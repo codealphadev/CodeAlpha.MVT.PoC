@@ -1,12 +1,11 @@
 # Learnings
 
+An unstructured collection of resources that very helpful.
 ## Error fixes
 
 * **Problem:** When trying to build a swift project from the command line using `swift build`, this error appears: `xcrun: error: unable to find utility "xctest", not a developer tool or in PATH`.
   
   **Fix:** https://stackoverflow.com/questions/61501298/xcrun-error-unable-to-find-utility-xctest-not-a-developer-tool-or-in-path
-
-
 
 ## AuthZ/AuthN
 * https://developer.apple.com/library/archive/samplecode/EvenBetterAuthorizationSample/Introduction/Intro.html
@@ -15,8 +14,6 @@
 ## Security
 
 * Thread Vector XPC/Mach: https://thecyberwire.com/events/docs/IanBeer_JSS_Slides.pdf 
-
-
 
 
 ## Random collection (uncleaned):
