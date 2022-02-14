@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3A12339C27B90507003B3395 /* AXSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3A12339B27B90507003B3395 /* AXSwift */; };
 		3A2B37D427B887EB002CD9AB /* XPC_AXWrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2B37D027B887EB002CD9AB /* XPC_AXWrap.swift */; };
 		3A2B37D527B887EB002CD9AB /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2B37D127B887EB002CD9AB /* main.swift */; };
 		3A2B37D627B887EB002CD9AB /* XPC_AXWrapProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2B37D227B887EB002CD9AB /* XPC_AXWrapProtocol.swift */; };
@@ -27,6 +28,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A12339C27B90507003B3395 /* AXSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +79,9 @@
 			dependencies = (
 			);
 			name = XPC.AXWrap;
+			packageProductDependencies = (
+				3A12339B27B90507003B3395 /* AXSwift */,
+			);
 			productName = XPC.AXWrap;
 			productReference = 3A2B37C127B885A5002CD9AB /* XPC.AXWrap.xpc */;
 			productType = "com.apple.product-type.xpc-service";
@@ -105,6 +110,9 @@
 				Base,
 			);
 			mainGroup = 3A2B37B827B885A5002CD9AB;
+			packageReferences = (
+				3A12339A27B90507003B3395 /* XCRemoteSwiftPackageReference "AXSwift" */,
+			);
 			productRefGroup = 3A2B37C227B885A5002CD9AB /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -321,6 +329,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3A12339A27B90507003B3395 /* XCRemoteSwiftPackageReference "AXSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tmandry/AXSwift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3A12339B27B90507003B3395 /* AXSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3A12339A27B90507003B3395 /* XCRemoteSwiftPackageReference "AXSwift" */;
+			productName = AXSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3A2B37B927B885A5002CD9AB /* Project object */;
 }
