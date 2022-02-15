@@ -1,3 +1,7 @@
+## Accepted Constraints
+
+* [15.02.2022]: XCode must be running before widget app is started
+
 ## Things done
 
 For the beginning I will track my progress in this README. In the past this has served me well when learning many things at the same time.
@@ -5,11 +9,11 @@ For the beginning I will track my progress in this README. In the past this has 
 ### 15.02.2022
 
 **AX Server logic:**
-- [ ] Bind observer to XCode application, if XCode is open
-- [ ] Unbind observer when XCode is closed
-- [ ] Add notification "AXFocusedUIElementChanged" to observer to track when XCode editor loses focus
-- [ ] Add notification to observer to track when XCode editor goes (back) in focus
-- [ ] Add notification "AXValueChanged" to observer to track when user modified the content
+- [x] Bind observer to XCode application, if XCode is open
+- [x] Unbind observer when XCode is closed
+- [x] Track when XCode editor area loses focus
+- [x] Track when XCode editor goes (back) in focus
+- [x] Add notification "AXValueChanged" to observer to track when user modified the content
 
 **AX Server connectivity:**
 - [ ] XPC Interface for GETTERs
