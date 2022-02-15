@@ -2,21 +2,51 @@ import AXSwift
 import Cocoa
 
 class XCodeAXState {
-    let xCodeBundleId = "com.apple.dt.Xcode"
+    let xCodeBundleId: String
 
     var xCodeApp: Application?
-    var xCodeEditorUIElement: UIElement?
-    var observer: Observer?
+    var lastFocusedXCodeEditorUIElement: UIElement?
 
     var observerContent: Observer?
-    var count = 0
+    var count = 0 // to be removed later
 
-    init() {
+    init(_ xCodeBundleId: String) {
+        print("IsEditorFocused:")
+
+        self.xCodeBundleId = xCodeBundleId
         timerFetchXCodeApplication()
         timerCheckFocusXCodeEditor()
     }
 
     public func isXCodeEditorInFocus() -> Bool {
+        // 1. XCode must be in focus
+        if !isXCodeAppInFocus() {
+            return false
+        }
+
+        guard let unwrappedFocusedWindow = try? systemWideElement.attribute(.focusedUIElement) as UIElement? else {
+            NSLog("Error: Could not read focused window")
+            return false
+        }
+
+        // 2. Focus must be on a Text AREA AX element of XCode
+        var focusFieldIsTextArea = false
+        do {
+            let uiElementType = try unwrappedFocusedWindow.role()
+
+            if uiElementType == .textArea {
+                focusFieldIsTextArea = true
+                lastFocusedXCodeEditorUIElement = unwrappedFocusedWindow
+            }
+        } catch {
+            NSLog("Error: Could not read type of UIElement [\(unwrappedFocusedWindow)]: \(error)")
+            return false
+        }
+
+        return focusFieldIsTextArea
+    }
+
+    public func isXCodeAppInFocus() -> Bool {
         guard let unwrappedFocusedWindow = try? systemWideElement.attribute(.focusedUIElement) as UIElement? else {
             NSLog("Error: Could not read focused window")
             return false
@@ -30,41 +60,36 @@ class XCodeAXState {
         // 2. XCode must be in focus
         var focusAppIsXCode = false
         do {
-            // NSLog("PID of XCode: \(try XCodeApp.first!.pid()), PID of focused window: \(try unwrappedFocusedWindow.pid())")
             focusAppIsXCode = try comparePIDs(unwrappedFocusedWindow.pid(), app.pid())
         } catch {
             NSLog("Error: Could not read PID of app [\(unwrappedFocusedWindow)]: \(error)")
             return false
         }
 
-        if !focusAppIsXCode {
+        return focusAppIsXCode
+    }
+
+    public func isXCodeAppRunning() -> Bool {
+        // 1. An instance of XCode must be running
+        let xCodeApplication = Application.allForBundleID(xCodeBundleId)
+
+        if xCodeApplication.count == 0 {
+            xCodeApp = nil
             return false
+        } else {
+            xCodeApp = xCodeApplication[0]
+            return true
         }
-
-        // 3. Focus must be on a Text AREA AX element of XCode
-        var focusFieldIsTextArea = false
-        do {
-            let uiElementType = try unwrappedFocusedWindow.role()
-
-            if uiElementType == .textArea {
-                focusFieldIsTextArea = true
-                xCodeEditorUIElement = unwrappedFocusedWindow
-            }
-        } catch {
-            NSLog("Error: Could not read type of UIElement [\(unwrappedFocusedWindow)]: \(error)")
-            return false
-        }
-
-        return focusFieldIsTextArea
     }
 
     public func getEditorContent() -> String? {
-        if !isXCodeEditorInFocus() {
+        // Logic: If XCode is still running and the editor UI element is known, return its value
+        if !isXCodeAppRunning() {
             return nil
         }
 
         var content: String?
-        if let unwrappedXCodeEditorUIElement = xCodeEditorUIElement {
+        if let unwrappedXCodeEditorUIElement = lastFocusedXCodeEditorUIElement {
             if let unwrappedContent: String = try? unwrappedXCodeEditorUIElement.attribute(.value) {
                 content = unwrappedContent
             } else {
@@ -76,11 +101,12 @@ class XCodeAXState {
     }
 
     public func updateEditorContent(_ newContent: String) -> String? {
-        if !isXCodeEditorInFocus() {
+        // Logic: If XCode is still running and the editor UI element is known, update its value
+        if !isXCodeAppRunning() {
             return nil
         }
 
-        guard let unwrappedXCodeEditorUIElement = xCodeEditorUIElement else { return nil }
+        guard let unwrappedXCodeEditorUIElement = lastFocusedXCodeEditorUIElement else { return nil }
 
         do {
             try unwrappedXCodeEditorUIElement.setAttribute(.value, value: newContent)
@@ -110,14 +136,6 @@ class XCodeAXState {
 
         var updated = false
         observerContent = unwrappedApp.createObserver { (_: Observer, element: UIElement, event: AXNotification, _: [String: AnyObject]?) in
-            // var elementDesc: String!
-            // if let role = try? element.role()!, role == .window {
-            //     elementDesc = "\(element) \"\(try! (element.attribute(.title) as String?)!)\""
-            // } else {
-            //     elementDesc = "\(element)"
-            // }
-            // // print("\(event) on \(String(describing: elementDesc)); info: \(info ?? [:])")
-
             if event == .valueChanged {
                 // Focus must be on a Text AREA AX element of XCode
                 do {
@@ -159,7 +177,7 @@ class XCodeAXState {
     }
 
     @objc func fetchXCodeApplication() {
-        // 1. An instance of XCode must be running
+        // Fetch the XCode application _again_ to later compare it with the previous one
         let xCodeApplication = Application.allForBundleID(xCodeBundleId)
 
         if xCodeApplication.count == 0 {
@@ -183,6 +201,7 @@ class XCodeAXState {
     }
 
     func timerCheckFocusXCodeEditor() {
+        
         _ = Timer.scheduledTimer(
             timeInterval: 0.1,
             target: self,
@@ -193,6 +212,8 @@ class XCodeAXState {
     }
 
     @objc func checkFocusXCodeEditor() {
-        _ = isXCodeEditorInFocus()
+        let a = isXCodeEditorInFocus()
+
+        print("IsEditorFocused: \(a)")
     }
 }

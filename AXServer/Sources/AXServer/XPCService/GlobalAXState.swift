@@ -5,6 +5,9 @@ class GlobalAXState {
     var observerGlobalFocus: Observer?
     var appGlobalFocus: Application?
 
+    var currentFocusedAppPid: Int32?
+    var previousFocusedAppPid: Int32?
+
     init() {
         do {
             try updateState()
@@ -22,6 +25,14 @@ class GlobalAXState {
             NSLog("Error: Could not read PID of app: \(error)")
             return nil
         }
+    }
+
+    public func getCurrentFocusedAppPid() -> Int32? {
+        return self.currentFocusedAppPid
+    }
+
+    public func getPreviousFocusedAppPid() -> Int32? {
+        return self.previousFocusedAppPid
     }
 
     func createTimer() {
@@ -42,6 +53,9 @@ class GlobalAXState {
         if appGlobalFocus == app {
             return
         }
+
+        previousFocusedAppPid = currentFocusedAppPid
+        currentFocusedAppPid = try app.pid()
 
         var updated = false
         observerGlobalFocus = app.createObserver { (_: Observer, element: UIElement, event: AXNotification, info: [String: AnyObject]?) in

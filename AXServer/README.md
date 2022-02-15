@@ -1,11 +1,27 @@
 ## Accepted Constraints
 
 * [15.02.2022]: XCode must be running before widget app is started
+* [15.02.2022]: It is not yet gracefully handled when the user denys accessibility permissions. Right now, the app terminates but the XPC service keeps running. 
 
 ## Things done
 
 For the beginning I will track my progress in this README. In the past this has served me well when learning many things at the same time.
 
+### 16.02.2022
+
+**AX Server logic:**
+- [ ] Write debug logs to file
+- [ ] Debug "getXCodeAppFocusStatus" method when called via XPC
+- [ ] Remove "RedString/GreenString" helpers
+- [ ] Continue testing server logic
+
+**AX Server connectivity:**
+- [ ] Learn how to create anonymous listener from Client app
+- [ ] XPC Interface for notifications 
+
+**Client App:**
+- [ ] Implement "listen" mode
+- [ ] Implement proper CLI companion app
 ### 15.02.2022
 
 **AX Server logic:**
@@ -16,15 +32,13 @@ For the beginning I will track my progress in this README. In the past this has 
 - [x] Add notification "AXValueChanged" to observer to track when user modified the content
 
 **AX Server connectivity:**
-- [ ] XPC Interface for GETTERs
-- [ ] Learn how to create anonymous listener from Client app
-- [ ] XPC Interface for notifications
+- [x] XPC Interface for GETTERs
 
 **Client App:**
 - [ ] Implement "listen" mode
-- [ ] Implement GET for focus status
-- [ ] Implement GET for editor content
-- [ ] Implement POST for content update
+- [x] Implement GET for focus status
+- [x] Implement GET for editor content
+- [x] Implement POST for content update
 
 ### **14.02.2022**
 

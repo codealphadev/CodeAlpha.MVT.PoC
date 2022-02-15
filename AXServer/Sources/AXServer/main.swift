@@ -6,11 +6,19 @@ let sigint = DispatchSource.makeSignalSource(signal: SIGINT, queue: DispatchQueu
 sigint.setEventHandler {
     NSApp.terminate(nil)
 }
-sigint.resume()
 
+sigint.resume()
 
 let appDelegate = AXAppDelegate()
 let application = NSApplication.shared
 application.setActivationPolicy(NSApplication.ActivationPolicy.accessory)
 application.delegate = appDelegate
+
+// Register XPC listener to receive requests from clients
+let machServiceName = "com.codeAlpha.AXServerXPC"
+let delegate = ServiceDelegate(xCodeAXState: XCodeAXState("com.apple.dt.Xcode"), globalAXState: GlobalAXState())
+let listener = NSXPCListener(machServiceName: machServiceName)
+listener.delegate = delegate
+listener.resume()
+
 application.run()

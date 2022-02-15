@@ -17,8 +17,6 @@ class AXAppDelegate: NSObject, NSApplicationDelegate {
         if UIElement.isProcessTrusted(withPrompt: true) {
             axTrusted = true
         }
-
-        _ = XCodeAXState()
     }
 
     func applicationWillTerminate(_: Notification) {
