@@ -16,7 +16,7 @@ application.delegate = appDelegate
 
 // Register XPC listener to receive requests from clients
 let machServiceName = "com.codeAlpha.AXServerXPC"
-let delegate = ServiceDelegate(xCodeAXState: XCodeAXState("com.apple.dt.Xcode"), globalAXState: GlobalAXState())
+let delegate = ServiceDelegate()
 let listener = NSXPCListener(machServiceName: machServiceName)
 listener.delegate = delegate
 listener.resume()

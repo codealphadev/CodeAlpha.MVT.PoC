@@ -1,27 +1,50 @@
+
+## Installation instructions
+
+1. Clone Git repository, navigate to repository's root folder
+2. Build the project: `swift build`
+3. Execute `sh Assets/updateDaemon.sh` to load `*plist` file to `launchd`. This registers this service to be launched at user login. 
+4. Check if the daemon runs without errors (for now...): `launchctl list | grep codeAlpha`. If there is an error, go investigate. 🤓
+
 ## Accepted Constraints
 
-* [15.02.2022]: XCode must be running before widget app is started
 * [15.02.2022]: It is not yet gracefully handled when the user denys accessibility permissions. Right now, the app terminates but the XPC service keeps running. 
 
 ## Things done
 
 For the beginning I will track my progress in this README. In the past this has served me well when learning many things at the same time.
 
-### 16.02.2022
+### 17.02.2022
 
 **AX Server logic:**
-- [ ] Write debug logs to file
+- [x] Improve routine to write to log file on disk
 - [ ] Debug "getXCodeAppFocusStatus" method when called via XPC
-- [ ] Remove "RedString/GreenString" helpers
 - [ ] Continue testing server logic
+- [ ] Change focus notification to "when editor goes in or out of focus"
 
 **AX Server connectivity:**
-- [ ] Learn how to create anonymous listener from Client app
-- [ ] XPC Interface for notifications 
+- [ ] Debug XPC Interface for notifications 
 
 **Client App:**
-- [ ] Implement "listen" mode
-- [ ] Implement proper CLI companion app
+- [ ] Testing control flow
+
+### 16.02.2022
+
+**Misc**
+- [x] Create first architecture sketch as part of the documentation
+
+**AX Server logic:**
+- [x] Write debug logs to file
+- [x] Remove "RedString/GreenString" helpers
+- [x] Refactor class structure
+- [x] Implement anonymous listener interface
+
+**AX Server connectivity:**
+- [x] Learn how to create anonymous listener from Client app  
+
+**Client App:**
+- [x] Implement "listen" mode
+- [x] Implement proper CLI companion app
 ### 15.02.2022
 
 **AX Server logic:**
@@ -35,7 +58,6 @@ For the beginning I will track my progress in this README. In the past this has 
 - [x] XPC Interface for GETTERs
 
 **Client App:**
-- [ ] Implement "listen" mode
 - [x] Implement GET for focus status
 - [x] Implement GET for editor content
 - [x] Implement POST for content update

@@ -2,99 +2,112 @@ import AXSwift
 import Cocoa
 
 class GlobalAXState {
-    var observerGlobalFocus: Observer?
-    var appGlobalFocus: Application?
+	let consoleIO = ConsoleIO()
 
-    var currentFocusedAppPid: Int32?
-    var previousFocusedAppPid: Int32?
+	var observerGlobalFocus: Observer?
+	var appGlobalFocus: Application?
 
-    init() {
-        do {
-            try updateState()
-        } catch {
-            NSLog("Error: Could not update Global State")
-        }
-        createTimer()
-    }
+	var currentFocusedAppPid: Int32?
+	var previousFocusedAppPid: Int32?
 
-    public func focusAppPID() -> Int32? {
-        do {
-            let pid = try appGlobalFocus?.pid()
-            return pid
-        } catch {
-            NSLog("Error: Could not read PID of app: \(error)")
-            return nil
-        }
-    }
+	var anonymousClientService: AXClientXPCProtocol?
 
-    public func getCurrentFocusedAppPid() -> Int32? {
-        return self.currentFocusedAppPid
-    }
+	init() {
+		do {
+			try updateState()
+		} catch {
+			consoleIO.writeMessage("Error: Could not update Global State", to: .error)
+		}
+		createTimer()
+	}
 
-    public func getPreviousFocusedAppPid() -> Int32? {
-        return self.previousFocusedAppPid
-    }
+	public func setXPCService(_ service: AXClientXPCProtocol?) {
+		anonymousClientService = service
+	}
 
-    func createTimer() {
-        _ = Timer.scheduledTimer(
-            timeInterval: 0.1,
-            target: self,
-            selector: #selector(updateState),
-            userInfo: nil,
-            repeats: true
-        )
-    }
+	public func focusAppPID() -> Int32? {
+		do {
+			let pid = try appGlobalFocus?.pid()
+			return pid
+		} catch {
+			consoleIO.writeMessage("Error: Could not read PID of app: \(error)", to: .error)
+			return nil
+		}
+	}
 
-    @objc func updateState() throws {
-        guard let focusedWindow = try systemWideElement.attribute(.focusedUIElement) as UIElement? else { return }
-        guard let app = Application(forProcessID: try focusedWindow.pid()) else { return }
+	public func getCurrentFocusedAppPid() -> Int32? {
+		return currentFocusedAppPid
+	}
 
-        // only continue when app has changed
-        if appGlobalFocus == app {
-            return
-        }
+	public func getPreviousFocusedAppPid() -> Int32? {
+		return previousFocusedAppPid
+	}
 
-        previousFocusedAppPid = currentFocusedAppPid
-        currentFocusedAppPid = try app.pid()
+	func createTimer() {
+		_ = Timer.scheduledTimer(
+			timeInterval: 0.1,
+			target: self,
+			selector: #selector(updateState),
+			userInfo: nil,
+			repeats: true
+		)
+	}
 
-        var updated = false
-        observerGlobalFocus = app.createObserver { (_: Observer, element: UIElement, event: AXNotification, info: [String: AnyObject]?) in
-            var elementDesc: String!
-            if let role = try? element.role()!, role == .window {
-                elementDesc = "\(element) \"\(try! (element.attribute(.title) as String?)!)\""
-            } else {
-                elementDesc = "\(element)"
-            }
-            print("\(event) on \(String(describing: elementDesc)); info: \(info ?? [:])")
+	@objc func updateState() throws {
+		guard let focusedWindow = try systemWideElement.attribute(.focusedUIElement) as UIElement? else { return }
+		guard let app = Application(forProcessID: try focusedWindow.pid()) else { return }
 
-            // Watch events on new windows
-            if event == .mainWindowChanged {
-                do {
-                    try self.observerGlobalFocus!.addNotification(.uiElementDestroyed, forElement: element)
-                    try self.observerGlobalFocus!.addNotification(.moved, forElement: element)
-                } catch {
-                    NSLog("Error: Could not watch [\(element)]: \(error)")
-                }
-            }
+		// only continue when app has changed
+		if appGlobalFocus == app {
+			return
+		}
 
-            // // Group simultaneous events together with --- lines
-            if !updated {
-                updated = true
-                // Set this code to run after the current run loop, which is dispatching all notifications.
-                DispatchQueue.main.async {
-                    print("---")
-                    updated = false
-                }
-            }
-        }
+		previousFocusedAppPid = currentFocusedAppPid
+		currentFocusedAppPid = try app.pid()
 
-        do {
-            try observerGlobalFocus!.addNotification(.windowCreated, forElement: app)
-            try observerGlobalFocus!.addNotification(.mainWindowChanged, forElement: app)
-            try observerGlobalFocus!.addNotification(.moved, forElement: app)
-            try observerGlobalFocus!.addNotification(.focusedWindowChanged, forElement: app)
-        } catch {
-            NSLog("Error: Could not add notifications: \(error)")
-        }
-    }
+		var updated = false
+		observerGlobalFocus = app.createObserver { (_: Observer, element: UIElement, event: AXNotification, _: [String: AnyObject]?) in
+			// do {
+			// 	var elementDesc: String!
+			// 	if let role = try? element.role()!, role == .window {
+			// 		elementDesc = "\(element) \"\(try (element.attribute(.title) as String?)!)\""
+			// 	} else {
+			// 		elementDesc = "\(element)"
+			// 	}
+			// 	self.consoleIO.writeMessage("\(event) on \(String(describing: elementDesc)); info: \(info ?? [:])")
+			// } catch {
+			// 	self.consoleIO.writeMessage("Error: Could not read type of UIElement [\(element)]: \(error)", to: .error)
+			// 	return
+			// }
+
+			// Watch events on new windows
+			if event == .mainWindowChanged {
+				do {
+					try self.observerGlobalFocus!.addNotification(.uiElementDestroyed, forElement: element)
+					try self.observerGlobalFocus!.addNotification(.moved, forElement: element)
+				} catch {
+					self.consoleIO.writeMessage("Error: Could not watch [\(element)]: \(error)", to: .error)
+				}
+			}
+
+			// // Group simultaneous events together with --- lines
+			if !updated {
+				updated = true
+				// Set this code to run after the current run loop, which is dispatching all notifications.
+				DispatchQueue.main.async {
+					self.consoleIO.writeMessage("---")
+					updated = false
+				}
+			}
+		}
+
+		do {
+			try observerGlobalFocus!.addNotification(.windowCreated, forElement: app)
+			try observerGlobalFocus!.addNotification(.mainWindowChanged, forElement: app)
+			try observerGlobalFocus!.addNotification(.moved, forElement: app)
+			try observerGlobalFocus!.addNotification(.focusedWindowChanged, forElement: app)
+		} catch {
+			consoleIO.writeMessage("Error: Could not add notifications: \(error)", to: .error)
+		}
+	}
 }

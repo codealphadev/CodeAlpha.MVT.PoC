@@ -2,22 +2,13 @@ import AXSwift
 import Foundation
 
 @objc class AXServerXPC: NSObject, AXServerXPCProtocol {
-  var endpoint: NSXPCListenerEndpoint = .init()
+  let consoleIO = ConsoleIO()
+  var anonymousXPCService: AXClientXPCProtocol?
 
-  let xCodeAXState: XCodeAXState
-  let globalAXState: GlobalAXState
+  let xCodeAXState = XCodeAXState()
+  let globalAXState = GlobalAXState()
 
-  let widgetBundleIdentifier = "com.googlecode.iterm2"
-  let xCodeBundleIdentifier = "com.apple.dt.Xcode"
-
-  init(xCodeAXState: XCodeAXState, globalAXState: GlobalAXState) {
-    self.xCodeAXState = xCodeAXState
-    self.globalAXState = globalAXState
-  }
-
-  func registerNSXPCListenerEndpoint(_ endpoint: NSXPCListenerEndpoint) {
-    self.endpoint = endpoint
-  }
+  let widgetBundleIdentifier = "com.googlecode.iterm2" // To be refactored later.
 
   func getXCodeEditorContent(withReply reply: @escaping (String?) -> Void) {
     reply(xCodeAXState.getEditorContent())
@@ -44,7 +35,7 @@ import Foundation
       }
 
       // 2. check whether XCode AND Widget are running applications
-      let xCodeApplication = Application.allForBundleID(xCodeBundleIdentifier)
+      let xCodeApplication = Application.allForBundleID(xCodeAXState.getXCodeBundleId())
 
       if xCodeApplication.count == 0 {
         reply(false)
@@ -78,10 +69,31 @@ import Foundation
     reply(xCodeAXState.isXCodeEditorInFocus())
   }
 
-  func toRedString(_ text: String, withReply reply: @escaping (String) -> Void) {
-    reply("\u{1B}[31m\(text)\u{1B}[0m")
+  func startAnonymousListener(_ endpoint: NSXPCListenerEndpoint, withReply reply: @escaping (Bool) -> Void) {
+    let connection = NSXPCConnection(listenerEndpoint: endpoint)
+    connection.remoteObjectInterface = NSXPCInterface(with: AXClientXPCProtocol.self)
+    connection.resume()
+
+    if #available(macOS 10.11, *) {
+      anonymousXPCService = connection.synchronousRemoteObjectProxyWithErrorHandler { error in
+        self.consoleIO.writeMessage("Received error: \(error.localizedDescription)", to: .error)
+      } as? AXClientXPCProtocol
+    } else {
+      anonymousXPCService = connection.remoteObjectProxyWithErrorHandler { error in
+        self.consoleIO.writeMessage("Received error: \(error.localizedDescription)", to: .error)
+      } as? AXClientXPCProtocol
+    }
+
+    xCodeAXState.setXPCService(anonymousXPCService)
+    globalAXState.setXPCService(anonymousXPCService)
+
+    reply(true)
   }
-  func toGreenString(_ text: String, withReply reply: @escaping (String) -> Void) {
-    reply("\u{1B}[32m\(text)\u{1B}[0m")
+
+  func stopAnonymousListener(withReply reply: @escaping (Bool) -> Void) {
+    anonymousXPCService = nil
+    xCodeAXState.setXPCService(anonymousXPCService)
+    globalAXState.setXPCService(anonymousXPCService)
+    reply(true)
   }
 }

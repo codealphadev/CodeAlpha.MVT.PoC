@@ -2,20 +2,12 @@ import AXSwift
 import Cocoa
 
 class AXAppDelegate: NSObject, NSApplicationDelegate {
-    var axTrusted: Bool = false
-
+    let consoleIO = ConsoleIO()
     func applicationDidFinishLaunching(_: Notification) {
         guard UIElement.isProcessTrusted(withPrompt: true) else {
-            NSLog("No accessibility API permission, exiting")
+            consoleIO.writeMessage("No accessibility API permission, exiting", to: .error)
             NSRunningApplication.current.terminate()
             return
-        }
-
-        // Check that we have permission to access accessibility features
-        axTrusted = UIElement.isProcessTrusted(withPrompt: true)
-
-        if UIElement.isProcessTrusted(withPrompt: true) {
-            axTrusted = true
         }
     }
 
@@ -25,10 +17,5 @@ class AXAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationSupportsSecureRestorableState(_: NSApplication) -> Bool {
         return true
-    }
-
-    // Provide method to trigger the accessibility popup in case the user clicked "deny" the first time it opened.
-    func triggerAccessibilityPopup() {
-        axTrusted = UIElement.isProcessTrusted(withPrompt: true)
     }
 }

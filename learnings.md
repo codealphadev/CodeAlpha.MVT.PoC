@@ -22,8 +22,9 @@ An unstructured collection of resources that very helpful.
   # Get bundle id of XCode ('com.apple.dt.Xcode')
   /usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' /Applications/Xcode-beta.app/Contents/Info.plist
   ```
-* Accessing text value from any System wide Application via Accessibility API: https://macdevelopers.wordpress.com/2014/01/31/accessing-text-value-from-any-system-wide-application-via-accessibility-api/comment-page-1/
-
+* Accessing text value from any System-wide Application via Accessibility API: https://macdevelopers.wordpress.com/2014/01/31/accessing-text-value-from-any-system-wide-application-via-accessibility-api/comment-page-1/
+* DistributedNotifications: https://medium.com/macoclock/finding-distributed-notifications-on-macos-catalina-b2a292aac5a1
+* How to write print to file: https://nshipster.com/textoutputstream/
 
 
 ## XPC Stuff
