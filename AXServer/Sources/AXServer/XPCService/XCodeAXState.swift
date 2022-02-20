@@ -192,7 +192,7 @@ class XCodeAXState {
 		let xCodeApplication = Application.allForBundleID(xCodeBundleId)
 
 		if xCodeApplication.count == 0 {
-			consoleIO.writeMessage("XCode is not started.", to: .error)
+			consoleIO.writeMessage("XCode is not started.")
 			xCodeApp = nil
 			return
 		}

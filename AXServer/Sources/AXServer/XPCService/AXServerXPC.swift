@@ -84,7 +84,10 @@ import Foundation
       } as? AXClientXPCProtocol
     }
 
-    xCodeAXState.setXPCService(anonymousXPCService)
+    // I have no idea why, but without this line, the anonymous XPC service will not work.
+    anonymousXPCService?.anonymousHeartbeat(true) { _ in }
+
+    // xCodeAXState.setXPCService(anonymousXPCService)
     globalAXState.setXPCService(anonymousXPCService)
 
     reply(true)

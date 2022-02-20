@@ -60,45 +60,55 @@ class GlobalAXState {
 		// only continue when app has changed
 		if appGlobalFocus == app {
 			return
+		} else {
+			appGlobalFocus = app
 		}
 
 		previousFocusedAppPid = currentFocusedAppPid
 		currentFocusedAppPid = try app.pid()
 
+		if let application = NSWorkspace.shared.frontmostApplication {
+			if let unwrappedAnonymousClientService = anonymousClientService {
+				unwrappedAnonymousClientService.notifyAppFocusChange("\(String(describing: application.localizedName))") { _ in
+					self.consoleIO.writeMessage("localizedName: \(String(describing: application.localizedName))")
+				}
+			}
+		}
+
 		var updated = false
-		observerGlobalFocus = app.createObserver { (_: Observer, element: UIElement, event: AXNotification, _: [String: AnyObject]?) in
+		observerGlobalFocus = app.createObserver { (_: Observer, _: UIElement, _: AXNotification, _: [String: AnyObject]?) in
 			// do {
 			// 	var elementDesc: String!
 			// 	if let role = try? element.role()!, role == .window {
-			// 		elementDesc = "\(element) \"\(try (element.attribute(.title) as String?)!)\""
+			// 		elementDesc = "\(element) '\(try (element.attribute(.title) as String?)!)'"
 			// 	} else {
 			// 		elementDesc = "\(element)"
 			// 	}
-			// 	self.consoleIO.writeMessage("\(event) on \(String(describing: elementDesc)); info: \(info ?? [:])")
+			// 	self.consoleIO.writeMessage("\(event) on \(String(describing: elementDesc));", to: .error)
 			// } catch {
 			// 	self.consoleIO.writeMessage("Error: Could not read type of UIElement [\(element)]: \(error)", to: .error)
 			// 	return
 			// }
 
 			// Watch events on new windows
-			if event == .mainWindowChanged {
-				do {
-					try self.observerGlobalFocus!.addNotification(.uiElementDestroyed, forElement: element)
-					try self.observerGlobalFocus!.addNotification(.moved, forElement: element)
-				} catch {
-					self.consoleIO.writeMessage("Error: Could not watch [\(element)]: \(error)", to: .error)
-				}
-			}
+			// if event == .mainWindowChanged {
+			// 	do {
+			// 		try self.observerGlobalFocus!.addNotification(.uiElementDestroyed, forElement: element)
+			// 		try self.observerGlobalFocus!.addNotification(.moved, forElement: element)
+			// 	} catch {
+			// 		self.consoleIO.writeMessage("Error: Could not watch [\(element)]: \(error)", to: .error)
+			// 	}
+			// }
 
 			// // Group simultaneous events together with --- lines
-			if !updated {
-				updated = true
-				// Set this code to run after the current run loop, which is dispatching all notifications.
-				DispatchQueue.main.async {
-					self.consoleIO.writeMessage("---")
-					updated = false
-				}
-			}
+			// if !updated {
+			// 	updated = true
+			// 	// Set this code to run after the current run loop, which is dispatching all notifications.
+			// 	DispatchQueue.main.async {
+			// 		self.consoleIO.writeMessage("---")
+			// 		updated = false
+			// 	}
+			// }
 		}
 
 		do {
