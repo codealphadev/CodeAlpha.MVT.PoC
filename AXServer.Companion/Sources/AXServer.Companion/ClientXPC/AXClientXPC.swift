@@ -28,14 +28,6 @@ import Foundation
         reply(true)
     }
 
-    func notifyAppFocusChange2(_ t1: Testen, _ t2: Testen, withReply reply: @escaping (Bool) -> Void) {
-        consoleIO.writeMessage("AXClientXPC: \(t1.name) -> \(t2.name)", to: .error)
-        consoleIO.writeMessage("AXClientXPC: \(t1.bundleId) -> \(t2.bundleId)", to: .error)
-        consoleIO.writeMessage("AXClientXPC: \(t1.pid) -> \(t2.pid)", to: .error)
-        consoleIO.writeMessage("AXClientXPC: \(t1.isFinishedLaunching) -> \(t2.isFinishedLaunching)", to: .error)
-        reply(true)
-    }
-
     func anonymousHeartbeat(_: Bool, withReply reply: @escaping (Bool) -> Void) {
         // consoleIO.writeMessage("AXClientXPC: anonymousHeartbeat: \(heartbeat)")
         reply(true)

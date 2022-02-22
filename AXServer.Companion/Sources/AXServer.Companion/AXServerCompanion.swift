@@ -88,7 +88,7 @@ class AXServerCompanion {
       consoleIO.writeMessage("Type 's' to update the editor's content.")
       consoleIO.writeMessage("Or type 'q' to quit.")
 
-      let (option, value) = getOption(consoleIO.getInput())
+      let (option, value) = getInputOption(consoleIO.getInput())
 
       consoleIO.writeMessage("You chose option '\(option.rawValue)'.")
 
@@ -104,6 +104,7 @@ class AXServerCompanion {
       case .send:
         updateContent()
       case .quit:
+        stopAnonymousListener()
         shouldQuit = true
       default:
         consoleIO.writeMessage("Unknown option \(value)", to: .error)
@@ -111,12 +112,13 @@ class AXServerCompanion {
 
       // axServerXPCReachable is set to "false" in error catch block of connection.synchronousRemoteObjectProxyWithErrorHandler
       if !axServerXpcReachable {
+        stopAnonymousListener()
         shouldQuit = true
       }
     }
   }
 
-  func getOption(_ option: String) -> (option: OptionType, value: String) {
+  func getInputOption(_ option: String) -> (option: OptionType, value: String) {
     return (OptionType(value: option), option)
   }
 
@@ -164,6 +166,22 @@ class AXServerCompanion {
         self.consoleIO.writeMessage("The content of the focused editor is: \n\n '\(unwrappedContent)' \n\n")
       } else {
         self.consoleIO.writeMessage("The content of the focused editor could not be fetched.")
+      }
+    }
+  }
+
+  func stopAnonymousListener() {
+    guard let unwrappedService = service else {
+      consoleIO.writeMessage("Service not available", to: .error)
+      return
+    }
+
+    unwrappedService.stopAnonymousListener { accepted in
+      if accepted {
+        self.consoleIO.writeMessage("The listener is now unregistered.")
+      } else {
+        self.consoleIO.writeMessage("The listener could not be unregistered.", to: .error)
+        return
       }
     }
   }

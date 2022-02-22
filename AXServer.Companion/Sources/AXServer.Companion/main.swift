@@ -10,6 +10,7 @@ import Foundation
 // ================================================================
 
 func signalHandler(signal _: Int32) {
+	axServerCompanion.stopAnonymousListener()
 	exit(0)
 }
 
@@ -22,7 +23,6 @@ for sig in signals {
 
 let axServerCompanion = AXServerCompanion()
 
-RunLoop.main.run()
 if CommandLine.argc < 2 {
 	axServerCompanion.interactiveMode()
 } else {
