@@ -31,7 +31,7 @@ class XCodeAXState {
 		}
 
 		guard let unwrappedFocusedWindow = try? systemWideElement.attribute(.focusedUIElement) as UIElement? else {
-			consoleIO.writeMessage("Error: Could not read focused window", to: .error)
+			consoleIO.writeMessage("isXCodeEditorInFocus -- Error: Could not read focused window", to: .error)
 			return false
 		}
 
@@ -54,7 +54,7 @@ class XCodeAXState {
 
 	public func isXCodeAppInFocus() -> Bool {
 		guard let unwrappedFocusedWindow = try? systemWideElement.attribute(.focusedUIElement) as UIElement? else {
-			consoleIO.writeMessage("Error: Could not read focused window", to: .error)
+			consoleIO.writeMessage("isXCodeAppInFocus -- Error: Could not read focused window", to: .error)
 			return false
 		}
 
@@ -91,7 +91,6 @@ class XCodeAXState {
 	public func getEditorContent() -> String? {
 		// Logic: If XCode is still running and the editor UI element is known, return its value
 		if !isXCodeAppRunning() {
-			consoleIO.writeMessage("Error: XCode is not running", to: .error)
 			return nil
 		}
 
@@ -142,21 +141,29 @@ class XCodeAXState {
 		guard let unwrappedApp = xCodeApp else { return }
 
 		var updated = false
+
+		// 1. Create an observer for the XCode editor
 		observerContent = unwrappedApp.createObserver { (_: Observer, element: UIElement, event: AXNotification, _: [String: AnyObject]?) in
+			// 2. Logic for handling "calueChanged" event in the XCode editor
 			if event == .valueChanged {
-				// Focus must be on a Text AREA AX element of XCode
+				// Focus must be on a text area AX UIElement of XCode
 				do {
 					if !(try element.attributeIsSupported(.role)) {
 						return
 					}
 					let uiElementType = try element.role()
 					if uiElementType == .textArea {
-						// // Group simultaneous events together with --- lines
+						// // Group simultaneous events together with
 						if !updated {
 							updated = true
+							// publish to anonymous client, if available
+							if let unwrappedAnonymousClientService = self.anonymousClientService {
+								unwrappedAnonymousClientService.notifyXCodeEditorContentUpdate(self.getEditorContent()) { _ in
+									// do nothing
+								}
+							}
 							// Set this code to run after the current run loop, which is dispatching all notifications.
 							DispatchQueue.main.async {
-								self.consoleIO.writeMessage("---")
 								updated = false
 							}
 						}
@@ -166,15 +173,9 @@ class XCodeAXState {
 					return
 				}
 			}
-
-			// publish to anonymous client, if available
-			if let unwrappedAnonymousClientService = self.anonymousClientService {
-				unwrappedAnonymousClientService.notifyXCodeEditorContentUpdate(self.getEditorContent()) { _ in
-					// do nothing
-				}
-			}
 		}
 
+		// 3. Register notification "valueChanged" at observer
 		try observerContent!.addNotification(.valueChanged, forElement: unwrappedApp)
 	}
 
@@ -192,8 +193,8 @@ class XCodeAXState {
 		// Fetch the XCode application _again_ to later compare it with the previous one
 		let xCodeApplication = Application.allForBundleID(xCodeBundleId)
 
+		// Check if the XCode application is still running, stop here already if not
 		if xCodeApplication.count == 0 {
-			consoleIO.writeMessage("XCode is not started.")
 			xCodeApp = nil
 			return
 		}
@@ -206,7 +207,7 @@ class XCodeAXState {
 			do {
 				try observeEditorContentChanges()
 			} catch {
-				consoleIO.writeMessage("Error: Could not watch content: \(error)", to: .error)
+				consoleIO.writeMessage("Error: Could not observe content: \(error)", to: .error)
 				xCodeApp = nil
 			}
 		}
@@ -223,7 +224,6 @@ class XCodeAXState {
 	}
 
 	@objc func checkFocusXCodeEditor() {
-		// publish to anonymous client, if available
 		let editorInFocus = isXCodeEditorInFocus()
 		let appInFocus = isXCodeAppInFocus()
 
@@ -236,16 +236,12 @@ class XCodeAXState {
 		// only send notification if focus has changed
 		if xcodeEditorFocusStatus != editorInFocus {
 			xcodeEditorFocusStatus = editorInFocus
-			unwrappedAnonymousClientService.notifyXCodeEditorFocusStatus(xcodeEditorFocusStatus) { _ in
-				// do nothing
-			}
+			unwrappedAnonymousClientService.notifyXCodeEditorFocusStatus(xcodeEditorFocusStatus) { _ in }
 		}
 
 		if xcodeAppFocusStatus != appInFocus {
 			xcodeAppFocusStatus = appInFocus
-			unwrappedAnonymousClientService.notifyXCodeAppFocusStatus(xcodeAppFocusStatus) { _ in
-				// do nothing
-			}
+			unwrappedAnonymousClientService.notifyXCodeAppFocusStatus(xcodeAppFocusStatus) { _ in }
 		}
 	}
 }

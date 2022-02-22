@@ -44,7 +44,7 @@ import Foundation
       self.consoleIO.writeMessage("Anonymous XPC service started", to: .error)
     }
 
-    // xCodeAXState.setXPCService(anonymousXPCService)
+    xCodeAXState.setXPCService(anonymousXPCService)
     globalAXState.setXPCService(anonymousXPCService)
 
     reply(true)
