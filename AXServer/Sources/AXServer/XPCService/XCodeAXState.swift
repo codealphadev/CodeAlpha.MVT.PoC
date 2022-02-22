@@ -2,11 +2,16 @@ import AXSwift
 import Cocoa
 
 class XCodeAXState {
-	let consoleIO = ConsoleIO()
 	let xCodeBundleId = "com.apple.dt.Xcode"
+
+	let consoleIO = ConsoleIO()
+
 	var xCodeApp: Application?
 	var lastFocusedXCodeEditorUIElement: UIElement?
 	var observerContent: Observer?
+
+	var xcodeEditorFocusStatus = false
+	var xcodeAppFocusStatus = false
 
 	var anonymousClientService: AXClientXPCProtocol?
 
@@ -17,10 +22,6 @@ class XCodeAXState {
 
 	public func setXPCService(_ service: AXClientXPCProtocol?) {
 		anonymousClientService = service
-	}
-
-	public func getXCodeBundleId() -> String {
-		return xCodeBundleId
 	}
 
 	public func isXCodeEditorInFocus() -> Bool {
@@ -225,11 +226,24 @@ class XCodeAXState {
 		// publish to anonymous client, if available
 		let editorInFocus = isXCodeEditorInFocus()
 		let appInFocus = isXCodeAppInFocus()
-		if let unwrappedAnonymousClientService = anonymousClientService {
-			unwrappedAnonymousClientService.notifyXCodeEditorFocusStatus(editorInFocus) { _ in
+
+		guard let unwrappedAnonymousClientService = anonymousClientService else {
+			xcodeEditorFocusStatus = editorInFocus
+			xcodeAppFocusStatus = appInFocus
+			return
+		}
+
+		// only send notification if focus has changed
+		if xcodeEditorFocusStatus != editorInFocus {
+			xcodeEditorFocusStatus = editorInFocus
+			unwrappedAnonymousClientService.notifyXCodeEditorFocusStatus(xcodeEditorFocusStatus) { _ in
 				// do nothing
 			}
-			unwrappedAnonymousClientService.notifyXCodeAppFocusStatus(appInFocus) { _ in
+		}
+
+		if xcodeAppFocusStatus != appInFocus {
+			xcodeAppFocusStatus = appInFocus
+			unwrappedAnonymousClientService.notifyXCodeAppFocusStatus(xcodeAppFocusStatus) { _ in
 				// do nothing
 			}
 		}

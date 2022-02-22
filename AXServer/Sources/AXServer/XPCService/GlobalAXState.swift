@@ -5,42 +5,19 @@ class GlobalAXState {
 	let consoleIO = ConsoleIO()
 
 	var observerGlobalFocus: Observer?
-	var appGlobalFocus: Application?
 
-	var currentFocusedAppPid: Int32?
-	var previousFocusedAppPid: Int32?
+	var currentFocusedApp: AppInfo?
+	var previousFocusedApp: AppInfo?
 
 	var anonymousClientService: AXClientXPCProtocol?
 
 	init() {
-		do {
-			try updateState()
-		} catch {
-			consoleIO.writeMessage("Error: Could not update Global State", to: .error)
-		}
+		updateState()
 		createTimer()
 	}
 
 	public func setXPCService(_ service: AXClientXPCProtocol?) {
 		anonymousClientService = service
-	}
-
-	public func focusAppPID() -> Int32? {
-		do {
-			let pid = try appGlobalFocus?.pid()
-			return pid
-		} catch {
-			consoleIO.writeMessage("Error: Could not read PID of app: \(error)", to: .error)
-			return nil
-		}
-	}
-
-	public func getCurrentFocusedAppPid() -> Int32? {
-		return currentFocusedAppPid
-	}
-
-	public func getPreviousFocusedAppPid() -> Int32? {
-		return previousFocusedAppPid
 	}
 
 	func createTimer() {
@@ -53,69 +30,65 @@ class GlobalAXState {
 		)
 	}
 
-	@objc func updateState() throws {
-		guard let focusedWindow = try systemWideElement.attribute(.focusedUIElement) as UIElement? else { return }
-		guard let app = Application(forProcessID: try focusedWindow.pid()) else { return }
+	@objc func updateState() {
+		var focusedWindow: UIElement?
+		var currentAppPID: Int32 = 0
 
-		// only continue when app has changed
-		if appGlobalFocus == app {
+		do {
+			focusedWindow = try systemWideElement.attribute(.focusedUIElement) as UIElement?
+			guard let window = focusedWindow else {
+				consoleIO.writeMessage("Error: Could not read focused window???", to: .error)
+				return
+			}
+			currentAppPID = try window.pid()
+
+		} catch {
+			consoleIO.writeMessage("Error: Could not read focused window: \(error)", to: .error)
 			return
-		} else {
-			appGlobalFocus = app
 		}
 
-		previousFocusedAppPid = currentFocusedAppPid
-		currentFocusedAppPid = try app.pid()
+		let currentUIApp = Application(forProcessID: currentAppPID)
+		let currentApp = AppInfo(
+			bundleId: NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "unknown",
+			name: NSWorkspace.shared.frontmostApplication?.localizedName ?? "unknown",
+			pid: currentAppPID,
+			isFinishedLaunching: NSWorkspace.shared.frontmostApplication?.isFinishedLaunching ?? false
+		)
 
-		if let application = NSWorkspace.shared.frontmostApplication {
+		// only continue when app has changed
+		consoleIO.writeMessage("DEBUG #0 -- PID 1: \(String(describing: currentFocusedApp?.pid)), PID 2: \(currentApp.pid) ", to: .error)
+
+		if currentFocusedApp?.pid == currentApp.pid {
+			consoleIO.writeMessage("DEBUG #1 -- PID 1: \(String(describing: currentFocusedApp?.pid)), PID 2: \(currentApp.pid) ", to: .error)
+			return
+		} else {
+			previousFocusedApp = currentFocusedApp
+		}
+
+		currentFocusedApp = currentApp
+
+		consoleIO.writeMessage("DEBUG #2", to: .error)
+		if let application = previousFocusedApp {
+			consoleIO.writeMessage("DEBUG #3", to: .error)
 			if let unwrappedAnonymousClientService = anonymousClientService {
-				unwrappedAnonymousClientService.notifyAppFocusChange("\(String(describing: application.localizedName))") { _ in
-					self.consoleIO.writeMessage("localizedName: \(String(describing: application.localizedName))")
+				consoleIO.writeMessage("DEBUG #4", to: .error)
+				unwrappedAnonymousClientService.notifyAppFocusChange(application, currentApp) { _ in
+					self.consoleIO.writeMessage("localizedName: \(String(describing: currentApp.name))", to: .error)
 				}
 			}
 		}
 
-		var updated = false
-		observerGlobalFocus = app.createObserver { (_: Observer, _: UIElement, _: AXNotification, _: [String: AnyObject]?) in
-			// do {
-			// 	var elementDesc: String!
-			// 	if let role = try? element.role()!, role == .window {
-			// 		elementDesc = "\(element) '\(try (element.attribute(.title) as String?)!)'"
-			// 	} else {
-			// 		elementDesc = "\(element)"
-			// 	}
-			// 	self.consoleIO.writeMessage("\(event) on \(String(describing: elementDesc));", to: .error)
-			// } catch {
-			// 	self.consoleIO.writeMessage("Error: Could not read type of UIElement [\(element)]: \(error)", to: .error)
-			// 	return
-			// }
+		// Add observer for app in global focus -- not needed right now but might be useful later
+		guard let unwrappedCurrentUIApp = currentUIApp else { return }
 
-			// Watch events on new windows
-			// if event == .mainWindowChanged {
-			// 	do {
-			// 		try self.observerGlobalFocus!.addNotification(.uiElementDestroyed, forElement: element)
-			// 		try self.observerGlobalFocus!.addNotification(.moved, forElement: element)
-			// 	} catch {
-			// 		self.consoleIO.writeMessage("Error: Could not watch [\(element)]: \(error)", to: .error)
-			// 	}
-			// }
-
-			// // Group simultaneous events together with --- lines
-			// if !updated {
-			// 	updated = true
-			// 	// Set this code to run after the current run loop, which is dispatching all notifications.
-			// 	DispatchQueue.main.async {
-			// 		self.consoleIO.writeMessage("---")
-			// 		updated = false
-			// 	}
-			// }
+		observerGlobalFocus = unwrappedCurrentUIApp.createObserver { (_: Observer, _: UIElement, _: AXNotification, _: [String: AnyObject]?) in
 		}
 
 		do {
-			try observerGlobalFocus!.addNotification(.windowCreated, forElement: app)
-			try observerGlobalFocus!.addNotification(.mainWindowChanged, forElement: app)
-			try observerGlobalFocus!.addNotification(.moved, forElement: app)
-			try observerGlobalFocus!.addNotification(.focusedWindowChanged, forElement: app)
+			try observerGlobalFocus!.addNotification(.windowCreated, forElement: unwrappedCurrentUIApp)
+			try observerGlobalFocus!.addNotification(.mainWindowChanged, forElement: unwrappedCurrentUIApp)
+			try observerGlobalFocus!.addNotification(.moved, forElement: unwrappedCurrentUIApp)
+			try observerGlobalFocus!.addNotification(.focusedWindowChanged, forElement: unwrappedCurrentUIApp)
 		} catch {
 			consoleIO.writeMessage("Error: Could not add notifications: \(error)", to: .error)
 		}
