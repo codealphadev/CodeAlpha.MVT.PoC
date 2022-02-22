@@ -8,7 +8,6 @@
 import Foundation
 
 enum OptionType: String {
-  case listen = "l"
   case getFocus = "gf"
   case getContent = "gc"
   case send = "s"
@@ -20,7 +19,6 @@ enum OptionType: String {
     case "s": self = .send
     case "gc": self = .getContent
     case "gf": self = .getFocus
-    case "l": self = .listen
     case "q": self = .quit
     default: self = .unknown
     }
@@ -95,8 +93,6 @@ class AXServerCompanion {
       consoleIO.writeMessage("You chose option '\(option.rawValue)'.")
 
       switch option {
-      case .listen:
-        listen()
       case .getContent:
         getContent()
       case .getFocus:
@@ -169,48 +165,6 @@ class AXServerCompanion {
       } else {
         self.consoleIO.writeMessage("The content of the focused editor could not be fetched.")
       }
-    }
-  }
-
-  func listen() {
-    // The endpoint is now ready to be transferred over to the remote XPC service.
-    guard let unwrappedService = service else {
-      consoleIO.writeMessage("Service not available", to: .error)
-      return
-    }
-
-    // anonymousListener.resume()
-    // consoleIO.writeMessage("Started listening... (press any key to stop listening)")
-
-    // Start listening for events by transferring the endpoint to the remote service.
-    let endpoint = anonymousListener.endpoint
-    unwrappedService.startAnonymousListener(endpoint) { accepted in
-      if accepted {
-        self.consoleIO.writeMessage("The listener is now registered.")
-      } else {
-        self.consoleIO.writeMessage("The listener could not be registered.", to: .error)
-        return
-      }
-    }
-
-    // _ = getOption(consoleIO.getInput())
-
-    // // Stop listenting for events
-    // unwrappedService.stopAnonymousListener { accepted in
-    //   if accepted {
-    //     self.consoleIO.writeMessage("The listener is now suspended.")
-    //   } else {
-    //     self.consoleIO.writeMessage("The listener could not be suspended.", to: .error)
-    //     return
-    //   }
-    // }
-    // anonymousListener.suspend()
-
-    consoleIO.writeMessage("Stopped listening.")
-
-    // axServerXPCReachable is set to "false" in error catch block of connection.synchronousRemoteObjectProxyWithErrorHandler
-    if !axServerXpcReachable {
-      return
     }
   }
 }
