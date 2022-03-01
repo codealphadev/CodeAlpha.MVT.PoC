@@ -1,6 +1,7 @@
 import Vapor
 
 class WebsocketManager {
+  let consoleIO = ConsoleIO()
   var clients: WebsocketClients
 
   init(eventLoop: EventLoop) {
@@ -13,9 +14,6 @@ class WebsocketManager {
         let app = WebsocketClient(id: msg.client, socket: ws)
         self.clients.add(app)
         print("Added client app: \(msg.client)")
-
-        // for demonstration purposes immediately respond to the client
-        notify()
       }
     }
 
@@ -24,19 +22,19 @@ class WebsocketManager {
     }
   }
 
-  func notify() {
+  func notify<T: Codable>(message: T) {
     let connectedClients = clients.active.compactMap { $0 as WebsocketClient }
     guard !connectedClients.isEmpty else {
       return
     }
 
-    connectedClients.forEach { client in
-
-      let person = Person(name: "Adrian", male: true, age: 33)
-      let msg = WebsocketMessage<Person>(client: client.id, data: person)
-      let data = try! JSONEncoder().encode(msg)
-
-      client.socket.send([UInt8](data))
+    do {
+      let data = try JSONEncoder().encode(message)
+      connectedClients.forEach { client in
+        client.socket.send([UInt8](data))
+      }
+    } catch {
+      consoleIO.writeMessage("Error: Could not encode websocket message: \(error)", to: .error)
     }
   }
 }
