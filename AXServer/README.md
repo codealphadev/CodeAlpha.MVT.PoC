@@ -10,3 +10,6 @@
 
 * [02.03.2022]: The folder where the executable is expected by the `launchd` agent is still specific to the user's file system. 
 * [02.03.2022]: On first startup and after granting accessibility api permissions, the service might not serve the right content to consumers
+* [02.03.2022]: Websocket URL (ws://127.0.0.1:8080/channel) is still hard coded. We might change it to be set via CLI arguments
+* [02.03.2022]: No TLS via websocket
+* [02.03.2022]: No authentication
