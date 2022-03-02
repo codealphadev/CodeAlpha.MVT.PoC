@@ -3,13 +3,17 @@
 <plist version="1.0">
     <dict>
         <key>Label</key>
-        <string>com.codeAlpha.AXServerXPC</string>
+        <string>com.codeAlpha.AXServer</string>
         <key>Program</key>
         <string>/Users/adrian/Developer/CodeAlpha.MVT.PoC/AXServer/.build/debug/AXServer</string>
-        <key>MachServices</key>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
         <dict>
-            <key>com.codeAlpha.AXServerXPC</key>
+            <key>Crashed</key>
             <true/>
         </dict>
+        <key>ThrottleInterval</key>
+        <integer>10s</integer>
     </dict>
 </plist>

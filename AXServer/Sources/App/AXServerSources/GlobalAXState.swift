@@ -37,7 +37,7 @@ class GlobalAXState {
 		do {
 			focusedWindow = try systemWideElement.attribute(.focusedUIElement) as UIElement?
 			guard let window = focusedWindow else {
-				consoleIO.writeMessage("Error: Could not read UIElement of focused window", to: .error)
+				// consoleIO.writeMessage("Error: Could not read UIElement of focused window", to: .error)
 				return
 			}
 			currentAppPID = try window.pid()

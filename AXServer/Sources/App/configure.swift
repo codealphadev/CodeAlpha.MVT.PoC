@@ -1,8 +1,6 @@
 import Cocoa
 import Vapor
 
-let consoleIO = ConsoleIO()
-
 public func configure(_ app: Application) throws {
 	app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
@@ -50,11 +48,4 @@ public func configure(_ app: Application) throws {
 			}
 		}
 	}
-
-	// Register XPC listener to receive requests from clients
-	// let machServiceName = "com.codeAlpha.AXServerXPC"
-	// let delegate = ServiceDelegate()
-	// let listener = NSXPCListener(machServiceName: machServiceName)
-	// listener.delegate = delegate
-	// listener.resume()
 }

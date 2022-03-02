@@ -31,7 +31,6 @@ class XCodeAXState {
 		}
 
 		guard let unwrappedFocusedWindow = try? systemWideElement.attribute(.focusedUIElement) as UIElement? else {
-			consoleIO.writeMessage("isXCodeEditorInFocus -- Error: Could not read focused window", to: .error)
 			return false
 		}
 
@@ -54,7 +53,6 @@ class XCodeAXState {
 
 	public func isXCodeAppInFocus() -> Bool {
 		guard let unwrappedFocusedWindow = try? systemWideElement.attribute(.focusedUIElement) as UIElement? else {
-			consoleIO.writeMessage("isXCodeAppInFocus -- Error: Could not read focused window", to: .error)
 			return false
 		}
 
