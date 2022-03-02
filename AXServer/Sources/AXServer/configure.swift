@@ -5,7 +5,7 @@ public func configure(_ app: Application) throws {
 	app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
 	// Register AppDelegate to interact with AX features
-	let appDelegate = AXAppDelegate()
+	let appDelegate = AppDelegate()
 	let application = NSApplication.shared
 	application.setActivationPolicy(NSApplication.ActivationPolicy.accessory)
 	application.delegate = appDelegate

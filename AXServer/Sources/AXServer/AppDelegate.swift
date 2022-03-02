@@ -1,7 +1,7 @@
 import AXSwift
 import Cocoa
 
-class AXAppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate {
     let consoleIO = ConsoleIO()
     func applicationDidFinishLaunching(_: Notification) {
         guard UIElement.isProcessTrusted(withPrompt: true) else {
