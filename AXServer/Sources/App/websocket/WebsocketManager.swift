@@ -3,23 +3,16 @@ import Vapor
 class WebsocketManager {
   let consoleIO = ConsoleIO()
   var clients: WebsocketClients
+  let loop: EventLoop
 
   init(eventLoop: EventLoop) {
     clients = WebsocketClients(eventLoop: eventLoop)
+    loop = eventLoop
   }
 
-  func connect(_ ws: WebSocket) {
-    ws.onBinary { [unowned self] ws, buffer in
-      if let msg = buffer.decodeWebsocketMessage(Connect.self) {
-        let app = WebsocketClient(id: msg.client, socket: ws)
-        self.clients.add(app)
-        print("Added client app: \(msg.client)")
-      }
-    }
-
-    ws.onText { ws, _ in
-      ws.send("pong")
-    }
+  func connect(client: WebsocketClient) {
+    clients.add(client)
+    print("Added client app: \(client.id)")
   }
 
   func notify<T: Codable>(message: T) {

@@ -5,25 +5,6 @@ import Foundation
   let consoleIO = ConsoleIO()
   var anonymousXPCService: AXClientXPCProtocol?
 
-  let xCodeAXState = XCodeAXState()
-  let globalAXState = GlobalAXState()
-
-  func getXCodeEditorContent(withReply reply: @escaping (String?) -> Void) {
-    reply(xCodeAXState.getEditorContent())
-  }
-
-  func updateXCodeEditorContent(_ newContent: String, withReply reply: @escaping (String?) -> Void) {
-    reply(xCodeAXState.updateEditorContent(newContent))
-  }
-
-  func getXCodeAppFocusStatus(withReply reply: @escaping (Bool) -> Void) {
-    reply(xCodeAXState.isXCodeAppInFocus())
-  }
-
-  func getXCodeEditorFocusStatus(withReply reply: @escaping (Bool) -> Void) {
-    reply(xCodeAXState.isXCodeEditorInFocus())
-  }
-
   func startAnonymousListener(_ endpoint: NSXPCListenerEndpoint, withReply reply: @escaping (Bool) -> Void) {
     let connection = NSXPCConnection(listenerEndpoint: endpoint)
     connection.remoteObjectInterface = NSXPCInterface(with: AXClientXPCProtocol.self)
@@ -44,16 +25,11 @@ import Foundation
       self.consoleIO.writeMessage("Anonymous XPC service started", to: .error)
     }
 
-    xCodeAXState.setXPCService(anonymousXPCService)
-    globalAXState.setXPCService(anonymousXPCService)
-
     reply(true)
   }
 
   func stopAnonymousListener(withReply reply: @escaping (Bool) -> Void) {
     anonymousXPCService = nil
-    xCodeAXState.setXPCService(anonymousXPCService)
-    globalAXState.setXPCService(anonymousXPCService)
     reply(true)
   }
 }

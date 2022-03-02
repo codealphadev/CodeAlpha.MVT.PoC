@@ -6,22 +6,22 @@ class XCodeAXState {
 
 	let consoleIO = ConsoleIO()
 
-	var xCodeApp: Application?
-	var lastFocusedXCodeEditorUIElement: UIElement?
-	var observerContent: Observer?
+	var xCodeApp: AXSwift.Application?
+	var observerContent: AXSwift.Observer?
 
 	var xcodeEditorFocusStatus = false
 	var xcodeAppFocusStatus = false
 
-	var anonymousClientService: AXClientXPCProtocol?
+	var lastFocusedXCodeEditorUIElement: UIElement?
+	var xcodeEditorContent: String?
 
-	init() {
+	let websocketManager: WebsocketManager
+
+	init(_ wsManager: WebsocketManager) {
+		websocketManager = wsManager
 		timerCheckFocusXCodeEditor()
 		timerFetchXCodeApplication()
-	}
-
-	public func setXPCService(_ service: AXClientXPCProtocol?) {
-		anonymousClientService = service
+		timerObserveXCodeEditorContentChanges()
 	}
 
 	public func isXCodeEditorInFocus() -> Bool {
@@ -88,45 +88,40 @@ class XCodeAXState {
 		}
 	}
 
-	public func getEditorContent() -> String? {
+	public func notifyEditorContent() {
 		// Logic: If XCode is still running and the editor UI element is known, return its value
 		if !isXCodeAppRunning() {
-			return nil
+			return
 		}
 
-		var content: String?
 		if let unwrappedXCodeEditorUIElement = lastFocusedXCodeEditorUIElement {
 			if let unwrappedContent: String = try? unwrappedXCodeEditorUIElement.attribute(.value) {
-				content = unwrappedContent
-			} else {
-				return nil
+				websocketManager.notify(message: XCodeEditorContent(content: unwrappedContent))
 			}
 		}
-
-		return content
 	}
 
-	public func updateEditorContent(_ newContent: String) -> String? {
+	public func notifyXCodeFocusStatus() {
+		let appFocusStatus = XCodeFocusStatusChange(focusElementChange: .app, isInFocus: isXCodeAppInFocus())
+		let editorFocusStatus = XCodeFocusStatusChange(focusElementChange: .editor, isInFocus: isXCodeEditorInFocus())
+
+		websocketManager.notify(message: XCodeFocusStatus(AppStatus: appFocusStatus, EditorStatus: editorFocusStatus))
+	}
+
+	public func updateEditorContent(_ newContent: String) {
 		// Logic: If XCode is still running and the editor UI element is known, update its value
 		if !isXCodeAppRunning() {
-			return nil
+			return
 		}
 
-		guard let unwrappedXCodeEditorUIElement = lastFocusedXCodeEditorUIElement else { return nil }
+		guard let unwrappedXCodeEditorUIElement = lastFocusedXCodeEditorUIElement else { return }
 
 		do {
 			try unwrappedXCodeEditorUIElement.setAttribute(.value, value: newContent)
 		} catch {
 			consoleIO.writeMessage("Error: Could not set value of UIElement [\(unwrappedXCodeEditorUIElement)]: \(error)", to: .error)
-			return nil
+			return
 		}
-
-		var newContent: String?
-		if let unwrappedNewContent: String = try! unwrappedXCodeEditorUIElement.attribute(.value) {
-			newContent = unwrappedNewContent
-		}
-
-		return newContent
 	}
 
 	func comparePIDs(_ pidWindow: Int32, _ pidOtherWindow: Int32) -> Bool {
@@ -137,14 +132,43 @@ class XCodeAXState {
 		}
 	}
 
+	func timerObserveXCodeEditorContentChanges() {
+		websocketManager.loop.scheduleRepeatedTask(initialDelay: .seconds(0), delay: .milliseconds(100)) { _ in
+			self.observeEditorContentChangesHacked()
+		}
+	}
+
+	// This implementation is a hack to get around the fact that the AXSwift
+	// Observer is publishing its events on the main thread which is not used
+	// because of the Vapor.
+	func observeEditorContentChangesHacked() {
+		if !isXCodeEditorInFocus() {
+			return
+		}
+
+		guard let editorUIElement = lastFocusedXCodeEditorUIElement else {
+			return
+		}
+
+		if let currentContent: String = try? editorUIElement.attribute(.value) {
+			if currentContent != xcodeEditorContent {
+				xcodeEditorContent = currentContent
+				notifyEditorContent()
+			}
+		}
+	}
+
+	// This method is the correct way to observe changes in the content of a text area.
+	// Unfortunately this publishes the changes to the RunLoop of the NSApplication, which is
+	// not being listened to by the websocket server.
 	func observeEditorContentChanges() throws {
 		guard let unwrappedApp = xCodeApp else { return }
-
 		var updated = false
 
 		// 1. Create an observer for the XCode editor
 		observerContent = unwrappedApp.createObserver { (_: Observer, element: UIElement, event: AXNotification, _: [String: AnyObject]?) in
-			// 2. Logic for handling "calueChanged" event in the XCode editor
+			self.consoleIO.writeMessage("Observer: \(event.rawValue)", to: .error)
+			// 2. Logic for handling "valueChanged" event in the XCode editor
 			if event == .valueChanged {
 				// Focus must be on a text area AX UIElement of XCode
 				do {
@@ -156,12 +180,9 @@ class XCodeAXState {
 						// // Group simultaneous events together with
 						if !updated {
 							updated = true
-							// publish to anonymous client, if available
-							if let unwrappedAnonymousClientService = self.anonymousClientService {
-								unwrappedAnonymousClientService.notifyXCodeEditorContentUpdate(self.getEditorContent()) { _ in
-									// do nothing
-								}
-							}
+
+							self.notifyEditorContent()
+
 							// Set this code to run after the current run loop, which is dispatching all notifications.
 							DispatchQueue.main.async {
 								updated = false
@@ -180,16 +201,12 @@ class XCodeAXState {
 	}
 
 	func timerFetchXCodeApplication() {
-		_ = Timer.scheduledTimer(
-			timeInterval: 0.1,
-			target: self,
-			selector: #selector(fetchXCodeApplication),
-			userInfo: nil,
-			repeats: true
-		)
+		websocketManager.loop.scheduleRepeatedTask(initialDelay: .seconds(0), delay: .milliseconds(100)) { _ in
+			self.fetchXCodeApplication()
+		}
 	}
 
-	@objc func fetchXCodeApplication() {
+	func fetchXCodeApplication() {
 		// Fetch the XCode application _again_ to later compare it with the previous one
 		let xCodeApplication = Application.allForBundleID(xCodeBundleId)
 
@@ -214,34 +231,28 @@ class XCodeAXState {
 	}
 
 	func timerCheckFocusXCodeEditor() {
-		_ = Timer.scheduledTimer(
-			timeInterval: 0.1,
-			target: self,
-			selector: #selector(checkFocusXCodeEditor),
-			userInfo: nil,
-			repeats: true
-		)
+		websocketManager.loop.scheduleRepeatedTask(initialDelay: .seconds(0), delay: .milliseconds(100)) { _ in
+			self.checkFocusXCodeEditor()
+		}
 	}
 
-	@objc func checkFocusXCodeEditor() {
+	func checkFocusXCodeEditor() {
 		let editorInFocus = isXCodeEditorInFocus()
 		let appInFocus = isXCodeAppInFocus()
-
-		guard let unwrappedAnonymousClientService = anonymousClientService else {
-			xcodeEditorFocusStatus = editorInFocus
-			xcodeAppFocusStatus = appInFocus
-			return
-		}
 
 		// only send notification if focus has changed
 		if xcodeEditorFocusStatus != editorInFocus {
 			xcodeEditorFocusStatus = editorInFocus
-			unwrappedAnonymousClientService.notifyXCodeEditorFocusStatus(xcodeEditorFocusStatus) { _ in }
+
+			let xCodeFocusStatusChange = XCodeFocusStatusChange(focusElementChange: .editor, isInFocus: editorInFocus)
+			websocketManager.notify(message: xCodeFocusStatusChange)
 		}
 
 		if xcodeAppFocusStatus != appInFocus {
 			xcodeAppFocusStatus = appInFocus
-			unwrappedAnonymousClientService.notifyXCodeAppFocusStatus(xcodeAppFocusStatus) { _ in }
+
+			let xCodeFocusStatusChange = XCodeFocusStatusChange(focusElementChange: .app, isInFocus: editorInFocus)
+			websocketManager.notify(message: xCodeFocusStatusChange)
 		}
 	}
 }

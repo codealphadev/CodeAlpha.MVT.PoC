@@ -9,25 +9,25 @@ class GlobalAXState {
 	var currentFocusedApp: AppInfo?
 	var previousFocusedApp: AppInfo?
 
-	var anonymousClientService: AXClientXPCProtocol?
+	let websocketManager: WebsocketManager
 
-	init() {
+	init(_ wsManager: WebsocketManager) {
+		websocketManager = wsManager
 		updateState()
 		createTimer()
 	}
 
-	public func setXPCService(_ service: AXClientXPCProtocol?) {
-		anonymousClientService = service
+	public func notifyAppFocusStatus() {
+		if let previousApp = previousFocusedApp, let currentApp = currentFocusedApp {
+			let appFocusState = AppFocusState(previousApp: previousApp, currentApp: currentApp)
+			websocketManager.notify(message: appFocusState)
+		}
 	}
 
 	func createTimer() {
-		_ = Timer.scheduledTimer(
-			timeInterval: 0.1,
-			target: self,
-			selector: #selector(updateState),
-			userInfo: nil,
-			repeats: true
-		)
+		websocketManager.loop.scheduleRepeatedTask(initialDelay: .seconds(0), delay: .milliseconds(100)) { _ in
+			self.updateState()
+		}
 	}
 
 	@objc func updateState() {
@@ -61,21 +61,18 @@ class GlobalAXState {
 			previousFocusedApp = currentFocusedApp
 		}
 		// only continue when app has changed
-
 		currentFocusedApp = currentApp
 
 		if let application = previousFocusedApp {
-			if let unwrappedAnonymousClientService = anonymousClientService {
-				unwrappedAnonymousClientService.notifyAppFocusChange(application, currentApp) { _ in
-					self.consoleIO.writeMessage("PreviousApp: \(String(describing: application.name)) CurrentApp: \(String(describing: currentApp.name))")
-				}
-			}
+			let appFocusState = AppFocusState(previousApp: application, currentApp: currentApp)
+			websocketManager.notify(message: appFocusState)
 		}
 
 		// Add observer for app in global focus -- not needed right now but might be useful later
 		guard let unwrappedCurrentUIApp = currentUIApp else { return }
 
 		observerGlobalFocus = unwrappedCurrentUIApp.createObserver { (_: Observer, _: UIElement, _: AXNotification, _: [String: AnyObject]?) in
+			// Closure for when one of the events listed below happens - not implemented yet
 		}
 
 		do {

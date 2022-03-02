@@ -7,7 +7,7 @@
 
 import Foundation
 
-let SUBFOLDER_NAME = "axserver-xpc-logs"
+let SUBFOLDER_NAME = "axserver-logs"
 let LOG_FILE_NAME = "AXServer"
 
 enum OutputType {
