@@ -105,8 +105,8 @@ class XCodeAXState {
 		}
 
 		if let unwrappedXCodeEditorUIElement = lastFocusedXCodeEditorUIElement {
-			if let unwrappedContent: String = try? unwrappedXCodeEditorUIElement.attribute(.value) {
-				websocketManager.notify(message: XCodeEditorContent(content: unwrappedContent))
+			if let message = extractEditorParameters(editorUIElement: unwrappedXCodeEditorUIElement) {
+				websocketManager.notify(message: message)
 			}
 		}
 	}
@@ -188,4 +188,23 @@ class XCodeAXState {
 	//
 	// This method is currently not being used. Git history reveals implementation. Removed here to avoid confusion.
 	func observeEditorContentChanges() {}
+
+	func extractEditorParameters(editorUIElement: UIElement) -> XCodeEditorContent? {
+		// 1. Get the top-level UI Element of the editor (the Text Area)
+		guard let topLevelUIElement = try? editorUIElement.attribute(.topLevelUIElement) as UIElement? else { return nil }
+
+		// 2. Get the Document of the top-level UI Element
+		guard let documentPath = try? topLevelUIElement.attribute(.document) as NSString? else { return nil }
+
+		// 3. Extract the file name from the document path
+		let fileName = documentPath.lastPathComponent
+
+		// 4. Extract the file extension from the fileName
+		guard let fileExtension = fileName.components(separatedBy: ".").last else { return nil }
+
+		// 5. Get value of editorUIElement
+		guard let editorContent = try? editorUIElement.attribute(.value) as String? else { return nil }
+
+		return XCodeEditorContent(fileExtension: fileExtension, fileName: fileName, filePath: documentPath as String, content: editorContent)
+	}
 }

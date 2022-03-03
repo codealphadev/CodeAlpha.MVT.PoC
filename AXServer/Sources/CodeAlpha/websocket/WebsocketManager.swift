@@ -16,6 +16,11 @@ class WebsocketManager {
   }
 
   func notify<T: Codable>(message: T) {
+    // Debug
+    let data = try! JSONEncoder().encode(message)
+    print("\(String(decoding: data, as: UTF8.self))\n")
+    // /Debug
+
     let connectedClients = clients.active.compactMap { $0 as WebsocketClient }
     guard !connectedClients.isEmpty else {
       return
