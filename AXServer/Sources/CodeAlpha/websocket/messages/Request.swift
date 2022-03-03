@@ -1,12 +1,12 @@
 import Foundation
 
 enum RequestType: String, Codable {
-  case getXCodeEditorContent
-  case updateXCodeEditorContent
-  case getXCodeFocusStatus
-  case getAppFocusState
+  case GetXCodeEditorContent
+  case UpdateXCodeEditorContent
+  case GetXCodeFocusStatus
+  case GetAppFocusState
 }
 
 struct Request: Codable {
-  let type: RequestType
+  let requestType: RequestType
 }

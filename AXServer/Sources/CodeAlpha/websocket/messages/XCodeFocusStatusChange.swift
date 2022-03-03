@@ -1,8 +1,8 @@
 import Foundation
 
 enum XCodeFocusElement: String, Codable {
-  case editor
-  case app
+  case Editor
+  case App
 }
 
 struct XCodeFocusStatusChange: Codable {

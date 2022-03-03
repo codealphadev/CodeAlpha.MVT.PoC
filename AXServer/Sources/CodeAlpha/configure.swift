@@ -27,12 +27,12 @@ public func configure(_ app: Application) throws {
 			}
 
 			if let msg = buffer.decodeWebsocketMessage(Request.self) {
-				switch msg.data.type {
-				case .getXCodeEditorContent:
+				switch msg.data.requestType {
+				case .GetXCodeEditorContent:
 					xCodeAXState.notifyEditorContent()
-				case .getXCodeFocusStatus:
+				case .GetXCodeFocusStatus:
 					xCodeAXState.notifyXCodeFocusStatus()
-				case .getAppFocusState:
+				case .GetAppFocusState:
 					globalAXState.notifyAppFocusStatus()
 				default:
 					break

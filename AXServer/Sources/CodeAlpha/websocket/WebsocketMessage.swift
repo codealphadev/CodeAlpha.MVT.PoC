@@ -7,6 +7,8 @@ struct WebsocketMessage<T: Codable>: Codable {
 
 extension ByteBuffer {
   func decodeWebsocketMessage<T: Codable>(_: T.Type) -> WebsocketMessage<T>? {
-    return try? JSONDecoder().decode(WebsocketMessage<T>.self, from: self)
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    return try? decoder.decode(WebsocketMessage<T>.self, from: self)
   }
 }
