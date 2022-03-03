@@ -123,51 +123,51 @@ class AXServerCompanion {
   }
 
   func getFocus() {
-    guard let unwrappedService = service else {
-      consoleIO.writeMessage("Service not available", to: .error)
-      return
-    }
+    // guard let unwrappedService = service else {
+    //   consoleIO.writeMessage("Service not available", to: .error)
+    //   return
+    // }
 
-    unwrappedService.getXCodeAppFocusStatus { focused in
-      if focused {
-        self.consoleIO.writeMessage("XCode is focused.")
-      } else {
-        self.consoleIO.writeMessage("XCode is not focused.")
-      }
-    }
+    // unwrappedService.getXCodeAppFocusStatus { focused in
+    //   if focused {
+    //     self.consoleIO.writeMessage("XCode is focused.")
+    //   } else {
+    //     self.consoleIO.writeMessage("XCode is not focused.")
+    //   }
+    // }
   }
 
   func getContent() {
-    guard let unwrappedService = service else {
-      consoleIO.writeMessage("Service not available", to: .error)
-      return
-    }
+    // guard let unwrappedService = service else {
+    //   consoleIO.writeMessage("Service not available", to: .error)
+    //   return
+    // }
 
-    unwrappedService.getXCodeEditorContent { content in
-      if let unwrappedContent = content {
-        self.consoleIO.writeMessage("The content of the focused editor is: \n\n '\(unwrappedContent)'")
-      } else {
-        self.consoleIO.writeMessage("The content of the focused editor could not be fetched.")
-      }
-    }
+    // unwrappedService.getXCodeEditorContent { content in
+    //   if let unwrappedContent = content {
+    //     self.consoleIO.writeMessage("The content of the focused editor is: \n\n '\(unwrappedContent)'")
+    //   } else {
+    //     self.consoleIO.writeMessage("The content of the focused editor could not be fetched.")
+    //   }
+    // }
   }
 
   func updateContent() {
-    guard let unwrappedService = service else {
-      consoleIO.writeMessage("Service not available", to: .error)
-      return
-    }
+    // guard let unwrappedService = service else {
+    //   consoleIO.writeMessage("Service not available", to: .error)
+    //   return
+    // }
 
-    consoleIO.writeMessage("Type the text to be sent to the editor:")
-    let updateText = consoleIO.getInput()
+    // consoleIO.writeMessage("Type the text to be sent to the editor:")
+    // let updateText = consoleIO.getInput()
 
-    unwrappedService.updateXCodeEditorContent(updateText) { content in
-      if let unwrappedContent = content {
-        self.consoleIO.writeMessage("The content of the focused editor is: \n\n '\(unwrappedContent)' \n\n")
-      } else {
-        self.consoleIO.writeMessage("The content of the focused editor could not be fetched.")
-      }
-    }
+    // unwrappedService.updateXCodeEditorContent(updateText) { content in
+    //   if let unwrappedContent = content {
+    //     self.consoleIO.writeMessage("The content of the focused editor is: \n\n '\(unwrappedContent)' \n\n")
+    //   } else {
+    //     self.consoleIO.writeMessage("The content of the focused editor could not be fetched.")
+    //   }
+    // }
   }
 
   func stopAnonymousListener() {
