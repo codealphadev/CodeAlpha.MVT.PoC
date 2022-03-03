@@ -20,8 +20,7 @@ fn main() {
 
     socket
         .write_message(tungstenite::Message::Binary(
-            "{\"client\":\"C13C2DA9-13FA-4BA6-A361-61488AC5B66A\",\"data\":{\"connect\":true}}"
-                .into(),
+            r#"{"client":"C13C2DA9-13FA-4BA6-A361-61488AC5B66A","data":{"connect":true}}"#.into(),
         ))
         .unwrap();
 
