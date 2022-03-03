@@ -13,3 +13,8 @@
 * [02.03.2022]: Websocket URL (ws://127.0.0.1:8080/channel) is still hard coded. We might change it to be set via CLI arguments
 * [02.03.2022]: No TLS via websocket
 * [02.03.2022]: No authentication
+
+## Troubleshooting
+* Problem: `bind(descriptor:ptr:bytes:): Address already in use (errno: 48)`
+  
+  Solution: Running `lsof -i :8080` and killing the process with `kill {PID of the porcess}` 
