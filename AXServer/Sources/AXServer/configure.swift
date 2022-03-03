@@ -4,11 +4,11 @@ import Vapor
 public func configure(_ app: Application) throws {
 	app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
-	// Register AppDelegate to interact with AX features
-	let appDelegate = AppDelegate()
-	let application = NSApplication.shared
-	application.setActivationPolicy(NSApplication.ActivationPolicy.accessory)
-	application.delegate = appDelegate
+	// // Register AppDelegate to interact with AX features
+	// let appDelegate = AppDelegate()
+	// let application = NSApplication.shared
+	// application.setActivationPolicy(NSApplication.ActivationPolicy.accessory)
+	// application.delegate = appDelegate
 
 	// Spin up websocket manager; manages all connected clients
 	let websocketManager = WebsocketManager(eventLoop: app.eventLoopGroup.next())
@@ -42,10 +42,9 @@ public func configure(_ app: Application) throws {
 			if let msg = buffer.decodeWebsocketMessage(XCodeEditorContent.self) {
 				xCodeAXState.updateEditorContent(msg.data.content)
 			}
-
-			ws.onText { ws, _ in
-				ws.send("pong")
-			}
+		}
+		ws.onText { ws, _ in
+			ws.send("pong")
 		}
 	}
 }

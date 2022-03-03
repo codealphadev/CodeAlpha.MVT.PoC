@@ -18,6 +18,8 @@ sigint.setEventHandler {
 
 sigint.resume()
 
+_ = NSApplication.shared
+
 if UIElement.isProcessTrusted(withPrompt: true) {
 	var env = try Environment.detect()
 	try LoggingSystem.bootstrap(from: &env)
