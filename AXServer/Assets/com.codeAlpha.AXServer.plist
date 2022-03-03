@@ -5,15 +5,15 @@
         <key>Label</key>
         <string>com.codeAlpha.AXServer</string>
         <key>Program</key>
-        <string>/Users/adrian/Developer/CodeAlpha.MVT.PoC/AXServer/.build/debug/AXServer</string>
-        <key>RunAtLoad</key>
-        <true/>
+        <string>/Users/adrian/Developer/CodeAlpha.MVT.PoC/AXServer/.build/debug/CodeAlpha</string>
         <key>KeepAlive</key>
         <dict>
+            <key>SuccessfulExit</key>
+            <false/>
             <key>Crashed</key>
             <true/>
         </dict>
         <key>ThrottleInterval</key>
-        <integer>10s</integer>
+        <integer>10</integer>
     </dict>
 </plist>
