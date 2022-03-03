@@ -13,7 +13,6 @@ class GlobalAXState {
 
 	init(_ wsManager: WebsocketManager) {
 		websocketManager = wsManager
-		updateState()
 		createTimer()
 	}
 
@@ -30,29 +29,25 @@ class GlobalAXState {
 		}
 	}
 
-	@objc func updateState() {
-		var focusedWindow: UIElement?
+	func updateState() {
 		var currentAppPID: Int32 = 0
-
 		do {
-			focusedWindow = try systemWideElement.attribute(.focusedUIElement) as UIElement?
-			guard let window = focusedWindow else {
-				// consoleIO.writeMessage("Error: Could not read UIElement of focused window", to: .error)
-				return
-			}
+			guard let window = try systemWideElement.attribute(.focusedUIElement) as UIElement? else { return }
 			currentAppPID = try window.pid()
-
 		} catch {
 			consoleIO.writeMessage("Error: Could not read focused window: \(error)", to: .error)
 			return
 		}
 
-		let currentUIApp = Application(forProcessID: currentAppPID)
+		// Seemingly NSWorkspace.shared.frontmostApplication does NOT give us the correct Application,
+		// presumably because we don't run the app in the main thread 🤷‍♂️
+		let appForPid = NSWorkspace.shared.runningApplications.first { $0.processIdentifier == currentAppPID }
+
 		let currentApp = AppInfo(
-			bundleId: NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "unknown",
-			name: NSWorkspace.shared.frontmostApplication?.localizedName ?? "unknown",
+			bundleId: appForPid?.bundleIdentifier ?? "unknown",
+			name: appForPid?.localizedName ?? "unknown",
 			pid: currentAppPID,
-			isFinishedLaunching: NSWorkspace.shared.frontmostApplication?.isFinishedLaunching ?? false
+			isFinishedLaunching: appForPid?.isFinishedLaunching ?? false
 		)
 
 		if currentFocusedApp?.pid == currentApp.pid {
@@ -63,25 +58,6 @@ class GlobalAXState {
 		// only continue when app has changed
 		currentFocusedApp = currentApp
 
-		if let application = previousFocusedApp {
-			let appFocusState = AppFocusState(previousApp: application, currentApp: currentApp)
-			websocketManager.notify(message: appFocusState)
-		}
-
-		// Add observer for app in global focus -- not needed right now but might be useful later
-		guard let unwrappedCurrentUIApp = currentUIApp else { return }
-
-		observerGlobalFocus = unwrappedCurrentUIApp.createObserver { (_: Observer, _: UIElement, _: AXNotification, _: [String: AnyObject]?) in
-			// Closure for when one of the events listed below happens - not implemented yet
-		}
-
-		do {
-			try observerGlobalFocus!.addNotification(.windowCreated, forElement: unwrappedCurrentUIApp)
-			try observerGlobalFocus!.addNotification(.mainWindowChanged, forElement: unwrappedCurrentUIApp)
-			try observerGlobalFocus!.addNotification(.moved, forElement: unwrappedCurrentUIApp)
-			try observerGlobalFocus!.addNotification(.focusedWindowChanged, forElement: unwrappedCurrentUIApp)
-		} catch {
-			consoleIO.writeMessage("Error: Could not add notifications: \(error)", to: .error)
-		}
+		notifyAppFocusStatus()
 	}
 }
