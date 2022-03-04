@@ -1,6 +1,6 @@
-use serde::de;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum RequestType {
     GetXCodeEditorContent(String),
     UpdateXCodeEditorContent(String),
@@ -8,7 +8,7 @@ pub enum RequestType {
     GetAppFocusState(String),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Request {
     pub request_type: RequestType,

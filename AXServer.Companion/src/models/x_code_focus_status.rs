@@ -1,7 +1,8 @@
-use serde::de;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+use super::XCodeFocusStatusChange;
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct XCodeFocusStatus {
     pub app_status: XCodeFocusStatusChange,

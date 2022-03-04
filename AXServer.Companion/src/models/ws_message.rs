@@ -1,9 +1,8 @@
-use serde::de;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WebsocketMessage<T> {
     pub client: Uuid,

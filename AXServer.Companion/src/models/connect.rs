@@ -1,7 +1,6 @@
-use serde::de;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Connect {
     pub connect: bool,

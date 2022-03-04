@@ -1,12 +1,12 @@
-use serde::de;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum XCodeFocusElement {
     Editor(String),
     App(String),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct XCodeFocusStatusChange {
     pub focus_element_change: XCodeFocusElement,
