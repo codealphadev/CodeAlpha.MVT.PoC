@@ -3,6 +3,11 @@
 use tungstenite::connect;
 use url::Url;
 
+pub use models::{
+    AppFocusState, AppInfo, Connect, Request, WebsocketMessage, XCodeEditorContent,
+    XCodeFocusStatus, XCodeFocusStatusChange,
+};
+
 mod models;
 
 static AX_SERVER_URL: &str = "ws://127.0.0.1:8080";
