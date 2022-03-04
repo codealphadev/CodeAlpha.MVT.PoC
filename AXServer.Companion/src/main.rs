@@ -3,12 +3,10 @@
 use tungstenite::connect;
 use url::Url;
 
-pub use models::{
-    AppFocusState, AppInfo, Connect, Request, WebsocketMessage, XCodeEditorContent,
-    XCodeFocusStatus, XCodeFocusStatusChange,
-};
+pub use messages::AXServerEvents;
+pub use messages::Request;
 
-mod models;
+mod messages;
 
 static AX_SERVER_URL: &str = "ws://127.0.0.1:8080";
 fn main() {
@@ -31,6 +29,7 @@ fn main() {
 
     loop {
         let msg = socket.read_message().expect("Error reading message");
+
         print!("{}", msg);
     }
 }
