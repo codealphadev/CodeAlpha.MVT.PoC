@@ -21,26 +21,25 @@ public func configure(_ app: Application) throws {
 	app.webSocket("channel") { _, ws in
 
 		ws.onBinary { _, buffer in
-			if let msg = buffer.decodeWebsocketMessage(Connect.self) {
-				let wsClient = WebsocketClient(id: msg.client, socket: ws)
-				websocketManager.connect(client: wsClient)
-			}
+			print(buffer.getString(at: 0, length: 120))
 
 			if let msg = buffer.decodeWebsocketMessage(Request.self) {
+				print(msg)
 				switch msg.data.requestType {
+				case let .Connect(connectStatus):
+					if connectStatus.connect {
+						let wsClient = WebsocketClient(id: msg.client, socket: ws)
+						websocketManager.connect(client: wsClient)
+					}
 				case .GetXCodeEditorContent:
 					xCodeAXState.notifyEditorContent()
 				case .GetXCodeFocusStatus:
 					xCodeAXState.notifyXCodeFocusStatus()
 				case .GetAppFocusState:
 					globalAXState.notifyAppFocusStatus()
-				default:
-					break
+				case let .UpdateXCodeEditorContent(editorContent):
+					xCodeAXState.updateEditorContent(editorContent.content)
 				}
-			}
-
-			if let msg = buffer.decodeWebsocketMessage(XCodeEditorContent.self) {
-				xCodeAXState.updateEditorContent(msg.data.content)
 			}
 		}
 		ws.onText { ws, _ in

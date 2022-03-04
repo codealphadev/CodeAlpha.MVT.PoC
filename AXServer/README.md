@@ -5,6 +5,10 @@
 2. Build the project: `swift build`
 3. Execute `sh Assets/updateDaemon.sh` to load `*plist` file to `launchd`. This registers this service to be launched at user login. 
 4. Check if the daemon runs without errors (for now...): `launchctl list | grep codeAlpha`. If there is an error, go investigate. 🤓
+5. Establish connection by sending a connect message to `ws://127.0.0.1:8080`:
+   ```
+   {Request: {"client":"C13C2DA8-13FA-4BA6-A361-61488AC5B66A","data":{"connect":true}}}
+   ```
 
 ## Accepted Constraints
 
