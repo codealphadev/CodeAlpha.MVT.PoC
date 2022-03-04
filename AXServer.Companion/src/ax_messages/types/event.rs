@@ -1,14 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-pub use models::{
-    AppFocusState, AppInfo, XCodeEditorContent, XCodeFocusStatus, XCodeFocusStatusChange,
+pub use super::super::models::{
+    AppFocusState, XCodeEditorContent, XCodeFocusStatus, XCodeFocusStatusChange,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum AXServerEvents {
+#[serde(tag = "type")]
+pub enum Event {
     AppFocusState(AppFocusState),
-    AppInfo(AppInfo),
     XCodeEditorContent(XCodeEditorContent),
     XCodeFocusStatus(XCodeFocusStatus),
     XCodeFocusStatusChange(XCodeFocusStatusChange),

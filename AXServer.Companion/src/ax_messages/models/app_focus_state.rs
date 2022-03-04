@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::AppInfo;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AppFocusState {
     pub previous_app: AppInfo,
