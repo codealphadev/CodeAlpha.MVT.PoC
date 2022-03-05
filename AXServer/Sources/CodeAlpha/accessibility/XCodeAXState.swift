@@ -106,7 +106,7 @@ class XCodeAXState {
 
 		if let unwrappedXCodeEditorUIElement = lastFocusedXCodeEditorUIElement {
 			if let message = extractEditorParameters(editorUIElement: unwrappedXCodeEditorUIElement) {
-				websocketManager.notify(message: message)
+				websocketManager.notify(message: Event(eventType: .XCodeEditorContent, payload: message))
 			}
 		}
 	}
@@ -115,7 +115,7 @@ class XCodeAXState {
 		let appFocusStatus = XCodeFocusStatusChange(focusElementChange: .App, isInFocus: isXCodeAppInFocus())
 		let editorFocusStatus = XCodeFocusStatusChange(focusElementChange: .Editor, isInFocus: isXCodeEditorInFocus())
 
-		websocketManager.notify(message: XCodeFocusStatus(appStatus: appFocusStatus, editorStatus: editorFocusStatus))
+		websocketManager.notify(message: Event(eventType: .XCodeFocusStatus, payload: XCodeFocusStatus(appStatus: appFocusStatus, editorStatus: editorFocusStatus)))
 	}
 
 	public func notifyXCodeFocusChange() {
@@ -127,14 +127,14 @@ class XCodeAXState {
 			xcodeEditorFocusStatus = editorInFocus
 
 			let xCodeFocusStatusChange = XCodeFocusStatusChange(focusElementChange: .Editor, isInFocus: editorInFocus)
-			websocketManager.notify(message: xCodeFocusStatusChange)
+			websocketManager.notify(message: Event(eventType: .XCodeFocusStatusChange, payload: xCodeFocusStatusChange))
 		}
 
 		if xcodeAppFocusStatus != appInFocus {
 			xcodeAppFocusStatus = appInFocus
 
 			let xCodeFocusStatusChange = XCodeFocusStatusChange(focusElementChange: .App, isInFocus: editorInFocus)
-			websocketManager.notify(message: xCodeFocusStatusChange)
+			websocketManager.notify(message: Event(eventType: .XCodeFocusStatusChange, payload: xCodeFocusStatusChange))
 		}
 	}
 

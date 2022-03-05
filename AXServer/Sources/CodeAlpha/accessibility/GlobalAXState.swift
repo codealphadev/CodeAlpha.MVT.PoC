@@ -19,7 +19,7 @@ class GlobalAXState {
 	public func notifyAppFocusStatus() {
 		if let previousApp = previousFocusedApp, let currentApp = currentFocusedApp {
 			let appFocusState = AppFocusState(previousApp: previousApp, currentApp: currentApp)
-			websocketManager.notify(message: appFocusState)
+			websocketManager.notify(message: Event(eventType: .AppFocusState, payload: appFocusState))
 		}
 	}
 
