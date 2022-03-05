@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::types::{Event, Request, Response};
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum Message {
     Event(Event),
     Request(Request),

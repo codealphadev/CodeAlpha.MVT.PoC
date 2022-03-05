@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum XCodeFocusElement {
-    Editor(String),
-    App(String),
+    Editor,
+    App,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

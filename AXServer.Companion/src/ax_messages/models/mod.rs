@@ -3,6 +3,7 @@ pub use app_info::AppInfo;
 pub use connect::Connect;
 pub use x_code_editor_content::XCodeEditorContent;
 pub use x_code_focus_status::XCodeFocusStatus;
+pub use x_code_focus_status_change::XCodeFocusElement;
 pub use x_code_focus_status_change::XCodeFocusStatusChange;
 
 pub mod app_focus_state;

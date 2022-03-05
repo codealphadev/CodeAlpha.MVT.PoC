@@ -5,7 +5,7 @@ pub use super::super::models::{
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "type")]
+#[serde(tag = "event", content = "payload")]
 pub enum Event {
     AppFocusState(AppFocusState),
     XCodeEditorContent(XCodeEditorContent),
