@@ -16,10 +16,8 @@ use url::Url;
 use uuid::Uuid;
 
 // Project Imports
-use crate::ax_messages::message::Message;
-use crate::ax_messages::types::request::Connect;
-use crate::ax_messages::types::Request;
-use crate::ws_message::WebsocketMessage;
+use super::accessibility_messages;
+use super::websocket_message::WebsocketMessage;
 
 pub struct WebsocketClient {
     pub url: Url,
@@ -38,6 +36,7 @@ impl WebsocketClient {
         Self { url, client_id }
     }
 
+    #[allow(dead_code)]
     pub async fn reconnect(&mut self, url: Url) {
         self.url = url;
         let ws_stream = Self::connect(&self.url).await;
@@ -62,8 +61,12 @@ impl WebsocketClient {
         let (stdin_tx, stdin_rx) = futures_channel::mpsc::unbounded();
 
         // Attempt connection to server
-        let payload: Connect = Connect { connect: true };
-        let ws_message = WebsocketMessage::from_request(Request::Connect(payload), client_id);
+        let payload: accessibility_messages::models::Connect =
+            accessibility_messages::models::Connect { connect: true };
+        let ws_message = WebsocketMessage::from_request(
+            accessibility_messages::types::Request::Connect(payload),
+            client_id,
+        );
         stdin_tx
             .unbounded_send(tungstenite::Message::binary(
                 serde_json::to_vec(&ws_message).unwrap(),
@@ -78,7 +81,7 @@ impl WebsocketClient {
         let ws_to_stdout = {
             stream_read.for_each(|message| async {
                 let data = message.unwrap().into_text().unwrap();
-                let parsed_msg: WebsocketMessage<Message> =
+                let parsed_msg: WebsocketMessage<accessibility_messages::Message> =
                     serde_json::from_str(&data.to_string()).unwrap();
 
                 // DEBUG

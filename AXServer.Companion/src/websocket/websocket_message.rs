@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::ax_messages::types::{Event, Request, Response};
-use crate::ax_messages::Message;
+use super::accessibility_messages::types::{Event, Request, Response};
+use super::accessibility_messages::Message;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]

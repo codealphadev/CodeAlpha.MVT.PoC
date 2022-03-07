@@ -1,7 +1,6 @@
-mod ax_messages;
-mod ws_message;
+use websocket::websocket_client;
 
-pub mod websocket_client;
+mod websocket;
 
 static AX_SERVER_URL: &str = "ws://127.0.0.1:8080/channel";
 
