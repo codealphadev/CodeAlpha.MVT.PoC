@@ -17,12 +17,15 @@ class WebsocketManager {
 
   func notify<T: Codable>(message: T) {
     // Debug
-    // let debugWsMessage = WebsocketMessage<Request<Connect>>(client: UUID(), data: Request<Connect>(requestType: .Connect, payload: Connect(connect: true)))
+    // let debugWsMessage = WebsocketMessage<Request<String>>(client: UUID(), data: Request<String>(requestType: .GetXCodeEditorContent, payload: nil))
     // let data2 = try! JSONEncoder().encode(debugWsMessage)
     // print("\(String(decoding: data2, as: UTF8.self))\n")
-
-    let data = try! JSONEncoder().encode(message)
-    print("\(String(decoding: data, as: UTF8.self))\n")
+    do {
+      let data = try JSONEncoder().encode(message)
+      consoleIO.writeMessage("\(String(decoding: data, as: UTF8.self))\n")
+    } catch {
+      // Do nothing
+    }
     // /Debug
 
     let connectedClients = clients.active.compactMap { $0 as WebsocketClient }
