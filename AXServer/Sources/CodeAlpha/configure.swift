@@ -18,36 +18,34 @@ public func configure(_ app: Application) throws {
 
 			// Case: Request<Connect>
 			if let msg = buffer.decodeWebsocketMessage(Request<Connect>.self) {
-				print(msg)
-
-				if msg.data.payload.connect {
-					let wsClient = WebsocketClient(id: msg.client, socket: ws)
-					websocketManager.connect(client: wsClient)
+				if let payload = msg.data.payload {
+					if payload.connect {
+						let wsClient = WebsocketClient(id: msg.client, socket: ws)
+						websocketManager.connect(client: wsClient)
+					}
 				}
 			}
 
 			// Case: Request<GetXCodeEditorContent>
-			if buffer.decodeWebsocketMessage(Request<XCodeEditorContent>.self) != nil {
-				xCodeAXState.notifyEditorContent()
+			if let msg = buffer.decodeWebsocketMessage(Request<String>.self) {
+				switch msg.data.requestType {
+				case .GetXCodeEditorContent:
+					xCodeAXState.notifyEditorContent()
+				case .GetXCodeFocusStatus:
+					xCodeAXState.notifyXCodeFocusStatus()
+				case .GetAppFocusState:
+					globalAXState.notifyAppFocusStatus()
+				default:
+					break
+				}
 			}
 
 			// Case: Request<UpdateXCodeEditorContent>
 			if let msg = buffer.decodeWebsocketMessage(Request<XCodeEditorContent>.self) {
-				xCodeAXState.updateEditorContent(msg.data.payload.content)
+				if let payload = msg.data.payload {
+					xCodeAXState.updateEditorContent(payload.content)
+				}
 			}
-
-			// Case: Request<GetXCodeFocusStatus>
-			if buffer.decodeWebsocketMessage(Request<XCodeFocusStatus>.self) != nil {
-				xCodeAXState.notifyXCodeFocusStatus()
-			}
-
-			// Case: Request<GetAppFocusState>
-			if buffer.decodeWebsocketMessage(Request<AppFocusState>.self) != nil {
-				globalAXState.notifyAppFocusStatus()
-			}
-		}
-		ws.onText { ws, _ in
-			ws.send("pong")
 		}
 	}
 }
