@@ -6,9 +6,9 @@ pub use super::super::models::{Connect, XCodeEditorContent};
 #[serde(tag = "request", content = "payload")]
 pub enum Request {
     Connect(Connect),
-    GetXCodeEditorContent(String),
+    GetXCodeEditorContent,
     UpdateXCodeEditorContent(XCodeEditorContent),
-    GetXCodeFocusStatus(String),
-    GetAppFocusState(String),
+    GetXCodeFocusStatus,
+    GetAppFocusState,
     None,
 }
