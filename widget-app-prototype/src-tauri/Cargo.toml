@@ -12,10 +12,10 @@ rust-version = "1.57"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.0.0-rc.3", features = [] }
+tauri-build = { version = "1.0.0-rc.3", features = ["isolation"] }
 
 [dependencies]
-tauri = { version = "1.0.0-rc.3", features = ["api-all"] }
+tauri = { version = "1.0.0-rc.3", features = ["api-all", "isolation"] }
 
 futures-util = "0.3"
 futures-channel = "0.3"
