@@ -3,25 +3,23 @@
     windows_subsystem = "windows"
 )]
 
-use websocket::websocket_client;
+use plugins::websocket_plugin;
 
+mod plugins;
 mod websocket;
-
-static AX_SERVER_URL: &str = "ws://127.0.0.1:8080/channel";
 
 #[tokio::main]
 async fn main() {
     tauri::async_runtime::set(tokio::runtime::Handle::current());
-
-    tauri::Builder::default()
-        .setup(|app| {
-            let handle = app.handle();
-            tokio::spawn(async move {
-                websocket_client::WebsocketClient::new(AX_SERVER_URL, handle).await;
-            });
-
-            Ok(())
-        })
-        .run(tauri::generate_context!())
+    let app: tauri::App = tauri::Builder::default()
+        .plugin(websocket_plugin::init())
+        .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
+
+    app.run(|_app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { api, .. } => {
+            api.prevent_exit();
+        }
+        _ => {}
+    });
 }
