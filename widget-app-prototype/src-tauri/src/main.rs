@@ -4,15 +4,17 @@
 )]
 
 use plugins::websocket_plugin;
+use utils::xcode_twin::XCodeTwin;
 
 mod plugins;
+mod utils;
 mod websocket;
 
 #[tokio::main]
 async fn main() {
-    tauri::async_runtime::set(tokio::runtime::Handle::current());
     let app: tauri::App = tauri::Builder::default()
         .plugin(websocket_plugin::init())
+        .manage(XCodeTwin::new())
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
 
