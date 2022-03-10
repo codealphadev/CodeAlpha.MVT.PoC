@@ -5,6 +5,7 @@ import tauriWord from "./wordmark.svg";
 import "./App.css";
 
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/tauri";
 import { sendNotification } from "@tauri-apps/api/notification";
 
 function App() {
@@ -16,6 +17,8 @@ function App() {
 				sendNotification(JSON.stringify(event.event));
 			});
 		};
+
+		invoke("plugin:awesome|register_again");
 
 		// call the function
 		listenToGlobalEvents()
