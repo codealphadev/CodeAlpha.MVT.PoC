@@ -1,1 +1,1 @@
-pub mod websocket_plugin;
+pub mod xcode_state_plugin;
