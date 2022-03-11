@@ -26,6 +26,24 @@ fn register_again<R: Runtime>(_handle: tauri::AppHandle<R>, state: tauri::State<
 
         print!("This works without multi threading! \n {} \n", print_str);
     }
+
+    if let Some(recent_message) = state.get_state_xcode_editor_content() {
+        let print_str = serde_json::to_string(&recent_message).unwrap();
+
+        print!("This works without multi threading! \n {} \n", print_str);
+    }
+
+    if let Some(recent_message) = state.get_state_global_app_focus() {
+        let print_str = serde_json::to_string(&recent_message).unwrap();
+
+        print!("This works without multi threading! \n {} \n", print_str);
+    }
+
+    if let Some(recent_message) = state.get_state_xcode_focus_state() {
+        let print_str = serde_json::to_string(&recent_message).unwrap();
+
+        print!("This works without multi threading! \n {} \n", print_str);
+    }
 }
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
