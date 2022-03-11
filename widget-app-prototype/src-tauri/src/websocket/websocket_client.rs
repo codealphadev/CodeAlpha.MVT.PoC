@@ -24,14 +24,12 @@ use super::accessibility_messages;
 use super::websocket_message::WebsocketMessage;
 
 pub async fn connect_to_ax_server(
-    url_string: &str,
+    url: url::Url,
+    client_id: Uuid,
     event_sink: futures_channel::mpsc::UnboundedSender<Message>,
     channel_sender: futures_channel::mpsc::UnboundedSender<Message>,
     channel_receiver: futures_channel::mpsc::UnboundedReceiver<Message>,
 ) {
-    let url = url::Url::parse(&url_string).expect("No valid URL path provided.");
-    let client_id = Uuid::new_v4();
-
     // 0. Establish connection to websocket server.
     // Returns a stream which we map to channels for sending and receiving messages.
     let (ws_stream, _) = tokio_tungstenite::connect_async(url)

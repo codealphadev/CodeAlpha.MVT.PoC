@@ -3,18 +3,22 @@
     windows_subsystem = "windows"
 )]
 
-use plugins::websocket_plugin;
+use plugins::xcode_state_plugin;
 use utils::xcode_twin::XCodeTwin;
 
 mod plugins;
 mod utils;
 mod websocket;
 
+static DEFAULT_AX_URL: &str = "ws://127.0.0.1:8080/channel";
+
 #[tokio::main]
 async fn main() {
+    let url = url::Url::parse(&DEFAULT_AX_URL).expect("No valid URL path provided.");
+
     let app: tauri::App = tauri::Builder::default()
-        .plugin(websocket_plugin::init())
-        .manage(XCodeTwin::new())
+        .plugin(xcode_state_plugin::init())
+        .manage(XCodeTwin::new(url))
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
 

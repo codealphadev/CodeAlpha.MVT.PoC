@@ -1,14 +1,13 @@
 use serde::Serialize;
-use std::fmt::format;
 use std::sync::Arc;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::websocket::accessibility_messages::models;
-use crate::websocket::accessibility_messages::types::Event;
 use crate::websocket::websocket_message::WebsocketMessage;
 use crate::websocket::{accessibility_messages, websocket_client};
+use tokio_tungstenite::tungstenite;
 
 // How we do this:
 // ======
@@ -30,12 +29,14 @@ pub struct XCodeTwin {
     state_xcode_app_focus_state: Arc<Mutex<Option<models::XCodeFocusStatusChange>>>,
 
     tauri_app_handle: Option<AppHandle>,
+
+    client_id: uuid::Uuid,
 }
 
 #[allow(dead_code)]
 
 impl XCodeTwin {
-    pub fn new() -> Self {
+    pub fn new(url: url::Url) -> Self {
         // Establish connection to Accessibility Server
         // ============================================
 
@@ -48,9 +49,12 @@ impl XCodeTwin {
 
         // Spawn connection to Accessibility Server from a separate thread
         let ax_sender = accessibility_event_sender.clone();
+        let client_id = uuid::Uuid::new_v4();
+
         tokio::spawn(async move {
             websocket_client::connect_to_ax_server(
-                "ws://127.0.0.1:8080/channel",
+                url,
+                client_id,
                 tauri_event_sender,
                 ax_sender,
                 accessibility_event_receiver,
@@ -145,6 +149,7 @@ impl XCodeTwin {
             state_xcode_editor_focus_state,
             state_xcode_app_focus_state,
             tauri_app_handle,
+            client_id,
         }
     }
 
@@ -153,8 +158,15 @@ impl XCodeTwin {
         *locked_val = Some(new_val.clone());
     }
 
-    pub fn send_generic_message(&self, message: Message) {
+    fn send_generic_message(&self, message: Message) {
         let _result = self.accessibility_event_sender.unbounded_send(message);
+    }
+
+    // Reconnect happens by resetting the XCodeTwin -> removes all previous state
+    pub fn reconnect(&self, url_path: &str, port: &str) -> Self {
+        let url =
+            url::Url::parse(&format!("{}{}", url_path, port)).expect("No valid URL path provided.");
+        Self::new(url)
     }
 
     pub fn get_state_recent_message(
@@ -191,5 +203,23 @@ impl XCodeTwin {
         } else {
             return None;
         }
+    }
+
+    pub fn update_xcode_editor_content(&self, new_content: &str) {
+        let content_update = models::XCodeEditorContent {
+            content: new_content.to_string(),
+            file_extension: "".to_string(),
+            file_name: "".to_string(),
+            file_path: "".to_string(),
+        };
+
+        let ws_message = WebsocketMessage::from_request(
+            accessibility_messages::types::Request::UpdateXCodeEditorContent(content_update),
+            self.client_id,
+        );
+
+        self.send_generic_message(tungstenite::Message::binary(
+            serde_json::to_vec(&ws_message).unwrap(),
+        ));
     }
 }
