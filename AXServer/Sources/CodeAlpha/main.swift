@@ -17,7 +17,7 @@ sigint.setEventHandler {
 }
 
 sigint.resume()
-
+ 
 // Register AppDelegate to interact with AX features
 let appDelegate = AppDelegate()
 let application = NSApplication.shared
@@ -30,7 +30,7 @@ try LoggingSystem.bootstrap(from: &env)
 let app = Application(env)
 defer { app.shutdown() }
 try configure(app)
-
+ 
 // Quit the app if Accessibility API permissions are not granted.
 // Because this is an launchd agent, we configured to attempt restart after 10 seconds
 guard UIElement.isProcessTrusted(withPrompt: true) else {

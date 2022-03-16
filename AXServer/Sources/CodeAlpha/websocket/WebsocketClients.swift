@@ -23,7 +23,7 @@ open class WebsocketClients {
 
   func find(_ uuid: UUID) -> WebsocketClient? {
     storage[uuid]
-  }
+  } 
 
   deinit {
     let futures = self.storage.values.map { $0.socket.close() }

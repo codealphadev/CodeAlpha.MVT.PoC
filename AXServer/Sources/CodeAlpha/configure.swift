@@ -18,7 +18,7 @@ public func configure(_ app: Application) throws {
 
 			// Case: Request<Connect>
 			if let msg = buffer.decodeWebsocketMessage(Request<Connect>.self) {
-				if let payload = msg.data.payload {
+                if let payload = msg.data.payload {
 					if payload.connect {
 						let wsClient = WebsocketClient(id: msg.client, socket: ws)
 						websocketManager.connect(client: wsClient)
