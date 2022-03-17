@@ -13,6 +13,7 @@ mod websocket;
 
 static DEFAULT_AX_URL: &str = "ws://127.0.0.1:8080/channel";
 
+#[allow(deprecated)]
 #[tauri::command]
 fn open_settings_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
     let _ = handle.create_window(
@@ -80,13 +81,12 @@ fn toggle_content_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
 
 #[tauri::command]
 fn resize_content_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>, size_x: u32, size_y: u32) {
-    println!("Resize content window to {}x{}", size_x, size_y);
     let content_window = handle.get_window("Content");
 
     if let Some(content_window) = content_window {
-        let _ = content_window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-            width: size_x,
-            height: size_y,
+        let _ = content_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: size_x as f64,
+            height: size_y as f64,
         }));
     }
 }
