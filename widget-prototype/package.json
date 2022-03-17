@@ -5,7 +5,7 @@
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
-    "start": "sirv public -p 8081",
+    "start": "sirv public -p 8081 --single",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri"
   },
@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1.0.0-rc.2",
-    "sirv-cli": "^2.0.0"
+    "sirv-cli": "^2.0.0",
+    "svelte-navigator": "^3.1.5"
   }
 }

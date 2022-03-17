@@ -15,7 +15,7 @@ rust-version = "1.57"
 tauri-build = { version = "1.0.0-rc.4", features = [] }
 
 [dependencies]
-tauri = { version = "1.0.0-rc.4", features = ["api-all"] }
+tauri = { version = "1.0.0-rc.4", features = ["api-all", "macos-private-api"] }
 
 futures-util = "0.3"
 futures-channel = "0.3"

@@ -46,6 +46,7 @@
         "timestampUrl": ""
       }
     },
+    "macOSPrivateApi": true,
     "updater": {
       "active": false
     },

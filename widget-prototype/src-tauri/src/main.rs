@@ -15,28 +15,80 @@ static DEFAULT_AX_URL: &str = "ws://127.0.0.1:8080/channel";
 
 #[tauri::command]
 fn open_settings_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
-    println!("I was invoked from JS!");
-
-    let _ = tauri::Builder::default().create_window(
-        "Rust",
-        tauri::WindowUrl::App("index.html".into()),
-        |win, webview| {
-            let win = win
-                .title("Tauri - Rust")
-                .resizable(true)
-                .inner_size(800.0, 550.0)
-                .min_inner_size(400.0, 200.0);
-            return (win, webview);
-        },
-    );
-
     let _ = handle.create_window(
         "Rust".to_string(),
-        tauri::WindowUrl::App("index.html".into()),
+        tauri::WindowUrl::App("/settings".into()),
         |window_builder, webview_attributes| {
-            (window_builder.title("Tauri - Rust"), webview_attributes)
+            (
+                window_builder.title("CodeAlpha - Settings"),
+                webview_attributes,
+            )
         },
     );
+}
+
+#[allow(deprecated)]
+#[tauri::command]
+fn open_content_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    let content_window = handle.get_window("Content");
+
+    if let Some(content_window) = content_window {
+        let _ = content_window.show();
+    } else {
+        let _ = handle.create_window(
+            "Content".to_string(),
+            tauri::WindowUrl::App("/content".into()),
+            |window_builder, webview_attributes| {
+                (
+                    window_builder
+                        .title("CodeAlpha - Content")
+                        .inner_size(384.0 + 2.0 * 16.0, 524.0)
+                        .resizable(false)
+                        .focus()
+                        .transparent(true)
+                        .decorations(false),
+                    webview_attributes,
+                )
+            },
+        );
+    }
+}
+
+#[tauri::command]
+fn close_content_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    let content_window = handle.get_window("Content");
+
+    if let Some(content_window) = content_window {
+        let _ = content_window.hide();
+    }
+}
+
+#[tauri::command]
+fn toggle_content_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    let content_window = handle.get_window("Content");
+
+    if let Some(content_window) = content_window {
+        if content_window.is_visible().unwrap() {
+            close_content_window(handle.clone());
+        } else {
+            open_content_window(handle.clone());
+        }
+    } else {
+        open_content_window(handle.clone());
+    }
+}
+
+#[tauri::command]
+fn resize_content_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>, size_x: u32, size_y: u32) {
+    println!("Resize content window to {}x{}", size_x, size_y);
+    let content_window = handle.get_window("Content");
+
+    if let Some(content_window) = content_window {
+        let _ = content_window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: size_x,
+            height: size_y,
+        }));
+    }
 }
 
 #[tokio::main]
@@ -44,7 +96,13 @@ async fn main() {
     let url = url::Url::parse(&DEFAULT_AX_URL).expect("No valid URL path provided.");
 
     let app: tauri::App = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_settings_window])
+        .invoke_handler(tauri::generate_handler![
+            open_settings_window,
+            toggle_content_window,
+            open_content_window,
+            close_content_window,
+            resize_content_window
+        ])
         .plugin(xcode_state_plugin::init())
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
