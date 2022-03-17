@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { CogIcon } from '@rgossiaux/svelte-heroicons/outline';
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { getAll, WebviewWindow } from '@tauri-apps/api/window';
 	import { axEventTableStore } from '../event-listener/AXEventsTableStore';
 
 	const { axEventList } = axEventTableStore;
@@ -14,8 +13,8 @@
 		invoke('open_settings_window');
 	};
 
-	const toggleContent = () => {
-		invoke('toggle_content_window');
+	const toggleWidget = () => {
+		invoke('toggle_widget_window');
 	};
 </script>
 
@@ -34,11 +33,11 @@
 			Reset
 		</button>
 		<button
-			on:click={toggleContent}
+			on:click={toggleWidget}
 			type="button"
 			class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
 		>
-			<span>Content</span>
+			<span>Widget</span>
 		</button>
 		<button
 			on:click={openSettings}

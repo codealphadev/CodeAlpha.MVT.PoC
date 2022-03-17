@@ -91,6 +91,57 @@ fn resize_content_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>, size_x:
     }
 }
 
+#[tauri::command]
+fn toggle_widget_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    let content_window = handle.get_window("Widget");
+
+    if let Some(content_window) = content_window {
+        if content_window.is_visible().unwrap() {
+            close_widget_window(handle.clone());
+        } else {
+            open_widget_window(handle.clone());
+        }
+    } else {
+        open_widget_window(handle.clone());
+    }
+}
+
+#[allow(deprecated)]
+#[tauri::command]
+fn open_widget_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    let widget_window = handle.get_window("Widget");
+
+    if let Some(widget_window) = widget_window {
+        let _ = widget_window.show();
+    } else {
+        let _ = handle.create_window(
+            "Widget".to_string(),
+            tauri::WindowUrl::App("/widget".into()),
+            |window_builder, webview_attributes| {
+                (
+                    window_builder
+                        .title("CodeAlpha - Widget")
+                        .inner_size(64.0, 64.0)
+                        .resizable(false)
+                        .focus()
+                        .transparent(true)
+                        .decorations(false),
+                    webview_attributes,
+                )
+            },
+        );
+    }
+}
+
+#[tauri::command]
+fn close_widget_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    let widget_window = handle.get_window("Widget");
+
+    if let Some(widget_window) = widget_window {
+        let _ = widget_window.hide();
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let url = url::Url::parse(&DEFAULT_AX_URL).expect("No valid URL path provided.");
@@ -101,7 +152,10 @@ async fn main() {
             toggle_content_window,
             open_content_window,
             close_content_window,
-            resize_content_window
+            resize_content_window,
+            open_widget_window,
+            close_widget_window,
+            toggle_widget_window
         ])
         .plugin(xcode_state_plugin::init())
         .build(tauri::generate_context!("tauri.conf.json"))
