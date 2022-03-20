@@ -7,17 +7,18 @@
 	let isOpen = true;
 
 	$: close = () => {
-		invoke('close_content_window');
+		invoke('close_window', { windowLabel: 'Content' });
 	};
 
 	let contentRootContainerHeight: number;
 	let contentRootContainerWidth: number;
 
 	onMount(() => {
-		invoke('resize_content_window', {
-			sizeX: contentRootContainerWidth,
-			sizeY: contentRootContainerHeight + 38
-		});
+		// invoke('resize_window', {
+		// 	windowLabel: 'Content',
+		// 	sizeX: contentRootContainerWidth,
+		// 	sizeY: contentRootContainerHeight + 38
+		// });
 	});
 </script>
 

@@ -8,10 +8,6 @@
 	const resetAXEventList = () => {
 		axEventList.set([]);
 	};
-
-	const openSettings = () => {
-		invoke('open_settings_window');
-	};
 </script>
 
 <div class="md:flex md:items-center md:justify-between">

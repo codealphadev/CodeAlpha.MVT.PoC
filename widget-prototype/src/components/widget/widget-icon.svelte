@@ -1,5 +1,5 @@
-<div class="w-16" data-tauri-drag-region>
-	<svg data-tauri-drag-region xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 81 81">
+<div class="w-16">
+	<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 81 81">
 		<!-- Outer Background -->
 		<path
 			class="outerBG"
@@ -55,7 +55,7 @@
 			opacity: 1;
 		}
 		50% {
-			opacity: 0.65;
+			opacity: 0.75;
 		}
 		70% {
 			opacity: 1;

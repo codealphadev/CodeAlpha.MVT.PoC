@@ -10,11 +10,11 @@
 	};
 
 	const openSettings = () => {
-		invoke('open_settings_window');
+		invoke('open_window', { windowLabel: 'Settings' });
 	};
 
 	const toggleWidget = () => {
-		invoke('toggle_widget_window');
+		invoke('toggle_window', { windowLabel: 'Widget' });
 	};
 </script>
 

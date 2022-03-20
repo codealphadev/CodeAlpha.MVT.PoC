@@ -37,5 +37,6 @@
     "@tauri-apps/api": "^1.0.0-rc.2",
     "sirv-cli": "^2.0.0",
     "svelte-navigator": "^3.1.5"
-  }
+  },
+  "type": "module"
 }
