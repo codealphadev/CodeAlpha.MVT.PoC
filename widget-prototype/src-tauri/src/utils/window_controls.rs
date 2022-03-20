@@ -120,7 +120,7 @@ fn get_window_size(window: &AppWindow) -> (f64, f64) {
     match window {
         AppWindow::Settings => (800.0, 600.0),
         AppWindow::Analytics => (1280.0, 786.0),
-        AppWindow::Widget => (400.0, 400.0),
+        AppWindow::Widget => (416.0, 416.0),
         AppWindow::Content => (384.0 + 2.0 * 16.0, 316.0),
         AppWindow::None => (0.0, 0.0),
     }
