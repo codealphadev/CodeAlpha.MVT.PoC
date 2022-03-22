@@ -22,7 +22,8 @@
 			console.log(contentRootContainerHeight);
 			console.log(contentRootContainerHeight);
 
-			invoke('resize_content_window', {
+			invoke('resize_window', {
+				windowLabel: 'Content',
 				sizeX: +contentRootContainerWidth,
 				sizeY: +contentRootContainerHeight
 			});
@@ -34,7 +35,7 @@
 
 <div
 	data-tauri-drag-region
-	class="relative border inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6"
+	class="relative w-full border inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6"
 >
 	<div class="absolute top-0 right-0 pt-4 pr-4">
 		<button

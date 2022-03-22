@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, WindowBuilder};
 
-use super::position_content;
-
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum AppWindow {
     Settings,
@@ -51,8 +49,6 @@ pub fn open_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>, window_label:
             },
         );
     }
-
-    let _ = position_content::position_content(handle, None);
 }
 
 #[tauri::command]
@@ -107,12 +103,6 @@ pub fn resize_window<R: tauri::Runtime>(
         };
 
         let _ = app_window.set_size(tauri::Size::Logical(new_size));
-
-        // In case the window to be resized is the content window, also check if it needs to be repositioned
-
-        if window_label == AppWindow::Content {
-            let _ = position_content::position_content(handle, Some(new_size));
-        }
     }
 }
 
@@ -120,8 +110,8 @@ fn get_window_size(window: &AppWindow) -> (f64, f64) {
     match window {
         AppWindow::Settings => (800.0, 600.0),
         AppWindow::Analytics => (1280.0, 786.0),
-        AppWindow::Widget => (416.0, 416.0),
-        AppWindow::Content => (384.0 + 2.0 * 16.0, 316.0),
+        AppWindow::Widget => (48.0, 48.0),
+        AppWindow::Content => (400.0, 316.0),
         AppWindow::None => (0.0, 0.0),
     }
 }

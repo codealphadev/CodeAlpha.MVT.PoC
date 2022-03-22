@@ -23,10 +23,18 @@ async fn main() {
             window_controls::toggle_window,
             window_controls::close_window,
             window_controls::resize_window,
+            utils::position_content::update_position
         ])
         .plugin(xcode_state_plugin::init())
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
+
+    // let movable_handle = app.handle().clone();
+    // tokio::spawn(async move {
+    //     loop {
+    //         utils::position_content::update_position(movable_handle.clone());
+    //     }
+    // });
 
     app.manage(XCodeTwin::new(url, app.handle().clone()));
 

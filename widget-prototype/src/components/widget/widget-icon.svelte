@@ -1,4 +1,4 @@
-<div class="w-16">
+<div class="w-12">
 	<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 81 81">
 		<!-- Outer Background -->
 		<path

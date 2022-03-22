@@ -107,3 +107,66 @@ fn reposition_widget<R: tauri::Runtime>(
         Err(e) => return Err(e),
     };
 }
+
+#[tauri::command]
+pub fn update_position<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    // Get both app windows which need to be positioned in relation to one another
+    let content_window = handle.get_window(&window_controls::AppWindow::Content.to_string());
+    let widget_window = handle.get_window(&window_controls::AppWindow::Widget.to_string());
+
+    // Return if either window is not found
+    if content_window.is_none() || widget_window.is_none() {
+        return;
+    }
+
+    // Reposition Content Window and Widget Window
+    if let Some(content) = content_window {
+        if let Some(widget) = widget_window {
+            let screen = widget.current_monitor().unwrap().unwrap();
+            let screen_scale_factor = screen.scale_factor();
+            let screen_position = screen.position().to_logical::<f64>(screen_scale_factor);
+
+            let pos_widget = (widget.outer_position())
+                .unwrap()
+                .to_logical::<f64>(screen_scale_factor);
+
+            let widget_size = LogicalSize::<f64> {
+                width: widget
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .width,
+                height: widget
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .height as f64,
+            };
+            let content_size = LogicalSize::<f64> {
+                width: content
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .width as f64,
+                height: content
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .height as f64,
+            };
+
+            let mut new_content_pos = LogicalPosition {
+                x: pos_widget.x + (widget_size.width - content_size.width),
+                y: pos_widget.y - content_size.height,
+            };
+
+            // Check if the content would be outside the left end of the screen, if so, flip the content window position horizontally
+
+            if screen_position.x > new_content_pos.x {
+                new_content_pos.x = pos_widget.x;
+            }
+
+            let _ = content.set_position(tauri::Position::Logical(new_content_pos));
+        }
+    }
+}
