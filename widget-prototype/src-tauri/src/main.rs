@@ -27,6 +27,7 @@ async fn main() {
             window_controls::cmd_is_window_visible,
             utils::window_positioning::cmd_update_widget_position,
             utils::window_positioning::cmd_start_dragging_widget,
+            utils::window_positioning::cmd_update_content_position
         ])
         .plugin(xcode_state_plugin::init())
         .build(tauri::generate_context!("tauri.conf.json"))
