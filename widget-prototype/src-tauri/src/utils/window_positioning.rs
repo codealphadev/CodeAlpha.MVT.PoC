@@ -5,6 +5,11 @@ use super::window_controls;
 static POSITIONING_OFFSET_X: f64 = 24.;
 static POSITIONING_OFFSET_Y: f64 = 8.;
 
+#[derive(Clone, serde::Serialize)]
+struct PayloadBubbleOrientationEvent {
+    orientation_right: bool,
+}
+
 #[tauri::command]
 pub fn cmd_update_widget_position<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
     // Get both app windows which need to be positioned in relation to one another
@@ -128,9 +133,22 @@ pub fn cmd_update_content_position<R: tauri::Runtime>(handle: tauri::AppHandle<R
             };
 
             // Check if the content would be outside the left end of the screen, if so, flip the content window position horizontally
+            let mut bubbleOrientation_right = true;
             if pos_screen.x > new_content_pos.x {
-                new_content_pos.x = pos_widget.x;
+                new_content_pos.x = pos_widget.x - POSITIONING_OFFSET_X;
+                bubbleOrientation_right = false;
             }
+
+            // Emit event to content window to update its orientation
+            handle
+                .emit_to(
+                    &window_controls::AppWindow::Content.to_string(),
+                    "evt-bubble-icon-orientation",
+                    PayloadBubbleOrientationEvent {
+                        orientation_right: bubbleOrientation_right,
+                    },
+                )
+                .unwrap();
 
             let _ = content.set_position(tauri::Position::Logical(new_content_pos));
         }

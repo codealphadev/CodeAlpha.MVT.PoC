@@ -1,18 +1,15 @@
 <script lang="ts">
-	import { XIcon } from '@rgossiaux/svelte-heroicons/outline';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { appWindow } from '@tauri-apps/api/window';
-	import { afterUpdate, onMount } from 'svelte';
+	import { afterUpdate } from 'svelte';
 	import SearchReplace from '../components/content/search-replace.svelte';
 	import OptionsMenu from '../components/content/options-menu.svelte';
 	import BubbleIcon from '../components/content/bubble-icon.svelte';
+	import { Event, listen } from '@tauri-apps/api/event';
 
-	$: close = () => {
-		invoke('cmd_close_window', { windowLabel: 'Content' });
-	};
+	// appWindow.setAlwaysOnTop(true);
 
-	appWindow.setAlwaysOnTop(true);
-
+	// Logic to always resize the content window to the size of the HTML
 	afterUpdate(() => {
 		setTimeout(() => {
 			let contentRootContainerHeight: number = parseInt(
@@ -22,9 +19,6 @@
 				window.getComputedStyle(document.body).getPropertyValue('width')
 			);
 
-			console.log(contentRootContainerHeight);
-			console.log(contentRootContainerHeight);
-
 			invoke('cmd_resize_window', {
 				windowLabel: 'Content',
 				sizeX: +contentRootContainerWidth,
@@ -33,17 +27,25 @@
 		}, 10);
 	});
 
-	let isOpen = true;
+	let bubbleOrientationRight = true;
+	const listenToGlobalEvents = async () => {
+		await listen('evt-bubble-icon-orientation', (event) => {
+			const tauriEvent = event as Event<any>;
+			bubbleOrientationRight = tauriEvent.payload.orientation_right;
+		});
+	};
+
+	listenToGlobalEvents();
 </script>
 
-<div class="flex flex-col items-end">
+<div class={`flex flex-col ${bubbleOrientationRight ? 'items-end' : ''}`}>
 	<div
-		class="w-full inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden transform transition-all sm:align-middle sm:max-w-sm sm:w-full sm:p-6"
+		class="max-w-xs inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden transform transition-all "
 	>
 		<OptionsMenu />
 		<SearchReplace />
 	</div>
-	<div class="pr-4">
+	<div class="px-4">
 		<BubbleIcon />
 	</div>
 </div>
