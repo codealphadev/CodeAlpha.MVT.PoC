@@ -6,6 +6,7 @@ use tokio_tungstenite::tungstenite::Message;
 use crate::websocket::accessibility_messages::models;
 use crate::websocket::websocket_message::WebsocketMessage;
 use crate::websocket::{accessibility_messages, websocket_client};
+use tokio::time::{sleep, Duration};
 use tokio_tungstenite::tungstenite;
 
 // How we do this:
@@ -137,6 +138,8 @@ impl XCodeTwin {
                         _ => {}
                     }
                 }
+                // Sleep for 10ms to not drive up CPU load
+                sleep(Duration::from_millis(20)).await;
             }
         });
 
