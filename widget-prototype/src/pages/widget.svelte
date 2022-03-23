@@ -9,6 +9,8 @@
 
 	const clickAction = async () => {
 		if (ghostClickAlreadyHappened) {
+			// 0.	Update content window position
+			await invoke('cmd_update_content_position');
 			// 1. Toggle the content window
 			await invoke('cmd_toggle_window', { windowLabel: 'Content' });
 			// 2. Reposition widget if content is visible
@@ -34,6 +36,7 @@
 
 	appWindow.listen('tauri://move', async ({ event, payload }) => {
 		ghostClickAlreadyHappened = false;
+		await invoke('cmd_update_content_position');
 	});
 </script>
 

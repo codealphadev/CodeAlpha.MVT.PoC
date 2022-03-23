@@ -38,16 +38,6 @@ async fn main() {
     // Load default windows
     window_controls::startup_windows(app.handle().clone());
 
-    // Test: monitor window position all the time
-    let handle_for_thread = app.handle().clone();
-    tokio::spawn(async move {
-        loop {
-            utils::window_positioning::cmd_update_content_position(handle_for_thread.clone());
-            // Sleep for 25ms to not drive up CPU load
-            sleep(Duration::from_millis(25)).await;
-        }
-    });
-
     app.run(|_app_handle, event| match event {
         tauri::RunEvent::ExitRequested { api, .. } => {
             api.prevent_exit();
