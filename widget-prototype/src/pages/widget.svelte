@@ -5,49 +5,39 @@
 
 	appWindow.setAlwaysOnTop(true);
 
-	// To prevent opening/closing the dialog when the user DRAGS the widget icon
-	// I introduce a threshold time to wait before opening the dialog after stoping the drag
-	let timeing_threshold = 500;
-	let last_drag: number = 0;
+	let ghostClickAlreadyHappened = true;
 
-	const toggleContent = () => {
-		if (performance.now() - last_drag > timeing_threshold) {
-			invoke('toggle_window', { windowLabel: 'Content' });
+	const clickAction = async () => {
+		if (ghostClickAlreadyHappened) {
+			// 1. Toggle the content window
+			await invoke('cmd_toggle_window', { windowLabel: 'Content' });
+			// 2. Reposition widget if content is visible
+			if (await isContentVisible()) {
+				await invoke('cmd_update_widget_position');
+			}
 		} else {
-			// Case: "Ghost Click" after dragging the widget
-			if (contentOpenBeforeMove) {
-				invoke('open_window', { windowLabel: 'Content' });
-				contentOpenBeforeMove = false;
+			// Case "Ghostclick happened"
+			ghostClickAlreadyHappened = true;
+
+			// Reposition widget if content is visible
+			if (await isContentVisible()) {
+				await invoke('cmd_update_widget_position');
 			}
 		}
 	};
 
-	let contentOpenBeforeMove = false;
+	const isContentVisible = async (): Promise<boolean> => {
+		const res: boolean = await invoke('cmd_is_window_visible', { windowLabel: 'Content' });
+		console.log(res);
+		return res;
+	};
 
-	appWindow.listen('tauri://move', ({ event, payload }) => {
-		setTimeout(() => {
-			last_drag = performance.now();
-		}, 10);
-
-		// Hide the content window if the user is moving the widget
-		let contentWindow = WebviewWindow.getByLabel('Content');
-
-		if (contentWindow) {
-			if (contentWindow.isVisible()) {
-				contentOpenBeforeMove = true;
-				invoke('close_window', { windowLabel: 'Content' });
-			} else {
-				contentOpenBeforeMove = false;
-			}
-		}
+	appWindow.listen('tauri://move', async ({ event, payload }) => {
+		ghostClickAlreadyHappened = false;
 	});
 </script>
 
 <div class="relative">
 	<WidgetIcon />
-	<div
-		data-tauri-drag-region
-		on:click={toggleContent}
-		class="absolute bottom-0 right-0 w-12 h-12"
-	/>
+	<div data-tauri-drag-region on:click={clickAction} class="absolute bottom-0 right-0 w-12 h-12" />
 </div>

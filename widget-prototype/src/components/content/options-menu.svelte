@@ -4,22 +4,20 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 
 	$: openSettings = () => {
-		invoke('open_window', { windowLabel: 'Settings' });
+		invoke('cmd_open_window', { windowLabel: 'Settings' });
 	};
 
 	$: openDebug = () => {
-		invoke('toggle_window', { windowLabel: 'Analytics' });
+		invoke('cmd_toggle_window', { windowLabel: 'Analytics' });
 	};
 </script>
 
 <Menu as="div" class="relative">
-	<div class="absolute top-0 right-0">
-		<MenuButton>
-			<button type="button" class="bg-white rounded-md text-gray-400 hover:text-gray-500 ">
-				<CogIcon class="h-6 w-6" />
-			</button>
-		</MenuButton>
-	</div>
+	<MenuButton as="div" class="absolute top-0 right-0 outline-none">
+		<button type="button" class="bg-white rounded-md text-gray-400 hover:text-gray-500 ">
+			<CogIcon class="h-6 w-6" />
+		</button>
+	</MenuButton>
 
 	<Transition
 		enter="transition ease-out duration-100"
@@ -34,17 +32,17 @@
 		>
 			<div class="hover:bg-gray-100">
 				<MenuItem let:active>
-					<button
-						on:click={openSettings}
-						type="button"
-						class="block px-4 py-2 text-sm text-gray-700">Settings</button
+					<button on:click={openDebug} type="button" class="block px-4 py-2 text-sm text-gray-700"
+						>Debug Tools</button
 					>
 				</MenuItem>
 			</div>
 			<div class="hover:bg-gray-100">
 				<MenuItem let:active>
-					<button on:click={openDebug} type="button" class="block px-4 py-2 text-sm text-gray-700"
-						>Debug Tools</button
+					<button
+						on:click={openSettings}
+						type="button"
+						class="block px-4 py-2 text-sm text-gray-700">Settings</button
 					>
 				</MenuItem>
 			</div>

@@ -5,9 +5,10 @@
 	import { afterUpdate, onMount } from 'svelte';
 	import SearchReplace from '../components/content/search-replace.svelte';
 	import OptionsMenu from '../components/content/options-menu.svelte';
+	import BubbleIcon from '../components/content/bubble-icon.svelte';
 
 	$: close = () => {
-		invoke('close_window', { windowLabel: 'Content' });
+		invoke('cmd_close_window', { windowLabel: 'Content' });
 	};
 
 	appWindow.setAlwaysOnTop(true);
@@ -24,7 +25,7 @@
 			console.log(contentRootContainerHeight);
 			console.log(contentRootContainerHeight);
 
-			invoke('resize_window', {
+			invoke('cmd_resize_window', {
 				windowLabel: 'Content',
 				sizeX: +contentRootContainerWidth,
 				sizeY: +contentRootContainerHeight
@@ -35,10 +36,14 @@
 	let isOpen = true;
 </script>
 
-<div
-	data-tauri-drag-region
-	class="relative w-full border inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:align-middle sm:max-w-sm sm:w-full sm:p-6"
->
-	<OptionsMenu />
-	<SearchReplace />
+<div class="flex flex-col items-end">
+	<div
+		class="w-full inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden transform transition-all sm:align-middle sm:max-w-sm sm:w-full sm:p-6"
+	>
+		<OptionsMenu />
+		<SearchReplace />
+	</div>
+	<div class="pr-4">
+		<BubbleIcon />
+	</div>
 </div>
