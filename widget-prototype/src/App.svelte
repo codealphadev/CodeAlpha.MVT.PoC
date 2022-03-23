@@ -11,7 +11,8 @@
 	<Link to="settings" />
 
 	<Route path="/">
-		<Analytics />
+		<Content />
+		<!-- <Analytics /> -->
 	</Route>
 
 	<Route path="settings">

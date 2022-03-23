@@ -3,6 +3,7 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { appWindow } from '@tauri-apps/api/window';
 	import { afterUpdate, onMount } from 'svelte';
+	import SearchReplace from '../components/content/search-replace.svelte';
 
 	$: close = () => {
 		invoke('close_window', { windowLabel: 'Content' });
@@ -52,12 +53,13 @@
 				as="h3"
 				class="focus:outline-none text-lg leading-6 font-medium text-gray-900 border-transparent focus:border-transparent focus:ring-0"
 			>
-				Content Window
+				Content Windows
 			</h1>
 			<div class="mt-2">
 				<p class="text-sm text-gray-500">This is our fancy content window!</p>
 			</div>
 		</div>
+		<SearchReplace />
 	</div>
 	<div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
 		<button
