@@ -53,15 +53,7 @@
     "allowlist": {
       "all": true
     },
-    "windows": [
-      {
-        "title": "CodeAlpha",
-        "width": 1280,
-        "height": 768,
-        "resizable": false,
-        "fullscreen": false
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }

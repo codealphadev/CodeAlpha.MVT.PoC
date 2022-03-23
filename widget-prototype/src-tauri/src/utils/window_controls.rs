@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, WindowBuilder};
+use tauri::{window::WindowBuilder, Manager, WindowBuilder as DeprecatedWindowBuilder, WindowUrl};
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum AppWindow {
@@ -13,6 +13,42 @@ pub enum AppWindow {
 impl std::fmt::Display for AppWindow {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+pub fn startup_windows<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+    let startup_window_list: [AppWindow; 2] = [AppWindow::Widget, AppWindow::Content];
+
+    for window_label in startup_window_list.iter() {
+        if *window_label == AppWindow::None {
+            continue;
+        }
+
+        // If the window is already created, don't open it again.
+        if handle.get_window(&window_label.to_string()).is_some() {
+            continue;
+        }
+
+        // Get window properties
+        let url_slug = format!("{}{}", r"\", window_label.to_string().to_lowercase());
+        let title = format!("CodeAlpha - {}", window_label.to_string());
+        let (size_x, size_y) = get_window_size(&window_label);
+        let (resizable, transparent, decorations, visible) = get_window_features(&window_label);
+
+        WindowBuilder::new(
+            &handle,
+            window_label.to_string(),
+            WindowUrl::App(url_slug.into()),
+        )
+        .title(title)
+        .inner_size(size_x, size_y)
+        .resizable(resizable)
+        .transparent(transparent)
+        .decorations(decorations)
+        .visible(visible)
+        .center()
+        .build()
+        .unwrap();
     }
 }
 
@@ -31,7 +67,7 @@ pub fn open_window<R: tauri::Runtime>(handle: tauri::AppHandle<R>, window_label:
         let url_slug = format!("{}{}", r"\", window_label.to_string().to_lowercase());
         let window_title = format!("CodeAlpha - {}", window_label.to_string());
         let (size_x, size_y) = get_window_size(&window_label);
-        let (resizable, transparent, decorations) = get_window_features(&window_label);
+        let (resizable, transparent, decorations, _) = get_window_features(&window_label);
 
         let _ = handle.create_window(
             window_label.to_string(),
@@ -116,13 +152,13 @@ fn get_window_size(window: &AppWindow) -> (f64, f64) {
     }
 }
 
-fn get_window_features(window: &AppWindow) -> (bool, bool, bool) {
-    // resizable, transparent, decorations
+fn get_window_features(window: &AppWindow) -> (bool, bool, bool, bool) {
+    // resizable, transparent, decorations, visible
     match window {
-        AppWindow::Settings => (false, false, true),
-        AppWindow::Analytics => (true, false, true),
-        AppWindow::Widget => (false, true, false),
-        AppWindow::Content => (false, true, false),
-        AppWindow::None => (false, false, false),
+        AppWindow::Settings => (false, false, true, true),
+        AppWindow::Analytics => (true, false, true, true),
+        AppWindow::Widget => (false, true, false, true),
+        AppWindow::Content => (false, true, false, false),
+        AppWindow::None => (false, false, false, true),
     }
 }

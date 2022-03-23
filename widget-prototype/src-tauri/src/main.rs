@@ -29,14 +29,9 @@ async fn main() {
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
 
-    // let movable_handle = app.handle().clone();
-    // tokio::spawn(async move {
-    //     loop {
-    //         utils::position_content::update_position(movable_handle.clone());
-    //     }
-    // });
-
     app.manage(XCodeTwin::new(url, app.handle().clone()));
+
+    window_controls::startup_windows(app.handle().clone());
 
     app.run(|_app_handle, event| match event {
         tauri::RunEvent::ExitRequested { api, .. } => {
