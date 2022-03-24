@@ -7,7 +7,7 @@
 	import BubbleIcon from '../components/content/bubble-icon.svelte';
 	import { Event, listen } from '@tauri-apps/api/event';
 
-	// appWindow.setAlwaysOnTop(true);
+	appWindow.setAlwaysOnTop(true);
 
 	// Logic to always resize the content window to the size of the HTML
 	afterUpdate(() => {
@@ -39,9 +39,7 @@
 </script>
 
 <div class={`flex flex-col ${bubbleOrientationRight ? 'items-end' : ''}`}>
-	<div
-		class="max-w-xs inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden transform transition-all "
-	>
+	<div class="max-w-xs align-bottom bg-white rounded-lg p-4 overflow-hidden transform ">
 		<OptionsMenu />
 		<SearchReplace />
 	</div>
