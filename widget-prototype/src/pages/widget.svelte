@@ -29,12 +29,11 @@
 	};
 
 	const isContentVisible = async (): Promise<boolean> => {
-		const res: boolean = await invoke('cmd_is_window_visible', { windowLabel: 'Content' });
-		console.log(res);
-		return res;
+		return await invoke('cmd_is_window_visible', { windowLabel: 'Content' });
 	};
 
 	appWindow.listen('tauri://move', async ({ event, payload }) => {
+		console.log('move', payload);
 		ghostClickAlreadyHappened = false;
 		await invoke('cmd_update_content_position');
 	});
