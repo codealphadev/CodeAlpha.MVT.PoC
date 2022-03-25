@@ -133,10 +133,10 @@ pub fn cmd_update_content_position<R: tauri::Runtime>(handle: tauri::AppHandle<R
             };
 
             // Check if the content would be outside the left end of the screen, if so, flip the content window position horizontally
-            let mut bubbleOrientation_right = true;
+            let mut bubble_orientation_right = true;
             if pos_screen.x > new_content_pos.x {
                 new_content_pos.x = pos_widget.x - POSITIONING_OFFSET_X;
-                bubbleOrientation_right = false;
+                bubble_orientation_right = false;
             }
 
             // Emit event to content window to update its orientation
@@ -145,7 +145,7 @@ pub fn cmd_update_content_position<R: tauri::Runtime>(handle: tauri::AppHandle<R
                     &window_controls::AppWindow::Content.to_string(),
                     "evt-bubble-icon-orientation",
                     PayloadBubbleOrientationEvent {
-                        orientation_right: bubbleOrientation_right,
+                        orientation_right: bubble_orientation_right,
                     },
                 )
                 .unwrap();
