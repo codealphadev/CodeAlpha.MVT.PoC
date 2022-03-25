@@ -1,3 +1,4 @@
+pub use accessibility_messages::models;
 pub use accessibility_messages::types;
 pub use accessibility_messages::Message;
 

@@ -5,8 +5,7 @@
 
 use plugins::xcode_state_plugin;
 use tauri::Manager;
-use tokio::time::{sleep, Duration};
-use utils::{window_controls, xcode_twin::XCodeTwin};
+use utils::{window_controls, window_state_machine::WindowStateMachine, xcode_twin::XCodeTwin};
 
 mod plugins;
 mod utils;
@@ -34,6 +33,10 @@ async fn main() {
         .expect("error while running tauri application");
 
     app.manage(XCodeTwin::new(url, app.handle().clone()));
+
+    let mut window_state_machine = WindowStateMachine::new(app.handle().clone());
+    window_state_machine.setup();
+    app.manage(window_state_machine);
 
     // Load default windows
     window_controls::startup_windows(app.handle().clone());
