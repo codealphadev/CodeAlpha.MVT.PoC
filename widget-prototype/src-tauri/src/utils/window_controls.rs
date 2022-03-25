@@ -35,7 +35,7 @@ fn get_window_features(window: &AppWindow) -> (bool, bool, bool, bool) {
     match window {
         AppWindow::Settings => (false, false, true, true),
         AppWindow::Analytics => (true, false, true, true),
-        AppWindow::Widget => (false, true, false, true),
+        AppWindow::Widget => (false, true, false, false),
         AppWindow::Content => (false, true, false, false),
         AppWindow::None => (false, false, false, true),
     }
