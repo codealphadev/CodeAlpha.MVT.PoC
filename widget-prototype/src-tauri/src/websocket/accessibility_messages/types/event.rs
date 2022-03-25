@@ -33,8 +33,15 @@ impl Event {
     pub fn publish_to_tauri(&self, app_handle: tauri::AppHandle) {
         let event_name = format!("StateEvent-{}", self.to_string());
 
+        // Emit to frontend window listeners
         app_handle
             .emit_all(event_name.as_str(), self.clone())
             .unwrap();
+
+        // Emit to rust listeners
+        app_handle.trigger_global(
+            event_name.as_str(),
+            Some(serde_json::to_string(self).unwrap()),
+        );
     }
 }
