@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { afterUpdate } from 'svelte';
+	import { Event, listen } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { appWindow } from '@tauri-apps/api/window';
-	import { afterUpdate } from 'svelte';
 	import SearchReplace from '../components/content/search-replace.svelte';
 	import OptionsMenu from '../components/content/options-menu.svelte';
 	import BubbleIcon from '../components/content/bubble-icon.svelte';
-	import { Event, listen } from '@tauri-apps/api/event';
 
 	appWindow.setAlwaysOnTop(true);
 
