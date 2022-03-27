@@ -26,6 +26,9 @@ tokio-tungstenite = "0.17.1"
 url = "2.1.0"
 uuid = { version = "0.8", features = ["serde", "v4"] }
 
+[dev-dependencies]
+pretty_assertions = "1.2.0"
+
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
