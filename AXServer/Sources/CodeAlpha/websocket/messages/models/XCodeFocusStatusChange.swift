@@ -8,4 +8,8 @@ enum XCodeFocusElement: String, Codable {
 struct XCodeFocusStatusChange: Codable {
   let focusElementChange: XCodeFocusElement
   let isInFocus: Bool
+  let uiElementX: Float
+  let uiElementY: Float
+  let uiElementW: Float
+  let uiElementH: Float
 }

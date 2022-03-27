@@ -112,8 +112,37 @@ class XCodeAXState {
 	}
 
 	public func notifyXCodeFocusStatus() {
-		let appFocusStatus = XCodeFocusStatusChange(focusElementChange: .App, isInFocus: isXCodeAppInFocus())
-		let editorFocusStatus = XCodeFocusStatusChange(focusElementChange: .Editor, isInFocus: isXCodeEditorInFocus())
+		// ====
+		// Get the frame of the parent UI element --> TextAreas don't contain the actual coordinates of the window
+		guard let editorUIElement = lastFocusedXCodeEditorUIElement else { return }
+		guard let parentUIElement = try? editorUIElement.attribute(.parent) as UIElement? else { return }
+		guard let parentUIElementFrame = try? parentUIElement.attribute(.frame) as CGRect? else { return }
+		// ====
+
+		let editorFocusStatus = XCodeFocusStatusChange(
+			focusElementChange: .Editor,
+			isInFocus: isXCodeEditorInFocus(),
+			uiElementX: Float(parentUIElementFrame.origin.x),
+			uiElementY: Float(parentUIElementFrame.origin.y),
+			uiElementW: Float(parentUIElementFrame.size.width),
+			uiElementH: Float(parentUIElementFrame.size.height)
+		)
+
+		// ====
+		// Get the frame of the topLevelUIElement
+		guard let editorUIElement = lastFocusedXCodeEditorUIElement else { return }
+		guard let topLevelUIElement = try? editorUIElement.attribute(.topLevelUIElement) as UIElement? else { return }
+		guard let topLevelUIElementFrame = try? topLevelUIElement.attribute(.frame) as CGRect? else { return }
+		// ====
+
+		let appFocusStatus = XCodeFocusStatusChange(
+			focusElementChange: .App,
+			isInFocus: isXCodeAppInFocus(),
+			uiElementX: Float(topLevelUIElementFrame.origin.x),
+			uiElementY: Float(topLevelUIElementFrame.origin.y),
+			uiElementW: Float(topLevelUIElementFrame.size.width),
+			uiElementH: Float(topLevelUIElementFrame.size.height)
+		)
 
 		websocketManager.notify(message: Event(eventType: .XCodeFocusStatus, payload: XCodeFocusStatus(appStatus: appFocusStatus, editorStatus: editorFocusStatus)))
 	}
@@ -126,14 +155,35 @@ class XCodeAXState {
 		if xcodeEditorFocusStatus != editorInFocus {
 			xcodeEditorFocusStatus = editorInFocus
 
-			let xCodeFocusStatusChange = XCodeFocusStatusChange(focusElementChange: .Editor, isInFocus: editorInFocus)
+			// ====
+			// Get the frame of the parent UI element --> TextAreas don't contain the actual coordinates of the window
+			guard let editorUIElement = lastFocusedXCodeEditorUIElement else { return }
+			guard let parentUIElement = try? editorUIElement.attribute(.parent) as UIElement? else { return }
+			guard let parentUIElementFrame = try? parentUIElement.attribute(.frame) as CGRect? else { return }
+			// ====
+
+			let xCodeFocusStatusChange = XCodeFocusStatusChange(
+				focusElementChange: .Editor,
+				isInFocus: editorInFocus,
+				uiElementX: Float(parentUIElementFrame.origin.x),
+				uiElementY: Float(parentUIElementFrame.origin.y),
+				uiElementW: Float(parentUIElementFrame.size.width),
+				uiElementH: Float(parentUIElementFrame.size.height)
+			)
 			websocketManager.notify(message: Event(eventType: .XCodeFocusStatusChange, payload: xCodeFocusStatusChange))
 		}
 
 		if xcodeAppFocusStatus != appInFocus {
 			xcodeAppFocusStatus = appInFocus
 
-			let xCodeFocusStatusChange = XCodeFocusStatusChange(focusElementChange: .App, isInFocus: editorInFocus)
+			let xCodeFocusStatusChange = XCodeFocusStatusChange(
+				focusElementChange: .App,
+				isInFocus: editorInFocus,
+				uiElementX: 0.0,
+				uiElementY: 0.0,
+				uiElementW: 0.0,
+				uiElementH: 0.0
+			)
 			websocketManager.notify(message: Event(eventType: .XCodeFocusStatusChange, payload: xCodeFocusStatusChange))
 		}
 	}
@@ -205,6 +255,11 @@ class XCodeAXState {
 		// 5. Get value of editorUIElement
 		guard let editorContent = try? editorUIElement.attribute(.value) as String? else { return nil }
 
-		return XCodeEditorContent(fileExtension: fileExtension, fileName: fileName, filePath: documentPath as String, content: editorContent)
+		return XCodeEditorContent(
+			fileExtension: fileExtension,
+			fileName: fileName,
+			filePath: documentPath as String,
+			content: editorContent
+		)
 	}
 }
