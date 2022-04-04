@@ -13,7 +13,11 @@ pub fn observer_global(
     let currently_focused_app = currently_focused_app()?;
     if let Some(ref previously_focused_app) = focused_app {
         if *previously_focused_app != currently_focused_app {
-            callback_global_app_focus(previously_focused_app, &currently_focused_app, &tauri_state);
+            let _ = callback_global_app_focus(
+                previously_focused_app,
+                &currently_focused_app,
+                &tauri_state,
+            );
             *focused_app = Some(currently_focused_app);
         }
     } else {
@@ -29,30 +33,25 @@ fn callback_global_app_focus(
     previous_app: &AXUIElement,
     current_app: &AXUIElement,
     tauri_state: &TauriState,
-) {
+) -> Result<(), Error> {
     assert_ne!(previous_app, current_app);
 
-    let current_app_title = current_app.attribute(&AXAttribute::title());
-    let previous_app_title = previous_app.attribute(&AXAttribute::title());
+    let current_app_title = current_app.attribute(&AXAttribute::title())?;
+    let previous_app_title = previous_app.attribute(&AXAttribute::title())?;
 
-    if let (Ok(current_app_title), Ok(previous_app_title)) = (current_app_title, previous_app_title)
-    {
-        let focus_state = AppFocusState {
-            previous_app: AppInfo {
-                bundle_id: "".to_string(),
-                name: previous_app_title.to_string(),
-                pid: 0,
-                is_finished_launching: true,
-            },
-            current_app: AppInfo {
-                bundle_id: "".to_string(),
-                name: current_app_title.to_string(),
-                pid: 0,
-                is_finished_launching: true,
-            },
-        };
+    let focus_state = AppFocusState {
+        previous_app: AppInfo {
+            name: previous_app_title.to_string(),
+            pid: previous_app.pid()?,
+        },
+        current_app: AppInfo {
+            name: current_app_title.to_string(),
+            pid: current_app.pid()?,
+        },
+    };
 
-        let event = Event::AppFocusState(focus_state);
-        event.publish_to_tauri(tauri_state.handle.clone());
-    }
+    let event = Event::AppFocusState(focus_state);
+    event.publish_to_tauri(tauri_state.handle.clone());
+
+    Ok(())
 }
