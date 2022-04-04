@@ -3,15 +3,13 @@
     windows_subsystem = "windows"
 )]
 
+use ax_interaction::{setup_observers, utils::TauriState};
 use plugins::xcode_state_plugin;
 use tauri::Manager;
-use utils::{
-    window_controls,
-    window_state_machine::WindowStateMachine,
-    xcode_twin::{observer_focused_app, TauriStateHandle},
-};
+use utils::{window_controls, window_state_machine::WindowStateMachine};
 
-mod axevents;
+mod ax_events;
+mod ax_interaction;
 mod plugins;
 mod utils;
 
@@ -31,7 +29,7 @@ fn main() {
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
 
-    observer_focused_app(TauriStateHandle {
+    setup_observers(TauriState {
         handle: app.handle().clone(),
     });
 
