@@ -1,10 +1,8 @@
+use crate::axevents::{models::XCodeFocusElement, Event};
+
 use super::{
     window_controls::{cmd_close_window, cmd_open_window, AppWindow},
     window_positioning,
-};
-use crate::{
-    utils::xcode_twin::XCodeTwin,
-    websocket::{models, types},
 };
 use std::sync::{Arc, Mutex};
 use tauri::{EventHandler, Manager, PhysicalSize};
@@ -70,9 +68,12 @@ impl WindowStateMachine {
                     // =========================================================
                     // Only execute if incoming msg contains a payload
                     if let Some(msg_s) = msg.payload() {
-                        let parsed_msg: types::Event = serde_json::from_str(&msg_s).unwrap();
+                        let parsed_msg: Event = serde_json::from_str(&msg_s).unwrap();
                         // Parse msg as Event of correct type
-                        if let types::Event::AppFocusState(payload) = parsed_msg {
+                        if let Event::AppFocusState(payload) = parsed_msg {
+                            // TODO DEBUG
+                            println!("{:?}", payload);
+
                             let _app_name = &tauri_app_handle_copy.package_info().name;
 
                             // For now, on this listener, only hide widget if neither widget or editor are in focus
@@ -114,11 +115,10 @@ impl WindowStateMachine {
                     // Only execute if incoming msg contains a payload
                     if let Some(msg_s) = msg.payload() {
                         // Parse msg as Event of correct type
-                        let parsed_msg: types::Event = serde_json::from_str(&msg_s).unwrap();
-                        if let types::Event::XCodeFocusStatusChange(payload) = parsed_msg {
+                        let parsed_msg: Event = serde_json::from_str(&msg_s).unwrap();
+                        if let Event::XCodeFocusStatusChange(payload) = parsed_msg {
                             // For now, on this listener, only react to focus changes on the Editor
-                            if let models::XCodeFocusElement::Editor = payload.focus_element_change
-                            {
+                            if let XCodeFocusElement::Editor = payload.focus_element_change {
                                 // Show widget if ...
                                 // 1. Last focused app before receiving this msg was NOT this app
                                 // 2. Editor was focused; restore preserved content window visibility.
@@ -152,6 +152,11 @@ impl WindowStateMachine {
                                         &preserve_content_visibility_was_visible_copy,
                                     );
                                 }
+                            } else {
+                                Self::hide_widget_preserve_content(
+                                    tauri_app_handle_copy.clone(),
+                                    &preserve_content_visibility_was_visible_copy,
+                                );
                             }
                         }
                     }
@@ -169,11 +174,6 @@ impl WindowStateMachine {
 
         cmd_close_window(app_handle.clone(), AppWindow::Widget);
         cmd_close_window(app_handle.clone(), AppWindow::Content);
-
-        let _my_state = app_handle.state::<XCodeTwin>().get_state_global_app_focus();
-        let _my_state2 = app_handle
-            .state::<XCodeTwin>()
-            .get_state_xcode_focus_state();
     }
 
     fn show_widget_preserve_content(app_handle: tauri::AppHandle, preserve_var: &Arc<Mutex<bool>>) {
@@ -185,11 +185,6 @@ impl WindowStateMachine {
             cmd_open_window(app_handle.clone(), AppWindow::Content);
             *locked_val = false;
         }
-
-        let _my_state = app_handle.state::<XCodeTwin>().get_state_global_app_focus();
-        let _my_state2 = app_handle
-            .state::<XCodeTwin>()
-            .get_state_xcode_focus_state();
     }
 
     fn smartly_position_widget(

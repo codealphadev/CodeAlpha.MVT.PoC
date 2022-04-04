@@ -1,227 +1,279 @@
-use serde::Serialize;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tokio_tungstenite::tungstenite::Message;
+#![allow(non_upper_case_globals)]
 
-use crate::websocket::accessibility_messages::models;
-use crate::websocket::websocket_message::WebsocketMessage;
-use crate::websocket::{accessibility_messages, websocket_client};
-use tokio::time::{sleep, Duration};
-use tokio_tungstenite::tungstenite;
+use std::thread;
+use std::{ffi::c_void, mem};
 
-// How we do this:
-// ======
-// We create a "XCodeTwin" object that holds the most recently received state info from the
-// accessibility server. So any Tauri command can retrieve this state info by interacting with
-// the "XCodeTwin" object. Furthermore, this object is also responsible for emitting
-// events to the frontend through Tauri. Messages that need to reach the Accessibility Server
-// are also transferred through the "XCodeTwin" object.
-#[allow(dead_code)]
-pub struct XCodeTwin {
-    accessibility_event_sender: futures_channel::mpsc::UnboundedSender<Message>,
+use accessibility::{AXAttribute, AXObserver, AXUIElement, Error};
+use accessibility_sys::{
+    kAXFocusedUIElementChangedNotification, kAXWindowDeminiaturizedNotification,
+    kAXWindowMiniaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification,
+    AXObserverRef, AXUIElementRef,
+};
+use cocoa::appkit::CGPoint;
+use core_foundation::runloop::CFRunLoop;
+use core_foundation::{
+    base::TCFType,
+    string::{CFString, CFStringRef},
+};
+use core_graphics_types::geometry::CGSize;
 
-    state_most_recent_message:
-        Arc<Mutex<Option<WebsocketMessage<accessibility_messages::Message>>>>,
+use crate::axevents::models::{XCodeFocusElement, XCodeFocusStatusChange};
+use crate::axevents::{
+    models::{AppFocusState, AppInfo},
+    Event,
+};
 
-    state_global_app_focus_state: Arc<Mutex<Option<models::AppFocusState>>>,
-    state_xcode_editor_content: Arc<Mutex<Option<models::XCodeEditorContent>>>,
-    state_xcode_editor_focus_state: Arc<Mutex<Option<models::XCodeFocusStatusChange>>>,
-    state_xcode_app_focus_state: Arc<Mutex<Option<models::XCodeFocusStatusChange>>>,
-
-    tauri_app_handle: tauri::AppHandle,
-
-    client_id: uuid::Uuid,
+pub struct TauriStateHandle {
+    pub handle: tauri::AppHandle,
 }
 
-#[allow(dead_code)]
+pub fn observer_focused_app(tauri_handle: TauriStateHandle) {
+    let tauri_handle_move_copy = TauriStateHandle {
+        handle: tauri_handle.handle.clone(),
+    };
+    thread::spawn(move || {
+        let mut focused_app: Option<AXUIElement> = None;
+        let mut xcode_app: Option<AXUIElement> = None;
 
-impl XCodeTwin {
-    pub fn new(url: url::Url, app_handle: tauri::AppHandle) -> Self {
-        // Establish connection to Accessibility Server
-        // ============================================
+        loop {
+            // Register XCode observer
+            // =======================
+            // Happens only once when xcode is launched; is retriggered if xcode is restarted
+            let app = currently_focused_app();
+            if let Ok(currently_focused_app) = app {
+                let registration_required_res =
+                    is_xcode_observer_registration_required(currently_focused_app, &mut xcode_app);
 
-        // First, we create two sets of channels:
-        // * The first TX and RX are being tied to the websocket server TcpStream
-        // * The second TX and RX enable the struct we use to
-        let (accessibility_event_sender, accessibility_event_receiver) =
-            futures_channel::mpsc::unbounded();
-        let (tauri_event_sender, mut tauri_event_receiver) = futures_channel::mpsc::unbounded();
-
-        // Spawn connection to Accessibility Server from a separate thread
-        let ax_sender = accessibility_event_sender.clone();
-        let client_id = uuid::Uuid::new_v4();
-
-        tokio::spawn(async move {
-            websocket_client::connect_to_ax_server(
-                url,
-                client_id,
-                tauri_event_sender,
-                ax_sender,
-                accessibility_event_receiver,
-            )
-            .await;
-        });
-
-        // Connect XCodeTwin to state messages from Accessibility Server
-        // ===========================================================
-
-        // Create Arc<Mutex>s for each state message
-        let state_global_app_focus_state = Arc::new(Mutex::new(None));
-        let state_xcode_editor_focus_state = Arc::new(Mutex::new(None));
-        let state_xcode_app_focus_state = Arc::new(Mutex::new(None));
-        let state_xcode_editor_content = Arc::new(Mutex::new(None));
-        let state_most_recent_message = Arc::new(Mutex::new(None));
-
-        // Clone all Arc<Mutex>s to be able to send them to a separate thread
-        let app_focus_state = Arc::clone(&state_global_app_focus_state);
-        let xcode_editor_focus_state = Arc::clone(&state_xcode_editor_focus_state);
-        let xcode_app_focus_state = Arc::clone(&state_xcode_app_focus_state);
-        let xcode_editor_content = Arc::clone(&state_xcode_editor_content);
-        let most_recent_msg = Arc::clone(&state_most_recent_message);
-
-        // Move AppHandle to thread to publish state messages
-        let tauri_app_handle = app_handle;
-        let thread_app_handle = tauri_app_handle.clone();
-        tokio::spawn(async move {
-            loop {
-                let result = tauri_event_receiver.try_next();
-                if let Ok(Some(message)) = result {
-                    let parsed_msg: WebsocketMessage<accessibility_messages::Message> =
-                        serde_json::from_str(&message.to_string()).unwrap();
-
-                    // Update most recently received message
-                    Self::assign_msg(&most_recent_msg, &parsed_msg).await;
-
-                    // // // DEBUG
-                    // let print_str = serde_json::to_string(&parsed_msg.data.clone()).unwrap();
-                    // tokio::io::stdout()
-                    //     .write_all(&print_str.as_bytes())
-                    //     .await
-                    //     .unwrap();
-
-                    match parsed_msg.data {
-                        accessibility_messages::Message::Event(data) => {
-                            // Publish event to Tauri
-                            data.publish_to_tauri(thread_app_handle.clone());
-
-                            match data {
-                                accessibility_messages::types::Event::AppFocusState(payload) => {
-                                    Self::assign_msg(&app_focus_state, &payload).await;
-                                }
-                                accessibility_messages::types::Event::XCodeEditorContent(
-                                    payload,
-                                ) => {
-                                    Self::assign_msg(&xcode_editor_content, &payload).await;
-                                }
-                                accessibility_messages::types::Event::XCodeFocusStatus(payload) => {
-                                    Self::assign_msg(&xcode_app_focus_state, &payload.app_status)
-                                        .await;
-                                    Self::assign_msg(
-                                        &xcode_editor_focus_state,
-                                        &payload.editor_status,
-                                    )
-                                    .await;
-                                }
-                                accessibility_messages::types::Event::XCodeFocusStatusChange(
-                                    payload,
-                                ) => match payload.focus_element_change {
-                                    accessibility_messages::models::XCodeFocusElement::App => {
-                                        Self::assign_msg(&xcode_app_focus_state, &payload).await;
-                                    }
-                                    accessibility_messages::models::XCodeFocusElement::Editor => {
-                                        Self::assign_msg(&xcode_editor_focus_state, &payload).await;
-                                    }
-                                },
-                                accessibility_messages::types::Event::None => {}
-                            }
+                if let Ok(registration_required) = registration_required_res {
+                    if registration_required {
+                        if let Some(ref xcode_app) = xcode_app {
+                            let _ = register_xcode_observer(xcode_app, &tauri_handle_move_copy);
                         }
-                        _ => {}
                     }
                 }
-                // Sleep for 10ms to not drive up CPU load
-                sleep(Duration::from_millis(20)).await;
             }
-        });
 
-        Self {
-            accessibility_event_sender,
-            state_most_recent_message,
-            state_global_app_focus_state,
-            state_xcode_editor_content,
-            state_xcode_editor_focus_state,
-            state_xcode_app_focus_state,
-            tauri_app_handle,
-            client_id,
+            // Monitor which app is currently in focus
+            // =======================================
+            let app = currently_focused_app();
+            if let Ok(currently_focused_app) = app {
+                if let Some(ref previously_focused_app) = focused_app {
+                    if *previously_focused_app != currently_focused_app {
+                        callback_app_focus_state(
+                            previously_focused_app,
+                            &currently_focused_app,
+                            &tauri_handle_move_copy,
+                        );
+
+                        focused_app = Some(currently_focused_app);
+                    }
+                } else {
+                    focused_app = Some(currently_focused_app);
+                }
+            }
+
+            thread::sleep(std::time::Duration::from_millis(150));
+        }
+    });
+}
+
+fn is_xcode_observer_registration_required(
+    focused_app: AXUIElement,
+    known_xcode_app: &mut Option<AXUIElement>,
+) -> Result<bool, Error> {
+    let focused_app_title = focused_app.attribute(&AXAttribute::title())?;
+
+    // Check if focused app is XCode, skip if not
+    if focused_app_title != "Xcode" {
+        return Ok(false);
+    }
+
+    if let Some(xcode_app) = known_xcode_app {
+        let xcode_app_identifier = xcode_app.attribute(&AXAttribute::identifier())?;
+        let focused_app_identifier = focused_app.attribute(&AXAttribute::identifier())?;
+
+        // Case: XCode has a new AXUIElement, telling us it was restarted
+        if xcode_app_identifier != focused_app_identifier {
+            *known_xcode_app = Some(focused_app);
+            return Ok(true);
+        }
+    } else {
+        // Case: XCode was never started while the program was running; it's UI element is not known yet
+        *known_xcode_app = Some(focused_app);
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+fn register_xcode_observer(
+    xcode_ui_element: &AXUIElement,
+    tauri_apphandle: &TauriStateHandle,
+) -> Result<(), Error> {
+    assert_eq!(xcode_ui_element.attribute(&AXAttribute::title())?, "Xcode");
+
+    let pid = xcode_ui_element.pid().unwrap();
+    let tauri_handle_move_copy = tauri_apphandle.handle.clone();
+    thread::spawn(move || {
+        // 1. Create AXObserver
+        let xcode_observer = AXObserver::new(pid, callback_xcode_events);
+        let ui_element = AXUIElement::application(pid);
+
+        if let Ok(mut xcode_observer) = xcode_observer {
+            xcode_observer.start();
+
+            // Add notification for "AXFocusedUIElementChanged"
+            let _ = xcode_observer.add_notification(
+                kAXFocusedUIElementChangedNotification,
+                &ui_element,
+                TauriStateHandle {
+                    handle: tauri_handle_move_copy.clone(),
+                },
+            );
+
+            // Add notification for "WindowMoved"
+            let _ = xcode_observer.add_notification(
+                kAXWindowMovedNotification,
+                &ui_element,
+                TauriStateHandle {
+                    handle: tauri_handle_move_copy.clone(),
+                },
+            );
+
+            // Add notification for "WindowResized"
+            let _ = xcode_observer.add_notification(
+                kAXWindowResizedNotification,
+                &ui_element,
+                TauriStateHandle {
+                    handle: tauri_handle_move_copy.clone(),
+                },
+            );
+
+            // Add notification for "WindowMiniaturized"
+            let _ = xcode_observer.add_notification(
+                kAXWindowMiniaturizedNotification,
+                &ui_element,
+                TauriStateHandle {
+                    handle: tauri_handle_move_copy.clone(),
+                },
+            );
+
+            // Add notification for "WindowDeminiaturized"
+            let _ = xcode_observer.add_notification(
+                kAXWindowDeminiaturizedNotification,
+                &ui_element,
+                TauriStateHandle {
+                    handle: tauri_handle_move_copy.clone(),
+                },
+            );
+
+            CFRunLoop::run_current();
+        }
+    });
+
+    Ok(())
+}
+
+unsafe extern "C" fn callback_xcode_events(
+    observer: AXObserverRef,
+    element: AXUIElementRef,
+    notification: CFStringRef,
+    context: *mut c_void,
+) {
+    let _observer: AXObserver = TCFType::wrap_under_get_rule(observer);
+    let element: AXUIElement = TCFType::wrap_under_get_rule(element);
+    let notification = CFString::wrap_under_get_rule(notification);
+    let context: *mut TauriStateHandle = mem::transmute(context);
+
+    match notification.to_string().as_str() {
+        kAXFocusedUIElementChangedNotification => {
+            let _ = publish_xcode_focus_change(&element, &*context);
+        }
+        _other => {
+            // println!("{:?}", other)
         }
     }
+}
 
-    async fn assign_msg<T: Clone + Serialize>(old_val: &Arc<Mutex<Option<T>>>, new_val: &T) {
-        let mut locked_val = old_val.lock().await;
-        *locked_val = Some(new_val.clone());
-    }
+fn publish_xcode_focus_change(
+    focused_element: &AXUIElement,
+    tauri_state: &TauriStateHandle,
+) -> Result<(), Error> {
+    let role = focused_element.attribute(&AXAttribute::role())?;
 
-    fn send_generic_message(&self, message: Message) {
-        let _result = self.accessibility_event_sender.unbounded_send(message);
-    }
+    if role.to_string().as_str() == "AXTextArea" {
+        // Get the frame of the parent UI element --> TextAreas don't contain the actual coordinates of the window
+        let parent_ui_element = focused_element.attribute(&AXAttribute::parent())?;
 
-    // Reconnect happens by resetting the XCodeTwin -> removes all previous state
-    pub fn reconnect(&self, url_path: &str, port: &str, app_handle: tauri::AppHandle) -> Self {
-        let url =
-            url::Url::parse(&format!("{}{}", url_path, port)).expect("No valid URL path provided.");
-        Self::new(url, app_handle)
-    }
+        let size_ax_val = parent_ui_element.attribute(&AXAttribute::size())?;
+        let pos_ax_val = parent_ui_element.attribute(&AXAttribute::position())?;
 
-    pub fn get_state_recent_message(
-        &self,
-    ) -> Option<WebsocketMessage<accessibility_messages::Message>> {
-        let arc_handle = Arc::clone(&self.state_most_recent_message);
-        let val = arc_handle.try_lock().unwrap();
-        return (*val).clone();
-    }
+        let size = size_ax_val.get_value::<CGSize>()?;
+        let origin = pos_ax_val.get_value::<CGPoint>()?;
 
-    pub fn get_state_xcode_editor_content(&self) -> Option<models::XCodeEditorContent> {
-        let arc_handle = Arc::clone(&self.state_xcode_editor_content);
-        let val = arc_handle.try_lock().unwrap();
-        return (*val).clone();
-    }
-
-    pub fn get_state_global_app_focus(&self) -> Option<models::AppFocusState> {
-        let arc_handle = Arc::clone(&self.state_global_app_focus_state);
-        let val = arc_handle.try_lock().unwrap();
-        return (*val).clone();
-    }
-
-    pub fn get_state_xcode_focus_state(&self) -> Option<models::XCodeFocusStatus> {
-        let arc_handle_1 = Arc::clone(&self.state_xcode_editor_focus_state);
-        let arc_handle_2 = Arc::clone(&self.state_xcode_app_focus_state);
-        let val1 = arc_handle_1.try_lock().unwrap();
-        let val2 = arc_handle_2.try_lock().unwrap();
-
-        if (*val1).is_some() && (*val2).is_some() {
-            return Some(models::XCodeFocusStatus {
-                editor_status: (*val1).clone().unwrap(),
-                app_status: (*val2).clone().unwrap(),
-            });
-        } else {
-            return None;
-        }
-    }
-
-    pub fn update_xcode_editor_content(&self, new_content: &str) {
-        let content_update = models::XCodeEditorContent {
-            content: new_content.to_string(),
-            file_extension: "".to_string(),
-            file_name: "".to_string(),
-            file_path: "".to_string(),
+        let focus_change = XCodeFocusStatusChange {
+            focus_element_change: XCodeFocusElement::Editor,
+            is_in_focus: true,
+            ui_element_x: origin.x,
+            ui_element_y: origin.y,
+            ui_element_w: size.width,
+            ui_element_h: size.height,
         };
 
-        let ws_message = WebsocketMessage::from_request(
-            accessibility_messages::types::Request::UpdateXCodeEditorContent(content_update),
-            self.client_id,
-        );
+        let event = Event::XCodeFocusStatusChange(focus_change);
+        event.publish_to_tauri(tauri_state.handle.clone());
+    } else {
+        let focus_change = XCodeFocusStatusChange {
+            focus_element_change: XCodeFocusElement::App,
+            is_in_focus: true,
+            ui_element_x: 0.0,
+            ui_element_y: 0.0,
+            ui_element_w: 0.0,
+            ui_element_h: 0.0,
+        };
 
-        self.send_generic_message(tungstenite::Message::binary(
-            serde_json::to_vec(&ws_message).unwrap(),
-        ));
+        let event = Event::XCodeFocusStatusChange(focus_change);
+        event.publish_to_tauri(tauri_state.handle.clone());
     }
+
+    Ok(())
+}
+
+fn callback_app_focus_state(
+    previous_app: &AXUIElement,
+    current_app: &AXUIElement,
+    tauri_state: &TauriStateHandle,
+) {
+    assert_ne!(previous_app, current_app);
+
+    let current_app_title = current_app.attribute(&AXAttribute::title());
+    let previous_app_title = previous_app.attribute(&AXAttribute::title());
+
+    if let (Ok(current_app_title), Ok(previous_app_title)) = (current_app_title, previous_app_title)
+    {
+        let focus_state = AppFocusState {
+            previous_app: AppInfo {
+                bundle_id: "".to_string(),
+                name: previous_app_title.to_string(),
+                pid: 0,
+                is_finished_launching: true,
+            },
+            current_app: AppInfo {
+                bundle_id: "".to_string(),
+                name: current_app_title.to_string(),
+                pid: 0,
+                is_finished_launching: true,
+            },
+        };
+
+        let event = Event::AppFocusState(focus_state);
+        event.publish_to_tauri(tauri_state.handle.clone());
+    }
+}
+
+pub fn currently_focused_app() -> Result<AXUIElement, Error> {
+    let system_wide_element = AXUIElement::system_wide();
+    let focused_ui_element = system_wide_element.attribute(&AXAttribute::focused_uielement())?;
+    let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
+    focused_window.attribute(&AXAttribute::parent())
 }

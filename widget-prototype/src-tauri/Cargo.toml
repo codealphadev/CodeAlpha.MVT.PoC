@@ -17,14 +17,16 @@ tauri-build = { version = "1.0.0-rc.4", features = [] }
 [dependencies]
 tauri = { version = "1.0.0-rc.4", features = ["api-all", "macos-private-api"] }
 
-futures-util = "0.3"
-futures-channel = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.17.0", features = ["full"] }
-tokio-tungstenite = "0.17.1"
-url = "2.1.0"
-uuid = { version = "0.8", features = ["serde", "v4"] }
+
+# Dependencies for accessibility apis
+core-foundation = "0.9.3"
+core-graphics-types = "0.1.1"
+cocoa = "0.24.0"
+
+accessibility = { git = "https://github.com/Hupka/accessibility" }
+accessibility-sys = { git = "https://github.com/Hupka/accessibility" }
 
 [dev-dependencies]
 pretty_assertions = "1.2.0"
