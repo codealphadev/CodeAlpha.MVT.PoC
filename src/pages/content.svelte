@@ -11,7 +11,7 @@
 
 	// Logic to always resize the content window to the size of the HTML
 	afterUpdate(() => {
-		setTimeout(() => {
+		setTimeout(async () => {
 			let contentRootContainerHeight: number = parseInt(
 				window.getComputedStyle(document.body).getPropertyValue('height')
 			);
@@ -19,11 +19,13 @@
 				window.getComputedStyle(document.body).getPropertyValue('width')
 			);
 
-			invoke('cmd_resize_window', {
+			await invoke('cmd_resize_window', {
 				windowLabel: 'Content',
 				sizeX: +contentRootContainerWidth,
 				sizeY: +contentRootContainerHeight
 			});
+
+			await invoke('cmd_update_content_position');
 		}, 10);
 	});
 
