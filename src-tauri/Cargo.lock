@@ -3,6 +3,22 @@
 version = 3
 
 [[package]]
+name = "CodeAlpha"
+version = "0.1.0"
+dependencies = [
+ "accessibility",
+ "accessibility-sys",
+ "cocoa",
+ "core-foundation",
+ "core-graphics-types",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "accessibility"
 version = "0.1.6"
 source = "git+https://github.com/Hupka/accessibility#45ff3e539791e1756d19f8280b1ce24bd0de4132"
@@ -73,22 +89,6 @@ name = "anyhow"
 version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4361135be9122e0870de935d7c439aef945b9f9ddd4199a553b5270b49c82a27"
-
-[[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "accessibility",
- "accessibility-sys",
- "cocoa",
- "core-foundation",
- "core-graphics-types",
- "pretty_assertions",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
-]
 
 [[package]]
 name = "async-broadcast"
