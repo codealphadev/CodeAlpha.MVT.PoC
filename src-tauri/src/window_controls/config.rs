@@ -64,6 +64,18 @@ pub mod default_properties {
         }
     }
 
+    // If we tie windows together as parent/child, they will be moved together.
+    // For now, only the content window is supposed to have the Widget as a parent.
+    pub fn parent_window(window: &AppWindow) -> AppWindow {
+        match window {
+            AppWindow::Settings => AppWindow::None,
+            AppWindow::Analytics => AppWindow::None,
+            AppWindow::Widget => AppWindow::None,
+            AppWindow::Content => AppWindow::Widget,
+            AppWindow::None => AppWindow::None,
+        }
+    }
+
     pub fn is_resizable(window: &AppWindow) -> bool {
         match window {
             AppWindow::Settings => false,

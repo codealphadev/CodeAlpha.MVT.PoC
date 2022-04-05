@@ -92,63 +92,65 @@ pub fn cmd_update_content_position(handle: tauri::AppHandle) {
 
     // Reposition Content Window and Widget Window
     if let (Some(content), Some(widget)) = (content_window, widget_window) {
-        let screen = widget.current_monitor().unwrap().unwrap();
-        let screen_scale_factor = screen.scale_factor();
-        let pos_screen = screen.position().to_logical::<f64>(screen_scale_factor);
+        if let Ok(temp) = widget.current_monitor() {
+            let screen = temp.unwrap();
+            let screen_scale_factor = screen.scale_factor();
+            let pos_screen = screen.position().to_logical::<f64>(screen_scale_factor);
 
-        let pos_widget = (widget.outer_position())
-            .unwrap()
-            .to_logical::<f64>(screen_scale_factor);
+            let pos_widget = (widget.outer_position())
+                .unwrap()
+                .to_logical::<f64>(screen_scale_factor);
 
-        let widget_size = LogicalSize::<f64> {
-            width: widget
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .width,
-            height: widget
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .height as f64,
-        };
-        let content_size = LogicalSize::<f64> {
-            width: content
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .width as f64,
-            height: content
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .height as f64,
-        };
+            let widget_size = LogicalSize::<f64> {
+                width: widget
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .width,
+                height: widget
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .height as f64,
+            };
+            let content_size = LogicalSize::<f64> {
+                width: content
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .width as f64,
+                height: content
+                    .outer_size()
+                    .unwrap()
+                    .to_logical::<f64>(screen_scale_factor)
+                    .height as f64,
+            };
 
-        let mut new_content_pos = LogicalPosition {
-            x: pos_widget.x + (widget_size.width - content_size.width) + POSITIONING_OFFSET_X,
-            y: pos_widget.y - content_size.height - POSITIONING_OFFSET_Y,
-        };
+            let mut new_content_pos = LogicalPosition {
+                x: pos_widget.x + (widget_size.width - content_size.width) + POSITIONING_OFFSET_X,
+                y: pos_widget.y - content_size.height - POSITIONING_OFFSET_Y,
+            };
 
-        // Check if the content would be outside the left end of the screen, if so, flip the content window position horizontally
-        let mut bubble_orientation_right = true;
-        if pos_screen.x > new_content_pos.x {
-            new_content_pos.x = pos_widget.x - POSITIONING_OFFSET_X;
-            bubble_orientation_right = false;
+            // Check if the content would be outside the left end of the screen, if so, flip the content window position horizontally
+            let mut bubble_orientation_right = true;
+            if pos_screen.x > new_content_pos.x {
+                new_content_pos.x = pos_widget.x - POSITIONING_OFFSET_X;
+                bubble_orientation_right = false;
+            }
+
+            // Emit event to content window to update its orientation
+            handle
+                .emit_to(
+                    &AppWindow::Content.to_string(),
+                    "evt-bubble-icon-orientation",
+                    PayloadBubbleOrientationEvent {
+                        orientation_right: bubble_orientation_right,
+                    },
+                )
+                .unwrap();
+
+            let _ = content.set_position(tauri::Position::Logical(new_content_pos));
         }
-
-        // Emit event to content window to update its orientation
-        handle
-            .emit_to(
-                &AppWindow::Content.to_string(),
-                "evt-bubble-icon-orientation",
-                PayloadBubbleOrientationEvent {
-                    orientation_right: bubble_orientation_right,
-                },
-            )
-            .unwrap();
-
-        let _ = content.set_position(tauri::Position::Logical(new_content_pos));
     }
 }
 
