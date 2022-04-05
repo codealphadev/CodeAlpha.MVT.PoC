@@ -21,7 +21,6 @@ pub struct WindowStateMachine {
     listener_app_focus_status: Option<EventHandler>,
     listener_xcode_focus_status_change: Option<EventHandler>,
 
-    preserve_content_visibility_was_visible: Arc<Mutex<bool>>,
     last_known_editor_position: Arc<Mutex<Option<tauri::PhysicalPosition<i32>>>>,
     last_known_editor_size: Arc<Mutex<Option<tauri::PhysicalSize<i32>>>>,
     last_repositioned_widget_position: Arc<Mutex<Option<tauri::PhysicalPosition<i32>>>>,
@@ -30,18 +29,10 @@ pub struct WindowStateMachine {
 
 impl WindowStateMachine {
     pub fn new(app_handle: tauri::AppHandle) -> Self {
-        // Init preserve_content_visibility_was_visible
-        let mut preserve_content_visibility_was_visible = Arc::new(Mutex::new(false));
-        let content_window = app_handle.get_window(&AppWindow::Content.to_string());
-        if content_window.is_some() {
-            preserve_content_visibility_was_visible = Arc::new(Mutex::new(true));
-        }
-
         Self {
             tauri_app_handle: app_handle.clone(),
             listener_app_focus_status: None,
             listener_xcode_focus_status_change: None,
-            preserve_content_visibility_was_visible,
             last_known_editor_position: Arc::new(Mutex::new(None)),
             last_known_editor_size: Arc::new(Mutex::new(None)),
             last_repositioned_widget_position: Arc::new(Mutex::new(None)),
@@ -53,8 +44,6 @@ impl WindowStateMachine {
         // Registering listener for a change in Global App Focus
         // ==================================
         // 1. Copy variable Arcs to be moved into closure (can't move sef into closure)
-        let preserve_content_visibility_was_visible_copy =
-            self.preserve_content_visibility_was_visible.clone();
         let tauri_app_handle_copy = self.tauri_app_handle.clone();
         let last_focused_app_pid_copy = self.last_focused_app_pid.clone();
 
@@ -76,10 +65,7 @@ impl WindowStateMachine {
                             if ![EDITOR_NAME].contains(&&payload.current_app.name.as_str())
                                 && payload.current_app.pid != std::process::id()
                             {
-                                Self::hide_widget_preserve_content(
-                                    tauri_app_handle_copy.clone(),
-                                    &preserve_content_visibility_was_visible_copy,
-                                );
+                                close_window(tauri_app_handle_copy.clone(), AppWindow::Widget);
                             }
 
                             // Update last focused app
@@ -94,8 +80,6 @@ impl WindowStateMachine {
         // Registering listener for Editor Focus
         // ==================================
         // 1. Copy variable Arcs to be moved into closure (can't move sef into closure)
-        let preserve_content_visibility_was_visible_copy =
-            self.preserve_content_visibility_was_visible.clone();
         let last_known_editor_position_copy = self.last_known_editor_position.clone();
         let last_known_editor_size_copy = self.last_known_editor_size.clone();
         let last_repositioned_widget_position_copy = self.last_repositioned_widget_position.clone();
@@ -118,7 +102,7 @@ impl WindowStateMachine {
                             if let XCodeFocusElement::Editor = payload.focus_element_change {
                                 // Show widget if ...
                                 // 1. Last focused app before receiving this msg was NOT this app
-                                // 2. Editor was focused; restore preserved content window visibility.
+                                // 2. Editor was focused; restore content window visibility.
                                 let last_focused_app_pid =
                                     last_focused_app_pid_copy.lock().unwrap();
 
@@ -146,44 +130,15 @@ impl WindowStateMachine {
                                     );
 
                                     // 2. Show Widget
-                                    Self::show_widget_preserve_content(
-                                        tauri_app_handle_copy.clone(),
-                                        &preserve_content_visibility_was_visible_copy,
-                                    );
+                                    open_window(tauri_app_handle_copy.clone(), AppWindow::Widget);
                                 }
                             } else {
-                                Self::hide_widget_preserve_content(
-                                    tauri_app_handle_copy.clone(),
-                                    &preserve_content_visibility_was_visible_copy,
-                                );
+                                close_window(tauri_app_handle_copy.clone(), AppWindow::Widget);
                             }
                         }
                     }
                 });
         self.listener_xcode_focus_status_change = Some(listener_xcode_focus_status_change);
-    }
-
-    fn hide_widget_preserve_content(app_handle: tauri::AppHandle, preserve_var: &Arc<Mutex<bool>>) {
-        // Preserve content visibility before hiding it due to the widget being hidden
-        let content_window = app_handle.get_window(&AppWindow::Content.to_string());
-        if content_window.is_some() {
-            let mut locked_val = preserve_var.lock().unwrap();
-            *locked_val = content_window.unwrap().is_visible().unwrap();
-        }
-
-        // Since the widget is "parent" of the content window, hiding the widget is sufficient to hide the content window as well
-        close_window(app_handle.clone(), AppWindow::Widget);
-    }
-
-    fn show_widget_preserve_content(app_handle: tauri::AppHandle, preserve_var: &Arc<Mutex<bool>>) {
-        open_window(app_handle.clone(), AppWindow::Widget);
-
-        // Restore content visibility after showing the widget
-        let mut locked_val = preserve_var.lock().unwrap();
-        if *locked_val {
-            open_window(app_handle.clone(), AppWindow::Content);
-            *locked_val = false;
-        }
     }
 
     fn smartly_position_widget(
