@@ -1,5 +1,5 @@
 pub use setup::setup_observers;
-pub use utils::currently_focused_app;
+pub use utils::*;
 
 pub mod setup;
 pub mod utils;

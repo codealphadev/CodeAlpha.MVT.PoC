@@ -1,9 +1,9 @@
-use crate::ax_events::{models::XCodeFocusElement, Event};
-
-use super::{
-    window_controls::{cmd_close_window, cmd_open_window, AppWindow},
-    window_positioning,
+use crate::{
+    ax_events::{models::XCodeFocusElement, Event},
+    window_controls::{close_window, open_window, AppWindow},
 };
+
+use super::window_positioning;
 use std::sync::{Arc, Mutex};
 use tauri::{EventHandler, Manager, PhysicalSize};
 
@@ -172,17 +172,17 @@ impl WindowStateMachine {
             *locked_val = content_window.unwrap().is_visible().unwrap();
         }
 
-        cmd_close_window(app_handle.clone(), AppWindow::Widget);
-        cmd_close_window(app_handle.clone(), AppWindow::Content);
+        close_window(app_handle.clone(), AppWindow::Widget);
+        close_window(app_handle.clone(), AppWindow::Content);
     }
 
     fn show_widget_preserve_content(app_handle: tauri::AppHandle, preserve_var: &Arc<Mutex<bool>>) {
-        cmd_open_window(app_handle.clone(), AppWindow::Widget);
+        open_window(app_handle.clone(), AppWindow::Widget);
 
         // Restore content visibility after showing the widget
         let mut locked_val = preserve_var.lock().unwrap();
         if *locked_val {
-            cmd_open_window(app_handle.clone(), AppWindow::Content);
+            open_window(app_handle.clone(), AppWindow::Content);
             *locked_val = false;
         }
     }

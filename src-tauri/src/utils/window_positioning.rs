@@ -1,6 +1,6 @@
 use tauri::{LogicalPosition, LogicalSize, Manager};
 
-use super::window_controls;
+use crate::window_controls::AppWindow;
 
 static POSITIONING_OFFSET_X: f64 = 24.;
 static POSITIONING_OFFSET_Y: f64 = 8.;
@@ -12,10 +12,10 @@ struct PayloadBubbleOrientationEvent {
 
 #[tauri::command]
 // Checking if widget's position after being dragged is still valid
-pub fn cmd_update_widget_position<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+pub fn cmd_update_widget_position(handle: tauri::AppHandle) {
     // Get both app windows which need to be positioned in relation to one another
-    let content_window = handle.get_window(&window_controls::AppWindow::Content.to_string());
-    let widget_window = handle.get_window(&window_controls::AppWindow::Widget.to_string());
+    let content_window = handle.get_window(&AppWindow::Content.to_string());
+    let widget_window = handle.get_window(&AppWindow::Widget.to_string());
 
     // Return if either window is not found
     if widget_window.is_none() {
@@ -80,10 +80,10 @@ pub fn cmd_update_widget_position<R: tauri::Runtime>(handle: tauri::AppHandle<R>
 }
 
 #[tauri::command]
-pub fn cmd_update_content_position<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
+pub fn cmd_update_content_position(handle: tauri::AppHandle) {
     // Get both app windows which need to be positioned in relation to one another
-    let content_window = handle.get_window(&window_controls::AppWindow::Content.to_string());
-    let widget_window = handle.get_window(&window_controls::AppWindow::Widget.to_string());
+    let content_window = handle.get_window(&AppWindow::Content.to_string());
+    let widget_window = handle.get_window(&AppWindow::Widget.to_string());
 
     // Return if either window is not found
     if content_window.is_none() || widget_window.is_none() {
@@ -140,7 +140,7 @@ pub fn cmd_update_content_position<R: tauri::Runtime>(handle: tauri::AppHandle<R
         // Emit event to content window to update its orientation
         handle
             .emit_to(
-                &window_controls::AppWindow::Content.to_string(),
+                &AppWindow::Content.to_string(),
                 "evt-bubble-icon-orientation",
                 PayloadBubbleOrientationEvent {
                     orientation_right: bubble_orientation_right,
@@ -153,8 +153,8 @@ pub fn cmd_update_content_position<R: tauri::Runtime>(handle: tauri::AppHandle<R
 }
 
 #[tauri::command]
-pub fn cmd_start_dragging_widget<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
-    let widget_window = handle.get_window(&window_controls::AppWindow::Widget.to_string());
+pub fn cmd_start_dragging_widget(handle: tauri::AppHandle) {
+    let widget_window = handle.get_window(&AppWindow::Widget.to_string());
 
     // Return if window is not found
     if widget_window.is_none() {
