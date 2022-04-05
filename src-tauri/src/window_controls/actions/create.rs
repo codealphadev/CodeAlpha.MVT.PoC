@@ -15,12 +15,11 @@ pub fn create_window(handle: tauri::AppHandle, window_type: AppWindow) {
         return;
     }
 
-    let parent_window = dbg!(default_properties::parent_window(&window_type));
+    let parent_window = default_properties::parent_window(&window_type);
     let parent_window = handle.get_window(&utils::get_window_label(parent_window));
 
     if let Some(parent_window) = parent_window {
         if let Ok(parent) = parent_window.ns_window() {
-            println!("DUDE");
             tauri::window::WindowBuilder::new(
                 &handle,
                 get_window_label(window_type),

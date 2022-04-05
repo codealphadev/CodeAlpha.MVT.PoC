@@ -20,8 +20,6 @@ pub mod default_properties {
     use super::*;
 
     pub fn url(window: &AppWindow) -> String {
-        let master = format!("{}{}", r"\", window.to_string().to_lowercase());
-
         match window {
             AppWindow::Settings => {
                 format!("{}{}", r"\", AppWindow::Settings.to_string().to_lowercase())

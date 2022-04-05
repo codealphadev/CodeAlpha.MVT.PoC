@@ -33,14 +33,11 @@ impl WindowStateManager {
     }
 
     pub fn launch_startup_windows(&self) {
-        let startup_window_list: [AppWindow; 2] = [AppWindow::Widget, AppWindow::Content];
+        let startup_window_list: [AppWindow; 1] = [AppWindow::Widget];
 
         for window_type in startup_window_list.iter() {
             create_window(self.tauri_app_handle.clone(), *window_type);
         }
-
-        // position the content window in relation to the widget
-        window_positioning::cmd_update_content_position(self.tauri_app_handle.clone());
     }
 }
 
