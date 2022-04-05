@@ -1,9 +1,6 @@
-use tauri::{http::ResponseParts, Error, Manager};
+use tauri::{Error, Manager};
 
-use crate::{
-    utils::window_positioning::{cmd_update_content_position, cmd_update_widget_position},
-    window_controls::{config::AppWindow, get_window_label},
-};
+use crate::window_controls::{config::AppWindow, get_window_label};
 
 use super::create::create_window;
 

@@ -2,8 +2,6 @@ use std::sync::{Arc, Mutex};
 
 use tauri::{EventHandler, Manager};
 
-use crate::utils::window_positioning;
-
 use super::{create_window, AppWindow};
 
 pub struct WindowStateManager {
@@ -36,7 +34,7 @@ impl WindowStateManager {
         let startup_window_list: [AppWindow; 1] = [AppWindow::Widget];
 
         for window_type in startup_window_list.iter() {
-            create_window(&self.tauri_app_handle, *window_type);
+            let _ = create_window(&self.tauri_app_handle, *window_type);
         }
     }
 }

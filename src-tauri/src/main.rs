@@ -1,10 +1,11 @@
+#![allow(non_snake_case)]
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
 
 use ax_interaction::{setup_observers, utils::TauriState};
-use tauri::{command, window, AppHandle, Manager, StateManager, WindowUrl};
+use tauri::Manager;
 use utils::window_state_machine::WindowStateMachine;
 
 use crate::commands::window_control_commands;
@@ -14,22 +15,6 @@ mod ax_interaction;
 mod commands;
 mod utils;
 mod window_controls;
-
-#[command]
-// fn create_child_window(id: String, app: AppHandle) {
-//     let main = app.get_window("main").unwrap();
-
-//     let child = window::WindowBuilder::new(&app, id, WindowUrl::default())
-//         .title("Child")
-//         .inner_size(400.0, 300.0);
-
-//     #[cfg(target_os = "macos")]
-//     let child = child.parent_window(main.ns_window().unwrap());
-//     #[cfg(target_os = "windows")]
-//     let child = child.parent_window(main.hwnd().unwrap());
-
-//     child.build();
-// }
 
 fn main() {
     let app: tauri::App = tauri::Builder::default()
@@ -52,8 +37,9 @@ fn main() {
             window_state_machine.setup();
             app.manage(window_state_machine);
 
-            let mut window_state = window_controls::WindowStateManager::new(app.handle().clone());
+            let window_state = window_controls::WindowStateManager::new(app.handle().clone());
             window_state.launch_startup_windows();
+
             Ok(())
         })
         .build(tauri::generate_context!("tauri.conf.json"))
