@@ -36,7 +36,7 @@ impl WindowStateManager {
         let startup_window_list: [AppWindow; 1] = [AppWindow::Widget];
 
         for window_type in startup_window_list.iter() {
-            create_window(self.tauri_app_handle.clone(), *window_type);
+            create_window(&self.tauri_app_handle, *window_type);
         }
     }
 }

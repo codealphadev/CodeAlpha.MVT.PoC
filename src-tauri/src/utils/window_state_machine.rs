@@ -70,9 +70,6 @@ impl WindowStateMachine {
                         let parsed_msg: Event = serde_json::from_str(&msg_s).unwrap();
                         // Parse msg as Event of correct type
                         if let Event::AppFocusState(payload) = parsed_msg {
-                            // TODO DEBUG
-                            println!("{:?}", payload);
-
                             let _app_name = &tauri_app_handle_copy.package_info().name;
 
                             // For now, on this listener, only hide widget if neither widget or editor are in focus
@@ -124,6 +121,7 @@ impl WindowStateMachine {
                                 // 2. Editor was focused; restore preserved content window visibility.
                                 let last_focused_app_pid =
                                     last_focused_app_pid_copy.lock().unwrap();
+
                                 if payload.is_in_focus
                                     && *last_focused_app_pid != Some(std::process::id())
                                 {
@@ -173,8 +171,8 @@ impl WindowStateMachine {
             *locked_val = content_window.unwrap().is_visible().unwrap();
         }
 
+        // Since the widget is "parent" of the content window, hiding the widget is sufficient to hide the content window as well
         close_window(app_handle.clone(), AppWindow::Widget);
-        close_window(app_handle.clone(), AppWindow::Content);
     }
 
     fn show_widget_preserve_content(app_handle: tauri::AppHandle, preserve_var: &Arc<Mutex<bool>>) {

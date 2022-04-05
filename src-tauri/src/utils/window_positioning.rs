@@ -12,14 +12,16 @@ struct PayloadBubbleOrientationEvent {
 
 #[tauri::command]
 // Checking if widget's position after being dragged is still valid
-pub fn cmd_update_widget_position(handle: tauri::AppHandle) -> Result<(), Error> {
+pub fn cmd_update_widget_position(
+    handle: tauri::AppHandle,
+) -> Result<Option<tauri::Position>, Error> {
     // Get both app windows which need to be positioned in relation to one another
     let content_window = handle.get_window(&AppWindow::Content.to_string());
     let widget_window = handle.get_window(&AppWindow::Widget.to_string());
 
     // Return if either window is not found
     if widget_window.is_none() {
-        return Ok(());
+        return Ok(None);
     }
 
     // Reposition Content Window and Widget Window
@@ -58,7 +60,7 @@ pub fn cmd_update_widget_position(handle: tauri::AppHandle) -> Result<(), Error>
 
             // only reposition, if widget is too close to upper end of screen
             if pos_screen.y < (pos_widget.y - content_size.height) {
-                return Ok(());
+                return Ok(Some(tauri::Position::Logical(pos_widget)));
             }
 
             let new_pos_widget = LogicalPosition {
@@ -70,21 +72,25 @@ pub fn cmd_update_widget_position(handle: tauri::AppHandle) -> Result<(), Error>
             };
 
             let _ = widget.set_position(tauri::Position::Logical(new_pos_widget));
+
+            return Ok(Some(tauri::Position::Logical(new_pos_widget)));
         }
     }
 
-    Ok(())
+    Ok(None)
 }
 
 #[tauri::command]
-pub fn cmd_update_content_position(handle: tauri::AppHandle) -> Result<(), Error> {
+pub fn cmd_update_content_position(
+    handle: tauri::AppHandle,
+) -> Result<Option<tauri::Position>, Error> {
     // Get both app windows which need to be positioned in relation to one another
     let content_window = handle.get_window(&AppWindow::Content.to_string());
     let widget_window = handle.get_window(&AppWindow::Widget.to_string());
 
     // Return if either window is not found
     if content_window.is_none() || widget_window.is_none() {
-        return Ok(());
+        return Ok(None);
     }
 
     // Reposition Content Window and Widget Window
@@ -138,10 +144,12 @@ pub fn cmd_update_content_position(handle: tauri::AppHandle) -> Result<(), Error
             )?;
 
             let _ = content.set_position(tauri::Position::Logical(new_content_pos));
+
+            return Ok(Some(tauri::Position::Logical(new_content_pos)));
         }
     }
 
-    Ok(())
+    Ok(None)
 }
 
 #[tauri::command]

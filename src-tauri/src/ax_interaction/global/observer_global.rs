@@ -16,26 +16,25 @@ pub fn observer_global(
     let currently_focused_app = currently_focused_app()?;
     if let Some(ref previously_focused_app) = focused_app {
         if (*previously_focused_app).pid()? != currently_focused_app.pid()? {
+            // If focused UI element is xcode editor, emit editor_focus_change event as well
+            let _ = callback_xcode_editor_focus(&currently_focused_app, &tauri_state);
+
             // User app focus has changed
             let _ = callback_global_app_focus(
                 previously_focused_app,
                 &currently_focused_app,
                 &tauri_state,
             );
-
-            // If focused UI element is xcode editor, emit editor_focus_change event as well
-            let _ = callback_xcode_editor_focus(&currently_focused_app, &tauri_state);
-
             *focused_app = Some(currently_focused_app);
         }
     } else {
+        // If focused UI element is xcode editor, emit editor_focus_change event as well
+        let _ = callback_xcode_editor_focus(&currently_focused_app, &tauri_state);
+
         // Case: first app in focus after program startup
         // User app focus has changed
         let _ =
             callback_global_app_focus(&currently_focused_app, &currently_focused_app, &tauri_state);
-
-        // If focused UI element is xcode editor, emit editor_focus_change event as well
-        let _ = callback_xcode_editor_focus(&currently_focused_app, &tauri_state);
 
         *focused_app = Some(currently_focused_app);
     }

@@ -13,7 +13,15 @@ pub fn cmd_is_window_visible(handle: tauri::AppHandle, window_type: AppWindow) -
     let app_window = handle.get_window(&get_window_label(window_type));
 
     if let Some(app_window) = app_window {
-        return app_window.is_visible().unwrap();
+        if let Ok(visible) = app_window.is_visible() {
+            if visible {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
     } else {
         return false;
     }
