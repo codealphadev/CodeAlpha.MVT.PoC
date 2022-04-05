@@ -1,4 +1,4 @@
-use tauri::{LogicalPosition, LogicalSize, Manager};
+use tauri::{Error, LogicalPosition, LogicalSize, Manager};
 
 use crate::window_controls::AppWindow;
 
@@ -12,116 +12,106 @@ struct PayloadBubbleOrientationEvent {
 
 #[tauri::command]
 // Checking if widget's position after being dragged is still valid
-pub fn cmd_update_widget_position(handle: tauri::AppHandle) {
+pub fn cmd_update_widget_position(handle: tauri::AppHandle) -> Result<(), Error> {
     // Get both app windows which need to be positioned in relation to one another
     let content_window = handle.get_window(&AppWindow::Content.to_string());
     let widget_window = handle.get_window(&AppWindow::Widget.to_string());
 
     // Return if either window is not found
     if widget_window.is_none() {
-        return;
+        return Ok(());
     }
 
     // Reposition Content Window and Widget Window
     if let (Some(content), Some(widget)) = (content_window, widget_window) {
-        let screen = widget.current_monitor().unwrap().unwrap();
-        let screen_scale_factor = screen.scale_factor();
-        let pos_screen = screen.position().to_logical::<f64>(screen_scale_factor);
+        if let Some(screen) = widget.current_monitor()? {
+            let screen_scale_factor = screen.scale_factor();
+            let pos_screen = screen.position().to_logical::<f64>(screen_scale_factor);
 
-        let pos_widget = (widget.outer_position())
-            .unwrap()
-            .to_logical::<f64>(screen_scale_factor);
+            let pos_widget = widget
+                .outer_position()?
+                .to_logical::<f64>(screen_scale_factor);
 
-        let pos_content = (content.outer_position())
-            .unwrap()
-            .to_logical::<f64>(screen_scale_factor);
+            let pos_content = (content.outer_position())?.to_logical::<f64>(screen_scale_factor);
 
-        let content_size = LogicalSize::<f64> {
-            width: content
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .width as f64,
-            height: content
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .height as f64,
-        };
+            let content_size = LogicalSize::<f64> {
+                width: content
+                    .outer_size()?
+                    .to_logical::<f64>(screen_scale_factor)
+                    .width as f64,
+                height: content
+                    .outer_size()?
+                    .to_logical::<f64>(screen_scale_factor)
+                    .height as f64,
+            };
 
-        let widget_size = LogicalSize::<f64> {
-            width: widget
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .width,
-            height: widget
-                .outer_size()
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor)
-                .height as f64,
-        };
+            let widget_size = LogicalSize::<f64> {
+                width: widget
+                    .outer_size()?
+                    .to_logical::<f64>(screen_scale_factor)
+                    .width,
+                height: widget
+                    .outer_size()?
+                    .to_logical::<f64>(screen_scale_factor)
+                    .height as f64,
+            };
 
-        // only reposition, if widget is too close to upper end of screen
-        if pos_screen.y < (pos_widget.y - content_size.height) {
-            return;
+            // only reposition, if widget is too close to upper end of screen
+            if pos_screen.y < (pos_widget.y - content_size.height) {
+                return Ok(());
+            }
+
+            let new_pos_widget = LogicalPosition {
+                x: pos_content.x + content_size.width - widget_size.width - POSITIONING_OFFSET_Y,
+                y: pos_screen.y
+                    + content_size.height
+                    + (widget_size.height / 2.)
+                    + POSITIONING_OFFSET_X,
+            };
+
+            let _ = widget.set_position(tauri::Position::Logical(new_pos_widget));
         }
-
-        let new_pos_widget = LogicalPosition {
-            x: pos_content.x + content_size.width - widget_size.width - POSITIONING_OFFSET_Y,
-            y: pos_screen.y
-                + content_size.height
-                + (widget_size.height / 2.)
-                + POSITIONING_OFFSET_X,
-        };
-
-        let _ = widget.set_position(tauri::Position::Logical(new_pos_widget));
     }
+
+    Ok(())
 }
 
 #[tauri::command]
-pub fn cmd_update_content_position(handle: tauri::AppHandle) {
+pub fn cmd_update_content_position(handle: tauri::AppHandle) -> Result<(), Error> {
     // Get both app windows which need to be positioned in relation to one another
     let content_window = handle.get_window(&AppWindow::Content.to_string());
     let widget_window = handle.get_window(&AppWindow::Widget.to_string());
 
     // Return if either window is not found
     if content_window.is_none() || widget_window.is_none() {
-        return;
+        return Ok(());
     }
 
     // Reposition Content Window and Widget Window
     if let (Some(content), Some(widget)) = (content_window, widget_window) {
-        if let Ok(temp) = widget.current_monitor() {
-            let screen = temp.unwrap();
+        if let Some(screen) = widget.current_monitor()? {
             let screen_scale_factor = screen.scale_factor();
             let pos_screen = screen.position().to_logical::<f64>(screen_scale_factor);
 
-            let pos_widget = (widget.outer_position())
-                .unwrap()
-                .to_logical::<f64>(screen_scale_factor);
+            let pos_widget = (widget.outer_position())?.to_logical::<f64>(screen_scale_factor);
 
             let widget_size = LogicalSize::<f64> {
                 width: widget
-                    .outer_size()
-                    .unwrap()
+                    .outer_size()?
                     .to_logical::<f64>(screen_scale_factor)
                     .width,
                 height: widget
-                    .outer_size()
-                    .unwrap()
+                    .outer_size()?
                     .to_logical::<f64>(screen_scale_factor)
                     .height as f64,
             };
             let content_size = LogicalSize::<f64> {
                 width: content
-                    .outer_size()
-                    .unwrap()
+                    .outer_size()?
                     .to_logical::<f64>(screen_scale_factor)
                     .width as f64,
                 height: content
-                    .outer_size()
-                    .unwrap()
+                    .outer_size()?
                     .to_logical::<f64>(screen_scale_factor)
                     .height as f64,
             };
@@ -139,19 +129,19 @@ pub fn cmd_update_content_position(handle: tauri::AppHandle) {
             }
 
             // Emit event to content window to update its orientation
-            handle
-                .emit_to(
-                    &AppWindow::Content.to_string(),
-                    "evt-bubble-icon-orientation",
-                    PayloadBubbleOrientationEvent {
-                        orientation_right: bubble_orientation_right,
-                    },
-                )
-                .unwrap();
+            handle.emit_to(
+                &AppWindow::Content.to_string(),
+                "evt-bubble-icon-orientation",
+                PayloadBubbleOrientationEvent {
+                    orientation_right: bubble_orientation_right,
+                },
+            )?;
 
             let _ = content.set_position(tauri::Position::Logical(new_content_pos));
         }
     }
+
+    Ok(())
 }
 
 #[tauri::command]

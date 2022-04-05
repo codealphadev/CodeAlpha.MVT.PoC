@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex};
 use tauri::{EventHandler, Manager, PhysicalSize};
 
 static EDITOR_NAME: &str = "Xcode";
-static APP_NAME: &str = "app";
 
 // Features:
 // [x] Which windows to load at startup
@@ -26,7 +25,7 @@ pub struct WindowStateMachine {
     last_known_editor_position: Arc<Mutex<Option<tauri::PhysicalPosition<i32>>>>,
     last_known_editor_size: Arc<Mutex<Option<tauri::PhysicalSize<i32>>>>,
     last_repositioned_widget_position: Arc<Mutex<Option<tauri::PhysicalPosition<i32>>>>,
-    last_focused_app: Arc<Mutex<Option<String>>>,
+    last_focused_app_pid: Arc<Mutex<Option<u32>>>,
 }
 
 impl WindowStateMachine {
@@ -46,7 +45,7 @@ impl WindowStateMachine {
             last_known_editor_position: Arc::new(Mutex::new(None)),
             last_known_editor_size: Arc::new(Mutex::new(None)),
             last_repositioned_widget_position: Arc::new(Mutex::new(None)),
-            last_focused_app: Arc::new(Mutex::new(None)),
+            last_focused_app_pid: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -57,7 +56,7 @@ impl WindowStateMachine {
         let preserve_content_visibility_was_visible_copy =
             self.preserve_content_visibility_was_visible.clone();
         let tauri_app_handle_copy = self.tauri_app_handle.clone();
-        let last_focused_app_copy = self.last_focused_app.clone();
+        let last_focused_app_pid_copy = self.last_focused_app_pid.clone();
 
         // 2. Create listener
         // Store listener id to be able to safely remove it later
@@ -77,8 +76,8 @@ impl WindowStateMachine {
                             let _app_name = &tauri_app_handle_copy.package_info().name;
 
                             // For now, on this listener, only hide widget if neither widget or editor are in focus
-                            if ![APP_NAME, EDITOR_NAME]
-                                .contains(&&payload.current_app.name.as_str())
+                            if ![EDITOR_NAME].contains(&&payload.current_app.name.as_str())
+                                && payload.current_app.pid != std::process::id()
                             {
                                 Self::hide_widget_preserve_content(
                                     tauri_app_handle_copy.clone(),
@@ -87,8 +86,9 @@ impl WindowStateMachine {
                             }
 
                             // Update last focused app
-                            let mut last_focused_app = last_focused_app_copy.lock().unwrap();
-                            *last_focused_app = Some(payload.current_app.name);
+                            let mut last_focused_app_pid =
+                                last_focused_app_pid_copy.lock().unwrap();
+                            *last_focused_app_pid = Some(payload.current_app.pid);
                         }
                     }
                 });
@@ -103,7 +103,7 @@ impl WindowStateMachine {
         let last_known_editor_size_copy = self.last_known_editor_size.clone();
         let last_repositioned_widget_position_copy = self.last_repositioned_widget_position.clone();
         let tauri_app_handle_copy = self.tauri_app_handle.clone();
-        let last_focused_app_copy = self.last_focused_app.clone();
+        let last_focused_app_pid_copy = self.last_focused_app_pid.clone();
 
         // 2. Create listener
         // Store listener id to be able to safely remove it later
@@ -122,9 +122,10 @@ impl WindowStateMachine {
                                 // Show widget if ...
                                 // 1. Last focused app before receiving this msg was NOT this app
                                 // 2. Editor was focused; restore preserved content window visibility.
-                                let last_focused_app = last_focused_app_copy.lock().unwrap();
+                                let last_focused_app_pid =
+                                    last_focused_app_pid_copy.lock().unwrap();
                                 if payload.is_in_focus
-                                    && *last_focused_app != Some(APP_NAME.to_string())
+                                    && *last_focused_app_pid != Some(std::process::id())
                                 {
                                     let editor_position = tauri::PhysicalPosition {
                                         x: payload.ui_element_x as i32,
@@ -249,7 +250,7 @@ impl WindowStateMachine {
                     }
                 }
 
-                window_positioning::cmd_update_content_position(app_handle.clone());
+                let _ = window_positioning::cmd_update_content_position(app_handle.clone());
             } else {
                 // Case: No previous positions known, just position at bottom right cornor (startup)
                 Self::position_widget_bottom_right(
@@ -319,7 +320,7 @@ impl WindowStateMachine {
             let _ = widget_window.set_position(tauri::Position::Physical(new_widget_pos));
 
             // Update Content Window Position
-            window_positioning::cmd_update_content_position(app_handle.clone());
+            let _ = window_positioning::cmd_update_content_position(app_handle.clone());
         }
     }
 

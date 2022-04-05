@@ -4,5 +4,5 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct AppInfo {
     pub name: String,
-    pub pid: i32,
+    pub pid: u32,
 }

@@ -4,12 +4,12 @@ use tauri::{EventHandler, Manager};
 
 use crate::{
     ax_events::{models::AppFocusState, Event},
-    ax_interaction::is_uielement_editor,
+    ax_interaction::is_focused_uielement_of_app_xcode_editor_field,
     window_controls::parse_into_ax_event_type,
 };
 
 static EDITOR_NAME: &str = "Xcode";
-static APP_NAME: &str = "app";
+static APP_NAME: &str = "CodeAlpha";
 static EVENT_NAME: &str = "StateEvent-AppFocusState";
 
 pub fn listen_global_app_focus(
@@ -55,7 +55,9 @@ fn control_logic(focus_state: &AppFocusState, handle: tauri::AppHandle) {
 
     // Show widget if editor text area is in focus
     if focus_state.current_app.name == EDITOR_NAME {
-        if let Ok(is_editor) = is_uielement_editor(focus_state.current_app.pid) {
+        if let Ok(is_editor) = is_focused_uielement_of_app_xcode_editor_field(
+            focus_state.current_app.pid.try_into().unwrap(),
+        ) {
             if is_editor {
                 // TODO
             }
