@@ -42,6 +42,12 @@ fn main() {
             let window_state = window_controls::WindowStateManager::new(app.handle().clone());
             window_state.launch_startup_windows();
 
+            // Continuously check if the accessibility APIs are enabled
+            std::thread::spawn(|| loop {
+                if !ax_interaction::application_is_trusted_with_prompt() {}
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            });
+
             Ok(())
         })
         .build(tauri::generate_context!("tauri.conf.json"))

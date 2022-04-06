@@ -1,5 +1,10 @@
 use accessibility::{AXAttribute, AXUIElement, Error};
-use accessibility_sys::pid_t;
+use accessibility_sys::{
+    kAXTrustedCheckOptionPrompt, pid_t, AXIsProcessTrusted, AXIsProcessTrustedWithOptions,
+};
+use core_foundation::{
+    base::TCFType, boolean::CFBoolean, dictionary::CFDictionary, string::CFString,
+};
 
 static EDITOR_NAME: &str = "Xcode";
 
@@ -34,6 +39,24 @@ pub fn is_focused_uielement_of_app_xcode_editor_field(app_pid: pid_t) -> Result<
         Ok(true)
     } else {
         Ok(false)
+    }
+}
+
+/// Checks whether or not this application is a trusted accessibility client.
+pub fn _application_is_trusted() -> bool {
+    unsafe {
+        return AXIsProcessTrusted();
+    }
+}
+
+/// Same as [application_is_trusted], but also shows the user a prompt asking
+/// them to allow accessibility API access if it hasn't already been given.
+pub fn application_is_trusted_with_prompt() -> bool {
+    unsafe {
+        let option_prompt = CFString::wrap_under_get_rule(kAXTrustedCheckOptionPrompt);
+        let dict: CFDictionary<CFString, CFBoolean> =
+            CFDictionary::from_CFType_pairs(&[(option_prompt, CFBoolean::true_value())]);
+        return AXIsProcessTrustedWithOptions(dict.as_concrete_TypeRef());
     }
 }
 

@@ -10,7 +10,6 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 
 ## Known Issues
 
-- Not yet implemented: macOS system popup asking for granting Accessibility API permissions
 - "Many Clicks" on widget can lead to widget disappearing -> more gracefully handle invokation of "Content Open" routine - can be jammed if many clicks are done on widget
 - Moving the editor window does not hide the widget while re-positioning
 - Repositioning logic on re-size or move of editor window is far from perfect
