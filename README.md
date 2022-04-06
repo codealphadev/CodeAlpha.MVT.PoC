@@ -10,6 +10,7 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 
 ## Known Issues
 
+- Not yet implemented: macOS system popup asking for granting Accessibility API permissions
 - "Many Clicks" on widget can lead to widget disappearing -> more gracefully handle invokation of "Content Open" routine - can be jammed if many clicks are done on widget
 - Moving the editor window does not hide the widget while re-positioning
 - Repositioning logic on re-size or move of editor window is far from perfect
@@ -17,6 +18,7 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 - In "observer_global.rs" exists a hack: I changed around the order of which "callback" is executed first, because this sufficiently improved UX behavior for now.
 - Restarting XCode leads to strange behavior
 - Closing XCode does not close the widget
+- When moving the widget with opened content too far up, the widget can get stuck behind the content window --> likely going to be fixed when listener for widget-movement is implemented.
 
 ## Design Debt
 
