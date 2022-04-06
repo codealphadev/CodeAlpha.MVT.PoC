@@ -5,6 +5,7 @@
 )]
 
 use ax_interaction::{setup_observers, utils::TauriState};
+use commands::search_and_replace_commands;
 use tauri::Manager;
 use utils::window_state_machine::WindowStateMachine;
 
@@ -26,7 +27,8 @@ fn main() {
             window_control_commands::cmd_is_window_visible,
             utils::window_positioning::cmd_update_widget_position,
             utils::window_positioning::cmd_start_dragging_widget,
-            utils::window_positioning::cmd_update_content_position
+            utils::window_positioning::cmd_update_content_position,
+            search_and_replace_commands::cmd_search_and_replace
         ])
         .setup(|app| {
             setup_observers(TauriState {

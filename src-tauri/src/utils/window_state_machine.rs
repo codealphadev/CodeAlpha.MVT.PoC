@@ -25,6 +25,7 @@ pub struct WindowStateMachine {
     last_known_editor_size: Arc<Mutex<Option<tauri::PhysicalSize<i32>>>>,
     last_repositioned_widget_position: Arc<Mutex<Option<tauri::PhysicalPosition<i32>>>>,
     last_focused_app_pid: Arc<Mutex<Option<u32>>>,
+    pub last_known_xcode_app_pid: Arc<Mutex<Option<u32>>>,
 }
 
 impl WindowStateMachine {
@@ -37,6 +38,7 @@ impl WindowStateMachine {
             last_known_editor_size: Arc::new(Mutex::new(None)),
             last_repositioned_widget_position: Arc::new(Mutex::new(None)),
             last_focused_app_pid: Arc::new(Mutex::new(None)),
+            last_known_xcode_app_pid: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -45,6 +47,7 @@ impl WindowStateMachine {
         // ==================================
         // 1. Copy variable Arcs to be moved into closure (can't move sef into closure)
         let tauri_app_handle_copy = self.tauri_app_handle.clone();
+        let last_known_xcode_app_pid_copy = self.last_known_xcode_app_pid.clone();
         let last_focused_app_pid_copy = self.last_focused_app_pid.clone();
 
         // 2. Create listener
@@ -72,6 +75,13 @@ impl WindowStateMachine {
                             let mut last_focused_app_pid =
                                 last_focused_app_pid_copy.lock().unwrap();
                             *last_focused_app_pid = Some(payload.current_app.pid);
+
+                            // Update last known xcode app pid
+                            if payload.current_app.name == EDITOR_NAME {
+                                let mut last_known_xcode_app_pid =
+                                    last_known_xcode_app_pid_copy.lock().unwrap();
+                                *last_known_xcode_app_pid = Some(payload.current_app.pid);
+                            }
                         }
                     }
                 });

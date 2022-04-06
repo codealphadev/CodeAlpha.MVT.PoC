@@ -9,7 +9,7 @@
 	$: console.log(replaceString);
 
 	const swapStrings = () => {
-		invoke('plugin:xcode-state-plugin|search_and_replace', {
+		invoke('cmd_search_and_replace', {
 			searchStr: searchString,
 			replaceStr: replaceString
 		});

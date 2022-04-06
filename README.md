@@ -15,3 +15,10 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 - Repositioning logic on re-size or move of editor window is far from perfect
 - Show / hide content window requires waaay too many clicks ("Ghostclicks")
 - In "observer_global.rs" exists a hack: I changed around the order of which "callback" is executed first, because this sufficiently improved UX behavior for now.
+- Restarting XCode leads to strange behavior
+- Closing XCode does not close the widget
+
+## Design Debt
+
+- Everything accessibility related shall not spill out of the `ax_interactions` module in order to more easily implement Windows Accessibility APIs. This includes not exposing any specific structs, enums and errors.
+  - Refactoring approach: start by adjusting the `mod.rs` file an `ax_interactions`. The moment everything is made private, the compiler will throw all errors. :-)
