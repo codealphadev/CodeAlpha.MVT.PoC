@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     ax_events::{models::XCodeFocusElement, Event},
     window_controls::{close_window, open_window, AppWindow},

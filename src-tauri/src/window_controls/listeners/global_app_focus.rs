@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::sync::{Arc, Mutex};
 
 use tauri::{EventHandler, Manager};
@@ -21,7 +23,7 @@ pub fn listen_global_app_focus(
     // Registering listener for a change in Global App Focus
     // =====================================
     // 1. Copy Arcs to be moved into closure
-    let is_content_visibility_preserved = preserve_content_visibility_was_visible.clone();
+    let _is_content_visibility_preserved = preserve_content_visibility_was_visible.clone();
     let app_handle = handle.clone();
     let last_focused_app_copy = last_focused_app.clone();
 
@@ -42,7 +44,7 @@ pub fn listen_global_app_focus(
     *listener_app_focus_status = Some(listener);
 }
 
-fn control_logic(focus_state: &AppFocusState, handle: tauri::AppHandle) {
+fn control_logic(focus_state: &AppFocusState, _handle: tauri::AppHandle) {
     // For now, on this listener, only hide widget if neither widget or editor are
 
     // Hide widget + content if neither editor nor widget is in focus

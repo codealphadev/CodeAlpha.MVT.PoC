@@ -1,9 +1,6 @@
 use accessibility::{AXAttribute, Error};
 use accessibility_sys::pid_t;
-use core_foundation::{
-    base::{CFType, TCFType},
-    string::CFString,
-};
+use core_foundation::{base::TCFType, string::CFString};
 
 use crate::ax_interaction::{
     focused_uielement_of_app, is_focused_uielement_of_app_xcode_editor_field,

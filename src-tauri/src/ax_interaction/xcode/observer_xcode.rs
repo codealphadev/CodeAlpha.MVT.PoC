@@ -1,7 +1,10 @@
 use std::thread;
 
 use accessibility_sys::{
-    kAXFocusedUIElementChangedNotification, kAXWindowDeminiaturizedNotification,
+    kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
+    kAXApplicationHiddenNotification, kAXApplicationShownNotification,
+    kAXFocusedUIElementChangedNotification, kAXMainWindowChangedNotification,
+    kAXValueChangedNotification, kAXWindowCreatedNotification, kAXWindowDeminiaturizedNotification,
     kAXWindowMiniaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification,
 };
 
@@ -9,15 +12,22 @@ use accessibility::{AXAttribute, AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
 
 use super::callback_xcode_notifications;
-use crate::ax_interaction::{currently_focused_app, utils::TauriState};
+use crate::ax_interaction::{currently_focused_app, utils::TauriState, XCodeObserverState};
 
 static EDITOR_NAME: &str = "Xcode";
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
+    kAXApplicationActivatedNotification,
+    kAXApplicationDeactivatedNotification,
+    kAXApplicationHiddenNotification,
+    kAXApplicationShownNotification,
     kAXFocusedUIElementChangedNotification,
+    kAXMainWindowChangedNotification,
+    kAXValueChangedNotification,
+    kAXWindowCreatedNotification,
+    kAXWindowDeminiaturizedNotification,
+    kAXWindowMiniaturizedNotification,
     kAXWindowMovedNotification,
     kAXWindowResizedNotification,
-    kAXWindowMiniaturizedNotification,
-    kAXWindowDeminiaturizedNotification,
 ];
 
 pub fn observer_xcode(
@@ -35,7 +45,7 @@ pub fn observer_xcode(
         if let Ok(registration_required) = registration_required_res {
             if registration_required {
                 if let Some(ref xcode_app) = xcode_app {
-                    let _ = create_observer_and_add_notifications(xcode_app, &tauri_state);
+                    create_observer_and_add_notifications(xcode_app, &tauri_state)?;
                 }
             }
         }
@@ -58,11 +68,8 @@ fn is_new_xcode_observer_registration_required(
     }
 
     if let Some(xcode_app) = known_xcode_app {
-        let xcode_app_identifier = xcode_app.attribute(&AXAttribute::identifier())?;
-        let focused_app_identifier = focused_app.attribute(&AXAttribute::identifier())?;
-
         // Case: XCode has a new AXUIElement, telling us it was restarted
-        if xcode_app_identifier != focused_app_identifier {
+        if xcode_app.pid()? != focused_app.pid()? {
             *known_xcode_app = Some(focused_app);
             return Ok(true);
         }
@@ -102,8 +109,9 @@ fn create_observer_and_add_notifications(
                 let _ = xcode_observer.add_notification(
                     notification,
                     &ui_element,
-                    TauriState {
-                        handle: tauri_handle_move_copy.clone(),
+                    XCodeObserverState {
+                        app_handle: tauri_handle_move_copy.clone(),
+                        window_list: Vec::new(),
                     },
                 );
             }

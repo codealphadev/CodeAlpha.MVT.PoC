@@ -6,8 +6,6 @@
 
 use ax_interaction::{setup_observers, utils::TauriState};
 use commands::search_and_replace_commands;
-use tauri::Manager;
-use utils::window_state_machine::WindowStateMachine;
 
 use crate::commands::window_control_commands;
 
@@ -35,14 +33,10 @@ fn main() {
                 handle: app.handle().clone(),
             });
 
-            let mut window_state_machine = WindowStateMachine::new(app.handle().clone());
-            window_state_machine.setup();
-            app.manage(window_state_machine);
-
             let window_state = window_controls::WindowStateManager::new(app.handle().clone());
             window_state.launch_startup_windows();
 
-            // Continuously check if the accessibility APIs are enabled
+            // Continuously check if the accessibility APIs are enabled, show popup if not
             std::thread::spawn(|| loop {
                 if !ax_interaction::application_is_trusted_with_prompt() {}
                 std::thread::sleep(std::time::Duration::from_secs(5));

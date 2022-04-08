@@ -7,6 +7,7 @@ pub use utils::*;
 
 mod actions;
 mod config;
+mod editor_window;
 mod listeners;
 mod state_management;
 mod utils;

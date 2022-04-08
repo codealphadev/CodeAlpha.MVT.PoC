@@ -1,8 +1,11 @@
 use tauri::{Error, Manager, Window, WindowUrl};
 
-use crate::window_controls::{
-    config::{default_properties, AppWindow},
-    get_window_label, special_default_position_for_content_window, utils,
+use crate::{
+    ax_interaction::app_widget::observer_app,
+    window_controls::{
+        config::{default_properties, AppWindow},
+        get_window_label, special_default_position_for_content_window, utils,
+    },
 };
 
 pub fn create_window(handle: &tauri::AppHandle, window_type: AppWindow) -> Result<Window, Error> {
@@ -32,6 +35,7 @@ pub fn create_window(handle: &tauri::AppHandle, window_type: AppWindow) -> Resul
     .always_on_top(default_properties::is_always_on_top(&window_type))
     .skip_taskbar(default_properties::skip_taskbar(&window_type));
 
+    // Additional special logic for each window type
     match window_type {
         AppWindow::Content => {
             // Add Parent Window
@@ -53,9 +57,17 @@ pub fn create_window(handle: &tauri::AppHandle, window_type: AppWindow) -> Resul
         _ => {}
     }
 
-    if default_properties::initially_focused(&window_type) {
-        window_builder = window_builder.focus();
-    }
+    let new_window = window_builder.build()?;
 
-    window_builder.build()
+    match window_type {
+        AppWindow::Widget => {
+            // Create an observer for out widget
+            if dbg!(observer_app(&handle).is_err()) {
+                Err(Error::CreateWindow)
+            } else {
+                Ok(new_window)
+            }
+        }
+        _ => Ok(new_window),
+    }
 }

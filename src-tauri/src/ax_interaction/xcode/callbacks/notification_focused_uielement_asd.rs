@@ -6,14 +6,14 @@ use crate::ax_events::{
     models::{XCodeFocusElement, XCodeFocusStatusChange},
     Event,
 };
-use crate::ax_interaction::utils::TauriState;
+use crate::ax_interaction::utils::XCodeObserverState;
 
 // This method is exectuted when the observer receives a notification of type "kAXFocusedUIElementChangedNotification"
 // It means the use has clicked a different ui element WITHIN Xcode.
 // This event is important, because we only want to show the widget when the user's curser is in the text area of the editor.
 pub fn notification_focused_uielement(
     focused_element: &AXUIElement,
-    tauri_state: &TauriState,
+    xcode_observer_state: &XCodeObserverState,
 ) -> Result<(), Error> {
     let role = focused_element.attribute(&AXAttribute::role())?;
 
@@ -37,7 +37,7 @@ pub fn notification_focused_uielement(
         };
 
         let event = Event::XCodeFocusStatusChange(focus_change);
-        event.publish_to_tauri(tauri_state.handle.clone());
+        event.publish_to_tauri(xcode_observer_state.app_handle.clone());
     } else {
         let focus_change = XCodeFocusStatusChange {
             focus_element_change: XCodeFocusElement::App,
@@ -49,7 +49,7 @@ pub fn notification_focused_uielement(
         };
 
         let event = Event::XCodeFocusStatusChange(focus_change);
-        event.publish_to_tauri(tauri_state.handle.clone());
+        event.publish_to_tauri(xcode_observer_state.app_handle.clone());
     }
 
     Ok(())

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::ax_events::Event;
 
 use super::config::AppWindow;

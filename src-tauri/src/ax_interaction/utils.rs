@@ -64,3 +64,111 @@ pub fn application_is_trusted_with_prompt() -> bool {
 pub struct TauriState {
     pub handle: tauri::AppHandle,
 }
+
+pub struct XCodeObserverState {
+    pub app_handle: tauri::AppHandle,
+    pub window_list: Vec<(uuid::Uuid, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
+}
+
+pub mod DebugUtils {
+
+    #![allow(dead_code)]
+
+    use accessibility::{
+        AXAttribute, AXUIElement, AXUIElementAttributes, TreeVisitor, TreeWalker, TreeWalkerFlow,
+    };
+    use colored::*;
+    use core_foundation::{array::CFArray, string::CFString};
+    use std::cell::Cell;
+
+    pub fn print_element_ax_properties(element: &AXUIElement) {
+        let walker = TreeWalker::new();
+
+        println!("=============== Tree Print Run Start ===============\n");
+        walker.walk(element, &AXTreePrinter::new(0));
+        println!("\n================ Tree Print Run End ================\n");
+    }
+
+    pub fn _print_ax_tree(element: &AXUIElement, max_tree_level: usize) {
+        let walker = TreeWalker::new();
+
+        println!("=============== Tree Print Run Start ===============\n");
+        walker.walk(element, &AXTreePrinter::new(max_tree_level));
+        println!("================ Tree Print Run End ================\n");
+    }
+
+    // A class that prints the AX tree in a 'pretty way' to stdout.
+    // How it works:
+    struct AXTreePrinter {
+        indent: String,
+        children: AXAttribute<CFArray<AXUIElement>>,
+
+        // Using a Cell instead of a simple usize because I don't want to define the self
+        // argument in the trait functions for enter & exit as mutable
+        tree_level: Cell<usize>,
+        max_tree_level: Cell<usize>,
+    }
+
+    impl AXTreePrinter {
+        pub fn new(max_tree_level: usize) -> Self {
+            Self {
+                tree_level: Cell::new(0),
+                indent: " ".repeat(4),
+                children: AXAttribute::children(),
+                max_tree_level: Cell::new(max_tree_level),
+            }
+        }
+
+        pub fn _new_with_indentation(indent: usize, max_tree_level: usize) -> Self {
+            Self {
+                tree_level: Cell::new(0),
+                indent: " ".repeat(indent),
+                children: AXAttribute::children(),
+                max_tree_level: Cell::new(max_tree_level),
+            }
+        }
+    }
+
+    impl TreeVisitor for AXTreePrinter {
+        fn enter_element(&self, element: &AXUIElement) -> TreeWalkerFlow {
+            let indent = self.indent.repeat(self.tree_level.get());
+            let role = element.role().unwrap_or_else(|_| CFString::new(""));
+
+            self.tree_level.replace(self.tree_level.get() + 1);
+            println![
+                "{}- {} ({} children)",
+                indent,
+                role.to_string().bright_yellow().bold(),
+                element.children().unwrap().len()
+            ];
+
+            if let Ok(names) = element.attribute_names() {
+                for name in names.into_iter() {
+                    if &*name == self.children.as_CFString() {
+                        continue;
+                    }
+
+                    if let Ok(value) = element.attribute(&AXAttribute::new(&*name)) {
+                        let value_str = format!("{:?}", value);
+                        println![
+                            "{}|. {}: {}",
+                            indent,
+                            (*name).to_string().bold(),
+                            value_str.green()
+                        ];
+                    }
+                }
+            }
+
+            if self.tree_level.get() > self.max_tree_level.get() {
+                TreeWalkerFlow::SkipSubtree
+            } else {
+                TreeWalkerFlow::Continue
+            }
+        }
+
+        fn exit_element(&self, _element: &AXUIElement) {
+            self.tree_level.replace(self.tree_level.get() - 1);
+        }
+    }
+}

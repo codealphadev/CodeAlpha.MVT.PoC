@@ -47,7 +47,7 @@ pub mod default_properties {
         match window {
             AppWindow::Settings => "CodeAlpha - Settings".to_string(),
             AppWindow::Analytics => "CodeAlpha - Analytics".to_string(),
-            AppWindow::Widget => "CodeAlpha".to_string(),
+            AppWindow::Widget => "CodeAlpha - Widget".to_string(),
             AppWindow::Content => "CodeAlpha - Guide".to_string(),
             AppWindow::None => "".to_string(),
         }
@@ -108,7 +108,7 @@ pub mod default_properties {
         match window {
             AppWindow::Settings => true,
             AppWindow::Analytics => true,
-            AppWindow::Widget => false,
+            AppWindow::Widget => true,
             AppWindow::Content => true,
             AppWindow::None => true,
         }
@@ -131,16 +131,6 @@ pub mod default_properties {
             AppWindow::Widget => true,
             AppWindow::Content => true,
             AppWindow::None => true,
-        }
-    }
-
-    pub fn initially_focused(window: &AppWindow) -> bool {
-        match window {
-            AppWindow::Settings => true,
-            AppWindow::Analytics => true,
-            AppWindow::Widget => true,
-            AppWindow::Content => true,
-            AppWindow::None => false,
         }
     }
 }

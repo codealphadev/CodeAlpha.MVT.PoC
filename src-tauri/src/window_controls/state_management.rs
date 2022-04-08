@@ -1,6 +1,10 @@
+#![allow(dead_code)]
+
 use std::sync::{Arc, Mutex};
 
 use tauri::{EventHandler, Manager};
+
+use crate::ax_interaction::AXEvent;
 
 use super::{create_window, AppWindow};
 
@@ -19,6 +23,35 @@ pub struct WindowStateManager {
 
 impl WindowStateManager {
     pub fn new(app_handle: tauri::AppHandle) -> Self {
+        // Register listener for xcode events
+        app_handle.listen_global("AXEvent-EditorWindowCreated", move |msg| {
+            let _parsed_msg: AXEvent = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        });
+
+        app_handle.listen_global("AXEvent-EditorWindowDestroyed", move |msg| {
+            let _parsed_msg: AXEvent = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        });
+
+        app_handle.listen_global("AXEvent-EditorWindowResized", move |msg| {
+            let _parsed_msg: AXEvent = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        });
+
+        app_handle.listen_global("AXEvent-EditorWindowMoved", move |msg| {
+            let _parsed_msg: AXEvent = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        });
+
+        app_handle.listen_global("AXEvent-EditorUIElementFocused", move |msg| {
+            let _parsed_msg: AXEvent = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        });
+
+        app_handle.listen_global("AXEvent-EditorAppActivated", move |msg| {
+            let _parsed_msg: AXEvent = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        });
+
+        app_handle.listen_global("AXEvent-EditorAppDeactivated", move |msg| {
+            let _parsed_msg: AXEvent = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        });
+
         Self {
             tauri_app_handle: app_handle.clone(),
             listener_app_focus_status: None,
