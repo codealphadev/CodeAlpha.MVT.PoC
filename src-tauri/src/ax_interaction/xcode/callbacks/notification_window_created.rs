@@ -4,7 +4,7 @@ use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
-use crate::ax_interaction::{models::EditorWindowCreatedMessage, AXEvent, XCodeObserverState};
+use crate::ax_interaction::{models::EditorWindowCreatedMessage, AXEventXcode, XCodeObserverState};
 
 /// Notify Tauri that an editor window has been created
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
@@ -43,7 +43,8 @@ pub fn notify_window_created(
         if !window_exists {
             let window_id = uuid::Uuid::new_v4();
 
-            if let Ok(msg) = window_creation_msg(window_id, &*window) {
+            let editor_name = app_element.attribute(&AXAttribute::title())?;
+            if let Ok(msg) = window_creation_msg(editor_name.to_string(), window_id, &*window) {
                 // Emit to rust listeners
                 msg.publish_to_tauri(xcode_observer_state.app_handle.clone());
 
@@ -58,7 +59,11 @@ pub fn notify_window_created(
     Ok(())
 }
 
-fn window_creation_msg(id: uuid::Uuid, window_element: &AXUIElement) -> Result<AXEvent, Error> {
+fn window_creation_msg(
+    editor_name: String,
+    id: uuid::Uuid,
+    window_element: &AXUIElement,
+) -> Result<AXEventXcode, Error> {
     let role = window_element.attribute(&AXAttribute::role())?;
 
     assert_eq!(role.to_string(), "AXWindow");
@@ -79,7 +84,8 @@ fn window_creation_msg(id: uuid::Uuid, window_element: &AXUIElement) -> Result<A
             width: size.width,
             height: size.height,
         },
+        editor_name,
     };
 
-    Ok(AXEvent::EditorWindowCreated(window_created_msg))
+    Ok(AXEventXcode::EditorWindowCreated(window_created_msg))
 }

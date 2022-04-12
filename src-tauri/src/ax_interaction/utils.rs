@@ -65,6 +65,7 @@ pub struct TauriState {
     pub handle: tauri::AppHandle,
 }
 
+#[derive(Debug, Clone)]
 pub struct XCodeObserverState {
     pub app_handle: tauri::AppHandle,
     pub window_list: Vec<(uuid::Uuid, AXUIElement, Option<tauri::LogicalSize<f64>>)>,

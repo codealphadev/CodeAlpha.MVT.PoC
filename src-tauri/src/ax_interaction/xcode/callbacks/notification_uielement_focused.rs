@@ -5,7 +5,7 @@ use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
     models::{EditorUIElementFocusedMessage, FocusedUIElement},
-    AXEvent, XCodeObserverState,
+    AXEventXcode, XCodeObserverState,
 };
 
 /// Notify Tauri that an new uielement in an editor window has been focused
@@ -55,7 +55,7 @@ pub fn notify_uielement_focused(
             });
         }
 
-        AXEvent::EditorUIElementFocused(uielement_focused_msg)
+        AXEventXcode::EditorUIElementFocused(uielement_focused_msg)
             .publish_to_tauri(xcode_observer_state.app_handle.clone());
     }
 

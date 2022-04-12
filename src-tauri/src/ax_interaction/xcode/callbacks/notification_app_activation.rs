@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::ax_interaction::{
     models::{EditorAppActivatedMessage, EditorAppDeactivatedMessage},
-    AXEvent, XCodeObserverState,
+    AXEventXcode, XCodeObserverState,
 };
 
 /// Notify Tauri that XCode has been activated, which means focus has moved to XCode from a different application.
@@ -22,7 +22,7 @@ pub fn notifiy_app_activated(
         pid: pid.try_into().unwrap(),
     };
 
-    let activation_event = AXEvent::EditorAppActivated(activation_msg);
+    let activation_event = AXEventXcode::EditorAppActivated(activation_msg);
 
     // Emit to rust listeners
     activation_event.publish_to_tauri(xcode_observer_state.app_handle.clone());
@@ -47,7 +47,7 @@ pub fn notifiy_app_deactivated(
         pid: pid.try_into().unwrap(),
     };
 
-    let deactivation_event = AXEvent::EditorAppDeactivated(deactivation_msg);
+    let deactivation_event = AXEventXcode::EditorAppDeactivated(deactivation_msg);
 
     // Emit to rust listeners
     deactivation_event.publish_to_tauri(xcode_observer_state.app_handle.clone());

@@ -9,9 +9,11 @@ use super::models::{
     EditorWindowResizedMessage,
 };
 
+pub static AX_EVENT_XCODE_CHANNEL: &str = "AXEventXcode";
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
-pub enum AXEvent {
+pub enum AXEventXcode {
     EditorWindowCreated(EditorWindowCreatedMessage),
     EditorWindowDestroyed(EditorWindowDestroyedMessage),
     EditorWindowResized(EditorWindowResizedMessage),
@@ -22,35 +24,29 @@ pub enum AXEvent {
     None,
 }
 
-impl fmt::Display for AXEvent {
+impl fmt::Display for AXEventXcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AXEvent::EditorWindowCreated(_) => write!(f, "EditorWindowCreated"),
-            AXEvent::EditorWindowDestroyed(_) => write!(f, "EditorWindowDestroyed"),
-            AXEvent::EditorWindowResized(_) => write!(f, "EditorWindowResized"),
-            AXEvent::EditorWindowMoved(_) => write!(f, "EditorWindowMoved"),
-            AXEvent::EditorUIElementFocused(_) => write!(f, "EditorUIElementFocused"),
-            AXEvent::EditorAppActivated(_) => write!(f, "EditorAppActivated"),
-            AXEvent::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
-            AXEvent::None => write!(f, "None"),
+            AXEventXcode::EditorWindowCreated(_) => write!(f, "EditorWindowCreated"),
+            AXEventXcode::EditorWindowDestroyed(_) => write!(f, "EditorWindowDestroyed"),
+            AXEventXcode::EditorWindowResized(_) => write!(f, "EditorWindowResized"),
+            AXEventXcode::EditorWindowMoved(_) => write!(f, "EditorWindowMoved"),
+            AXEventXcode::EditorUIElementFocused(_) => write!(f, "EditorUIElementFocused"),
+            AXEventXcode::EditorAppActivated(_) => write!(f, "EditorAppActivated"),
+            AXEventXcode::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
+            AXEventXcode::None => write!(f, "None"),
         }
     }
 }
 
-static AX_EVENT_PREFIX: &str = "AXEvent";
-
-impl AXEvent {
+impl AXEventXcode {
     pub fn publish_to_tauri(&self, app_handle: tauri::AppHandle) {
-        let event_name = format!("{}-{}", AX_EVENT_PREFIX, self.to_string());
+        let event_name = AX_EVENT_XCODE_CHANNEL.to_string();
 
         // Emit to rust listeners
         app_handle.trigger_global(
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );
-    }
-
-    pub fn _tauri_event_name(event_type: AXEvent) -> String {
-        format!("{}-{}", AX_EVENT_PREFIX, event_type.to_string())
     }
 }

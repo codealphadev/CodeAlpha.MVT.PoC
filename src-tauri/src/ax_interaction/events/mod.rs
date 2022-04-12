@@ -1,4 +1,4 @@
-pub use event::AXEvent;
+pub use event_xcode::*;
 
-mod event;
+mod event_xcode;
 pub mod models;

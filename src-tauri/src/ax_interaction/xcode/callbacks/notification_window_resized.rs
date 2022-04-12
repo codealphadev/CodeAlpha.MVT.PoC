@@ -3,7 +3,7 @@ use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
-use crate::ax_interaction::{models::EditorWindowResizedMessage, AXEvent, XCodeObserverState};
+use crate::ax_interaction::{models::EditorWindowResizedMessage, AXEventXcode, XCodeObserverState};
 
 /// Notify Tauri that an editor window has been resized
 /// Method requires AXUIElement of type "AXScrollBar". Asserts if different AXUIElement is provided as argument.
@@ -69,7 +69,7 @@ pub fn notify_window_resized(
             xcode_observer_state.window_list.push(new_tuple);
         }
 
-        AXEvent::EditorWindowResized(resize_msg)
+        AXEventXcode::EditorWindowResized(resize_msg)
             .publish_to_tauri(xcode_observer_state.app_handle.clone());
     }
 
