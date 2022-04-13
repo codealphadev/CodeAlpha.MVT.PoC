@@ -50,7 +50,7 @@ pub fn notify_window_created(
             if let Ok(msg) = window_creation_msg(editor_name.to_string(), pid, window_id, &*window)
             {
                 // Emit to rust listeners
-                msg.publish_to_tauri(xcode_observer_state.app_handle.clone());
+                msg.publish_to_tauri(&xcode_observer_state.app_handle);
 
                 // Add window to list of windows
                 xcode_observer_state

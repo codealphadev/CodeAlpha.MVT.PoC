@@ -46,8 +46,7 @@ pub fn notify_window_moved(
             },
         };
 
-        AXEventXcode::EditorWindowMoved(msg)
-            .publish_to_tauri(xcode_observer_state.app_handle.clone());
+        AXEventXcode::EditorWindowMoved(msg).publish_to_tauri(&xcode_observer_state.app_handle);
     }
 
     Ok(())

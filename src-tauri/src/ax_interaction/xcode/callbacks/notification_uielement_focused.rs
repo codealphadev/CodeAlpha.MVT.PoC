@@ -56,7 +56,7 @@ pub fn notify_uielement_focused(
         }
 
         AXEventXcode::EditorUIElementFocused(uielement_focused_msg)
-            .publish_to_tauri(xcode_observer_state.app_handle.clone());
+            .publish_to_tauri(&xcode_observer_state.app_handle);
     }
 
     Ok(())

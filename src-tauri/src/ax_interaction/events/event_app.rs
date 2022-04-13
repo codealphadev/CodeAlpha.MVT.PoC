@@ -16,8 +16,8 @@ pub enum AXEventApp {
     AppWindowFocused(AppWindowFocusedMessage),
     AppWindowMoved(AppWindowMovedMessage),
     AppUIElementFocused(AppUIElementFocusedMessage),
-    AppAppActivated(AppActivatedMessage),
-    AppAppDeactivated(AppDeactivatedMessage),
+    AppActivated(AppActivatedMessage),
+    AppDeactivated(AppDeactivatedMessage),
     None,
 }
 
@@ -27,15 +27,15 @@ impl fmt::Display for AXEventApp {
             AXEventApp::AppWindowMoved(_) => write!(f, "AppWindowMoved"),
             AXEventApp::AppUIElementFocused(_) => write!(f, "AppUIElementFocused"),
             AXEventApp::AppWindowFocused(_) => write!(f, "AppWindowFocused"),
-            AXEventApp::AppAppActivated(_) => write!(f, "AppActivated"),
-            AXEventApp::AppAppDeactivated(_) => write!(f, "AppDeactivated"),
+            AXEventApp::AppActivated(_) => write!(f, "AppActivated"),
+            AXEventApp::AppDeactivated(_) => write!(f, "AppDeactivated"),
             AXEventApp::None => write!(f, "None"),
         }
     }
 }
 
 impl AXEventApp {
-    pub fn publish_to_tauri(&self, app_handle: tauri::AppHandle) {
+    pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
         let event_name = AX_EVENT_APP_CHANNEL.to_string();
 
         // Emit to rust listeners

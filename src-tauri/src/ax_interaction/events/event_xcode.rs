@@ -40,7 +40,7 @@ impl fmt::Display for AXEventXcode {
 }
 
 impl AXEventXcode {
-    pub fn publish_to_tauri(&self, app_handle: tauri::AppHandle) {
+    pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
         let event_name = AX_EVENT_XCODE_CHANNEL.to_string();
 
         // Emit to rust listeners

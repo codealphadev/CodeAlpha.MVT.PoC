@@ -13,7 +13,7 @@ use accessibility_sys::{
 use accessibility::{AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
 
-use super::callback_app_widget;
+use super::callback_app_notifications;
 use crate::ax_interaction::utils::TauriState;
 
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
@@ -55,7 +55,7 @@ fn create_observer_and_add_notifications(tauri_apphandle: &TauriState) -> Result
         let pid: i32 = 48049;
 
         // 1. Create AXObserver
-        let app_observer = AXObserver::new(pid, callback_app_widget);
+        let app_observer = AXObserver::new(pid, callback_app_notifications);
         let ui_element = AXUIElement::application(pid);
 
         if let Ok(mut app_observer) = app_observer {

@@ -38,7 +38,7 @@ pub fn notify_window_destroyed(
         if !still_exists {
             if let Ok(msg) = window_destroyed_msg(known_window.0) {
                 // Emit to rust listeners
-                msg.publish_to_tauri(xcode_observer_state.app_handle.clone());
+                msg.publish_to_tauri(&xcode_observer_state.app_handle);
             }
         }
 

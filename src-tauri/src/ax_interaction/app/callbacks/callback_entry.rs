@@ -20,7 +20,7 @@ use colored::*;
 
 /// Entry callback function that is being called by the operating system every time
 /// one of the registered notifications is received.
-pub unsafe extern "C" fn callback_app_widget(
+pub unsafe extern "C" fn callback_app_notifications(
     observer: AXObserverRef,
     element: AXUIElementRef,
     notification: CFStringRef,

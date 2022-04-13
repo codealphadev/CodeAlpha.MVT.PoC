@@ -72,7 +72,7 @@ pub fn notify_window_resized(
         }
 
         AXEventXcode::EditorWindowResized(resize_msg)
-            .publish_to_tauri(xcode_observer_state.app_handle.clone());
+            .publish_to_tauri(&xcode_observer_state.app_handle);
     }
 
     Ok(())

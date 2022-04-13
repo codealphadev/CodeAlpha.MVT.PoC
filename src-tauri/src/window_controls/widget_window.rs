@@ -8,7 +8,7 @@ use tauri::{Error, Manager};
 
 use crate::{
     ax_interaction::{
-        app_widget::observer_app,
+        app::observer_app,
         models::editor::{
             EditorAppActivatedMessage, EditorAppDeactivatedMessage, EditorUIElementFocusedMessage,
             EditorWindowMovedMessage, EditorWindowResizedMessage,
