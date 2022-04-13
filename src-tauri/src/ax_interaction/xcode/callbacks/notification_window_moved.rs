@@ -3,7 +3,9 @@ use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
-use crate::ax_interaction::{models::EditorWindowMovedMessage, AXEventXcode, XCodeObserverState};
+use crate::ax_interaction::{
+    models::editor::EditorWindowMovedMessage, AXEventXcode, XCodeObserverState,
+};
 
 /// Notify Tauri that an editor window has been moved
 /// Method requires AXUIElement of type "AXWindow". Asserts if different AXUIElement is provided as argument.

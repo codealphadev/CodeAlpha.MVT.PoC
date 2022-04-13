@@ -3,7 +3,7 @@ use accessibility_sys::kAXErrorInvalidUIElement;
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
-    models::EditorWindowDestroyedMessage, AXEventXcode, XCodeObserverState,
+    models::editor::EditorWindowDestroyedMessage, AXEventXcode, XCodeObserverState,
 };
 
 /// Notify Tauri that an editor window has been destroyed

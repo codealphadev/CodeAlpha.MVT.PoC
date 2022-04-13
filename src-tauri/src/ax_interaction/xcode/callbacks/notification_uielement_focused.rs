@@ -4,7 +4,7 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    models::{EditorUIElementFocusedMessage, FocusedUIElement},
+    models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
     AXEventXcode, XCodeObserverState,
 };
 

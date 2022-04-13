@@ -1,7 +1,7 @@
 use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::ax_interaction::{
-    models::{EditorAppActivatedMessage, EditorAppDeactivatedMessage},
+    models::editor::{EditorAppActivatedMessage, EditorAppDeactivatedMessage},
     AXEventXcode, XCodeObserverState,
 };
 

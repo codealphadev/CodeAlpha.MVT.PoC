@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{Error, Manager};
 
 use crate::ax_interaction::{
-    models::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
+    models::editor::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
     AXEventXcode, AX_EVENT_XCODE_CHANNEL,
 };
 

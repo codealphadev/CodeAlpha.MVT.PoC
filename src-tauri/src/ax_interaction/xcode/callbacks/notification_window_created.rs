@@ -4,7 +4,9 @@ use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
-use crate::ax_interaction::{models::EditorWindowCreatedMessage, AXEventXcode, XCodeObserverState};
+use crate::ax_interaction::{
+    models::editor::EditorWindowCreatedMessage, AXEventXcode, XCodeObserverState,
+};
 
 /// Notify Tauri that an editor window has been created
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.

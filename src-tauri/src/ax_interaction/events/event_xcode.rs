@@ -3,7 +3,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
-use super::models::{
+use super::models::editor::{
     EditorAppActivatedMessage, EditorAppDeactivatedMessage, EditorUIElementFocusedMessage,
     EditorWindowCreatedMessage, EditorWindowDestroyedMessage, EditorWindowMovedMessage,
     EditorWindowResizedMessage,

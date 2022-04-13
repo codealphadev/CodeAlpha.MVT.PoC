@@ -9,7 +9,7 @@ use tauri::{Error, Manager};
 use crate::{
     ax_interaction::{
         app_widget::observer_app,
-        models::{
+        models::editor::{
             EditorAppActivatedMessage, EditorAppDeactivatedMessage, EditorUIElementFocusedMessage,
             EditorWindowMovedMessage, EditorWindowResizedMessage,
         },
@@ -56,12 +56,12 @@ impl WidgetWindow {
         let is_xcode_focused: Arc<Mutex<Option<bool>>> = Arc::new(Mutex::new(None));
 
         // Spin up watcher for when to show/hide the widget
-        Self::control_widget_visibility(
-            &is_xcode_focused,
-            &currently_focused_editor_window,
-            &hide_until_instant,
-            app_handle,
-        );
+        // Self::control_widget_visibility(
+        //     &is_xcode_focused,
+        //     &currently_focused_editor_window,
+        //     &hide_until_instant,
+        //     app_handle,
+        // );
 
         // Register listener for xcode events relevant for displaying/hiding and positioning the widget
         let editor_windows_move_copy = editor_windows.clone();

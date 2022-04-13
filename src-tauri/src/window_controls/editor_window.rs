@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::ax_interaction::models::{EditorWindowCreatedMessage, FocusedUIElement};
+use crate::ax_interaction::models::editor::{EditorWindowCreatedMessage, FocusedUIElement};
 
 #[derive(Debug)]
 enum HorizontalBoundary {
