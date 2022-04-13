@@ -57,17 +57,5 @@ pub fn create_window(handle: &tauri::AppHandle, window_type: AppWindow) -> Resul
         _ => {}
     }
 
-    let new_window = window_builder.build()?;
-
-    match window_type {
-        AppWindow::Widget => {
-            // Create an observer for out widget
-            if dbg!(observer_app(&handle).is_err()) {
-                Err(Error::CreateWindow)
-            } else {
-                Ok(new_window)
-            }
-        }
-        _ => Ok(new_window),
-    }
+    window_builder.build()
 }

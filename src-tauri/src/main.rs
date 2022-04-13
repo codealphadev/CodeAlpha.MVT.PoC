@@ -4,7 +4,7 @@
     windows_subsystem = "windows"
 )]
 
-use ax_interaction::{setup_observers, utils::TauriState};
+use ax_interaction::setup_observers;
 use commands::search_and_replace_commands;
 
 use crate::commands::window_control_commands;
@@ -29,17 +29,21 @@ fn main() {
             search_and_replace_commands::cmd_search_and_replace
         ])
         .setup(|app| {
-            setup_observers(TauriState {
-                handle: app.handle().clone(),
-            });
+            setup_observers(&app.handle());
 
-            let window_state = window_controls::WindowStateManager::new(app.handle().clone());
-            window_state.launch_startup_windows();
+            let handle = app.handle();
+
+            // Should panic if widget window fails do be created, hence the unwrap.
+            window_controls::WindowStateManager::new(&handle)
+                .launch_startup_windows()
+                .unwrap();
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
-            std::thread::spawn(|| loop {
-                if !ax_interaction::application_is_trusted_with_prompt() {}
-                std::thread::sleep(std::time::Duration::from_secs(5));
+            tauri::async_runtime::spawn(async {
+                loop {
+                    if !ax_interaction::application_is_trusted_with_prompt() {}
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                }
             });
 
             Ok(())

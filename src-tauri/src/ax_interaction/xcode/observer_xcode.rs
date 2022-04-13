@@ -12,7 +12,7 @@ use accessibility::{AXAttribute, AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
 
 use super::callback_xcode_notifications;
-use crate::ax_interaction::{currently_focused_app, utils::TauriState, XCodeObserverState};
+use crate::ax_interaction::{currently_focused_app, XCodeObserverState};
 
 static EDITOR_NAME: &str = "Xcode";
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
@@ -32,7 +32,7 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
 
 pub fn observer_xcode(
     xcode_app: &mut Option<AXUIElement>,
-    tauri_state: &TauriState,
+    app_handle: &tauri::AppHandle,
 ) -> Result<(), Error> {
     // Register XCode observer
     // =======================
@@ -45,7 +45,7 @@ pub fn observer_xcode(
         if let Ok(registration_required) = registration_required_res {
             if registration_required {
                 if let Some(ref xcode_app) = xcode_app {
-                    create_observer_and_add_notifications(xcode_app, &tauri_state)?;
+                    create_observer_and_add_notifications(xcode_app, &app_handle)?;
                 }
             }
         }
@@ -86,7 +86,7 @@ fn is_new_xcode_observer_registration_required(
 // The list of notifications is managed at the top of the file in a static variable.
 fn create_observer_and_add_notifications(
     xcode_ui_element: &AXUIElement,
-    tauri_apphandle: &TauriState,
+    app_handle: &tauri::AppHandle,
 ) -> Result<(), Error> {
     assert_eq!(
         xcode_ui_element.attribute(&AXAttribute::title())?,
@@ -94,7 +94,7 @@ fn create_observer_and_add_notifications(
     );
 
     let pid = xcode_ui_element.pid().unwrap();
-    let tauri_handle_move_copy = tauri_apphandle.handle.clone();
+    let app_handle_move_copy = app_handle.clone();
     thread::spawn(move || {
         // 1. Create AXObserver
         let xcode_observer = AXObserver::new(pid, callback_xcode_notifications);
@@ -110,7 +110,7 @@ fn create_observer_and_add_notifications(
                     notification,
                     &ui_element,
                     XCodeObserverState {
-                        app_handle: tauri_handle_move_copy.clone(),
+                        app_handle: app_handle_move_copy.clone(),
                         window_list: Vec::new(),
                     },
                 );

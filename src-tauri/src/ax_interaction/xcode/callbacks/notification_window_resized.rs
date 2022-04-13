@@ -40,8 +40,8 @@ pub fn notify_window_resized(
                 width: size.width,
                 height: size.height,
             },
-            editor_position: None,
-            editor_size: None,
+            textarea_position: None,
+            textarea_size: None,
         };
 
         if "AXScrollBar" == ui_element.attribute(&AXAttribute::role())? {
@@ -50,7 +50,7 @@ pub fn notify_window_resized(
             let _ = derive_resize_parameters_from_scrollbar(&mut resize_msg, ui_element);
 
             // Avoid spam by checking if the editor textarea dimensions have changed
-            if let (Some(old_size), Some(new_size)) = (window.2, resize_msg.editor_size) {
+            if let (Some(old_size), Some(new_size)) = (window.2, resize_msg.textarea_size) {
                 if old_size.width as i32 == new_size.width as i32
                     && old_size.height as i32 == new_size.height as i32
                 {
@@ -59,7 +59,7 @@ pub fn notify_window_resized(
                 }
             }
 
-            let new_tuple = (window.0, window.1.clone(), resize_msg.editor_size.clone());
+            let new_tuple = (window.0, window.1.clone(), resize_msg.textarea_size.clone());
 
             // Remove item window_list
             xcode_observer_state
@@ -132,12 +132,12 @@ fn derive_resize_parameters_from_scrollbar(
     }
 
     // Update EditorWindowResizedMessage
-    resize_msg.editor_position = Some(tauri::LogicalPosition {
+    resize_msg.textarea_position = Some(tauri::LogicalPosition {
         x: updated_origin_x,
         y: scrollarea_origin.y,
     });
 
-    resize_msg.editor_size = Some(tauri::LogicalSize {
+    resize_msg.textarea_size = Some(tauri::LogicalSize {
         width: updated_width,
         height: scrollarea_size.height,
     });

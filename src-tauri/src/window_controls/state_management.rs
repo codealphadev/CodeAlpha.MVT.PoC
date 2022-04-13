@@ -1,67 +1,89 @@
-#![allow(dead_code)]
-
 use std::sync::{Arc, Mutex};
 
-use tauri::{EventHandler, Manager};
+use tauri::{Error, Manager};
+use tokio::time::{sleep, Duration};
 
-use crate::ax_interaction::{AXEventXcode, AX_EVENT_XCODE_CHANNEL};
+use crate::ax_interaction::{
+    models::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
+    AXEventXcode, AX_EVENT_XCODE_CHANNEL,
+};
 
-use super::{create_window, AppWindow};
+use super::{editor_window::EditorWindow, WidgetWindow};
 
 pub struct WindowStateManager {
     tauri_app_handle: tauri::AppHandle,
 
     // List of listeners; stored to be able to safely remove them
-    listener_app_focus_status: Option<EventHandler>,
-    listener_xcode_focus_status_change: Option<EventHandler>,
-
-    last_known_editor_position: Arc<Mutex<Option<tauri::PhysicalPosition<i32>>>>,
-    last_known_editor_size: Arc<Mutex<Option<tauri::PhysicalSize<i32>>>>,
-    last_repositioned_widget_position: Arc<Mutex<Option<tauri::PhysicalPosition<i32>>>>,
-    last_focused_app: Arc<Mutex<Option<String>>>,
+    open_editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
+    widget_window: Option<WidgetWindow>,
 }
 
 impl WindowStateManager {
-    pub fn new(app_handle: tauri::AppHandle) -> Self {
+    pub fn new(app_handle: &tauri::AppHandle) -> Self {
+        let open_editor_windows: Arc<Mutex<Vec<EditorWindow>>> = Arc::new(Mutex::new(Vec::new()));
+
         // Register listener for xcode events
+        let open_editors_move_copy = open_editor_windows.clone();
         app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
-            let _parsed_msg: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
-            println!("{}", _parsed_msg.to_string());
+            let axevent_xcode: AXEventXcode =
+                serde_json::from_str(&msg.payload().unwrap()).unwrap();
+
+            match axevent_xcode {
+                AXEventXcode::EditorWindowCreated(msg) => {
+                    Self::add_editor_window(&open_editors_move_copy, &msg);
+                }
+                AXEventXcode::EditorWindowDestroyed(msg) => {
+                    Self::remove_editor_window(&open_editors_move_copy, &msg);
+                }
+                _ => {}
+            }
         });
 
         Self {
             tauri_app_handle: app_handle.clone(),
-            listener_app_focus_status: None,
-            listener_xcode_focus_status_change: None,
-            last_known_editor_position: Arc::new(Mutex::new(None)),
-            last_known_editor_size: Arc::new(Mutex::new(None)),
-            last_repositioned_widget_position: Arc::new(Mutex::new(None)),
-            last_focused_app: Arc::new(Mutex::new(None)),
+            open_editor_windows: open_editor_windows,
+            widget_window: None,
         }
     }
 
-    pub fn launch_startup_windows(&self) {
-        let startup_window_list: [AppWindow; 1] = [AppWindow::Widget];
+    pub fn launch_startup_windows(&mut self) -> Result<(), Error> {
+        self.widget_window = Some(WidgetWindow::new(
+            &self.tauri_app_handle,
+            &self.open_editor_windows,
+        )?);
 
-        for window_type in startup_window_list.iter() {
-            let _ = create_window(&self.tauri_app_handle, *window_type);
+        Ok(())
+    }
+
+    fn add_editor_window(
+        editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
+        created_msg: &EditorWindowCreatedMessage,
+    ) {
+        let mut editor_list_locked = editor_window_list.lock().unwrap();
+
+        // check if window is already contained in list of windows
+        let window_exists = (*editor_list_locked)
+            .iter()
+            .any(|window| window.id == created_msg.id);
+
+        if !window_exists {
+            (*editor_list_locked).push(EditorWindow::new(created_msg));
         }
     }
-}
 
-impl Drop for WindowStateManager {
-    fn drop(&mut self) {
-        // Unregister listener for AppFocusStatus
-        if let Some(listener_app_focus_status) = self.listener_app_focus_status.take() {
-            self.tauri_app_handle.unlisten(listener_app_focus_status);
-        }
+    fn remove_editor_window(
+        editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
+        destroyed_msg: &EditorWindowDestroyedMessage,
+    ) {
+        let mut editor_list_locked = editor_window_list.lock().unwrap();
 
-        // Unregister listener for XCodeFocusStatusChange
-        if let Some(listener_xcode_focus_status_change) =
-            self.listener_xcode_focus_status_change.take()
-        {
-            self.tauri_app_handle
-                .unlisten(listener_xcode_focus_status_change);
-        }
+        let _ = &editor_list_locked.retain(|editor_window| {
+            // returning false in Vec::retain() will remove the element from the vector
+            if editor_window.id == destroyed_msg.id {
+                false
+            } else {
+                true
+            }
+        });
     }
 }
