@@ -1,5 +1,5 @@
-use crate::ax_events::models::{AppFocusState, AppInfo};
-use crate::ax_events::Event;
+use crate::ax_events_deprecated::models::{AppFocusState, AppInfo};
+use crate::ax_events_deprecated::Event;
 use crate::ax_interaction::{currently_focused_app, XCodeObserverState};
 use accessibility::{AXAttribute, AXUIElement, Error};
 

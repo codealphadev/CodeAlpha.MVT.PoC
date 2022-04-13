@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::{
-    ax_events::{models::XCodeFocusElement, Event},
+    ax_events_deprecated::{models::XCodeFocusElement, Event},
     window_controls::{close_window, open_window, AppWindow},
 };
 

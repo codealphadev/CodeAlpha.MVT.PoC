@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{EventHandler, Manager};
 
 use crate::{
-    ax_events::{models::AppFocusState, Event},
+    ax_events_deprecated::{models::AppFocusState, Event},
     ax_interaction::is_focused_uielement_of_app_xcode_editor_field,
     window_controls::parse_into_ax_event_type,
 };

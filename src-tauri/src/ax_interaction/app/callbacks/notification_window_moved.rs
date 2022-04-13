@@ -19,7 +19,7 @@ pub fn notify_window_moved(
     let title = window_element.attribute(&AXAttribute::title())?;
     let window: AppWindow = serde_json::from_str(&title.to_string()).unwrap();
 
-    // Get updated window position and size
+    // Get updated window position
     let pos_ax_value = window_element.attribute(&AXAttribute::position())?;
     let origin = pos_ax_value.get_value::<CGPoint>()?;
 

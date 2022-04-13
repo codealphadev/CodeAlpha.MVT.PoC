@@ -9,7 +9,7 @@ use commands::search_and_replace_commands;
 
 use crate::commands::window_control_commands;
 
-mod ax_events;
+mod ax_events_deprecated;
 mod ax_interaction;
 mod commands;
 mod utils;
