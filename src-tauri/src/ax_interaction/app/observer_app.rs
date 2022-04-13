@@ -41,8 +41,6 @@ fn create_observer_and_add_notifications(app_handle: &tauri::AppHandle) -> Resul
     thread::spawn(move || {
         let pid: i32 = std::process::id().try_into().unwrap();
 
-        println!("{}", pid);
-
         // 1. Create AXObserver
         let app_observer = AXObserver::new(pid, callback_app_notifications);
         let ui_element = AXUIElement::application(pid);
@@ -61,7 +59,6 @@ fn create_observer_and_add_notifications(app_handle: &tauri::AppHandle) -> Resul
                     },
                 );
             }
-            println!("ASDASD");
 
             // 4. Kick of RunLoop on this thread
             CFRunLoop::run_current();

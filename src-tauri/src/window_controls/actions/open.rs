@@ -9,6 +9,12 @@ pub fn open_window(handle: &tauri::AppHandle, window_type: AppWindow) {
         return;
     }
 
+    if let Some(window) = handle.get_window(&get_window_label(window_type)) {
+        if window.is_visible().unwrap() {
+            return;
+        }
+    }
+
     match window_type {
         AppWindow::Content => {
             let _ = special_open_for_content_window(handle);
