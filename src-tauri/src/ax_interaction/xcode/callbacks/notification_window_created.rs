@@ -44,7 +44,9 @@ pub fn notify_window_created(
             let window_id = uuid::Uuid::new_v4();
 
             let editor_name = app_element.attribute(&AXAttribute::title())?;
-            if let Ok(msg) = window_creation_msg(editor_name.to_string(), window_id, &*window) {
+            let pid = app_element.pid()?;
+            if let Ok(msg) = window_creation_msg(editor_name.to_string(), pid, window_id, &*window)
+            {
                 // Emit to rust listeners
                 msg.publish_to_tauri(xcode_observer_state.app_handle.clone());
 
@@ -61,6 +63,7 @@ pub fn notify_window_created(
 
 fn window_creation_msg(
     editor_name: String,
+    pid: i32,
     id: uuid::Uuid,
     window_element: &AXUIElement,
 ) -> Result<AXEventXcode, Error> {
@@ -84,6 +87,7 @@ fn window_creation_msg(
             width: size.width,
             height: size.height,
         },
+        pid,
         editor_name,
     };
 

@@ -1,11 +1,8 @@
 use tauri::{Error, Manager, Window, WindowUrl};
 
-use crate::{
-    ax_interaction::app_widget::observer_app,
-    window_controls::{
-        config::{default_properties, AppWindow},
-        get_window_label, special_default_position_for_content_window, utils,
-    },
+use crate::window_controls::{
+    config::{default_properties, AppWindow},
+    get_window_label, special_default_position_for_content_window, utils,
 };
 
 pub fn create_window(handle: &tauri::AppHandle, window_type: AppWindow) -> Result<Window, Error> {

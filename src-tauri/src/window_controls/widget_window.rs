@@ -1,13 +1,17 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+    time::{Duration, Instant},
+};
 
 use tauri::{Error, Manager};
-use tokio::time::{sleep, Duration, Instant, Sleep};
 
 use crate::{
     ax_interaction::{
         app_widget::observer_app,
         models::{
-            EditorUIElementFocusedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+            EditorAppActivatedMessage, EditorAppDeactivatedMessage, EditorUIElementFocusedMessage,
+            EditorWindowMovedMessage, EditorWindowResizedMessage,
         },
         AXEventXcode, AX_EVENT_XCODE_CHANNEL,
     },
@@ -21,9 +25,12 @@ static HIDE_DELAY_IN_MILLIS: u64 = 200;
 #[allow(dead_code)]
 pub struct WidgetWindow {
     handle: tauri::AppHandle,
+
     open_editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
-    temporarily_hide_timer: Arc<tokio::sync::Mutex<Option<Sleep>>>,
     currently_focused_editor_window: Arc<Mutex<Option<uuid::Uuid>>>,
+    hide_until_instant: Arc<Mutex<Instant>>,
+
+    is_xcode_focused: Arc<Mutex<Option<bool>>>,
 }
 
 impl WidgetWindow {
@@ -39,25 +46,28 @@ impl WidgetWindow {
             return Err(Error::CreateWindow);
         }
 
-        // Instantiate a timer shared between closure calls for incoming events
-        // Each qualifying incoming event hides the widget and resets the timer for when it should be shown again
-        let temporarily_hide_timer: Arc<tokio::sync::Mutex<Option<Sleep>>> =
-            Arc::new(tokio::sync::Mutex::new(None));
+        // Instantiate an instant shared between closure calls for incoming events
+        // Each qualifying incoming event updates the instant until when the widget should be hidden
+        let hide_until_instant: Arc<Mutex<Instant>> = Arc::new(Mutex::new(Instant::now()));
 
         let currently_focused_editor_window: Arc<Mutex<Option<uuid::Uuid>>> =
             Arc::new(Mutex::new(None));
 
+        let is_xcode_focused: Arc<Mutex<Option<bool>>> = Arc::new(Mutex::new(None));
+
         // Spin up watcher for when to show/hide the widget
         Self::control_widget_visibility(
+            &is_xcode_focused,
             &currently_focused_editor_window,
-            &temporarily_hide_timer,
+            &hide_until_instant,
             app_handle,
         );
 
         // Register listener for xcode events relevant for displaying/hiding and positioning the widget
         let editor_windows_move_copy = editor_windows.clone();
-        let hide_timer_move_copy = temporarily_hide_timer.clone();
+        let hide_until_instant_move_copy = hide_until_instant.clone();
         let focused_editor_move_copy = currently_focused_editor_window.clone();
+        let is_xcode_focused_move_copy = is_xcode_focused.clone();
         app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
             let axevent_xcode: AXEventXcode =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
@@ -65,14 +75,14 @@ impl WidgetWindow {
             match axevent_xcode {
                 AXEventXcode::EditorWindowResized(msg) => {
                     Self::on_resize_editor_window(
-                        &hide_timer_move_copy,
+                        &hide_until_instant_move_copy,
                         &editor_windows_move_copy,
                         &msg,
                     );
                 }
                 AXEventXcode::EditorWindowMoved(msg) => {
                     Self::on_move_editor_window(
-                        &hide_timer_move_copy,
+                        &hide_until_instant_move_copy,
                         &editor_windows_move_copy,
                         &msg,
                     );
@@ -84,8 +94,12 @@ impl WidgetWindow {
                         &msg,
                     );
                 }
-                AXEventXcode::EditorAppActivated(_) => {}
-                AXEventXcode::EditorAppDeactivated(_) => {}
+                AXEventXcode::EditorAppActivated(msg) => {
+                    Self::on_app_activated(&is_xcode_focused_move_copy, &msg)
+                }
+                AXEventXcode::EditorAppDeactivated(msg) => {
+                    Self::on_app_deactivated(&is_xcode_focused_move_copy, &msg)
+                }
                 _ => {}
             }
         });
@@ -93,13 +107,14 @@ impl WidgetWindow {
         Ok(Self {
             handle: app_handle.clone(),
             open_editor_windows: editor_windows.clone(),
-            temporarily_hide_timer,
+            hide_until_instant,
             currently_focused_editor_window,
+            is_xcode_focused,
         })
     }
 
     fn on_resize_editor_window(
-        hide_timer: &Arc<tokio::sync::Mutex<Option<Sleep>>>,
+        hide_until_instant: &Arc<Mutex<Instant>>,
         editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
         resize_msg: &EditorWindowResizedMessage,
     ) {
@@ -116,14 +131,9 @@ impl WidgetWindow {
                 }
 
                 // Reset hide timer after which the widget should be displayed again
-                let hide_timer_move_copy = hide_timer.clone();
-                tauri::async_runtime::spawn(async move {
-                    let mut timer_locked = hide_timer_move_copy.lock().await;
-
-                    *timer_locked = Some(tokio::time::sleep(Duration::from_millis(
-                        HIDE_DELAY_IN_MILLIS,
-                    )));
-                });
+                let mut hide_until_instant_locked = hide_until_instant.lock().unwrap();
+                *hide_until_instant_locked =
+                    Instant::now() + Duration::from_millis(HIDE_DELAY_IN_MILLIS);
 
                 break;
             }
@@ -131,7 +141,7 @@ impl WidgetWindow {
     }
 
     fn on_move_editor_window(
-        hide_timer: &Arc<tokio::sync::Mutex<Option<Sleep>>>,
+        hide_until_instant: &Arc<Mutex<Instant>>,
         editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
         moved_msg: &EditorWindowMovedMessage,
     ) {
@@ -142,14 +152,9 @@ impl WidgetWindow {
                 window.update_window_dimensions(moved_msg.window_position, moved_msg.window_size);
 
                 // Reset hide timer after which the widget should be displayed again
-                let hide_timer_move_copy = hide_timer.clone();
-                tauri::async_runtime::spawn(async move {
-                    let mut timer_locked = hide_timer_move_copy.lock().await;
-
-                    *timer_locked = Some(tokio::time::sleep(Duration::from_millis(
-                        HIDE_DELAY_IN_MILLIS,
-                    )));
-                });
+                let mut hide_until_instant_locked = hide_until_instant.lock().unwrap();
+                *hide_until_instant_locked =
+                    Instant::now() + Duration::from_millis(HIDE_DELAY_IN_MILLIS);
 
                 break;
             }
@@ -182,29 +187,61 @@ impl WidgetWindow {
         }
     }
 
+    fn on_app_deactivated(
+        is_xcode_focused: &Arc<Mutex<Option<bool>>>,
+        deactivated_msg: &EditorAppDeactivatedMessage,
+    ) {
+        let mut is_xcode_focused_locked = is_xcode_focused.lock().unwrap();
+
+        if deactivated_msg.editor_name == "Xcode" {
+            *is_xcode_focused_locked = Some(false);
+        }
+    }
+
+    fn on_app_activated(
+        is_xcode_focused: &Arc<Mutex<Option<bool>>>,
+        activated_msg: &EditorAppActivatedMessage,
+    ) {
+        let mut is_xcode_focused_locked = is_xcode_focused.lock().unwrap();
+
+        if activated_msg.editor_name == "Xcode" {
+            *is_xcode_focused_locked = Some(true);
+        }
+    }
+
     fn control_widget_visibility(
+        is_xcode_focused: &Arc<Mutex<Option<bool>>>,
         focused_editor: &Arc<Mutex<Option<uuid::Uuid>>>,
-        temporarily_hide_timer: &Arc<tokio::sync::Mutex<Option<tokio::time::Sleep>>>,
+        hide_until_instant: &Arc<Mutex<Instant>>,
         app_handle: &tauri::AppHandle,
     ) {
-        let hide_timer_move_copy = temporarily_hide_timer.clone();
+        let hide_until_instant_move_copy = hide_until_instant.clone();
         let app_handle_move_copy = app_handle.clone();
-        let focused_editor_move_copy = focused_editor.clone();
-        tauri::async_runtime::spawn(async move {
-            loop {
-                let timer_locked = hide_timer_move_copy.lock().await;
+        let _focused_editor_move_copy = focused_editor.clone();
+        let is_xcode_focused_move_copy = is_xcode_focused.clone();
+        thread::spawn(move || loop {
+            // Sleep first to not block the locked Mutexes afterwards
+            thread::sleep(std::time::Duration::from_millis(25));
 
-                if let Some(timer) = &*timer_locked {
-                    let foo = timer.deadline().duration_since(Instant::now());
+            let hide_until_locked = hide_until_instant_move_copy.lock().unwrap();
+            let is_xcode_focused_locked = is_xcode_focused_move_copy.lock().unwrap();
 
-                    if foo.as_millis() > 0 {
+            // Hide widget if editor is not in focus
+            if (*is_xcode_focused_locked).is_none() {
+                close_window(&app_handle_move_copy, AppWindow::Widget);
+                continue;
+            }
+
+            if let Some(xcode_focused) = *is_xcode_focused_locked {
+                if xcode_focused {
+                    if *hide_until_locked > Instant::now() {
                         close_window(&app_handle_move_copy, AppWindow::Widget);
                     } else {
                         open_window(&app_handle_move_copy, AppWindow::Widget);
                     }
+                } else {
+                    close_window(&app_handle_move_copy, AppWindow::Widget);
                 }
-
-                sleep(Duration::from_millis(25)).await;
             }
         });
     }

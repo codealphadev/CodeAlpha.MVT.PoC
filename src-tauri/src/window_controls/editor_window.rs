@@ -18,6 +18,7 @@ enum VerticalBoundary {
 pub struct EditorWindow {
     pub id: uuid::Uuid,
     editor_name: String,
+    pid: i32,
     focused_ui_element: Option<FocusedUIElement>,
     window_position: tauri::LogicalPosition<f64>,
     window_size: tauri::LogicalSize<f64>,
@@ -32,6 +33,7 @@ impl EditorWindow {
         Self {
             id: created_msg.id,
             editor_name: created_msg.editor_name.clone(),
+            pid: created_msg.pid,
             window_position: created_msg.window_position,
             window_size: created_msg.window_size,
             textarea_position: None,
