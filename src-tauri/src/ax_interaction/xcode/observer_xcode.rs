@@ -30,7 +30,7 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXWindowResizedNotification,
 ];
 
-pub fn observer_xcode(
+pub fn register_observer_xcode(
     xcode_app: &mut Option<AXUIElement>,
     app_handle: &tauri::AppHandle,
 ) -> Result<(), Error> {

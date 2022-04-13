@@ -2,7 +2,7 @@ use std::thread;
 
 use accessibility::AXUIElement;
 
-use super::xcode::observer_xcode;
+use super::xcode::register_observer_xcode;
 
 static LOOP_TIME_IN_MS: u64 = 150;
 
@@ -18,7 +18,7 @@ pub fn setup_observers(app_handle: &tauri::AppHandle) {
         loop {
             // Register XCode observer
             // =======================
-            let _ = observer_xcode(&mut xcode_app, &app_handle_move_copy);
+            let _ = register_observer_xcode(&mut xcode_app, &app_handle_move_copy);
 
             thread::sleep(std::time::Duration::from_millis(LOOP_TIME_IN_MS));
         }

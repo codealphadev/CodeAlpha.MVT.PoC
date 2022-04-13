@@ -44,6 +44,9 @@ pub mod default_properties {
     }
 
     pub fn title(window: &AppWindow) -> String {
+        // ACHTUNG! Before changing the titles, check if these are used elsewhere ... at least in
+        // src-tauri/src/ax_interaction/app/callbacks I am using hard coded title strings because I
+        // I could not get it to work to match with the strings here.
         match window {
             AppWindow::Settings => "CodeAlpha - Settings".to_string(),
             AppWindow::Analytics => "CodeAlpha - Analytics".to_string(),

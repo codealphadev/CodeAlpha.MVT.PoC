@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use cocoa::appkit::CGPoint;
 
 use crate::{
-    ax_interaction::{models::app::AppWindowMovedMessage, AXEventApp},
+    ax_interaction::{models::app::AppWindowMovedMessage, AXEventApp, AppObserverState},
     window_controls::AppWindow,
 };
 
@@ -10,14 +10,24 @@ use crate::{
 /// Method requires AXUIElement of type "AXWindow". Asserts if different AXUIElement is provided as argument.
 pub fn notify_window_moved(
     window_element: &AXUIElement,
-    app_handle: &tauri::AppHandle,
+    app_state: &AppObserverState,
 ) -> Result<(), Error> {
     let role = window_element.attribute(&AXAttribute::role())?;
 
     assert_eq!(role.to_string(), "AXWindow");
 
     let title = window_element.attribute(&AXAttribute::title())?;
-    let window: AppWindow = serde_json::from_str(&title.to_string()).unwrap();
+
+    #[allow(unused_assignments)]
+    let mut window = AppWindow::None;
+
+    match title.to_string().as_str() {
+        "CodeAlpha - Guide" => window = AppWindow::Content,
+        "CodeAlpha - Settings" => window = AppWindow::Settings,
+        "CodeAlpha - Analytics" => window = AppWindow::Analytics,
+        "CodeAlpha - Widget" => window = AppWindow::Widget,
+        _ => window = AppWindow::None,
+    }
 
     // Get updated window position
     let pos_ax_value = window_element.attribute(&AXAttribute::position())?;
@@ -31,7 +41,7 @@ pub fn notify_window_moved(
         },
     };
 
-    AXEventApp::AppWindowMoved(msg).publish_to_tauri(&app_handle);
+    AXEventApp::AppWindowMoved(msg).publish_to_tauri(&app_state.app_handle);
 
     Ok(())
 }

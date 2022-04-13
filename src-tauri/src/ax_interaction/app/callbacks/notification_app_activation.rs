@@ -2,14 +2,14 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::ax_interaction::{
     models::app::{AppActivatedMessage, AppDeactivatedMessage},
-    AXEventApp,
+    AXEventApp, AppObserverState,
 };
 
 /// Notify Tauri that our app has been activated, which means focus has moved to our app from a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
 pub fn notifiy_app_activated(
     app_element: &AXUIElement,
-    app_handle: &tauri::AppHandle,
+    app_state: &AppObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
     assert_eq!(role.to_string(), "AXApplication");
@@ -25,7 +25,7 @@ pub fn notifiy_app_activated(
     let activation_event = AXEventApp::AppActivated(activation_msg);
 
     // Emit to rust listeners
-    activation_event.publish_to_tauri(&app_handle);
+    activation_event.publish_to_tauri(&app_state.app_handle);
 
     Ok(())
 }
@@ -34,7 +34,7 @@ pub fn notifiy_app_activated(
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
 pub fn notifiy_app_deactivated(
     app_element: &AXUIElement,
-    app_handle: &tauri::AppHandle,
+    app_state: &AppObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
     assert_eq!(role.to_string(), "AXApplication");
@@ -50,7 +50,7 @@ pub fn notifiy_app_deactivated(
     let deactivation_event = AXEventApp::AppDeactivated(deactivation_msg);
 
     // Emit to rust listeners
-    deactivation_event.publish_to_tauri(&app_handle);
+    deactivation_event.publish_to_tauri(&app_state.app_handle);
 
     Ok(())
 }

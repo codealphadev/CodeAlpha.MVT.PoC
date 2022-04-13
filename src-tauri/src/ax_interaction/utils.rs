@@ -60,15 +60,15 @@ pub fn application_is_trusted_with_prompt() -> bool {
     }
 }
 
-// A bit WIP - tiny struct to help move context info into callback functions of the observers
-pub struct TauriState {
-    pub handle: tauri::AppHandle,
-}
-
 #[derive(Debug, Clone)]
 pub struct XCodeObserverState {
     pub app_handle: tauri::AppHandle,
     pub window_list: Vec<(uuid::Uuid, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AppObserverState {
+    pub app_handle: tauri::AppHandle,
 }
 
 pub mod DebugUtils {

@@ -3,35 +3,25 @@ use std::thread;
 use accessibility_sys::{
     kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
     kAXApplicationHiddenNotification, kAXApplicationShownNotification,
-    kAXFocusedUIElementChangedNotification, kAXFocusedWindowChangedNotification,
-    kAXMainWindowChangedNotification, kAXMovedNotification, kAXResizedNotification,
-    kAXSelectedChildrenChangedNotification, kAXSelectedChildrenMovedNotification,
-    kAXUIElementDestroyedNotification, kAXWindowCreatedNotification,
-    kAXWindowDeminiaturizedNotification, kAXWindowMiniaturizedNotification,
+    kAXFocusedUIElementChangedNotification, kAXMainWindowChangedNotification,
+    kAXWindowMovedNotification,
 };
 
 use accessibility::{AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
 
+use crate::ax_interaction::AppObserverState;
+
 use super::callback_app_notifications;
-use crate::ax_interaction::utils::TauriState;
 
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXFocusedUIElementChangedNotification,
-    kAXFocusedWindowChangedNotification,
-    kAXApplicationShownNotification,
-    kAXApplicationHiddenNotification,
-    kAXWindowCreatedNotification,
     kAXMainWindowChangedNotification,
-    kAXApplicationDeactivatedNotification,
     kAXApplicationActivatedNotification,
-    kAXWindowMiniaturizedNotification,
-    kAXWindowDeminiaturizedNotification,
-    kAXUIElementDestroyedNotification,
-    kAXSelectedChildrenMovedNotification,
-    kAXSelectedChildrenChangedNotification,
-    kAXResizedNotification,
-    kAXMovedNotification,
+    kAXApplicationDeactivatedNotification,
+    kAXApplicationHiddenNotification,
+    kAXApplicationShownNotification,
+    kAXWindowMovedNotification,
 ];
 
 /// AX Observer - Our App
@@ -39,20 +29,19 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
 /// This call registers a macOS AXObserver for our application
 /// The list of notifications added to this observer can be modified at the
 /// top of the file in a static array.
-pub fn observer_app(handle: &tauri::AppHandle) -> Result<(), Error> {
-    create_observer_and_add_notifications(&TauriState {
-        handle: handle.clone(),
-    })?;
+pub fn register_observer_app(app_handle: &tauri::AppHandle) -> Result<(), Error> {
+    create_observer_and_add_notifications(&app_handle)?;
     Ok(())
 }
 
 /// This function is called to create a new observer and add the notifications to it.
 /// The list of notifications is managed at the top of the file in a static variable.
-fn create_observer_and_add_notifications(tauri_apphandle: &TauriState) -> Result<(), Error> {
-    let tauri_handle_move_copy = tauri_apphandle.handle.clone();
+fn create_observer_and_add_notifications(app_handle: &tauri::AppHandle) -> Result<(), Error> {
+    let app_handle_move_copy = app_handle.clone();
     thread::spawn(move || {
-        // let pid: i32 = std::process::id().try_into().unwrap();
-        let pid: i32 = 48049;
+        let pid: i32 = std::process::id().try_into().unwrap();
+
+        println!("{}", pid);
 
         // 1. Create AXObserver
         let app_observer = AXObserver::new(pid, callback_app_notifications);
@@ -67,11 +56,12 @@ fn create_observer_and_add_notifications(tauri_apphandle: &TauriState) -> Result
                 let _ = app_observer.add_notification(
                     notification,
                     &ui_element,
-                    TauriState {
-                        handle: tauri_handle_move_copy.clone(),
+                    AppObserverState {
+                        app_handle: app_handle_move_copy.clone(),
                     },
                 );
             }
+            println!("ASDASD");
 
             // 4. Kick of RunLoop on this thread
             CFRunLoop::run_current();
