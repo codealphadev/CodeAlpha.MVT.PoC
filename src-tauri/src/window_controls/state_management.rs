@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
 use tauri::{Error, Manager};
-use tokio::time::{sleep, Duration};
 
 use crate::ax_interaction::{
     models::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},

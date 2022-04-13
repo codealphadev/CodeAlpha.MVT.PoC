@@ -2,7 +2,7 @@ use tauri::Manager;
 
 use crate::window_controls::{config::AppWindow, get_window_label};
 
-pub fn close_window(handle: tauri::AppHandle, window_type: AppWindow) {
+pub fn close_window(handle: &tauri::AppHandle, window_type: AppWindow) {
     if window_type == AppWindow::None {
         return;
     }

@@ -70,7 +70,7 @@ impl WindowStateMachine {
                             if ![EDITOR_NAME].contains(&&payload.current_app.name.as_str())
                                 && payload.current_app.pid != std::process::id()
                             {
-                                close_window(tauri_app_handle_copy.clone(), AppWindow::Widget);
+                                close_window(&tauri_app_handle_copy, AppWindow::Widget);
                             }
 
                             // Update last focused app
@@ -142,10 +142,10 @@ impl WindowStateMachine {
                                     );
 
                                     // 2. Show Widget
-                                    open_window(tauri_app_handle_copy.clone(), AppWindow::Widget);
+                                    open_window(&tauri_app_handle_copy, AppWindow::Widget);
                                 }
                             } else {
-                                close_window(tauri_app_handle_copy.clone(), AppWindow::Widget);
+                                close_window(&tauri_app_handle_copy, AppWindow::Widget);
                             }
                         }
                     }

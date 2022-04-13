@@ -29,17 +29,17 @@ pub fn cmd_is_window_visible(handle: tauri::AppHandle, window_type: AppWindow) -
 
 #[tauri::command]
 pub fn cmd_open_window(handle: tauri::AppHandle, window_label: AppWindow) {
-    open_window(handle.clone(), window_label);
+    open_window(&handle, window_label);
 }
 
 #[tauri::command]
 pub fn cmd_close_window(handle: tauri::AppHandle, window_label: AppWindow) {
-    close_window(handle.clone(), window_label);
+    close_window(&handle, window_label);
 }
 
 #[tauri::command]
 pub fn cmd_toggle_window(handle: tauri::AppHandle, window_label: AppWindow) {
-    toggle_window(handle.clone(), window_label);
+    toggle_window(&handle, window_label);
 }
 
 #[tauri::command]
@@ -50,9 +50,9 @@ pub fn cmd_resize_window(
     size_y: u32,
 ) {
     resize_window(
-        handle.clone(),
+        &handle,
         window_label,
-        tauri::LogicalSize {
+        &tauri::LogicalSize {
             width: size_x as f64,
             height: size_y as f64,
         },

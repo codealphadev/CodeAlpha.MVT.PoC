@@ -33,7 +33,7 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 - [ ] If the _editor textarea_ is off-screen the moment it is being focused, the widget should **stay hidden**.
 - [ ] While receiving `AXMoved` notifications for the _editor window_ ...
 
-  - [ ] the widget should be hidden until `500ms` have elapsed after the last received `AXMoved` notification
+  - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXMoved` notification
   - [ ] calculate the distance it moved from the last received notification and update the widget's position accordingly.
   - [ ] If the widget would move off-screen, move it only so far that it still stays on-screen **AND** on a remaining piece of the _editor textarea_
 
@@ -43,7 +43,7 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
   - [ ] Ties to _editor text_area boundaries_ are only recalculated when the widget is being **moved by the user**.
 - [ ] While receiving `AXResized` notifications for the _editor window_ ...
 
-  - [ ] the widget should be hidden until `500ms` have elapsed after the last received `AXResized` notification
+  - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXResized` notification
   - [ ] Using the updated _position_ and _size_ of the _editor textarea_ and the boundaries, recalculate & update the widget's position.
 
 - [ ] Hide the widget if `AXApplicationDeactivated` notification is received

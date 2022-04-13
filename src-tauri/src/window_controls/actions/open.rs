@@ -4,7 +4,7 @@ use crate::window_controls::{config::AppWindow, get_window_label};
 
 use super::create::create_window;
 
-pub fn open_window(handle: tauri::AppHandle, window_type: AppWindow) {
+pub fn open_window(handle: &tauri::AppHandle, window_type: AppWindow) {
     if window_type == AppWindow::None {
         return;
     }
@@ -23,7 +23,7 @@ pub fn open_window(handle: tauri::AppHandle, window_type: AppWindow) {
     }
 }
 
-fn special_open_for_content_window(handle: tauri::AppHandle) -> Result<(), Error> {
+fn special_open_for_content_window(handle: &tauri::AppHandle) -> Result<(), Error> {
     if let Some(content_window) = handle.get_window(&get_window_label(AppWindow::Content)) {
         let _ = content_window.show();
     } else {
