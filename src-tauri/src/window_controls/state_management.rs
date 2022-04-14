@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use tauri::{Error, Manager};
+use tauri::Manager;
 
 use crate::ax_interaction::{
     models::editor::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
@@ -13,16 +13,16 @@ pub struct WindowStateManager {
     tauri_app_handle: tauri::AppHandle,
 
     // List of listeners; stored to be able to safely remove them
-    open_editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
-    widget_window: Option<WidgetWindow>,
+    _open_editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
+    widget_window: Arc<Mutex<WidgetWindow>>,
 }
 
 impl WindowStateManager {
     pub fn new(app_handle: &tauri::AppHandle) -> Self {
-        let open_editor_windows: Arc<Mutex<Vec<EditorWindow>>> = Arc::new(Mutex::new(Vec::new()));
+        let _open_editor_windows: Arc<Mutex<Vec<EditorWindow>>> = Arc::new(Mutex::new(Vec::new()));
 
         // Register listener for xcode events
-        let open_editors_move_copy = open_editor_windows.clone();
+        let open_editors_move_copy = _open_editor_windows.clone();
         app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
             let axevent_xcode: AXEventXcode =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
@@ -34,24 +34,29 @@ impl WindowStateManager {
                 AXEventXcode::EditorWindowDestroyed(msg) => {
                     Self::remove_editor_window(&open_editors_move_copy, &msg);
                 }
+                AXEventXcode::EditorClosed(_) => {
+                    let mut editors_locked = open_editors_move_copy.lock().unwrap();
+                    *editors_locked = Vec::new();
+                }
                 _ => {}
             }
         });
 
         Self {
             tauri_app_handle: app_handle.clone(),
-            open_editor_windows: open_editor_windows,
-            widget_window: None,
+            _open_editor_windows: _open_editor_windows.clone(),
+            widget_window: Arc::new(Mutex::new(
+                WidgetWindow::new(&app_handle, &_open_editor_windows).unwrap(),
+            )),
         }
     }
 
-    pub fn launch_startup_windows(&mut self) -> Result<(), Error> {
-        self.widget_window = Some(WidgetWindow::new(
+    pub fn configure_windows(&mut self) {
+        WidgetWindow::setup_widget_listeners(&self.tauri_app_handle, &mut self.widget_window);
+        WidgetWindow::start_widget_visibility_control(
             &self.tauri_app_handle,
-            &self.open_editor_windows,
-        )?);
-
-        Ok(())
+            &mut self.widget_window,
+        );
     }
 
     fn add_editor_window(

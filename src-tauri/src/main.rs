@@ -35,6 +35,7 @@ fn main() {
 
             // Should panic if widget window fails do be created, hence the unwrap.
             let mut manager = window_controls::WindowStateManager::new(&handle);
+            manager.configure_windows();
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
             tauri::async_runtime::spawn(async {
@@ -43,10 +44,6 @@ fn main() {
                     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                 }
             });
-
-            // WIP: Calling launch_startup_windows a few lines further down seemed to help with more reliably
-            // registering an observer for our app.
-            manager.launch_startup_windows().unwrap();
 
             Ok(())
         })

@@ -8,13 +8,17 @@ use accessibility_sys::{
     kAXWindowMiniaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification,
 };
 
-use accessibility::{AXAttribute, AXObserver, AXUIElement, Error};
+use accessibility::{AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
 
 use super::callback_xcode_notifications;
-use crate::ax_interaction::{currently_focused_app, XCodeObserverState};
+use crate::ax_interaction::{
+    models::editor::EditorAppClosedMessage, AXEventXcode, XCodeObserverState,
+};
 
-static EDITOR_NAME: &str = "Xcode";
+static EDITOR_XCODE_BUNDLE_ID: &str = "com.apple.dt.Xcode";
+static OBSERVER_REGISTRATION_DELAY_IN_MILLIS: u64 = 2000;
+
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXApplicationActivatedNotification,
     kAXApplicationDeactivatedNotification,
@@ -31,51 +35,52 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
 ];
 
 pub fn register_observer_xcode(
-    xcode_app: &mut Option<AXUIElement>,
+    known_xcode_app: &mut Option<AXUIElement>,
     app_handle: &tauri::AppHandle,
 ) -> Result<(), Error> {
     // Register XCode observer
     // =======================
     // Happens only once when xcode is launched; is retriggered if xcode is restarted
-    let app = currently_focused_app();
-    if let Ok(currently_focused_app) = app {
-        let registration_required_res =
-            is_new_xcode_observer_registration_required(currently_focused_app, xcode_app);
-
-        if let Ok(registration_required) = registration_required_res {
-            if registration_required {
-                if let Some(ref xcode_app) = xcode_app {
-                    create_observer_and_add_notifications(xcode_app, &app_handle)?;
-                }
+    let registration_required_res = is_new_xcode_observer_registration_required(known_xcode_app);
+    if let Ok(registration_required) = registration_required_res {
+        if registration_required {
+            if let Some(ref xcode_app) = known_xcode_app {
+                create_observer_and_add_notifications(xcode_app, &app_handle)?;
             }
         }
-    }
+    } else {
+        // Case: XCode is not running
+        if let Some(ref xcode_app) = known_xcode_app {
+            // Case: XCode was just closed
 
+            AXEventXcode::EditorClosed(EditorAppClosedMessage {
+                editor_name: "Xcode".to_string(),
+                pid: xcode_app.pid().unwrap().try_into().unwrap(),
+            })
+            .publish_to_tauri(&app_handle);
+
+            *known_xcode_app = None;
+        }
+    }
     Ok(())
 }
 
 // Determine if a new observer is required. This might be the case if XCode was restarted. We detect this by
 // checking if the XCode's AXUIElement has changed.
 fn is_new_xcode_observer_registration_required(
-    focused_app: AXUIElement,
     known_xcode_app: &mut Option<AXUIElement>,
 ) -> Result<bool, Error> {
-    let focused_app_title = focused_app.attribute(&AXAttribute::title())?;
+    let xcode_ui_element = AXUIElement::application_with_bundle(EDITOR_XCODE_BUNDLE_ID)?;
 
-    // Check if focused app is XCode, skip if not
-    if focused_app_title != EDITOR_NAME {
-        return Ok(false);
-    }
-
-    if let Some(xcode_app) = known_xcode_app {
+    if let Some(xcode_app) = &known_xcode_app {
         // Case: XCode has a new AXUIElement, telling us it was restarted
-        if xcode_app.pid()? != focused_app.pid()? {
-            *known_xcode_app = Some(focused_app);
+        if xcode_ui_element != *xcode_app {
+            *known_xcode_app = Some(xcode_ui_element);
             return Ok(true);
         }
     } else {
         // Case: XCode was never started while the program was running; it's UI element is not known yet
-        *known_xcode_app = Some(focused_app);
+        *known_xcode_app = Some(xcode_ui_element);
         return Ok(true);
     }
 
@@ -88,14 +93,15 @@ fn create_observer_and_add_notifications(
     xcode_ui_element: &AXUIElement,
     app_handle: &tauri::AppHandle,
 ) -> Result<(), Error> {
-    assert_eq!(
-        xcode_ui_element.attribute(&AXAttribute::title())?,
-        EDITOR_NAME
-    );
-
     let pid = xcode_ui_element.pid().unwrap();
     let app_handle_move_copy = app_handle.clone();
     thread::spawn(move || {
+        // 0. Delay observer registration on macOS, because there is a good chance no
+        // notifications will be received despite seemingly successful observer registration
+        thread::sleep(std::time::Duration::from_millis(
+            OBSERVER_REGISTRATION_DELAY_IN_MILLIS,
+        ));
+
         // 1. Create AXObserver
         let xcode_observer = AXObserver::new(pid, callback_xcode_notifications);
         let ui_element = AXUIElement::application(pid);

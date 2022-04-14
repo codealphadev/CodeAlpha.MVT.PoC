@@ -23,6 +23,7 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXApplicationShownNotification,
     kAXWindowMovedNotification,
 ];
+static OBSERVER_REGISTRATION_DELAY_IN_MILLIS: u64 = 2000;
 
 /// AX Observer - Our App
 /// ================================
@@ -39,6 +40,12 @@ pub fn register_observer_app(app_handle: &tauri::AppHandle) -> Result<(), Error>
 fn create_observer_and_add_notifications(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     let app_handle_move_copy = app_handle.clone();
     thread::spawn(move || {
+        // 0. Delay observer registration on macOS, because there is a good chance no
+        // notifications will be received despite seemingly successful observer registration
+        thread::sleep(std::time::Duration::from_millis(
+            OBSERVER_REGISTRATION_DELAY_IN_MILLIS,
+        ));
+
         let pid: i32 = std::process::id().try_into().unwrap();
 
         // 1. Create AXObserver

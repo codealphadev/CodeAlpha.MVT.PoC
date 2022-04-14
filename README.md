@@ -32,22 +32,18 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 - [ ] The widget should appear in **the bottom right corner** of the focused _editor textarea_.
 - [ ] If the _editor textarea_ is off-screen the moment it is being focused, the widget should **stay hidden**.
 - [ ] While receiving `AXMoved` notifications for the _editor window_ ...
-
   - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXMoved` notification
   - [ ] calculate the distance it moved from the last received notification and update the widget's position accordingly.
   - [ ] If the widget would move off-screen, move it only so far that it still stays on-screen **AND** on a remaining piece of the _editor textarea_
-
 - [ ] At all times, the widget should be _tied_ to one of the _editor textarea's_ horizontal and vertical boundaries `left|right` `bottom|top`.
   - [ ] Ties to _editor text_area boundaries_ are being determined by the minimum distance.
   - [ ] Ties to _editor text_area boundaries_ are defined as the distance in pixels to a boundary.
   - [ ] Ties to _editor text_area boundaries_ are only recalculated when the widget is being **moved by the user**.
 - [ ] While receiving `AXResized` notifications for the _editor window_ ...
-
   - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXResized` notification
   - [ ] Using the updated _position_ and _size_ of the _editor textarea_ and the boundaries, recalculate & update the widget's position.
-
-- [ ] Hide the widget if `AXApplicationDeactivated` notification is received
-- [ ] Evaluate if widget should be shown when `AXApplicationActivated` is received
+- [x] Hide the widget if `AXApplicationDeactivated` notification is received
+- [x] Evaluate if widget should be shown when `AXApplicationActivated` is received
   - [ ] Lookup currently focused UI element, if it has role `AXTextArea`, then show the widget
 
 **XCode Behavior**
@@ -60,5 +56,6 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 **Open Issues:**
 
 - [ ] Undefined UX behavior if editor is resized beyond one screen
+- [ ] Undefined UX behavior if editor is closed using CMD+Q
 
 - DEFINE A MINIMUM VISIBLE EDITOR TEXT AREA FOR WHICH TO DISPLAY THE WIDGET

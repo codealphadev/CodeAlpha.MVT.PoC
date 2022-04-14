@@ -22,33 +22,35 @@ use super::{create_window, editor_window::EditorWindow, AppWindow};
 
 static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
 static HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS: u64 = 50;
+static XCODE_EDITOR_NAME: &str = "Xcode";
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct WidgetWindow {
-    handle: tauri::AppHandle,
+    app_handle: tauri::AppHandle,
 
     // List of open editor windows. List is managed by WindowStateManager.
     editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
 
     // Identitfier of the currently focused editor window. Is None until the first window was focused.
-    currently_focused_editor_window: Arc<Mutex<Option<uuid::Uuid>>>,
+    currently_focused_editor_window: Option<uuid::Uuid>,
 
     // Each qualifying incoming event updates the instant until when the widget should be hidden.
-    hide_until_instant: Arc<Mutex<Instant>>,
+    hide_until_instant: Instant,
 
     // In case the focus switches from our app to an editor or vice versa it is possible, that there is
     // a state where seemingly neither is in focus, only because the new "AXActivation" event from the
     // newly focused entity hasn't arrived yet / wasn't processed yet.
-    delay_hide_until_instant: Arc<Mutex<Instant>>,
+    delay_hide_until_instant: Instant,
 
     // Boolean saying if the currently focused application is Xcode.
-    is_xcode_focused: Arc<Mutex<Option<bool>>>,
+    is_xcode_focused: Option<bool>,
 
     // Boolean saying if the currently focused application is our app.
-    is_app_focused: Arc<Mutex<Option<bool>>>,
+    is_app_focused: Option<bool>,
 
     // Identitfier of the currently focused app window. Is None until the first window was focused.
-    currently_focused_app_window: Arc<Mutex<Option<AppWindow>>>,
+    currently_focused_app_window: Option<AppWindow>,
 }
 
 impl WidgetWindow {
@@ -64,303 +66,221 @@ impl WidgetWindow {
             return Err(Error::CreateWindow);
         }
 
-        let hide_until_instant: Arc<Mutex<Instant>> = Arc::new(Mutex::new(Instant::now()));
-        let delay_hide_until_instant: Arc<Mutex<Instant>> = Arc::new(Mutex::new(Instant::now()));
-
-        let currently_focused_editor_window: Arc<Mutex<Option<uuid::Uuid>>> =
-            Arc::new(Mutex::new(None));
-        let currently_focused_app_window: Arc<Mutex<Option<AppWindow>>> =
-            Arc::new(Mutex::new(None));
-
-        let is_xcode_focused: Arc<Mutex<Option<bool>>> = Arc::new(Mutex::new(None));
-        let is_app_focused: Arc<Mutex<Option<bool>>> = Arc::new(Mutex::new(None));
-
-        // Spin up watcher for when to show/hide the widget
-        Self::control_widget_visibility(
-            &is_app_focused,
-            &is_xcode_focused,
-            &currently_focused_editor_window,
-            &hide_until_instant,
-            &delay_hide_until_instant,
-            app_handle,
-        );
-
-        // Register listener for AXEvents from our app
-        Self::register_listener_app(
-            &app_handle,
-            &currently_focused_app_window,
-            &delay_hide_until_instant,
-            &is_app_focused,
-        );
-
-        // Register listener for xcode events relevant for displaying/hiding and positioning the widget
-        Self::register_listener_xcode(
-            &app_handle,
-            &editor_windows,
-            &currently_focused_editor_window,
-            &hide_until_instant,
-            &delay_hide_until_instant,
-            &is_xcode_focused,
-        );
-
         Ok(Self {
-            handle: app_handle.clone(),
+            app_handle: app_handle.clone(),
             editor_windows: editor_windows.clone(),
-            hide_until_instant,
-            delay_hide_until_instant,
-            currently_focused_editor_window,
-            is_xcode_focused,
-            is_app_focused,
-            currently_focused_app_window,
+            hide_until_instant: Instant::now(),
+            delay_hide_until_instant: Instant::now(),
+            currently_focused_editor_window: None,
+            is_xcode_focused: None,
+            is_app_focused: None,
+            currently_focused_app_window: None,
         })
     }
 
-    fn register_listener_xcode(
+    pub fn setup_widget_listeners(
         app_handle: &tauri::AppHandle,
-        editor_windows: &Arc<Mutex<Vec<EditorWindow>>>,
-        currently_focused_editor_window: &Arc<Mutex<Option<uuid::Uuid>>>,
-        hide_until_instant: &Arc<Mutex<Instant>>,
-        delay_hide_until_instant: &Arc<Mutex<Instant>>,
-        is_xcode_focused: &Arc<Mutex<Option<bool>>>,
+        widget_props: &Arc<Mutex<WidgetWindow>>,
     ) {
-        let editor_windows_move_copy = editor_windows.clone();
-        let hide_until_instant_move_copy = hide_until_instant.clone();
-        let delay_hide_until_instant_move_copy = delay_hide_until_instant.clone();
-        let focused_editor_move_copy = currently_focused_editor_window.clone();
-        let is_xcode_focused_move_copy = is_xcode_focused.clone();
-        app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
-            let axevent_xcode: AXEventXcode =
-                serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        // Register listener for AXEvents from our app
+        register_listener_app(&app_handle, &widget_props);
 
-            match axevent_xcode {
-                AXEventXcode::EditorWindowResized(msg) => {
-                    Self::on_resize_editor_window(
-                        &hide_until_instant_move_copy,
-                        &editor_windows_move_copy,
-                        &msg,
-                    );
-                }
-                AXEventXcode::EditorWindowMoved(msg) => {
-                    Self::on_move_editor_window(
-                        &hide_until_instant_move_copy,
-                        &editor_windows_move_copy,
-                        &msg,
-                    );
-                }
-                AXEventXcode::EditorUIElementFocused(msg) => {
-                    Self::on_editor_ui_element_focus_change(
-                        &focused_editor_move_copy,
-                        &editor_windows_move_copy,
-                        &msg,
-                    );
-                }
-                AXEventXcode::EditorAppActivated(msg) => {
-                    Self::on_editor_app_activated(&is_xcode_focused_move_copy, &msg)
-                }
-                AXEventXcode::EditorAppDeactivated(msg) => Self::on_editor_app_deactivated(
-                    &is_xcode_focused_move_copy,
-                    &delay_hide_until_instant_move_copy,
-                    &msg,
-                ),
-                _ => {}
-            }
-        });
+        // Register listener for xcode events relevant for displaying/hiding and positioning the widget
+        register_listener_xcode(&app_handle, &widget_props);
     }
 
-    fn register_listener_app(
+    pub fn start_widget_visibility_control(
         app_handle: &tauri::AppHandle,
-        currently_focused_app_window: &Arc<Mutex<Option<AppWindow>>>,
-        delay_hide_until_instant: &Arc<Mutex<Instant>>,
-        is_app_focused: &Arc<Mutex<Option<bool>>>,
+        widget_props: &Arc<Mutex<WidgetWindow>>,
     ) {
-        let is_app_focused_move_copy = is_app_focused.clone();
-        let focused_app_window_move_copy = currently_focused_app_window.clone();
-        let delay_hide_until_instant_move_copy = delay_hide_until_instant.clone();
-
-        app_handle.listen_global(AX_EVENT_APP_CHANNEL, move |msg| {
-            let axevent_app: AXEventApp = serde_json::from_str(&msg.payload().unwrap()).unwrap();
-
-            match &axevent_app {
-                AXEventApp::AppWindowFocused(msg) => {
-                    let mut focused_app_window_locked =
-                        focused_app_window_move_copy.lock().unwrap();
-
-                    *focused_app_window_locked = Some(msg.window);
-                }
-                AXEventApp::AppWindowMoved(_) => {
-                    // Recalculate boundaries
-                }
-                AXEventApp::AppUIElementFocused(_) => {
-                    // TODO: Do nothing
-                }
-                AXEventApp::AppActivated(_) => {
-                    let mut is_app_focused_locked = is_app_focused_move_copy.lock().unwrap();
-
-                    *is_app_focused_locked = Some(true);
-                }
-                AXEventApp::AppDeactivated(_) => {
-                    let mut is_app_focused_locked = is_app_focused_move_copy.lock().unwrap();
-                    *is_app_focused_locked = Some(false);
-
-                    // Reset hide timer after which the widget should be displayed again
-                    let mut delay_hide_until_instant_locked =
-                        delay_hide_until_instant_move_copy.lock().unwrap();
-                    *delay_hide_until_instant_locked =
-                        Instant::now() + Duration::from_millis(HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS);
-                }
-                AXEventApp::None => {}
-            }
-        });
+        control_widget_visibility(&app_handle, &widget_props);
     }
+}
 
-    fn on_resize_editor_window(
-        hide_until_instant: &Arc<Mutex<Instant>>,
-        editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
-        resize_msg: &EditorWindowResizedMessage,
-    ) {
-        let mut editor_list_locked = editor_window_list.lock().unwrap();
+fn register_listener_xcode(app_handle: &tauri::AppHandle, widget_props: &Arc<Mutex<WidgetWindow>>) {
+    let widget_props_move_copy = (widget_props).clone();
+    app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
+        let mut widget_props_locked = widget_props_move_copy.lock().unwrap();
 
-        for window in &mut *editor_list_locked {
-            if window.id == resize_msg.id {
-                window.update_window_dimensions(resize_msg.window_position, resize_msg.window_size);
+        let axevent_xcode: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
-                if let (Some(position), Some(size)) =
-                    (resize_msg.textarea_position, resize_msg.textarea_size)
-                {
-                    window.update_textarea_dimensions(position, size);
-                }
+        match axevent_xcode {
+            AXEventXcode::EditorWindowResized(msg) => {
+                on_resize_editor_window(&mut *widget_props_locked, &msg);
+            }
+            AXEventXcode::EditorWindowMoved(msg) => {
+                on_move_editor_window(&mut *widget_props_locked, &msg);
+            }
+            AXEventXcode::EditorUIElementFocused(msg) => {
+                on_editor_ui_element_focus_change(&mut *widget_props_locked, &msg);
+            }
+            AXEventXcode::EditorAppActivated(msg) => {
+                on_editor_app_activated(&mut *widget_props_locked, &msg)
+            }
+            AXEventXcode::EditorAppDeactivated(msg) => {
+                on_editor_app_deactivated(&mut *widget_props_locked, &msg)
+            }
+            _ => {}
+        }
+    });
+}
+
+fn register_listener_app(app_handle: &tauri::AppHandle, widget_props: &Arc<Mutex<WidgetWindow>>) {
+    let widget_props_move_copy = (widget_props).clone();
+    app_handle.listen_global(AX_EVENT_APP_CHANNEL, move |msg| {
+        let mut widget_props_locked = widget_props_move_copy.lock().unwrap();
+
+        let axevent_app: AXEventApp = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+
+        match &axevent_app {
+            AXEventApp::AppWindowFocused(msg) => {
+                (*widget_props_locked).currently_focused_app_window = Some(msg.window);
+            }
+            AXEventApp::AppWindowMoved(_) => {
+                // Recalculate boundaries
+            }
+            AXEventApp::AppUIElementFocused(_) => {
+                // TODO: Do nothing
+            }
+            AXEventApp::AppActivated(_) => {
+                (*widget_props_locked).is_app_focused = Some(true);
+            }
+            AXEventApp::AppDeactivated(_) => {
+                (*widget_props_locked).is_app_focused = Some(false);
 
                 // Reset hide timer after which the widget should be displayed again
-                let mut hide_until_instant_locked = hide_until_instant.lock().unwrap();
-                *hide_until_instant_locked =
-                    Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
-
-                break;
+                (*widget_props_locked).delay_hide_until_instant =
+                    Instant::now() + Duration::from_millis(HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS);
             }
+            AXEventApp::None => {}
         }
-    }
+    });
+}
 
-    fn on_move_editor_window(
-        hide_until_instant: &Arc<Mutex<Instant>>,
-        editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
-        moved_msg: &EditorWindowMovedMessage,
-    ) {
-        let mut editor_list_locked = editor_window_list.lock().unwrap();
+fn on_resize_editor_window(
+    widget_props: &mut WidgetWindow,
+    resize_msg: &EditorWindowResizedMessage,
+) {
+    let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
 
-        for window in &mut *editor_list_locked {
-            if window.id == moved_msg.id {
-                window.update_window_dimensions(moved_msg.window_position, moved_msg.window_size);
+    for window in &mut *editor_list_locked {
+        if window.id == resize_msg.id {
+            window.update_window_dimensions(resize_msg.window_position, resize_msg.window_size);
 
-                // Reset hide timer after which the widget should be displayed again
-                let mut hide_until_instant_locked = hide_until_instant.lock().unwrap();
-                *hide_until_instant_locked =
-                    Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
-
-                break;
+            if let (Some(position), Some(size)) =
+                (resize_msg.textarea_position, resize_msg.textarea_size)
+            {
+                window.update_textarea_dimensions(position, size);
             }
+
+            // Reset hide timer after which the widget should be displayed again
+            widget_props.hide_until_instant =
+                Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
+
+            break;
         }
     }
+}
 
-    /// Update EditorWindow to which of it's ui elements is currently in focus. Furthermore, also update
-    /// which of all open editor windows is currently in focus.
-    fn on_editor_ui_element_focus_change(
-        focused_editor: &Arc<Mutex<Option<uuid::Uuid>>>,
-        editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
-        focus_msg: &EditorUIElementFocusedMessage,
-    ) {
-        let mut editor_list_locked = editor_window_list.lock().unwrap();
-        let mut focused_editor_locked = focused_editor.lock().unwrap();
+fn on_move_editor_window(widget_props: &mut WidgetWindow, moved_msg: &EditorWindowMovedMessage) {
+    let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
 
-        for window in &mut *editor_list_locked {
-            if window.id == focus_msg.window_id {
-                window.update_focused_ui_element(
-                    &focus_msg.focused_ui_element,
-                    focus_msg.textarea_position,
-                    focus_msg.textarea_size,
-                );
+    for window in &mut *editor_list_locked {
+        if window.id == moved_msg.id {
+            window.update_window_dimensions(moved_msg.window_position, moved_msg.window_size);
 
-                // Set which editor window is currently focused
-                *focused_editor_locked = Some(window.id);
+            // Reset hide timer after which the widget should be displayed again
+            widget_props.hide_until_instant =
+                Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
 
-                break;
+            break;
+        }
+    }
+}
+
+/// Update EditorWindow to which of it's ui elements is currently in focus. Furthermore, also update
+/// which of all open editor windows is currently in focus.
+fn on_editor_ui_element_focus_change(
+    widget_props: &mut WidgetWindow,
+    focus_msg: &EditorUIElementFocusedMessage,
+) {
+    let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
+
+    for window in &mut *editor_list_locked {
+        if window.id == focus_msg.window_id {
+            window.update_focused_ui_element(
+                &focus_msg.focused_ui_element,
+                focus_msg.textarea_position,
+                focus_msg.textarea_size,
+            );
+
+            // Set which editor window is currently focused
+            widget_props.currently_focused_editor_window = Some(window.id);
+
+            break;
+        }
+    }
+}
+
+fn on_editor_app_deactivated(
+    widget_props: &mut WidgetWindow,
+    deactivated_msg: &EditorAppDeactivatedMessage,
+) {
+    if deactivated_msg.editor_name == XCODE_EDITOR_NAME {
+        widget_props.is_xcode_focused = Some(false);
+    }
+
+    // Reset hide timer after which the widget should be displayed again
+    widget_props.delay_hide_until_instant =
+        Instant::now() + Duration::from_millis(HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS);
+}
+
+fn on_editor_app_activated(
+    widget_props: &mut WidgetWindow,
+    activated_msg: &EditorAppActivatedMessage,
+) {
+    if activated_msg.editor_name == XCODE_EDITOR_NAME {
+        widget_props.is_xcode_focused = Some(true);
+    }
+}
+
+fn control_widget_visibility(
+    _app_handle: &tauri::AppHandle,
+    widget_props: &Arc<Mutex<WidgetWindow>>,
+) {
+    let widget_props_move_copy = widget_props.clone();
+    thread::spawn(move || {
+        loop {
+            // Sleep first to not block the locked Mutexes afterwards
+            thread::sleep(std::time::Duration::from_millis(25));
+
+            let widget_props_locked = widget_props_move_copy.lock().unwrap();
+
+            // Hide widget if neither editor nor our app has ever been focused
+            if (*widget_props_locked).is_xcode_focused.is_none()
+                || (*widget_props_locked).is_app_focused.is_none()
+            {
+                close_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
+
+                continue;
             }
-        }
-    }
 
-    fn on_editor_app_deactivated(
-        is_xcode_focused: &Arc<Mutex<Option<bool>>>,
-        delay_hide_until_instant: &Arc<Mutex<Instant>>,
-        deactivated_msg: &EditorAppDeactivatedMessage,
-    ) {
-        let mut is_xcode_focused_locked = is_xcode_focused.lock().unwrap();
-
-        if deactivated_msg.editor_name == "Xcode" {
-            *is_xcode_focused_locked = Some(false);
-        }
-
-        // Reset hide timer after which the widget should be displayed again
-        let mut delay_hide_until_instant_locked = delay_hide_until_instant.lock().unwrap();
-        *delay_hide_until_instant_locked =
-            Instant::now() + Duration::from_millis(HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS);
-    }
-
-    fn on_editor_app_activated(
-        is_xcode_focused: &Arc<Mutex<Option<bool>>>,
-        activated_msg: &EditorAppActivatedMessage,
-    ) {
-        let mut is_xcode_focused_locked = is_xcode_focused.lock().unwrap();
-
-        if activated_msg.editor_name == "Xcode" {
-            *is_xcode_focused_locked = Some(true);
-        }
-    }
-
-    fn control_widget_visibility(
-        is_app_focused: &Arc<Mutex<Option<bool>>>,
-        is_xcode_focused: &Arc<Mutex<Option<bool>>>,
-        _focused_editor_window: &Arc<Mutex<Option<uuid::Uuid>>>,
-        hide_until_instant: &Arc<Mutex<Instant>>,
-        delay_hide_until_instant: &Arc<Mutex<Instant>>,
-        app_handle: &tauri::AppHandle,
-    ) {
-        let hide_until_instant_move_copy = hide_until_instant.clone();
-        let delay_hide_until_instant_move_copy = delay_hide_until_instant.clone();
-        let app_handle_move_copy = app_handle.clone();
-        let is_xcode_focused_move_copy = is_xcode_focused.clone();
-        let is_app_focused_move_copy = is_app_focused.clone();
-        thread::spawn(move || {
-            loop {
-                // Sleep first to not block the locked Mutexes afterwards
-                thread::sleep(std::time::Duration::from_millis(25));
-
-                let hide_until_locked = hide_until_instant_move_copy.lock().unwrap();
-                let delay_hide_until_locked = delay_hide_until_instant_move_copy.lock().unwrap();
-                let is_xcode_focused_locked = is_xcode_focused_move_copy.lock().unwrap();
-                let is_app_focused_locked = is_app_focused_move_copy.lock().unwrap();
-
-                // Hide widget if neither editor nor our app has ever been focused
-                if (*is_xcode_focused_locked).is_none() || (*is_app_focused_locked).is_none() {
-                    close_window(&app_handle_move_copy, AppWindow::Widget);
-
-                    continue;
-                }
-
-                if let (Some(xcode_focused), Some(app_focused)) =
-                    (*is_xcode_focused_locked, *is_app_focused_locked)
-                {
-                    if xcode_focused || app_focused {
-                        if *hide_until_locked > Instant::now() {
-                            close_window(&app_handle_move_copy, AppWindow::Widget);
-                        } else {
-                            open_window(&app_handle_move_copy, AppWindow::Widget);
-                        }
+            if let (Some(xcode_focused), Some(app_focused)) = (
+                (*widget_props_locked).is_xcode_focused,
+                (*widget_props_locked).is_app_focused,
+            ) {
+                if xcode_focused || app_focused {
+                    if (*widget_props_locked).hide_until_instant > Instant::now() {
+                        close_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
                     } else {
-                        if *delay_hide_until_locked < Instant::now() {
-                            close_window(&app_handle_move_copy, AppWindow::Widget);
-                        }
+                        open_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
+                    }
+                } else {
+                    if (*widget_props_locked).delay_hide_until_instant < Instant::now() {
+                        close_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
                     }
                 }
             }
-        });
-    }
+        }
+    });
 }
