@@ -9,10 +9,13 @@ use tauri::{Error, Manager};
 use crate::{
     ax_interaction::{
         app::observer_app::register_observer_app,
-        models::editor::{
-            EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
-            EditorUIElementFocusedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
-            FocusedUIElement,
+        models::{
+            app::AppWindowMovedMessage,
+            editor::{
+                EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
+                EditorUIElementFocusedMessage, EditorWindowMovedMessage,
+                EditorWindowResizedMessage, FocusedUIElement,
+            },
         },
         AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_XCODE_CHANNEL,
     },
@@ -30,27 +33,27 @@ static XCODE_EDITOR_NAME: &str = "Xcode";
 pub struct WidgetWindow {
     app_handle: tauri::AppHandle,
 
-    // List of open editor windows. List is managed by WindowStateManager.
+    /// List of open editor windows. List is managed by WindowStateManager.
     editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
 
-    // Identitfier of the currently focused editor window. Is None until the first window was focused.
+    /// Identitfier of the currently focused editor window. Is None until the first window was focused.
     currently_focused_editor_window: Option<uuid::Uuid>,
 
-    // Each qualifying incoming event updates the instant until when the widget should be hidden.
+    /// Each qualifying incoming event updates the instant until when the widget should be hidden.
     hide_until_instant: Instant,
 
-    // In case the focus switches from our app to an editor or vice versa it is possible, that there is
-    // a state where seemingly neither is in focus, only because the new "AXActivation" event from the
-    // newly focused entity hasn't arrived yet / wasn't processed yet.
+    /// In case the focus switches from our app to an editor or vice versa it is possible, that there is
+    /// a state where seemingly neither is in focus, only because the new "AXActivation" event from the
+    /// newly focused entity hasn't arrived yet / wasn't processed yet.
     delay_hide_until_instant: Instant,
 
-    // Boolean saying if the currently focused application is Xcode.
+    /// Boolean saying if the currently focused application is Xcode.
     is_xcode_focused: bool,
 
-    // Boolean saying if the currently focused application is our app.
+    /// Boolean saying if the currently focused application is our app.
     is_app_focused: bool,
 
-    // Identitfier of the currently focused app window. Is None until the first window was focused.
+    /// Identitfier of the currently focused app window. Is None until the first window was focused.
     currently_focused_app_window: Option<AppWindow>,
 }
 
@@ -140,8 +143,8 @@ fn register_listener_app(app_handle: &tauri::AppHandle, widget_props: &Arc<Mutex
             AXEventApp::AppWindowFocused(msg) => {
                 (*widget_props_locked).currently_focused_app_window = Some(msg.window);
             }
-            AXEventApp::AppWindowMoved(_) => {
-                // Recalculate boundaries
+            AXEventApp::AppWindowMoved(msg) => {
+                on_move_app_window(&mut *widget_props_locked, &msg);
             }
             AXEventApp::AppUIElementFocused(_) => {
                 // TODO: Do nothing
@@ -161,6 +164,20 @@ fn register_listener_app(app_handle: &tauri::AppHandle, widget_props: &Arc<Mutex
     });
 }
 
+fn on_move_app_window(widget_props: &mut WidgetWindow, move_msg: &AppWindowMovedMessage) {
+    let editor_windows = &mut *(widget_props.editor_windows.lock().unwrap());
+    if let Some(focused_editor_window_id) = widget_props.currently_focused_editor_window {
+        if let Some(editor_window) = editor_windows
+            .iter_mut()
+            .find(|window| window.id == focused_editor_window_id)
+        {
+            if move_msg.window == AppWindow::Widget {
+                editor_window.update_widget_position(move_msg.window_position);
+            }
+        }
+    }
+}
+
 fn on_resize_editor_window(
     widget_props: &mut WidgetWindow,
     resize_msg: &EditorWindowResizedMessage,
@@ -169,13 +186,12 @@ fn on_resize_editor_window(
 
     for window in &mut *editor_list_locked {
         if window.id == resize_msg.id {
-            window.update_window_dimensions(resize_msg.window_position, resize_msg.window_size);
-
-            if let (Some(position), Some(size)) =
-                (resize_msg.textarea_position, resize_msg.textarea_size)
-            {
-                window.update_textarea_dimensions(position, size);
-            }
+            window.update_window_dimensions(
+                resize_msg.window_position,
+                resize_msg.window_size,
+                resize_msg.textarea_position,
+                resize_msg.textarea_size,
+            );
 
             // Reset hide timer after which the widget should be displayed again
             widget_props.hide_until_instant =
@@ -191,7 +207,12 @@ fn on_move_editor_window(widget_props: &mut WidgetWindow, moved_msg: &EditorWind
 
     for window in &mut *editor_list_locked {
         if window.id == moved_msg.id {
-            window.update_window_dimensions(moved_msg.window_position, moved_msg.window_size);
+            window.update_window_dimensions(
+                moved_msg.window_position,
+                moved_msg.window_size,
+                None,
+                None,
+            );
 
             // Reset hide timer after which the widget should be displayed again
             widget_props.hide_until_instant =

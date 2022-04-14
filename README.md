@@ -41,7 +41,7 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
   - [ ] Using the updated _position_ and _size_ of the _editor textarea_ and the boundaries, recalculate & update the widget's position.
 - [x] Hide the widget if `AXApplicationDeactivated` notification is received
 - [x] Evaluate if widget should be shown when `AXApplicationActivated` is received
-  - [ ] Lookup currently focused UI element, if it has role `AXTextArea`, then show the widget
+  - [x] Lookup currently focused UI element, if it has role `AXTextArea`, then show the widget
 
 **XCode Behavior**
 
