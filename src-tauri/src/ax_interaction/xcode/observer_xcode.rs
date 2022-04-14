@@ -53,7 +53,7 @@ pub fn register_observer_xcode(
         if let Some(ref xcode_app) = known_xcode_app {
             // Case: XCode was just closed
 
-            AXEventXcode::EditorClosed(EditorAppClosedMessage {
+            AXEventXcode::EditorAppClosed(EditorAppClosedMessage {
                 editor_name: "Xcode".to_string(),
                 pid: xcode_app.pid().unwrap().try_into().unwrap(),
             })

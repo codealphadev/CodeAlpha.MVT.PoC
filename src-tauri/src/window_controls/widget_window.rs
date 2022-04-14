@@ -10,8 +10,9 @@ use crate::{
     ax_interaction::{
         app::observer_app::register_observer_app,
         models::editor::{
-            EditorAppActivatedMessage, EditorAppDeactivatedMessage, EditorUIElementFocusedMessage,
-            EditorWindowMovedMessage, EditorWindowResizedMessage,
+            EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
+            EditorUIElementFocusedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+            FocusedUIElement,
         },
         AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_XCODE_CHANNEL,
     },
@@ -44,10 +45,10 @@ pub struct WidgetWindow {
     delay_hide_until_instant: Instant,
 
     // Boolean saying if the currently focused application is Xcode.
-    is_xcode_focused: Option<bool>,
+    is_xcode_focused: bool,
 
     // Boolean saying if the currently focused application is our app.
-    is_app_focused: Option<bool>,
+    is_app_focused: bool,
 
     // Identitfier of the currently focused app window. Is None until the first window was focused.
     currently_focused_app_window: Option<AppWindow>,
@@ -72,8 +73,8 @@ impl WidgetWindow {
             hide_until_instant: Instant::now(),
             delay_hide_until_instant: Instant::now(),
             currently_focused_editor_window: None,
-            is_xcode_focused: None,
-            is_app_focused: None,
+            is_xcode_focused: false,
+            is_app_focused: false,
             currently_focused_app_window: None,
         })
     }
@@ -120,6 +121,9 @@ fn register_listener_xcode(app_handle: &tauri::AppHandle, widget_props: &Arc<Mut
             AXEventXcode::EditorAppDeactivated(msg) => {
                 on_editor_app_deactivated(&mut *widget_props_locked, &msg)
             }
+            AXEventXcode::EditorAppClosed(msg) => {
+                on_editor_app_closed(&mut *widget_props_locked, &msg)
+            }
             _ => {}
         }
     });
@@ -143,10 +147,10 @@ fn register_listener_app(app_handle: &tauri::AppHandle, widget_props: &Arc<Mutex
                 // TODO: Do nothing
             }
             AXEventApp::AppActivated(_) => {
-                (*widget_props_locked).is_app_focused = Some(true);
+                (*widget_props_locked).is_app_focused = true;
             }
             AXEventApp::AppDeactivated(_) => {
-                (*widget_props_locked).is_app_focused = Some(false);
+                (*widget_props_locked).is_app_focused = false;
 
                 // Reset hide timer after which the widget should be displayed again
                 (*widget_props_locked).delay_hide_until_instant =
@@ -227,12 +231,17 @@ fn on_editor_app_deactivated(
     deactivated_msg: &EditorAppDeactivatedMessage,
 ) {
     if deactivated_msg.editor_name == XCODE_EDITOR_NAME {
-        widget_props.is_xcode_focused = Some(false);
+        widget_props.is_xcode_focused = false;
     }
 
-    // Reset hide timer after which the widget should be displayed again
     widget_props.delay_hide_until_instant =
         Instant::now() + Duration::from_millis(HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS);
+}
+
+fn on_editor_app_closed(widget_props: &mut WidgetWindow, closed_msg: &EditorAppClosedMessage) {
+    if closed_msg.editor_name == XCODE_EDITOR_NAME {
+        widget_props.is_xcode_focused = false;
+    }
 }
 
 fn on_editor_app_activated(
@@ -240,7 +249,7 @@ fn on_editor_app_activated(
     activated_msg: &EditorAppActivatedMessage,
 ) {
     if activated_msg.editor_name == XCODE_EDITOR_NAME {
-        widget_props.is_xcode_focused = Some(true);
+        widget_props.is_xcode_focused = true;
     }
 }
 
@@ -251,36 +260,123 @@ fn control_widget_visibility(
     let widget_props_move_copy = widget_props.clone();
     thread::spawn(move || {
         loop {
-            // Sleep first to not block the locked Mutexes afterwards
+            // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
+            // ==================================================================
             thread::sleep(std::time::Duration::from_millis(25));
+            // ==================================================================
 
-            let widget_props_locked = widget_props_move_copy.lock().unwrap();
+            let widget = &*(widget_props_move_copy.lock().unwrap());
+            let editor_windows = &*(widget.editor_windows.lock().unwrap());
 
-            // Hide widget if neither editor nor our app has ever been focused
-            if (*widget_props_locked).is_xcode_focused.is_none()
-                || (*widget_props_locked).is_app_focused.is_none()
-            {
-                close_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
-
-                continue;
-            }
-
-            if let (Some(xcode_focused), Some(app_focused)) = (
-                (*widget_props_locked).is_xcode_focused,
-                (*widget_props_locked).is_app_focused,
-            ) {
-                if xcode_focused || app_focused {
-                    if (*widget_props_locked).hide_until_instant > Instant::now() {
-                        close_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
-                    } else {
-                        open_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
-                    }
-                } else {
-                    if (*widget_props_locked).delay_hide_until_instant < Instant::now() {
-                        close_window(&(*widget_props_locked).app_handle, AppWindow::Widget);
-                    }
-                }
+            // Control widget visibility
+            match validate_decision_tree_show_hide_widget(widget, editor_windows) {
+                ShowHide::Show => open_window(&widget.app_handle, AppWindow::Widget),
+                ShowHide::Hide => close_window(&widget.app_handle, AppWindow::Widget),
+                ShowHide::Continue => {}
             }
         }
     });
+}
+
+enum ShowHide {
+    Show,
+    Hide,
+    Continue,
+}
+
+fn validate_decision_tree_show_hide_widget(
+    widget: &WidgetWindow,
+    editor_windows: &Vec<EditorWindow>,
+) -> ShowHide {
+    match check_if_xcode_is_running(editor_windows) {
+        ShowHide::Show => ShowHide::Show,
+        ShowHide::Hide => ShowHide::Hide,
+        ShowHide::Continue => check_if_either_widget_or_editor_is_focused(widget, editor_windows),
+    }
+}
+
+fn check_if_xcode_is_running(editor_windows: &Vec<EditorWindow>) -> ShowHide {
+    // Hide if no editor_window exists
+    if editor_windows.len() == 0 {
+        ShowHide::Hide
+    } else {
+        ShowHide::Continue
+    }
+}
+
+fn check_if_either_widget_or_editor_is_focused(
+    widget: &WidgetWindow,
+    editor_windows: &Vec<EditorWindow>,
+) -> ShowHide {
+    // Case: Hide if neither xcode nor app is focused
+    if widget.is_xcode_focused || widget.is_app_focused {
+        // Trying something
+
+        match check_if_an_editor_window_is_focused(
+            &widget.currently_focused_editor_window,
+            editor_windows,
+        ) {
+            ShowHide::Hide => ShowHide::Hide,
+            ShowHide::Show => {
+                check_if_widget_should_be_temporarily_hidden(&widget.hide_until_instant)
+            }
+            ShowHide::Continue => ShowHide::Continue,
+        }
+    } else {
+        check_if_hiding_delay_elapsed(widget.delay_hide_until_instant)
+    }
+}
+
+fn check_if_hiding_delay_elapsed(delay_hide_until_instant: Instant) -> ShowHide {
+    if delay_hide_until_instant < Instant::now() {
+        ShowHide::Hide
+    } else {
+        ShowHide::Continue
+    }
+}
+
+fn check_if_widget_should_be_temporarily_hidden(hide_until_instant: &Instant) -> ShowHide {
+    // Case: Check if widget is supposed to be temporarily hidden due
+    //       to the editor window being either resized or moved.
+    if *hide_until_instant > Instant::now() {
+        ShowHide::Hide
+    } else {
+        ShowHide::Show
+    }
+}
+
+fn check_if_an_editor_window_is_focused(
+    focused_window_id: &Option<uuid::Uuid>,
+    editor_windows: &Vec<EditorWindow>,
+) -> ShowHide {
+    if let Some(focused_window_id) = focused_window_id {
+        return check_if_focused_window_is_still_available(focused_window_id, editor_windows);
+    } else {
+        return ShowHide::Hide;
+    }
+}
+
+fn check_if_focused_window_is_still_available(
+    focused_window_id: &uuid::Uuid,
+    editor_windows: &Vec<EditorWindow>,
+) -> ShowHide {
+    let editor_window = editor_windows
+        .iter()
+        .find(|window| window.id == *focused_window_id);
+    if let Some(window) = editor_window {
+        return check_if_focused_ui_element_is_textarea(window.focused_ui_element.as_ref());
+    } else {
+        return ShowHide::Hide;
+    }
+}
+
+fn check_if_focused_ui_element_is_textarea(ui_element: Option<&FocusedUIElement>) -> ShowHide {
+    if let Some(ui_element) = ui_element {
+        match ui_element {
+            FocusedUIElement::Textarea => ShowHide::Show,
+            FocusedUIElement::Other => ShowHide::Hide,
+        }
+    } else {
+        ShowHide::Hide
+    }
 }

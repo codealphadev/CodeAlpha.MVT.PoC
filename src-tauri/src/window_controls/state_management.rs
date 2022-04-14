@@ -34,7 +34,7 @@ impl WindowStateManager {
                 AXEventXcode::EditorWindowDestroyed(msg) => {
                     Self::remove_editor_window(&open_editors_move_copy, &msg);
                 }
-                AXEventXcode::EditorClosed(_) => {
+                AXEventXcode::EditorAppClosed(_) => {
                     let mut editors_locked = open_editors_move_copy.lock().unwrap();
                     *editors_locked = Vec::new();
                 }

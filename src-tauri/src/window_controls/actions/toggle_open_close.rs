@@ -12,10 +12,15 @@ pub fn toggle_window(handle: &tauri::AppHandle, window_type: AppWindow) {
     let app_window = handle.get_window(&get_window_label(window_type));
 
     if let Some(app_window) = app_window {
-        if app_window.is_visible().unwrap() {
-            close_window(&handle, window_type);
+        let res = app_window.is_visible();
+        if let Ok(visible) = res {
+            if visible {
+                close_window(&handle, window_type);
+            } else {
+                open_window(&handle, window_type);
+            }
         } else {
-            open_window(&handle, window_type);
+            println!("Err: {:?}", res);
         }
     } else {
         open_window(&handle, window_type);

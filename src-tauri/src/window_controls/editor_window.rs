@@ -19,7 +19,7 @@ pub struct EditorWindow {
     pub id: uuid::Uuid,
     editor_name: String,
     pid: i32,
-    focused_ui_element: Option<FocusedUIElement>,
+    pub focused_ui_element: Option<FocusedUIElement>,
     window_position: tauri::LogicalPosition<f64>,
     window_size: tauri::LogicalSize<f64>,
     textarea_position: Option<tauri::LogicalPosition<f64>>,

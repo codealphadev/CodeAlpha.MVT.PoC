@@ -21,7 +21,7 @@ pub enum AXEventXcode {
     EditorUIElementFocused(EditorUIElementFocusedMessage),
     EditorAppActivated(EditorAppActivatedMessage),
     EditorAppDeactivated(EditorAppDeactivatedMessage),
-    EditorClosed(EditorAppClosedMessage),
+    EditorAppClosed(EditorAppClosedMessage),
     None,
 }
 
@@ -35,7 +35,7 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorUIElementFocused(_) => write!(f, "EditorUIElementFocused"),
             AXEventXcode::EditorAppActivated(_) => write!(f, "EditorAppActivated"),
             AXEventXcode::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
-            AXEventXcode::EditorClosed(_) => write!(f, "EditorClosed"),
+            AXEventXcode::EditorAppClosed(_) => write!(f, "EditorClosed"),
             AXEventXcode::None => write!(f, "None"),
         }
     }
