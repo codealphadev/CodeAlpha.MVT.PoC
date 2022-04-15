@@ -2,6 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
+use tauri::{LogicalPosition, LogicalSize};
 
 use crate::ax_interaction::{
     models::editor::EditorWindowResizedMessage, AXEventXcode, XCodeObserverState,
@@ -94,8 +95,19 @@ fn derive_resize_parameters_from_scrollbar(
 
     assert_eq!(role.to_string(), "AXScrollBar");
 
-    // Get AXScrollArea
-    let scrollarea_element = scrollbar_element.attribute(&AXAttribute::parent())?;
+    let (position, size) = derive_textarea_dimensions(scrollbar_element)?;
+
+    // Update EditorWindowResizedMessage
+    resize_msg.textarea_position = Some(position);
+    resize_msg.textarea_size = Some(size);
+
+    Ok(())
+}
+
+pub fn derive_textarea_dimensions(
+    child_element: &AXUIElement,
+) -> Result<(LogicalPosition<f64>, LogicalSize<f64>), Error> {
+    let scrollarea_element = child_element.attribute(&AXAttribute::parent())?;
 
     // Get Size and Origin of AXScrollArea
     let scrollarea_pos_ax_value = scrollarea_element.attribute(&AXAttribute::position())?;
@@ -134,15 +146,15 @@ fn derive_resize_parameters_from_scrollbar(
     }
 
     // Update EditorWindowResizedMessage
-    resize_msg.textarea_position = Some(tauri::LogicalPosition {
+    let position = tauri::LogicalPosition {
         x: updated_origin_x,
         y: scrollarea_origin.y,
-    });
+    };
 
-    resize_msg.textarea_size = Some(tauri::LogicalSize {
+    let size = tauri::LogicalSize {
         width: updated_width,
         height: scrollarea_size.height,
-    });
+    };
 
-    Ok(())
+    return Ok((position, size));
 }
