@@ -107,6 +107,9 @@ impl EditorWindow {
         }
 
         self.focused_ui_element = Some(focused_ui_element.clone());
+
+        // In case no widget position is set yet, initialize widget position on editor textarea
+        self.initialize_widget_position();
     }
 
     pub fn update_widget_position_through_dragging(
@@ -250,6 +253,13 @@ impl EditorWindow {
             }
         } else {
             // In case no widget position is set yet, initialize widget position on editor textarea
+            self.initialize_widget_position();
+        }
+    }
+
+    fn initialize_widget_position(&mut self) {
+        // In case no widget position is set yet, initialize widget position on editor textarea
+        if self.widget_position.is_none() {
             if let (Some(textarea_pos), Some(textarea_size)) =
                 (self.textarea_position, self.textarea_size)
             {
