@@ -40,11 +40,17 @@ pub struct EditorWindow {
     textarea_position: Option<tauri::LogicalPosition<f64>>,
     textarea_size: Option<tauri::LogicalSize<f64>>,
 
-    /// Widget position relative to the editor's text area.
-    widget_position: Option<tauri::LogicalPosition<f64>>,
+    /// Widget position to the editor's text area.
+    pub widget_position: Option<tauri::LogicalPosition<f64>>,
+
+    /// We only programmatically hide/show the widget, if the user is not dragging it.
+    /// We know if this is the case, if the widget's position was most recently updated by
+    /// a dragging event. This is set to false if the most recent update happened through
+    /// a calculation due to an editor window being moved or resized.
+    pub recent_widget_position_update_through_dragging: bool,
 
     /// When the editor text area's size or position is updated, the widget_position
-    /// is recalculated relative to the boundaries. The boundaries are initially set to bottom|right
+    /// is recalculated with respect to the boundaries. The boundaries are initially set to bottom|right
     /// but get updated each time the user moves the widget manually
     h_boundary: HorizontalBoundary,
     v_boundary: VerticalBoundary,
@@ -64,6 +70,7 @@ impl EditorWindow {
             h_boundary: HorizontalBoundary::Right,
             v_boundary: VerticalBoundary::Bottom,
             widget_position: None,
+            recent_widget_position_update_through_dragging: false,
         }
     }
 
@@ -109,8 +116,12 @@ impl EditorWindow {
         self.focused_ui_element = Some(focused_ui_element.clone());
     }
 
-    pub fn update_widget_position(&mut self, widget_position: tauri::LogicalPosition<f64>) {
+    pub fn update_widget_position_through_dragging(
+        &mut self,
+        widget_position: tauri::LogicalPosition<f64>,
+    ) {
         self.widget_position = Some(widget_position);
+        self.recent_widget_position_update_through_dragging = true;
 
         // Recalculate boundaries
         if let (Some(textarea_pos), Some(textarea_size)) =
@@ -245,6 +256,7 @@ impl EditorWindow {
                     widget_pos.x = widget_pos.x + right_boundary_diff;
                 }
             }
+            self.recent_widget_position_update_through_dragging = false;
         } else {
             // In case no widget position is set yet, initialize widget position on editor textarea
             if let (Some(textarea_pos), Some(textarea_size)) =
@@ -254,6 +266,8 @@ impl EditorWindow {
                     x: textarea_pos.x + textarea_size.width - 100.,
                     y: textarea_pos.y + textarea_size.height - 100.,
                 });
+
+                self.recent_widget_position_update_through_dragging = false;
             }
         }
     }

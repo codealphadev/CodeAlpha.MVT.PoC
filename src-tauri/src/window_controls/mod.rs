@@ -9,7 +9,6 @@ pub use widget_window::WidgetWindow;
 mod actions;
 mod config;
 mod editor_window;
-mod listeners;
 mod state_management;
 mod utils;
 mod widget_window;

@@ -8,37 +8,24 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 - Frontend: TypeScript with Svelte and TailwindCSS
 - Backend: Rust
 
-## Known Issues
-
-- [ ] "Many Clicks" on widget can lead to widget disappearing -> more gracefully handle invokation of "Content Open" routine - can be jammed if many clicks are done on widget
-- [ ] Repositioning logic on re-size or move of editor window is far from perfect
-- [ ] Show / hide content window requires waaay too many clicks ("Ghostclicks")
-- [ ] In "observer_global.rs" exists a hack: I changed around the order of which "callback" is executed first, because this sufficiently improved UX behavior for now.
-- [ ] When moving the widget with opened content too far up, the widget can get stuck behind the content window --> likely going to be fixed when listener for widget-movement is implemented.
-
-## Design Debt
-
-- Everything accessibility related shall not spill out of the `ax_interactions` module in order to more easily implement Windows Accessibility APIs. This includes not exposing any specific structs, enums and errors.
-  - Refactoring approach: start by adjusting the `mod.rs` file an `ax_interactions`. The moment everything is made private, the compiler will throw all errors. :-)
-
 ## UX Rule Log
 
 **Rules to be implemented for MVT:**
 
-- [ ] The widget should only appear when the user's cursor is in an _editor textarea_.
-- [ ] The widget should appear in **the bottom right corner** of the focused _editor textarea_.
+- [x] The widget should only appear when the user's cursor is in an _editor textarea_.
+- [x] The widget should appear in **the bottom right corner** of the focused _editor textarea_.
 - [ ] If the _editor textarea_ is off-screen the moment it is being focused, the widget should **stay hidden**.
-- [ ] While receiving `AXMoved` notifications for the _editor window_ ...
+- [x] While receiving `AXMoved` notifications for the _editor window_ ...
   - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXMoved` notification
-  - [ ] calculate the distance it moved from the last received notification and update the widget's position accordingly.
-  - [ ] If the widget would move off-screen, move it only so far that it still stays on-screen **AND** on a remaining piece of the _editor textarea_
-- [ ] At all times, the widget should be _tied_ to one of the _editor textarea's_ horizontal and vertical boundaries `left|right` `bottom|top`.
-  - [ ] Ties to _editor text_area boundaries_ are being determined by the minimum distance.
-  - [ ] Ties to _editor text_area boundaries_ are defined as the distance in pixels to a boundary.
-  - [ ] Ties to _editor text_area boundaries_ are only recalculated when the widget is being **moved by the user**.
-- [ ] While receiving `AXResized` notifications for the _editor window_ ...
+  - [x] calculate the distance it moved from the last received notification and update the widget's position accordingly.
+  - [x] If the widget would move off-screen, move it only so far that it still stays on-screen **AND** on a remaining piece of the _editor textarea_
+- [x] At all times, the widget should be _tied_ to one of the _editor textarea's_ horizontal and vertical boundaries `left|right` `bottom|top`.
+  - [x] Ties to _editor text_area boundaries_ are being determined by the minimum distance.
+  - [x] Ties to _editor text_area boundaries_ are defined as the distance in pixels to a boundary.
+  - [x] Ties to _editor text_area boundaries_ are only recalculated when the widget is being **moved by the user**.
+- [x] While receiving `AXResized` notifications for the _editor window_ ...
   - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXResized` notification
-  - [ ] Using the updated _position_ and _size_ of the _editor textarea_ and the boundaries, recalculate & update the widget's position.
+  - [x] Using the updated _position_ and _size_ of the _editor textarea_ and the boundaries, recalculate & update the widget's position.
 - [x] Hide the widget if `AXApplicationDeactivated` notification is received
 - [x] Evaluate if widget should be shown when `AXApplicationActivated` is received
   - [x] Lookup currently focused UI element, if it has role `AXTextArea`, then show the widget
@@ -50,9 +37,22 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 - If XCode obtains focus, the `AXApplicationActivated` notification is triggered.
 - If XCode loses focus, the `AXApplicationDeactivated` notification is triggered.
 
-**Open Issues:**
+## Known Issues
 
-- [ ] Undefined UX behavior if editor is resized beyond one screen
+- [ ] "Many Clicks" on widget can lead to widget disappearing -> more gracefully handle invokation of "Content Open" routine - can be jammed if many clicks are done on widget
+- [ ] Show / hide content window requires waaay too many clicks ("Ghostclicks")
+- [ ] When moving the widget with opened content too far up, the widget can get stuck behind the content window --> likely going to be fixed when listener for widget-movement is implemented.
 - [ ] Show/Hide decision tree for widget does not yet include the behavior of the content window
+- [ ] Decision Tree is badly implemented - not logical; needs refactoring
 
-- DEFINE A MINIMUM VISIBLE EDITOR TEXT AREA FOR WHICH TO DISPLAY THE WIDGET
+## Bugs
+
+- [ ] Widget not shown on first click into an XCode editor window
+- [ ] Initial spawn of widget still in center of screen
+- [ ] Recently broken:
+- [ ] Prevent-off-screen-widget
+  - [ ] Only respecting the current screen - no multiscreen support
+  - [ ] Not including the content window into calculations
+- [ ] When moving the widget it flashes due to erroneous re-positionings
+- [ ] Widget can be selected in app-carousel
+- [ ] Occasionally (3/10 times) the widget "jumps" inbetween window resizes --> most noticably ~200 px to the left if h-boundary-right
