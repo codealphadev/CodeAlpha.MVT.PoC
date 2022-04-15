@@ -77,8 +77,20 @@ pub fn on_editor_ui_element_focus_change(
                 focus_msg.textarea_size,
             );
 
+            // In case currently_focused_editor_window is changed, temporarily hide widget
+            // for it to be correctly displayed on newly focused window
+            if let Some(previously_focused_window_id) = widget_props.currently_focused_editor_window
+            {
+                if previously_focused_window_id != window.id {
+                    // Reset hide timer after which the widget should be displayed again
+                    widget_props.hide_until_instant = Instant::now()
+                        + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
+                }
+            }
+
             // Set which editor window is currently focused
             widget_props.currently_focused_editor_window = Some(window.id);
+            widget_props.is_xcode_focused = true;
 
             break;
         }

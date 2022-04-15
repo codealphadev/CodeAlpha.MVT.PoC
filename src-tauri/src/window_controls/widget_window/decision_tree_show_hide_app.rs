@@ -6,6 +6,7 @@ use crate::{
 
 use super::WidgetWindow;
 
+#[derive(Debug)]
 pub enum ShowHide {
     Show,
     Hide,
