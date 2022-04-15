@@ -41,9 +41,9 @@ pub struct EditorWindow {
     textarea_size: Option<tauri::LogicalSize<f64>>,
 
     /// Widget position relative to the editor's text area.
-    relative_widget_position: Option<tauri::LogicalPosition<f64>>,
+    widget_position: Option<tauri::LogicalPosition<f64>>,
 
-    /// When the editor text area's size or position is updated, the relative_widget_position
+    /// When the editor text area's size or position is updated, the widget_position
     /// is recalculated relative to the boundaries. The boundaries are initially set to bottom|right
     /// but get updated each time the user moves the widget manually
     h_boundary: HorizontalBoundary,
@@ -63,7 +63,7 @@ impl EditorWindow {
             focused_ui_element: None,
             h_boundary: HorizontalBoundary::Right,
             v_boundary: VerticalBoundary::Bottom,
-            relative_widget_position: None,
+            widget_position: None,
         }
     }
 
@@ -110,7 +110,7 @@ impl EditorWindow {
     }
 
     pub fn update_widget_position(&mut self, widget_position: tauri::LogicalPosition<f64>) {
-        self.relative_widget_position = Some(widget_position);
+        self.widget_position = Some(widget_position);
 
         // Recalculate boundaries
         if let (Some(textarea_pos), Some(textarea_size)) =
@@ -156,7 +156,7 @@ impl EditorWindow {
 
         let mut diff_size = LogicalSize {
             width: window_size.width - self.window_size.width,
-            height: window_size.height - self.window_size.width,
+            height: window_size.height - self.window_size.height,
         };
 
         // If textarea dimensions are provided, use their change of the dimensions
@@ -178,7 +178,7 @@ impl EditorWindow {
 
             diff_size = LogicalSize {
                 width: textarea_size_new.width - textarea_size_old.width,
-                height: textarea_size_new.height - textarea_size_old.width,
+                height: textarea_size_new.height - textarea_size_old.height,
             };
         }
 
@@ -221,12 +221,7 @@ impl EditorWindow {
         diff_pos: tauri::LogicalSize<f64>,
         diff_size: tauri::LogicalSize<f64>,
     ) {
-        if let Some(widget_pos) = self.relative_widget_position {
-            // only continue if resize happened
-            if diff_size.height == 0. || diff_size.width == 0. {
-                return;
-            }
-
+        if let Some(widget_pos) = &mut self.widget_position {
             // Determine how much each side/boundary moved
             let left_boundary_diff = diff_pos.width;
             let right_boundary_diff = diff_pos.width + diff_size.width;
@@ -235,31 +230,19 @@ impl EditorWindow {
 
             match self.v_boundary {
                 VerticalBoundary::Top => {
-                    self.relative_widget_position = Some(LogicalPosition {
-                        x: widget_pos.x,
-                        y: widget_pos.y + top_boundary_diff,
-                    });
+                    widget_pos.y = widget_pos.y + top_boundary_diff;
                 }
                 VerticalBoundary::Bottom => {
-                    self.relative_widget_position = Some(LogicalPosition {
-                        x: widget_pos.x,
-                        y: widget_pos.y + bottom_boundary_diff,
-                    });
+                    widget_pos.y = widget_pos.y + bottom_boundary_diff;
                 }
             }
 
             match self.h_boundary {
                 HorizontalBoundary::Left => {
-                    self.relative_widget_position = Some(LogicalPosition {
-                        x: widget_pos.x + left_boundary_diff,
-                        y: widget_pos.y,
-                    });
+                    widget_pos.x = widget_pos.x + left_boundary_diff;
                 }
                 HorizontalBoundary::Right => {
-                    self.relative_widget_position = Some(LogicalPosition {
-                        x: widget_pos.x + right_boundary_diff,
-                        y: widget_pos.y,
-                    });
+                    widget_pos.x = widget_pos.x + right_boundary_diff;
                 }
             }
         } else {
@@ -267,7 +250,7 @@ impl EditorWindow {
             if let (Some(textarea_pos), Some(textarea_size)) =
                 (self.textarea_position, self.textarea_size)
             {
-                self.relative_widget_position = Some(LogicalPosition {
+                self.widget_position = Some(LogicalPosition {
                     x: textarea_pos.x + textarea_size.width - 100.,
                     y: textarea_pos.y + textarea_size.height - 100.,
                 });
