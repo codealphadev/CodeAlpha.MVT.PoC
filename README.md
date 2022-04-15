@@ -47,12 +47,7 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 
 ## Bugs
 
-- [ ] Widget not shown on first click into an XCode editor window
-- [ ] Initial spawn of widget still in center of screen
-- [ ] Recently broken:
 - [ ] Prevent-off-screen-widget
   - [ ] Only respecting the current screen - no multiscreen support
   - [ ] Not including the content window into calculations
-- [ ] When moving the widget it flashes due to erroneous re-positionings
 - [ ] Widget can be selected in app-carousel
-- [ ] Occasionally (3/10 times) the widget "jumps" inbetween window resizes --> most noticably ~200 px to the left if h-boundary-right
