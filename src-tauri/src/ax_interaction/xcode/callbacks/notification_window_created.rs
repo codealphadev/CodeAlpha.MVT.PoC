@@ -5,7 +5,8 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    models::editor::EditorWindowCreatedMessage, AXEventXcode, XCodeObserverState,
+    focused_uielement_of_app, models::editor::EditorWindowCreatedMessage,
+    xcode::callbacks::notify_uielement_focused, AXEventXcode, XCodeObserverState,
 };
 
 /// Notify Tauri that an editor window has been created
@@ -56,6 +57,11 @@ pub fn notify_window_created(
                 xcode_observer_state
                     .window_list
                     .push((window_id, window.clone(), None));
+
+                // Attempt to send an additional notification_uielement_focused
+                if let Ok(element) = focused_uielement_of_app(pid) {
+                    let _ = notify_uielement_focused(&element, xcode_observer_state);
+                }
             }
         }
     }
