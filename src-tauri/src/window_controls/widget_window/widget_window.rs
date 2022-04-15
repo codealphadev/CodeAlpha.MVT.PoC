@@ -10,7 +10,7 @@ use crate::{
     ax_interaction::app::observer_app::register_observer_app,
     window_controls::{
         close_window, create_window, current_monitor_of_window, default_properties,
-        editor_window::EditorWindow, open_window, set_position, AppWindow,
+        editor_window::EditorWindow, is_visible, open_window, set_position, AppWindow,
     },
 };
 
@@ -119,23 +119,28 @@ impl WidgetWindow {
                 // Control widget visibility
                 match validate_decision_tree_show_hide_widget(widget, editor_windows) {
                     ShowHide::Show => {
-                        // 1. Get position from currently focused window
-                        if let Some(focused_window_id) = widget.currently_focused_editor_window {
-                            if let Some(editor_window) = editor_windows
-                                .iter()
-                                .find(|window| window.id == focused_window_id)
+                        // 0. Only proceed if widget is currently not visible
+                        if !is_visible(&app_handle_move_copy, AppWindow::Widget) {
+                            // 1. Get position from currently focused window
+                            if let Some(focused_window_id) = widget.currently_focused_editor_window
                             {
-                                if let Some(mut widget_position) = editor_window.widget_position {
-                                    prevent_widget_position_off_screen(
-                                        &app_handle_move_copy,
-                                        &mut widget_position,
-                                    );
+                                if let Some(editor_window) = editor_windows
+                                    .iter()
+                                    .find(|window| window.id == focused_window_id)
+                                {
+                                    if let Some(mut widget_position) = editor_window.widget_position
+                                    {
+                                        prevent_widget_position_off_screen(
+                                            &app_handle_move_copy,
+                                            &mut widget_position,
+                                        );
 
-                                    set_position(
-                                        &widget.app_handle,
-                                        AppWindow::Widget,
-                                        &widget_position,
-                                    );
+                                        set_position(
+                                            &widget.app_handle,
+                                            AppWindow::Widget,
+                                            &widget_position,
+                                        );
+                                    }
                                 }
                             }
                         }
