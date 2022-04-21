@@ -1,6 +1,6 @@
 use tauri::Manager;
 
-use crate::window_controls::{config::AppWindow, get_window_label};
+use crate::window_controls::config::AppWindow;
 
 use super::{close::close_window, open::open_window};
 
@@ -9,7 +9,7 @@ pub fn toggle_window(handle: &tauri::AppHandle, window_label: AppWindow) {
         return;
     }
 
-    let app_window = handle.get_window(&get_window_label(window_label));
+    let app_window = handle.get_window(&window_label.to_string());
 
     if let Some(app_window) = app_window {
         let res = app_window.is_visible();

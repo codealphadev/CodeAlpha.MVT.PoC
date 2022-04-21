@@ -7,22 +7,17 @@
 use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
-use commands::search_and_replace_commands;
+use commands::{search_and_replace_commands, window_control_commands};
 use window_controls::{
     actions::create_window, AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
 };
 
-use crate::{
-    commands::window_control_commands,
-    window_controls::{
-        cmd_open_content_window, cmd_resize_content_window, cmd_toggle_content_window,
-    },
+use crate::window_controls::content_window::{
+    cmd_open_content_window, cmd_resize_content_window, cmd_toggle_content_window,
 };
 
-mod ax_events_deprecated;
 mod ax_interaction;
 mod commands;
-mod utils;
 mod window_controls;
 
 fn main() {
@@ -33,9 +28,6 @@ fn main() {
             window_control_commands::cmd_close_window,
             window_control_commands::cmd_resize_window,
             window_control_commands::cmd_is_window_visible,
-            utils::window_positioning::cmd_update_widget_position,
-            utils::window_positioning::cmd_start_dragging_widget,
-            utils::window_positioning::cmd_update_content_position,
             search_and_replace_commands::cmd_search_and_replace,
             cmd_resize_content_window,
             cmd_open_content_window,

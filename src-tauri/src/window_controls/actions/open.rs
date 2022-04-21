@@ -2,7 +2,7 @@ use core::panic;
 
 use tauri::{Error, Manager};
 
-use crate::window_controls::{config::AppWindow, get_window_label};
+use crate::window_controls::config::AppWindow;
 
 use super::create::create_window;
 
@@ -24,7 +24,7 @@ pub fn open_window(handle: &tauri::AppHandle, window_label: AppWindow) {
             let _ = special_open_for_content_window(handle);
         }
         _ => {
-            if let Some(app_window) = handle.get_window(&get_window_label(window_label)) {
+            if let Some(app_window) = handle.get_window(&window_label.to_string()) {
                 let _ = app_window.show();
             } else {
                 let _window = create_window(&handle, window_label);
@@ -38,7 +38,7 @@ pub fn is_visible(handle: &tauri::AppHandle, window_label: AppWindow) -> bool {
         return false;
     }
 
-    if let Some(window) = handle.get_window(&get_window_label(window_label)) {
+    if let Some(window) = handle.get_window(&window_label.to_string()) {
         if window.is_visible().unwrap() {
             return true;
         }
@@ -47,7 +47,7 @@ pub fn is_visible(handle: &tauri::AppHandle, window_label: AppWindow) -> bool {
 }
 
 fn special_open_for_content_window(handle: &tauri::AppHandle) -> Result<(), Error> {
-    if let Some(content_window) = handle.get_window(&get_window_label(AppWindow::Content)) {
+    if let Some(content_window) = handle.get_window(&AppWindow::Content.to_string()) {
         let _ = content_window.show();
     } else {
         // Create Window -> only when creating a new window the parent/child relationship needed for dragging is established.

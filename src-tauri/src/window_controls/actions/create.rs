@@ -1,9 +1,6 @@
 use tauri::{window::WindowBuilder, Error, Manager, Window, WindowUrl};
 
-use crate::window_controls::{
-    config::{default_properties, AppWindow},
-    get_window_label,
-};
+use crate::window_controls::config::{default_properties, AppWindow};
 
 pub fn create_window(handle: &tauri::AppHandle, window_label: AppWindow) -> Result<Window, Error> {
     if window_label == AppWindow::None {
@@ -11,7 +8,7 @@ pub fn create_window(handle: &tauri::AppHandle, window_label: AppWindow) -> Resu
     }
 
     // If the window is already created, don't open it again.
-    if let Some(window) = handle.get_window(&get_window_label(window_label)) {
+    if let Some(window) = handle.get_window(&window_label.to_string()) {
         return Ok(window);
     }
 
@@ -30,7 +27,7 @@ pub fn create_default_window_builder(
 
     let window_builder = tauri::window::WindowBuilder::new(
         handle,
-        get_window_label(window_label),
+        window_label.to_string(),
         WindowUrl::App(default_properties::url(&window_label).into()),
     )
     .title(default_properties::title(&window_label))

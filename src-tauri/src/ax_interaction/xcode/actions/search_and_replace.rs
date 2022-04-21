@@ -6,7 +6,7 @@ use crate::ax_interaction::{
     focused_uielement_of_app, is_focused_uielement_of_app_xcode_editor_field,
 };
 
-pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
+pub fn _get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
     if is_focused_uielement_of_app_xcode_editor_field(pid)? {
         let editor_element = focused_uielement_of_app(pid)?;
 
@@ -21,7 +21,7 @@ pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
     Ok(None)
 }
 
-pub fn update_xcode_editor_content(pid: pid_t, content: &str) -> Result<bool, Error> {
+pub fn _update_xcode_editor_content(pid: pid_t, content: &str) -> Result<bool, Error> {
     if is_focused_uielement_of_app_xcode_editor_field(pid)? {
         let editor_element = focused_uielement_of_app(pid)?;
 

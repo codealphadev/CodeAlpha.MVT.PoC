@@ -1,6 +1,6 @@
 use tauri::Manager;
 
-use crate::window_controls::{config::AppWindow, get_window_label};
+use crate::window_controls::config::AppWindow;
 
 pub fn close_window(handle: &tauri::AppHandle, window_label: AppWindow) {
     if window_label == AppWindow::None {
@@ -11,7 +11,7 @@ pub fn close_window(handle: &tauri::AppHandle, window_label: AppWindow) {
         panic!("Use open_window method of ContentWindow instead");
     }
 
-    let app_window = handle.get_window(&get_window_label(window_label));
+    let app_window = handle.get_window(&window_label.to_string());
 
     if let Some(app_window) = app_window {
         let _ = app_window.hide();

@@ -25,7 +25,6 @@ pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
 pub static HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS: u64 = 50;
 pub static XCODE_EDITOR_NAME: &str = "Xcode";
 
-#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct WidgetWindow {
     pub app_handle: tauri::AppHandle,

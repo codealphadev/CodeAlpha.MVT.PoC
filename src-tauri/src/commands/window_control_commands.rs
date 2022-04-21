@@ -2,7 +2,7 @@ use tauri::Manager;
 
 use crate::window_controls::{
     actions::{close_window, open_window, resize_window, toggle_window},
-    get_window_label, AppWindow,
+    AppWindow,
 };
 
 #[tauri::command]
@@ -11,7 +11,7 @@ pub fn cmd_is_window_visible(handle: tauri::AppHandle, window_type: AppWindow) -
         return false;
     }
 
-    let app_window = handle.get_window(&get_window_label(window_type));
+    let app_window = handle.get_window(&window_type.to_string());
 
     if let Some(app_window) = app_window {
         if let Ok(visible) = app_window.is_visible() {
