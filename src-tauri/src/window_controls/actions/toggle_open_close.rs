@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use tauri::Manager;
 
 use crate::window_controls::config::AppWindow;

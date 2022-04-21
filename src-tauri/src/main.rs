@@ -7,13 +7,14 @@
 use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
-use commands::{search_and_replace_commands, window_control_commands};
+use commands::search_and_replace_commands;
+use tauri::Manager;
 use window_controls::{
     actions::create_window, AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
 };
 
 use crate::window_controls::content_window::{
-    cmd_open_content_window, cmd_resize_content_window, cmd_toggle_content_window,
+    cmd_resize_content_window, cmd_toggle_content_window,
 };
 
 mod ax_interaction;
@@ -23,14 +24,8 @@ mod window_controls;
 fn main() {
     let app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            window_control_commands::cmd_open_window,
-            window_control_commands::cmd_toggle_window,
-            window_control_commands::cmd_close_window,
-            window_control_commands::cmd_resize_window,
-            window_control_commands::cmd_is_window_visible,
             search_and_replace_commands::cmd_search_and_replace,
             cmd_resize_content_window,
-            cmd_open_content_window,
             cmd_toggle_content_window
         ])
         .setup(|app| {
@@ -55,6 +50,8 @@ fn main() {
                 editor_windows_arc.clone(),
                 widget_window_arc.clone(),
             );
+
+            app.manage(widget_window_arc);
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
             tauri::async_runtime::spawn(async {

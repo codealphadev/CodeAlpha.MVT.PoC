@@ -134,11 +134,6 @@ pub fn cmd_resize_content_window(app_handle: tauri::AppHandle, size_x: u32, size
 }
 
 #[tauri::command]
-pub fn cmd_open_content_window(app_handle: tauri::AppHandle) {
-    let _ = open(&app_handle);
-}
-
-#[tauri::command]
 pub fn cmd_toggle_content_window(app_handle: tauri::AppHandle) {
     if let Ok(visible) = is_open(&app_handle) {
         if visible {

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use accessibility::{AXAttribute, AXUIElement, Error};
 use accessibility_sys::{
     kAXTrustedCheckOptionPrompt, pid_t, AXIsProcessTrusted, AXIsProcessTrustedWithOptions,

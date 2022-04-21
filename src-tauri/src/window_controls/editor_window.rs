@@ -28,7 +28,7 @@ pub struct EditorWindow {
     editor_name: String,
 
     /// The process identifier for the window's editor application.
-    pid: i32,
+    pub pid: i32,
 
     /// This enum holds the last type of the last focused ui element in this editor window.
     pub focused_ui_element: Option<FocusedUIElement>,
