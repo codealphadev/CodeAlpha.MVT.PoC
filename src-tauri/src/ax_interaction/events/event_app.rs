@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use super::models::app::{
-    AppActivatedMessage, AppDeactivatedMessage, AppUIElementFocusedMessage,
-    AppWindowFocusedMessage, AppWindowMovedMessage,
+    AppActivatedMessage, AppContentActivationMessage, AppDeactivatedMessage,
+    AppUIElementFocusedMessage, AppWindowFocusedMessage, AppWindowMovedMessage,
 };
 
 pub static AX_EVENT_APP_CHANNEL: &str = "AXEventApp";
@@ -16,6 +16,7 @@ pub enum AXEventApp {
     AppWindowFocused(AppWindowFocusedMessage),
     AppWindowMoved(AppWindowMovedMessage),
     AppUIElementFocused(AppUIElementFocusedMessage),
+    AppContentActivationChange(AppContentActivationMessage),
     AppActivated(AppActivatedMessage),
     AppDeactivated(AppDeactivatedMessage),
     None,
@@ -27,6 +28,7 @@ impl fmt::Display for AXEventApp {
             AXEventApp::AppWindowMoved(_) => write!(f, "AppWindowMoved"),
             AXEventApp::AppUIElementFocused(_) => write!(f, "AppUIElementFocused"),
             AXEventApp::AppWindowFocused(_) => write!(f, "AppWindowFocused"),
+            AXEventApp::AppContentActivationChange(_) => write!(f, "AppContentActivationChange"),
             AXEventApp::AppActivated(_) => write!(f, "AppActivated"),
             AXEventApp::AppDeactivated(_) => write!(f, "AppDeactivated"),
             AXEventApp::None => write!(f, "None"),

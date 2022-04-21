@@ -2,7 +2,10 @@
 
 use tauri::{LogicalPosition, LogicalSize};
 
-use crate::ax_interaction::models::editor::{EditorWindowCreatedMessage, FocusedUIElement};
+use crate::ax_interaction::models::{
+    app::ContentWindowState,
+    editor::{EditorWindowCreatedMessage, FocusedUIElement},
+};
 
 #[derive(Debug)]
 enum HorizontalBoundary {
@@ -43,6 +46,13 @@ pub struct EditorWindow {
     /// Widget position to the editor's text area.
     pub widget_position: Option<tauri::LogicalPosition<f64>>,
 
+    /// Enum to indicate if the content window is currently active or inactive.
+    /// Because of the parent-child relationship between widget and content window the
+    /// content window gets hidden as well when the widget is hidden. But if the widget
+    /// is only temporarily hidden we need to know if the content window is active or inactive
+    /// to correctly position the widget before bringing it back.
+    pub content_window_state: ContentWindowState,
+
     /// When the editor text area's size or position is updated, the widget_position
     /// is recalculated with respect to the boundaries. The boundaries are initially set to bottom|right
     /// but get updated each time the user moves the widget manually
@@ -64,6 +74,7 @@ impl EditorWindow {
             h_boundary: HorizontalBoundary::Right,
             v_boundary: VerticalBoundary::Bottom,
             widget_position: None,
+            content_window_state: ContentWindowState::Inactive,
         }
     }
 
@@ -86,7 +97,7 @@ impl EditorWindow {
         self.update_textarea_dimensions(diff_pos, diff_size, textarea_position, textarea_size);
 
         // Update widget position
-        self.update_widget_pos_by_respecting_boundaries(diff_pos, diff_size);
+        self.calc_widget_pos_by_respecting_boundaries(diff_pos, diff_size);
 
         self.window_position = window_position;
         self.window_size = window_size;
@@ -112,10 +123,11 @@ impl EditorWindow {
         self.initialize_widget_position();
     }
 
-    pub fn update_widget_position_through_dragging(
-        &mut self,
-        widget_position: tauri::LogicalPosition<f64>,
-    ) {
+    pub fn update_content_window_state(&mut self, content_window_state: &ContentWindowState) {
+        self.content_window_state = *content_window_state;
+    }
+
+    pub fn update_widget_position(&mut self, widget_position: tauri::LogicalPosition<f64>) {
         self.widget_position = Some(widget_position);
 
         // Recalculate boundaries
@@ -222,7 +234,7 @@ impl EditorWindow {
         }
     }
 
-    fn update_widget_pos_by_respecting_boundaries(
+    fn calc_widget_pos_by_respecting_boundaries(
         &mut self,
         diff_pos: tauri::LogicalSize<f64>,
         diff_size: tauri::LogicalSize<f64>,

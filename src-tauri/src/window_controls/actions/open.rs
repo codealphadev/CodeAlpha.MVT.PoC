@@ -1,3 +1,5 @@
+use core::panic;
+
 use tauri::{Error, Manager};
 
 use crate::window_controls::{config::AppWindow, get_window_label};
@@ -7,6 +9,10 @@ use super::create::create_window;
 pub fn open_window(handle: &tauri::AppHandle, window_label: AppWindow) {
     if window_label == AppWindow::None {
         return;
+    }
+
+    if window_label == AppWindow::Content {
+        panic!("Use open_window method of ContentWindow instead");
     }
 
     if is_visible(&handle, window_label) {

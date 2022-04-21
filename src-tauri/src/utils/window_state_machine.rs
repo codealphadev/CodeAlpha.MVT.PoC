@@ -2,7 +2,10 @@
 
 use crate::{
     ax_events_deprecated::{models::XCodeFocusElement, Event},
-    window_controls::{close_window, open_window, AppWindow},
+    window_controls::{
+        actions::{close_window, open_window},
+        AppWindow,
+    },
 };
 
 use super::window_positioning;

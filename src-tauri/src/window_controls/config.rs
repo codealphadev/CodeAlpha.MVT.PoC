@@ -112,7 +112,7 @@ pub mod default_properties {
             AppWindow::Settings => true,
             AppWindow::Analytics => true,
             AppWindow::Widget => true,
-            AppWindow::Content => true,
+            AppWindow::Content => false,
             AppWindow::None => true,
         }
     }

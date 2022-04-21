@@ -10,7 +10,7 @@ use crate::ax_interaction::{
 };
 
 use super::{
-    handler_ax_events_app::on_move_app_window,
+    handler_ax_events_app::{on_move_app_window, on_toggle_content_window},
     handler_ax_events_xcode::{
         on_activate_editor_app, on_close_editor_app, on_deactivate_editor_app,
         on_editor_ui_element_focus_change, on_move_editor_window, on_resize_editor_window,
@@ -82,6 +82,9 @@ pub fn register_listener_app(
                 // Reset hide timer after which the widget should be displayed again
                 (*widget_props_locked).delay_hide_until_instant =
                     Instant::now() + Duration::from_millis(HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS);
+            }
+            AXEventApp::AppContentActivationChange(msg) => {
+                on_toggle_content_window(&mut *widget_props_locked, msg);
             }
             AXEventApp::None => {}
         }

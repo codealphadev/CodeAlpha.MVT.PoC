@@ -7,18 +7,13 @@ pub fn close_window(handle: &tauri::AppHandle, window_label: AppWindow) {
         return;
     }
 
+    if window_label == AppWindow::Content {
+        panic!("Use open_window method of ContentWindow instead");
+    }
+
     let app_window = handle.get_window(&get_window_label(window_label));
 
     if let Some(app_window) = app_window {
-        match window_label {
-            AppWindow::Content => special_close_for_content_window(&app_window),
-            _ => {
-                let _ = app_window.hide();
-            }
-        }
+        let _ = app_window.hide();
     }
-}
-
-fn special_close_for_content_window(content_window: &tauri::Window) {
-    let _ = content_window.close();
 }

@@ -1,7 +1,8 @@
 use tauri::Manager;
 
 use crate::window_controls::{
-    close_window, get_window_label, open_window, resize_window, toggle_window, AppWindow,
+    actions::{close_window, open_window, resize_window, toggle_window},
+    get_window_label, AppWindow,
 };
 
 #[tauri::command]
@@ -49,7 +50,7 @@ pub fn cmd_resize_window(
     size_x: u32,
     size_y: u32,
 ) {
-    resize_window(
+    let _ = resize_window(
         &handle,
         window_label,
         &tauri::LogicalSize {

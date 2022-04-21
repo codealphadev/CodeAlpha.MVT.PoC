@@ -12,6 +12,7 @@ dependencies = [
  "colored",
  "core-foundation",
  "core-graphics-types",
+ "objc",
  "pretty_assertions",
  "serde",
  "serde_json",
