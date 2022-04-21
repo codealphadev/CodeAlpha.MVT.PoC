@@ -8,6 +8,7 @@ use crate::window_controls::{
 // Hard coded values for the positioning of the content window to a widget of size 48px
 pub static POSITIONING_OFFSET_X: f64 = 24.;
 pub static POSITIONING_OFFSET_Y: f64 = 8.;
+pub static HEIGHT_MENU_BAR: f64 = 37.;
 
 pub fn prevent_widget_position_off_screen(
     app_handle: &tauri::AppHandle,
@@ -78,23 +79,14 @@ pub fn prevent_misalignement_of_content_and_widget(
         if let Some(monitor) = current_monitor_of_window(&app_handle, AppWindow::Widget) {
             let monitor_position = monitor.position().to_logical::<f64>(monitor.scale_factor());
 
-            let widget_size = LogicalSize {
-                width: default_properties::size(&AppWindow::Widget).0,
-                height: default_properties::size(&AppWindow::Widget).1,
-            };
-
             // only reposition, if widget is too close to upper end of screen
-            if (monitor_position.y) < (widget_position.y - content_size.height) {
+            if (monitor_position.y) < (widget_position.y - content_size.height - HEIGHT_MENU_BAR) {
                 return;
             }
 
             // Update widget position to respect content window dimensions
-            // widget_position.x =
-            //     content_position.x + content_size.width - widget_size.width - POSITIONING_OFFSET_Y;
-            widget_position.y = monitor_position.y
-                + content_size.height
-                + (widget_size.height / 2.)
-                + POSITIONING_OFFSET_X;
+            widget_position.y =
+                monitor_position.y + content_size.height + HEIGHT_MENU_BAR + POSITIONING_OFFSET_Y;
         }
     }
 }

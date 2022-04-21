@@ -5,27 +5,20 @@ use std::{
     time::Instant,
 };
 
-use tauri::{Error, LogicalPosition, LogicalSize};
-
 use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
     window_controls::{
-        actions::{
-            close_window, create_window, current_monitor_of_window, get_position, get_size,
-            is_visible, open_window, set_position,
-        },
-        default_properties,
+        actions::{close_window, create_window, is_visible, open_window, set_position},
         editor_window::EditorWindow,
-        AppWindow, ContentWindow,
+        AppWindow,
     },
 };
 
 use super::{
     decision_tree_show_hide_widget::{validate_decision_tree_show_hide_widget, ShowHide},
-    dimension_calculations::{
-        prevent_misalignement_of_content_and_widget, prevent_widget_position_off_screen,
-    },
+    dimension_calculations::prevent_widget_position_off_screen,
     listeners::{register_listener_app, register_listener_xcode},
+    prevent_misalignement_of_content_and_widget,
 };
 
 pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
@@ -39,9 +32,6 @@ pub struct WidgetWindow {
 
     /// List of open editor windows. List is managed by WindowStateManager.
     pub editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
-
-    /// Properties of the content window
-    // pub content_window: Arc<Mutex<ContentWindow>>,
 
     /// Identitfier of the currently focused editor window. Is None until the first window was focused.
     pub currently_focused_editor_window: Option<uuid::Uuid>,
@@ -68,7 +58,6 @@ impl WidgetWindow {
     pub fn new(
         app_handle: &tauri::AppHandle,
         editor_windows: &Arc<Mutex<Vec<EditorWindow>>>,
-        content_window: &Arc<Mutex<ContentWindow>>,
     ) -> Self {
         // Create Tauri Window
         if create_window(&app_handle, AppWindow::Widget).is_err() {
@@ -123,11 +112,11 @@ fn control_widget_visibility(
         loop {
             // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
             // ==================================================================
-            thread::sleep(std::time::Duration::from_millis(100));
+            thread::sleep(std::time::Duration::from_millis(50));
             // ==================================================================
 
             let widget = &*(widget_props_move_copy.lock().unwrap());
-            let editor_windows = &*(widget.editor_windows.lock().unwrap());
+            let editor_windows = &mut *(widget.editor_windows.lock().unwrap());
 
             // Control widget visibility
             match validate_decision_tree_show_hide_widget(widget, editor_windows) {
@@ -146,15 +135,15 @@ fn control_widget_visibility(
                                         &mut widget_position,
                                     );
 
-                                    // // If content window was open before, also check that it would not go offscreen
-                                    // if editor_window.content_window_state
-                                    //     == ContentWindowState::Active
-                                    // {
-                                    //     prevent_misalignement_of_content_and_widget(
-                                    //         &app_handle_move_copy,
-                                    //         &mut widget_position,
-                                    //     );
-                                    // }
+                                    // If content window was open before, also check that it would not go offscreen
+                                    if editor_window.content_window_state
+                                        == ContentWindowState::Active
+                                    {
+                                        prevent_misalignement_of_content_and_widget(
+                                            &app_handle_move_copy,
+                                            &mut widget_position,
+                                        );
+                                    }
 
                                     let _ = set_position(
                                         &widget.app_handle,
@@ -166,47 +155,47 @@ fn control_widget_visibility(
                         }
                     }
 
+                    // // Recover ContentWindowState
+                    // if let Some(focused_window_id) = widget.currently_focused_editor_window {
+                    //     if let Some(editor_window) = editor_windows
+                    //         .iter()
+                    //         .find(|window| window.id == focused_window_id)
+                    //     {
+                    //         match dbg!(editor_window.content_window_state) {
+                    //             ContentWindowState::Active => {
+                    //                 let _ = content_window::open(&app_handle_move_copy);
+                    //             }
+                    //             ContentWindowState::Inactive => {
+                    //                 let _ = content_window::hide(&app_handle_move_copy);
+                    //             }
+                    //         }
+                    //     }
+                    // }
+
                     open_window(&widget.app_handle, AppWindow::Widget)
                 }
-                ShowHide::Hide => close_window(&widget.app_handle, AppWindow::Widget),
+                ShowHide::Hide => {
+                    // Preserve the state of the content window
+                    let is_content_visible = is_visible(&app_handle_move_copy, AppWindow::Content);
+                    if let Some(focused_window_id) = widget.currently_focused_editor_window {
+                        if let Some(editor_window) = editor_windows
+                            .iter_mut()
+                            .find(|window| window.id == focused_window_id)
+                        {
+                            if is_content_visible {
+                                editor_window
+                                    .update_content_window_state(&ContentWindowState::Active);
+                            } else {
+                                editor_window
+                                    .update_content_window_state(&ContentWindowState::Inactive);
+                            }
+                        }
+                    }
+
+                    close_window(&widget.app_handle, AppWindow::Widget)
+                }
                 ShowHide::Continue => {}
             }
         }
     });
-}
-
-static POSITIONING_OFFSET_X: f64 = 24.;
-static POSITIONING_OFFSET_Y: f64 = 8.;
-
-fn check_widget_position_update_required(
-    app_handle: &tauri::AppHandle,
-    widget_position: &LogicalPosition<f64>,
-    content_position: &LogicalPosition<f64>,
-    content_size: &LogicalSize<f64>,
-) -> Result<Option<LogicalPosition<f64>>, Error> {
-    if let Some(monitor) = current_monitor_of_window(&app_handle, AppWindow::Widget) {
-        let widget_size = LogicalSize {
-            width: default_properties::size(&AppWindow::Widget).0,
-            height: default_properties::size(&AppWindow::Widget).1,
-        };
-
-        let monitor_position = monitor.position().to_logical::<f64>(monitor.scale_factor());
-
-        // only reposition, if widget is too close to upper end of screen
-        if (monitor_position.y) < (widget_position.y - content_size.height) {
-            return Ok(None);
-        }
-
-        let updated_widget_position = LogicalPosition {
-            x: content_position.x + content_size.width - widget_size.width - POSITIONING_OFFSET_Y,
-            y: monitor_position.y
-                + content_size.height
-                + (widget_size.height / 2.)
-                + POSITIONING_OFFSET_X,
-        };
-
-        Ok(Some(updated_widget_position))
-    } else {
-        Err(Error::AssetNotFound("No screen found".to_string()))
-    }
 }

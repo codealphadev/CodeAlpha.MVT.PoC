@@ -41,7 +41,6 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 
 - [ ] "Many Clicks" on widget can lead to widget disappearing -> more gracefully handle invokation of "Content Open" routine - can be jammed if many clicks are done on widget
 - [ ] Show / hide content window requires waaay too many clicks ("Ghostclicks")
-- [ ] When moving the widget with opened content too far up, the widget can get stuck behind the content window --> likely going to be fixed when listener for widget-movement is implemented.
 - [ ] Show/Hide decision tree for widget does not yet include the behavior of the content window
 - [ ] Decision Tree is badly implemented - not logical; needs refactoring
 
@@ -51,3 +50,8 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
   - [ ] Only respecting the current screen - no multiscreen support
   - [ ] Not including the content window into calculations
 - [ ] Widget can be selected in app-carousel
+
+## Open TODOS
+
+- Refactor actions to remove special implementation for content window
+- "Bei show() content window state berücksichtigen" --> Wenn inactive, dann hide(), wenn active, dann open()"

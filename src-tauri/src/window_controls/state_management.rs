@@ -7,7 +7,7 @@ use crate::ax_interaction::{
     AXEventXcode, AX_EVENT_XCODE_CHANNEL,
 };
 
-use super::{editor_window::EditorWindow, ContentWindow, WidgetWindow};
+use super::{editor_window::EditorWindow, WidgetWindow};
 
 #[allow(dead_code)]
 pub struct WindowStateManager {
@@ -16,7 +16,6 @@ pub struct WindowStateManager {
     // List of listeners; stored to be able to safely remove them
     open_editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
     widget_window: Arc<Mutex<WidgetWindow>>,
-    content_window: Arc<Mutex<ContentWindow>>,
 }
 
 impl WindowStateManager {
@@ -24,7 +23,6 @@ impl WindowStateManager {
         app_handle: &tauri::AppHandle,
         editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
         widget_window: Arc<Mutex<WidgetWindow>>,
-        content_window: Arc<Mutex<ContentWindow>>,
     ) -> Self {
         // Register listener for xcode events to create / remove editor
         let editor_windows_move_copy = editor_windows.clone();
@@ -51,7 +49,6 @@ impl WindowStateManager {
             tauri_app_handle: app_handle.clone(),
             open_editor_windows: editor_windows.clone(),
             widget_window: widget_window.clone(),
-            content_window,
         }
     }
 

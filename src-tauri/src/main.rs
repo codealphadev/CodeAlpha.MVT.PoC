@@ -8,8 +8,9 @@ use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
 use commands::search_and_replace_commands;
-use tauri::Manager;
-use window_controls::{ContentWindow, EditorWindow, WidgetWindow, WindowStateManager};
+use window_controls::{
+    actions::create_window, AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
+};
 
 use crate::{
     commands::window_control_commands,
@@ -49,28 +50,19 @@ fn main() {
             let editor_windows_arc: Arc<Mutex<Vec<EditorWindow>>> =
                 Arc::new(Mutex::new(Vec::new()));
 
-            // Create instance of content window
-            let content_window_arc = Arc::new(Mutex::new(ContentWindow::new(&handle)));
+            let _ = create_window(&handle, AppWindow::Content);
 
             // Create instance of widget window; panics if creation fails
-            let widget_window =
-                WidgetWindow::new(&handle, &editor_windows_arc, &content_window_arc);
+            let widget_window = WidgetWindow::new(&handle, &editor_windows_arc);
             let widget_window_arc = Arc::new(Mutex::new(widget_window));
             WidgetWindow::setup_widget_listeners(&handle, &widget_window_arc);
             WidgetWindow::start_widget_visibility_control(&handle, &widget_window_arc);
 
-            let state_manager_arc = Arc::new(Mutex::new(WindowStateManager::new(
+            let _state_manager = WindowStateManager::new(
                 &handle,
                 editor_windows_arc.clone(),
                 widget_window_arc.clone(),
-                content_window_arc.clone(),
-            )));
-
-            // Move instances into tauri state
-            app.manage(editor_windows_arc);
-            app.manage(widget_window_arc);
-            app.manage(content_window_arc);
-            app.manage(state_manager_arc);
+            );
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
             tauri::async_runtime::spawn(async {

@@ -12,10 +12,11 @@
 			// 0.	Update content window position
 			// await invoke('cmd_update_content_position');
 			// 1. Toggle the content window
-			await invoke('cmd_toggle_window', { windowLabel: 'Content' });
+			// await invoke('cmd_toggle_window', { windowLabel: 'Content' });
+			await invoke('cmd_toggle_content_window');
 			// 2. Reposition widget if content is visible
 			if (await isContentVisible()) {
-				await invoke('cmd_update_widget_position');
+				// await invoke('cmd_update_widget_position');
 			}
 		} else {
 			// Case "Ghostclick happened"
@@ -23,7 +24,7 @@
 
 			// Reposition widget if content is visible
 			if (await isContentVisible()) {
-				await invoke('cmd_update_widget_position');
+				// await invoke('cmd_update_widget_position');
 			}
 		}
 	};

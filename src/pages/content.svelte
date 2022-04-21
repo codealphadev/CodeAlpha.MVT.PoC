@@ -19,19 +19,16 @@
 				window.getComputedStyle(document.body).getPropertyValue('width')
 			);
 
-			await invoke('cmd_resize_window', {
-				windowLabel: 'Content',
+			await invoke('cmd_resize_content_window', {
 				sizeX: +contentRootContainerWidth,
 				sizeY: +contentRootContainerHeight
 			});
-
-			await invoke('cmd_update_content_position');
 		}, 10);
 	});
 
 	let bubbleOrientationRight = true;
 	const listenToGlobalEvents = async () => {
-		await listen('evt-bubble-icon-orientation', (event) => {
+		await listen('evt-content-window-orientation', (event) => {
 			const tauriEvent = event as Event<any>;
 			bubbleOrientationRight = tauriEvent.payload.orientation_right;
 		});
