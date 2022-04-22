@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
 use commands::search_and_replace_commands;
-use tauri::Manager;
+use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu};
 use window_controls::{
     actions::create_window, AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
 };
@@ -63,6 +63,20 @@ fn main() {
 
             Ok(())
         })
+        .menu(Menu::with_items([
+            #[cfg(target_os = "macos")]
+            MenuEntry::Submenu(Submenu::new(
+                "dummy-menu-for-shortcuts-to-work-on-input-fields-see-github-issue-#-1055",
+                Menu::with_items([
+                    MenuItem::Undo.into(),
+                    MenuItem::Redo.into(),
+                    MenuItem::Cut.into(),
+                    MenuItem::Copy.into(),
+                    MenuItem::Paste.into(),
+                    MenuItem::SelectAll.into(),
+                ]),
+            )),
+        ]))
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
 
