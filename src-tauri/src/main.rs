@@ -43,7 +43,6 @@ fn main() {
             let widget_window = WidgetWindow::new(&handle, &editor_windows_arc);
             let widget_window_arc = Arc::new(Mutex::new(widget_window));
             WidgetWindow::setup_widget_listeners(&handle, &widget_window_arc);
-            WidgetWindow::start_widget_visibility_control(&handle, &widget_window_arc);
 
             let _state_manager = WindowStateManager::new(
                 &handle,

@@ -1,7 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
+use std::sync::{Arc, Mutex};
 
 use tauri::Manager;
 
@@ -15,7 +12,6 @@ use super::{
         on_activate_editor_app, on_close_editor_app, on_deactivate_editor_app,
         on_editor_ui_element_focus_change, on_move_editor_window, on_resize_editor_window,
     },
-    widget_window::HIDE_DELAY_ON_DEACTIVATE_IN_MILLIS,
     WidgetWindow,
 };
 
@@ -24,38 +20,35 @@ pub fn register_listener_xcode(
     widget_props: &Arc<Mutex<WidgetWindow>>,
 ) {
     let widget_props_move_copy = (widget_props).clone();
+    let app_handle_move_copy = app_handle.clone();
     app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
-        let mut widget_props_locked = widget_props_move_copy.lock().unwrap();
-
         let axevent_xcode: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
-        println!("{:?}", axevent_xcode);
-
-        // match axevent_xcode {
-        //     AXEventXcode::EditorWindowResized(msg) => {
-        //         // on_resize_editor_window(&mut *widget_props_locked, &widget_props_move_copy, &msg);
-        //     }
-        //     AXEventXcode::EditorWindowMoved(msg) => {
-        //         // on_move_editor_window(&mut *widget_props_locked, &widget_props_move_copy, &msg);
-        //     }
-        //     AXEventXcode::EditorUIElementFocused(msg) => {
-        //         // on_editor_ui_element_focus_change(
-        //         //     &mut *widget_props_locked,
-        //         //     &widget_props_move_copy,
-        //         //     &msg,
-        //         // );
-        //     }
-        //     AXEventXcode::EditorAppActivated(msg) => {
-        //         // on_activate_editor_app(&mut *widget_props_locked, &msg)
-        //     }
-        //     AXEventXcode::EditorAppDeactivated(msg) => {
-        //         // on_deactivate_editor_app(&mut *widget_props_locked, &widget_props_move_copy, &msg)
-        //     }
-        //     AXEventXcode::EditorAppClosed(msg) => {
-        //         // on_close_editor_app(&mut *widget_props_locked, &widget_props_move_copy, &msg)
-        //     }
-        //     _ => {}
-        // }
+        match axevent_xcode {
+            AXEventXcode::EditorWindowResized(msg) => {
+                on_resize_editor_window(&app_handle_move_copy, &widget_props_move_copy, &msg);
+            }
+            AXEventXcode::EditorWindowMoved(msg) => {
+                on_move_editor_window(&app_handle_move_copy, &widget_props_move_copy, &msg);
+            }
+            AXEventXcode::EditorUIElementFocused(msg) => {
+                on_editor_ui_element_focus_change(
+                    &app_handle_move_copy,
+                    &widget_props_move_copy,
+                    &msg,
+                );
+            }
+            AXEventXcode::EditorAppActivated(msg) => {
+                on_activate_editor_app(&widget_props_move_copy, &msg)
+            }
+            AXEventXcode::EditorAppDeactivated(msg) => {
+                on_deactivate_editor_app(&widget_props_move_copy, &msg)
+            }
+            AXEventXcode::EditorAppClosed(msg) => {
+                on_close_editor_app(&widget_props_move_copy, &msg)
+            }
+            _ => {}
+        }
     });
 }
 
@@ -65,28 +58,30 @@ pub fn register_listener_app(
 ) {
     let widget_props_move_copy = (widget_props).clone();
     app_handle.listen_global(AX_EVENT_APP_CHANNEL, move |msg| {
-        let mut widget_props_locked = widget_props_move_copy.lock().unwrap();
-
         let axevent_app: AXEventApp = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
         match &axevent_app {
             AXEventApp::AppWindowFocused(msg) => {
-                (*widget_props_locked).currently_focused_app_window = Some(msg.window);
+                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                widget_props.currently_focused_app_window = Some(msg.window);
             }
             AXEventApp::AppWindowMoved(msg) => {
-                on_move_app_window(&mut *widget_props_locked, &msg);
+                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                on_move_app_window(widget_props, &msg);
             }
             AXEventApp::AppUIElementFocused(_) => {
                 // TODO: Do nothing
             }
             AXEventApp::AppActivated(_) => {
-                (*widget_props_locked).is_app_focused = true;
+                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                widget_props.is_app_focused = true;
             }
             AXEventApp::AppDeactivated(msg) => {
                 on_deactivate_app(&widget_props_move_copy, &msg);
             }
             AXEventApp::AppContentActivationChange(msg) => {
-                on_toggle_content_window(&mut *widget_props_locked, msg);
+                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                on_toggle_content_window(widget_props, msg);
             }
             AXEventApp::None => {}
         }

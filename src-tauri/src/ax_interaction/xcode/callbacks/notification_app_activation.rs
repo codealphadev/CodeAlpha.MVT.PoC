@@ -27,8 +27,6 @@ pub fn notifiy_app_activated(
     // Emit to rust listeners
     activation_event.publish_to_tauri(&xcode_observer_state.app_handle);
 
-    println!("XCode activated");
-
     Ok(())
 }
 

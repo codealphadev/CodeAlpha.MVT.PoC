@@ -37,15 +37,20 @@ pub fn is_currently_focused_app_editor() -> Option<bool> {
 }
 
 pub fn is_currently_focused_app_our_app() -> Option<bool> {
-    if let Ok(focused_app) = currently_focused_app() {
-        if let Ok(app_title) = focused_app.pid() {
+    let system_wide_element = AXUIElement::system_wide();
+
+    if let Ok(focused_ui_element) = system_wide_element.attribute(&AXAttribute::focused_uielement())
+    {
+        if let Ok(app_pid) = focused_ui_element.pid() {
             let our_app_pid: i32 = std::process::id().try_into().unwrap();
-            if app_title == our_app_pid {
+            if app_pid == our_app_pid {
                 return Some(true);
             } else {
                 return Some(false);
             }
         }
+    } else {
+        return Some(false);
     }
 
     None
