@@ -11,7 +11,7 @@ use core_foundation::{
 static EDITOR_NAME: &str = "Xcode";
 
 // Method to get the focused AXUIElement's top-level window
-pub fn _currently_focused_app() -> Result<AXUIElement, Error> {
+pub fn currently_focused_app() -> Result<AXUIElement, Error> {
     let system_wide_element = AXUIElement::system_wide();
     let focused_ui_element = system_wide_element.attribute(&AXAttribute::focused_uielement())?;
     let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
@@ -20,6 +20,35 @@ pub fn _currently_focused_app() -> Result<AXUIElement, Error> {
     } else {
         return Ok(focused_ui_element);
     }
+}
+
+pub fn is_currently_focused_app_editor() -> Option<bool> {
+    if let Ok(focused_app) = currently_focused_app() {
+        if let Ok(app_title) = focused_app.attribute(&AXAttribute::title()) {
+            if app_title == EDITOR_NAME {
+                return Some(true);
+            } else {
+                return Some(false);
+            }
+        }
+    }
+
+    None
+}
+
+pub fn is_currently_focused_app_our_app() -> Option<bool> {
+    if let Ok(focused_app) = currently_focused_app() {
+        if let Ok(app_title) = focused_app.pid() {
+            let our_app_pid: i32 = std::process::id().try_into().unwrap();
+            if app_title == our_app_pid {
+                return Some(true);
+            } else {
+                return Some(false);
+            }
+        }
+    }
+
+    None
 }
 
 pub fn focused_uielement_of_app(app_pid: pid_t) -> Result<AXUIElement, Error> {
