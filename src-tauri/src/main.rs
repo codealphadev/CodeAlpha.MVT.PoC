@@ -22,7 +22,7 @@ mod commands;
 mod window_controls;
 
 fn main() {
-    let app: tauri::App = tauri::Builder::default()
+    let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             search_and_replace_commands::cmd_search_and_replace,
             cmd_resize_content_window,
@@ -57,7 +57,7 @@ fn main() {
             tauri::async_runtime::spawn(async {
                 loop {
                     if !ax_interaction::application_is_trusted_with_prompt() {}
-                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
                 }
             });
 
@@ -66,6 +66,7 @@ fn main() {
         .build(tauri::generate_context!("tauri.conf.json"))
         .expect("error while running tauri application");
 
+    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
     app.run(|_app_handle, event| match event {
         tauri::RunEvent::ExitRequested { api, .. } => {
             api.prevent_exit();
