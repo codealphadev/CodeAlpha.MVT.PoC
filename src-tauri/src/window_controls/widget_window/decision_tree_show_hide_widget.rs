@@ -45,7 +45,7 @@ fn check_if_either_widget_or_editor_is_focused(
         ) {
             ShowHide::Hide => ShowHide::Hide,
             ShowHide::Show => {
-                check_if_widget_should_be_temporarily_hidden(&widget.hide_until_instant)
+                check_if_widget_should_be_temporarily_hidden(&widget.temporary_hide_until_instant)
             }
             ShowHide::Continue => ShowHide::Continue,
         }

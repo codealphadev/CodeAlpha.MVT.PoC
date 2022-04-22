@@ -98,7 +98,7 @@ pub mod default_properties {
         match window {
             AppWindow::Settings => true,
             AppWindow::Analytics => true,
-            AppWindow::Widget => true,
+            AppWindow::Widget => false,
             AppWindow::Content => false,
             AppWindow::None => true,
         }

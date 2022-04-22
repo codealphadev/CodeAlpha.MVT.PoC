@@ -2,7 +2,7 @@ use core::panic;
 use std::{
     sync::{Arc, Mutex},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use crate::{
@@ -36,7 +36,12 @@ pub struct WidgetWindow {
     pub currently_focused_editor_window: Option<uuid::Uuid>,
 
     /// Each qualifying incoming event updates the instant until when the widget should be hidden.
-    pub hide_until_instant: Instant,
+    pub temporary_hide_until_instant: Instant,
+
+    /// If an event requires the widget to be temporarily hidden, it triggers a routine that monitors when
+    /// the widget should be shown again. In case another event occurs and this variable is set to true,
+    /// only 'temporary_hide_until_instant' will be updated.
+    pub temporary_hide_check_active: bool,
 
     /// In case the focus switches from our app to an editor or vice versa it is possible, that there is
     /// a state where seemingly neither is in focus, only because the new "AXActivation" event from the
@@ -72,7 +77,8 @@ impl WidgetWindow {
             app_handle: app_handle.clone(),
             editor_windows: editor_windows.clone(),
             // content_window: content_window.clone(),
-            hide_until_instant: Instant::now(),
+            temporary_hide_until_instant: Instant::now(),
+            temporary_hide_check_active: false,
             delay_hide_until_instant: Instant::now(),
             currently_focused_editor_window: None,
             is_xcode_focused: false,
@@ -96,7 +102,7 @@ impl WidgetWindow {
         app_handle: &tauri::AppHandle,
         widget_window: &Arc<Mutex<WidgetWindow>>,
     ) {
-        control_widget_visibility(app_handle, &widget_window);
+        //control_widget_visibility(app_handle, &widget_window);
     }
 }
 
@@ -197,4 +203,97 @@ fn control_widget_visibility(
             }
         }
     });
+}
+
+pub fn temporary_hide_check_routine(
+    app_handle: &tauri::AppHandle,
+    widget_props: &Arc<Mutex<WidgetWindow>>,
+) {
+    let widget = &mut *(widget_props.lock().unwrap());
+
+    // Update the Instant time stamp when the widget should be shown again
+    widget.temporary_hide_until_instant =
+        Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
+
+    // Check if another instance of this routine is already running
+    if widget.temporary_hide_check_active {
+        return;
+    }
+
+    // Gracefully hide widget
+    let editor_windows = &mut *(widget.editor_windows.lock().unwrap());
+    hide_widget_routine(app_handle, widget, editor_windows);
+
+    // Start temporary hide check routine
+    let widget_props_move_copy = widget_props.clone();
+    let app_handle_move_copy = app_handle.clone();
+
+    thread::spawn(move || loop {
+        // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
+        // ==================================================================
+        thread::sleep(std::time::Duration::from_millis(25));
+        // ==================================================================
+
+        let widget_window = &mut *(widget_props_move_copy.lock().unwrap());
+
+        if widget_window.temporary_hide_until_instant > Instant::now() {
+            let editor_windows = &mut *(widget_window.editor_windows.lock().unwrap());
+            show_widget_routine(&app_handle_move_copy, &widget_window, &editor_windows);
+
+            // Indicate that the routine finished
+            widget_window.temporary_hide_check_active = false;
+            break;
+        }
+    });
+}
+
+pub fn show_widget_routine(
+    app_handle: &tauri::AppHandle,
+    widget: &WidgetWindow,
+    editor_windows: &Vec<EditorWindow>,
+) {
+    println!("show_widget_routine");
+    // Check if the widget position should be updated before showing it
+    if let Some(focused_window_id) = widget.currently_focused_editor_window {
+        if let Some(editor_window) = editor_windows
+            .iter()
+            .find(|window| window.id == focused_window_id)
+        {
+            if let Some(mut widget_position) = editor_window.widget_position {
+                prevent_widget_position_off_screen(&app_handle, &mut widget_position);
+
+                // If content window was open before, also check that it would not go offscreen
+                if editor_window.content_window_state == ContentWindowState::Active {
+                    prevent_misalignement_of_content_and_widget(&app_handle, &mut widget_position);
+                }
+
+                let _ = set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
+            }
+        }
+    }
+
+    open_window(&widget.app_handle, AppWindow::Widget)
+}
+
+pub fn hide_widget_routine(
+    app_handle: &tauri::AppHandle,
+    widget: &WidgetWindow,
+    editor_windows: &mut Vec<EditorWindow>,
+) {
+    // Preserve the state of the content window
+    let is_content_visible = is_visible(&app_handle, AppWindow::Content);
+    if let Some(focused_window_id) = widget.currently_focused_editor_window {
+        if let Some(editor_window) = editor_windows
+            .iter_mut()
+            .find(|window| window.id == focused_window_id)
+        {
+            if is_content_visible {
+                editor_window.update_content_window_state(&ContentWindowState::Active);
+            } else {
+                editor_window.update_content_window_state(&ContentWindowState::Inactive);
+            }
+        }
+    }
+
+    close_window(&widget.app_handle, AppWindow::Widget)
 }
