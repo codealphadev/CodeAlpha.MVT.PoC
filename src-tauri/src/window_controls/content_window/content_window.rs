@@ -2,12 +2,18 @@ use cocoa::{appkit::NSWindowOrderingMode, base::id};
 use objc::{msg_send, sel, sel_impl};
 use tauri::{Error, Manager};
 
-use crate::window_controls::{
-    actions::{current_monitor_of_window, get_position, get_size, set_position},
-    widget_window::{
-        prevent_misalignement_of_content_and_widget, POSITIONING_OFFSET_X, POSITIONING_OFFSET_Y,
+use crate::{
+    ax_interaction::{
+        models::app::{AppContentActivationMessage, ContentWindowState},
+        AXEventApp,
     },
-    AppWindow,
+    window_controls::{
+        actions::{current_monitor_of_window, get_position, get_size, set_position},
+        widget_window::{
+            prevent_misalignement_of_content_and_widget, POSITIONING_OFFSET_X, POSITIONING_OFFSET_Y,
+        },
+        AppWindow,
+    },
 };
 
 #[derive(Clone, serde::Serialize)]
@@ -138,8 +144,16 @@ pub fn cmd_toggle_content_window(app_handle: tauri::AppHandle) {
     if let Ok(visible) = is_open(&app_handle) {
         if visible {
             let _ = hide(&app_handle);
+            AXEventApp::AppContentActivationChange(AppContentActivationMessage {
+                activation_state: ContentWindowState::Inactive,
+            })
+            .publish_to_tauri(&app_handle);
         } else {
             let _ = open(&app_handle);
+            AXEventApp::AppContentActivationChange(AppContentActivationMessage {
+                activation_state: ContentWindowState::Active,
+            })
+            .publish_to_tauri(&app_handle);
         }
     } else {
         println!("Error: cmd_toggle_content_window");

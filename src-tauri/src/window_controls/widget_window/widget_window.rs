@@ -8,7 +8,8 @@ use std::{
 use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
     window_controls::{
-        actions::{close_window, create_window, is_visible, open_window, set_position},
+        actions::{close_window, create_window, open_window, set_position},
+        content_window,
         editor_window::EditorWindow,
         AppWindow,
     },
@@ -161,28 +162,30 @@ pub fn show_widget_routine(
         }
     }
 
-    open_window(&widget.app_handle, AppWindow::Widget)
-}
-
-pub fn hide_widget_routine(
-    app_handle: &tauri::AppHandle,
-    widget: &WidgetWindow,
-    editor_windows: &mut Vec<EditorWindow>,
-) {
-    // Preserve the state of the content window
-    let is_content_visible = is_visible(&app_handle, AppWindow::Content);
+    // Recover ContentWindowState for this editor window
     if let Some(focused_window_id) = widget.currently_focused_editor_window {
         if let Some(editor_window) = editor_windows
-            .iter_mut()
+            .iter()
             .find(|window| window.id == focused_window_id)
         {
-            if is_content_visible {
-                editor_window.update_content_window_state(&ContentWindowState::Active);
-            } else {
-                editor_window.update_content_window_state(&ContentWindowState::Inactive);
+            match editor_window.content_window_state {
+                ContentWindowState::Active => {
+                    let _ = content_window::open(&app_handle);
+                }
+                ContentWindowState::Inactive => {
+                    let _ = content_window::hide(&app_handle);
+                }
             }
         }
     }
 
+    open_window(&widget.app_handle, AppWindow::Widget)
+}
+
+pub fn hide_widget_routine(
+    _app_handle: &tauri::AppHandle,
+    widget: &WidgetWindow,
+    _editor_windows: &mut Vec<EditorWindow>,
+) {
     close_window(&widget.app_handle, AppWindow::Widget)
 }
