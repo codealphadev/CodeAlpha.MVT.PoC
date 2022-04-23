@@ -140,6 +140,10 @@
         "unminimize": false
       }
     },
+    "systemTray": {
+      "iconPath": "icons/icon-template.svg",
+      "iconAsTemplate": true
+    },
     "windows": [],
     "security": {
       "csp": null

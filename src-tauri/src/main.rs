@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
 use commands::search_and_replace_commands;
-use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu};
+use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::{
     actions::create_window, AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
 };
@@ -16,12 +16,19 @@ use window_controls::{
 use crate::window_controls::content_window::{
     cmd_resize_content_window, cmd_toggle_content_window,
 };
+use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
 
 mod ax_interaction;
 mod commands;
 mod window_controls;
 
 fn main() {
+    // Configure system tray
+    // here `"quit".to_string()` defines the menu item id, and the second parameter is the menu item label.
+    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
+    let tray_menu = SystemTrayMenu::new().add_item(quit);
+    let system_tray = SystemTray::new().with_menu(tray_menu);
+
     let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             search_and_replace_commands::cmd_search_and_replace,
@@ -61,6 +68,16 @@ fn main() {
             });
 
             Ok(())
+        })
+        .system_tray(system_tray)
+        .on_system_tray_event(|_app, event| match event {
+            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
+                "quit" => {
+                    std::process::exit(0);
+                }
+                _ => {}
+            },
+            _ => {}
         })
         .menu(Menu::with_items([
             #[cfg(target_os = "macos")]
