@@ -50,9 +50,6 @@
     "updater": {
       "active": false
     },
-    "allowlist": {
-      "all": true
-    },
     "windows": [],
     "security": {
       "csp": null
