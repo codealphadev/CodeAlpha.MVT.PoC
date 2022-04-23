@@ -19,17 +19,10 @@ pub fn open_window(handle: &tauri::AppHandle, window_label: AppWindow) {
         return;
     }
 
-    match window_label {
-        AppWindow::Content => {
-            let _ = special_open_for_content_window(handle);
-        }
-        _ => {
-            if let Some(app_window) = handle.get_window(&window_label.to_string()) {
-                let _ = app_window.show();
-            } else {
-                let _window = create_window(&handle, window_label);
-            }
-        }
+    if let Some(app_window) = handle.get_window(&window_label.to_string()) {
+        let _ = app_window.show();
+    } else {
+        let _window = create_window(&handle, window_label);
     }
 }
 
@@ -44,20 +37,4 @@ pub fn is_visible(handle: &tauri::AppHandle, window_label: AppWindow) -> bool {
         }
     }
     false
-}
-
-fn special_open_for_content_window(handle: &tauri::AppHandle) -> Result<(), Error> {
-    if let Some(content_window) = handle.get_window(&AppWindow::Content.to_string()) {
-        let _ = content_window.show();
-    } else {
-        // Create Window -> only when creating a new window the parent/child relationship needed for dragging is established.
-        // We sacrifice other UX here, because window creation takes a noticable split second
-        // Before we call "create", we need to get the updated position for the content window
-        let content_window = create_window(&handle, AppWindow::Content)?;
-
-        // Show Content window
-        content_window.show()?;
-    }
-
-    Ok(())
 }
