@@ -1,4 +1,5 @@
 use cocoa::{appkit::NSWindowOrderingMode, base::id};
+use colored::Colorize;
 use objc::{msg_send, sel, sel_impl};
 use tauri::{Error, Manager};
 
@@ -33,6 +34,8 @@ fn resize(
 }
 
 fn reposition(app_handle: &tauri::AppHandle) -> Result<(), Error> {
+    println!("{}", "reposition".to_string().blue());
+
     let widget_position = get_position(&app_handle, AppWindow::Widget)?;
     let widget_size = get_size(&app_handle, AppWindow::Widget)?;
     let content_position = get_position(&app_handle, AppWindow::Content)?;
@@ -141,6 +144,7 @@ pub fn cmd_resize_content_window(app_handle: tauri::AppHandle, size_x: u32, size
 
 #[tauri::command]
 pub fn cmd_toggle_content_window(app_handle: tauri::AppHandle) {
+    println!("cmd_toggle_content_window");
     if let Ok(visible) = is_open(&app_handle) {
         if visible {
             let _ = hide(&app_handle);

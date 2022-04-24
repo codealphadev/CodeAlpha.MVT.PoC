@@ -5,6 +5,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use colored::Colorize;
+
 use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
     window_controls::{
@@ -143,6 +145,7 @@ pub fn show_widget_routine(
     widget: &WidgetWindow,
     editor_windows: &Vec<EditorWindow>,
 ) {
+    println!("{}", "show_widget_routine".to_string().blue());
     // Check if the widget position should be updated before showing it
     if let Some(focused_window_id) = widget.currently_focused_editor_window {
         if let Some(editor_window) = editor_windows

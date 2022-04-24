@@ -1,9 +1,11 @@
 use std::sync::{Arc, Mutex};
 
+use colored::Colorize;
 use tauri::Manager;
 
-use crate::ax_interaction::{
-    AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_XCODE_CHANNEL,
+use crate::{
+    ax_interaction::{AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_XCODE_CHANNEL},
+    window_controls::AppWindow,
 };
 
 use super::{
@@ -60,18 +62,23 @@ pub fn register_listener_app(
     app_handle.listen_global(AX_EVENT_APP_CHANNEL, move |msg| {
         let axevent_app: AXEventApp = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
+        println!(
+            "AX_EVENT_APP_CHANNEL: {}",
+            format!("{:?}", axevent_app).yellow()
+        );
+
         match &axevent_app {
             AXEventApp::AppWindowFocused(msg) => {
                 let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
                 widget_props.currently_focused_app_window = Some(msg.window);
+
+                println!("AppWindowFocused: {:?}", msg);
             }
             AXEventApp::AppWindowMoved(msg) => {
                 let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
                 on_move_app_window(widget_props, &msg);
             }
-            AXEventApp::AppUIElementFocused(_) => {
-                // TODO: Do nothing
-            }
+            AXEventApp::AppUIElementFocused(_) => {}
             AXEventApp::AppActivated(_) => {
                 let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
                 widget_props.is_app_focused = true;
@@ -84,6 +91,23 @@ pub fn register_listener_app(
                 on_toggle_content_window(widget_props, msg);
             }
             AXEventApp::None => {}
+        }
+
+        let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+
+        let app_handle = (*widget_props).app_handle.clone();
+        let is_app_focused = (*widget_props).is_app_focused;
+        let focused_window = (*widget_props).currently_focused_app_window;
+        std::mem::drop(widget_props);
+
+        if let Some(focused_window) = focused_window {
+            if is_app_focused && focused_window == AppWindow::Widget {
+                let widget_window = app_handle
+                    .get_window(&AppWindow::Widget.to_string())
+                    .unwrap();
+
+                let _ = widget_window.start_dragging();
+            }
         }
     });
 }

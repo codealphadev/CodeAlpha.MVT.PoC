@@ -5,12 +5,16 @@ use crate::{
         is_currently_focused_app_editor,
         models::app::{AppContentActivationMessage, AppDeactivatedMessage, AppWindowMovedMessage},
     },
-    window_controls::AppWindow,
+    window_controls::{actions::close_window, AppWindow},
 };
 
 use super::{widget_window::hide_widget_routine, WidgetWindow};
 
 pub fn on_move_app_window(widget_props: &mut WidgetWindow, move_msg: &AppWindowMovedMessage) {
+    if move_msg.window != AppWindow::Widget {
+        return;
+    }
+
     let editor_windows = &mut *(widget_props.editor_windows.lock().unwrap());
     if let Some(focused_editor_window_id) = widget_props.currently_focused_editor_window {
         if let Some(editor_window) = editor_windows
@@ -51,5 +55,7 @@ pub fn on_deactivate_app(
             let editor_windows = &mut *(widget_window.editor_windows.lock().unwrap());
             hide_widget_routine(&widget_window.app_handle, &widget_window, editor_windows);
         }
+    } else {
+        close_window(&widget_window.app_handle, AppWindow::Widget)
     }
 }

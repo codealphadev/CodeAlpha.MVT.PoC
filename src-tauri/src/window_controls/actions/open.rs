@@ -1,6 +1,6 @@
 use core::panic;
 
-use tauri::{Error, Manager};
+use tauri::Manager;
 
 use crate::window_controls::config::AppWindow;
 
