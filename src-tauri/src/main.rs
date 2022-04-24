@@ -60,9 +60,17 @@ fn main() {
             app.manage(widget_window_arc);
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
-            tauri::async_runtime::spawn(async {
+            let handle_move_copy = app.handle().clone();
+            let ax_apis_enabled_at_start = ax_interaction::application_is_trusted();
+            tauri::async_runtime::spawn(async move {
                 loop {
-                    if !ax_interaction::application_is_trusted_with_prompt() {}
+                    if ax_interaction::application_is_trusted_with_prompt() {
+                        // In case AX apis were not enabled at program start, restart the app to
+                        // ensure the AX observers are properly registered.
+                        if !ax_apis_enabled_at_start {
+                            handle_move_copy.restart();
+                        }
+                    }
                     tokio::time::sleep(std::time::Duration::from_secs(10)).await;
                 }
             });

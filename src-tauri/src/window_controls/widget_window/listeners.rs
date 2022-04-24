@@ -71,8 +71,6 @@ pub fn register_listener_app(
             AXEventApp::AppWindowFocused(msg) => {
                 let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
                 widget_props.currently_focused_app_window = Some(msg.window);
-
-                println!("AppWindowFocused: {:?}", msg);
             }
             AXEventApp::AppWindowMoved(msg) => {
                 let widget_props = &mut *(widget_props_move_copy.lock().unwrap());

@@ -79,7 +79,7 @@ pub fn is_focused_uielement_of_app_xcode_editor_field(app_pid: pid_t) -> Result<
 }
 
 /// Checks whether or not this application is a trusted accessibility client.
-pub fn _application_is_trusted() -> bool {
+pub fn application_is_trusted() -> bool {
     unsafe {
         return AXIsProcessTrusted();
     }
