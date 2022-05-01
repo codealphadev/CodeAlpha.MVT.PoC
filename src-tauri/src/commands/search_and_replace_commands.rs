@@ -16,10 +16,7 @@ pub fn cmd_search_and_replace(
     let editor_windows = &*(widget_window.editor_windows.lock().unwrap());
 
     if let Some(focused_editor_window_id) = widget_window.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows
-            .iter()
-            .find(|window| window.id == focused_editor_window_id)
-        {
+        if let Some(editor_window) = editor_windows.get(&focused_editor_window_id) {
             let content = get_xcode_editor_content(editor_window.pid.try_into().unwrap());
 
             if let Ok(content) = content {

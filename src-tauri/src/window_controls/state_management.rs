@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use tauri::Manager;
 
@@ -14,14 +17,14 @@ pub struct WindowStateManager {
     tauri_app_handle: tauri::AppHandle,
 
     // List of listeners; stored to be able to safely remove them
-    open_editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
+    open_editor_windows: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
     widget_window: Arc<Mutex<WidgetWindow>>,
 }
 
 impl WindowStateManager {
     pub fn new(
         app_handle: &tauri::AppHandle,
-        editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
+        editor_windows: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
         widget_window: Arc<Mutex<WidgetWindow>>,
     ) -> Self {
         // Register listener for xcode events to create / remove editor
@@ -39,7 +42,7 @@ impl WindowStateManager {
                 }
                 AXEventXcode::EditorAppClosed(_) => {
                     let mut editors_locked = editor_windows_move_copy.lock().unwrap();
-                    *editors_locked = Vec::new();
+                    *editors_locked = HashMap::new();
                 }
                 _ => {}
             }
@@ -53,34 +56,23 @@ impl WindowStateManager {
     }
 
     fn add_editor_window(
-        editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
+        editor_window_list: &Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
         created_msg: &EditorWindowCreatedMessage,
     ) {
         let mut editor_list_locked = editor_window_list.lock().unwrap();
 
         // check if window is already contained in list of windows
-        let window_exists = (*editor_list_locked)
-            .iter()
-            .any(|window| window.id == created_msg.id);
-
-        if !window_exists {
-            (*editor_list_locked).push(EditorWindow::new(created_msg));
+        if (*editor_list_locked).get(&created_msg.id).is_none() {
+            (*editor_list_locked).insert(created_msg.id, EditorWindow::new(created_msg));
         }
     }
 
     fn remove_editor_window(
-        editor_window_list: &Arc<Mutex<Vec<EditorWindow>>>,
+        editor_window_list: &Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
         destroyed_msg: &EditorWindowDestroyedMessage,
     ) {
         let mut editor_list_locked = editor_window_list.lock().unwrap();
 
-        let _ = &editor_list_locked.retain(|editor_window| {
-            // returning false in Vec::retain() will remove the element from the vector
-            if editor_window.id == destroyed_msg.id {
-                false
-            } else {
-                true
-            }
-        });
+        let _ = &editor_list_locked.remove(&destroyed_msg.id);
     }
 }

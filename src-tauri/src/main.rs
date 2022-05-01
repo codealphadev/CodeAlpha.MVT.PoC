@@ -4,7 +4,10 @@
     windows_subsystem = "windows"
 )]
 
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use ax_interaction::setup_observers;
 use commands::search_and_replace_commands;
@@ -41,8 +44,8 @@ fn main() {
             let handle = app.handle();
 
             // Create vector of editor windows
-            let editor_windows_arc: Arc<Mutex<Vec<EditorWindow>>> =
-                Arc::new(Mutex::new(Vec::new()));
+            let editor_windows_arc: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>> =
+                Arc::new(Mutex::new(HashMap::new()));
 
             let _ = create_window(&handle, AppWindow::Content);
 

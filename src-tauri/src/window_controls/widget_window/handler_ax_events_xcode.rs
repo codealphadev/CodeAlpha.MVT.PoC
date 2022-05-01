@@ -25,10 +25,7 @@ pub fn on_resize_editor_window(
         let widget_props = &mut *(widget_arc.lock().unwrap());
         let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
 
-        if let Some(editor_window) = editor_list_locked
-            .iter_mut()
-            .find(|window| window.id == resize_msg.id)
-        {
+        if let Some(editor_window) = editor_list_locked.get_mut(&resize_msg.id) {
             editor_window.update_window_dimensions(
                 resize_msg.window_position,
                 resize_msg.window_size,
@@ -52,10 +49,7 @@ pub fn on_move_editor_window(
         let widget_props = &mut *(widget_arc.lock().unwrap());
         let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
 
-        if let Some(editor_window) = editor_list_locked
-            .iter_mut()
-            .find(|window| window.id == moved_msg.id)
-        {
+        if let Some(editor_window) = editor_list_locked.get_mut(&moved_msg.id) {
             editor_window.update_window_dimensions(
                 moved_msg.window_position,
                 moved_msg.window_size,
@@ -86,10 +80,7 @@ pub fn on_editor_ui_element_focus_change(
         let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
 
         // Update the focused ui element on the corresponding editor window instance.
-        if let Some(editor_window) = editor_list_locked
-            .iter_mut()
-            .find(|window| window.id == focus_msg.window_id)
-        {
+        if let Some(editor_window) = editor_list_locked.get_mut(&focus_msg.window_id) {
             editor_window.update_focused_ui_element(
                 &focus_msg.focused_ui_element,
                 focus_msg.textarea_position,
@@ -178,10 +169,7 @@ pub fn on_activate_editor_app(
 
     // Check if focused ui element of the currently focused editor window is textarea.
     if let Some(currently_focused_editor_window_id) = widget_props.currently_focused_editor_window {
-        if let Some(editor_window) = editor_list_locked
-            .iter()
-            .find(|window| window.id == currently_focused_editor_window_id)
-        {
+        if let Some(editor_window) = editor_list_locked.get(&currently_focused_editor_window_id) {
             if let Some(focused_ui_element) = &editor_window.focused_ui_element {
                 if *focused_ui_element == FocusedUIElement::Textarea {
                     show_widget_routine(&widget_props.app_handle, widget_props, &editor_list_locked)

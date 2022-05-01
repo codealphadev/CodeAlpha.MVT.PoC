@@ -1,5 +1,6 @@
 use core::panic;
 use std::{
+    collections::HashMap,
     sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant},
@@ -31,7 +32,7 @@ pub struct WidgetWindow {
     pub app_handle: tauri::AppHandle,
 
     /// List of open editor windows. List is managed by WindowStateManager.
-    pub editor_windows: Arc<Mutex<Vec<EditorWindow>>>,
+    pub editor_windows: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
 
     /// Identitfier of the currently focused editor window. Is None until the first window was focused.
     pub currently_focused_editor_window: Option<uuid::Uuid>,
@@ -57,7 +58,7 @@ pub struct WidgetWindow {
 impl WidgetWindow {
     pub fn new(
         app_handle: &tauri::AppHandle,
-        editor_windows: &Arc<Mutex<Vec<EditorWindow>>>,
+        editor_windows: &Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
     ) -> Self {
         // Create Tauri Window
         if create_window(&app_handle, AppWindow::Widget).is_err() {
@@ -143,15 +144,12 @@ pub fn temporary_hide_check_routine(
 pub fn show_widget_routine(
     app_handle: &tauri::AppHandle,
     widget: &WidgetWindow,
-    editor_windows: &Vec<EditorWindow>,
+    editor_windows: &HashMap<uuid::Uuid, EditorWindow>,
 ) {
     println!("{}", "show_widget_routine".to_string().blue());
     // Check if the widget position should be updated before showing it
     if let Some(focused_window_id) = widget.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows
-            .iter()
-            .find(|window| window.id == focused_window_id)
-        {
+        if let Some(editor_window) = editor_windows.get(&focused_window_id) {
             if let Some(mut widget_position) = editor_window.widget_position {
                 prevent_widget_position_off_screen(&app_handle, &mut widget_position);
 
@@ -167,10 +165,7 @@ pub fn show_widget_routine(
 
     // Recover ContentWindowState for this editor window
     if let Some(focused_window_id) = widget.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows
-            .iter()
-            .find(|window| window.id == focused_window_id)
-        {
+        if let Some(editor_window) = editor_windows.get(&focused_window_id) {
             match editor_window.content_window_state {
                 ContentWindowState::Active => {
                     let _ = content_window::open(&app_handle);
@@ -188,7 +183,7 @@ pub fn show_widget_routine(
 pub fn hide_widget_routine(
     _app_handle: &tauri::AppHandle,
     widget: &WidgetWindow,
-    _editor_windows: &mut Vec<EditorWindow>,
+    _editor_windows: &mut HashMap<uuid::Uuid, EditorWindow>,
 ) {
     close_window(&widget.app_handle, AppWindow::Widget)
 }
