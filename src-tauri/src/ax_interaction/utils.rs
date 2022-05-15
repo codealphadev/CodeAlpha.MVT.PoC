@@ -78,6 +78,22 @@ pub fn is_focused_uielement_of_app_xcode_editor_field(app_pid: pid_t) -> Result<
     }
 }
 
+pub fn is_focused_uielement_of_app_replit_editor_field(app_pid: pid_t) -> Result<bool, Error> {
+    todo!();
+    let focused_ui_element = focused_uielement_of_app(app_pid)?;
+    let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
+    let parent = focused_window.attribute(&AXAttribute::parent())?;
+    let title = parent.attribute(&AXAttribute::title())?;
+
+    let role = focused_ui_element.attribute(&AXAttribute::role())?;
+
+    if role == "AXTextArea" && title == EDITOR_NAME {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 /// Checks whether or not this application is a trusted accessibility client.
 pub fn application_is_trusted() -> bool {
     unsafe {
@@ -98,6 +114,11 @@ pub fn application_is_trusted_with_prompt() -> bool {
 
 #[derive(Debug, Clone)]
 pub struct XCodeObserverState {
+    pub app_handle: tauri::AppHandle,
+    pub window_list: Vec<(uuid::Uuid, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
+}
+
+pub struct ReplitObserverState {
     pub app_handle: tauri::AppHandle,
     pub window_list: Vec<(uuid::Uuid, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
 }
