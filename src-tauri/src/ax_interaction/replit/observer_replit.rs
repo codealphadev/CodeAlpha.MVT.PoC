@@ -13,10 +13,10 @@ use core_foundation::runloop::CFRunLoop;
 
 use super::callback_replit_notifications;
 use crate::ax_interaction::{
-    models::editor::EditorAppClosedMessage, AXEventReplit, XCodeObserverState,
+    models::editor::EditorAppClosedMessage, AXEventReplit, ReplitObserverState,
 };
 
-static EDITOR_XCODE_BUNDLE_ID: &str = "com.apple.dt.Replit";
+static CHROME_BUNDLE_ID: &str = "com.google.Chrome";
 static OBSERVER_REGISTRATION_DELAY_IN_MILLIS: u64 = 2000;
 
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
@@ -38,7 +38,7 @@ pub fn register_observer_replit(
     known_replit_app: &mut Option<AXUIElement>,
     app_handle: &tauri::AppHandle,
 ) -> Result<(), Error> {
-    // Register XCode observer
+    // Register Replit observer
     // =======================
     // Happens only once when replit is launched; is retriggered if replit is restarted
     let registration_required_res = is_new_replit_observer_registration_required(known_replit_app);
@@ -49,9 +49,9 @@ pub fn register_observer_replit(
             }
         }
     } else {
-        // Case: XCode is not running
+        // Case: Replit is not running
         if let Some(ref replit_app) = known_replit_app {
-            // Case: XCode was just closed
+            // Case: Replit was just closed
 
             AXEventReplit::EditorAppClosed(EditorAppClosedMessage {
                 editor_name: "Replit".to_string(),
@@ -65,21 +65,21 @@ pub fn register_observer_replit(
     Ok(())
 }
 
-// Determine if a new observer is required. This might be the case if XCode was restarted. We detect this by
-// checking if the XCode's AXUIElement has changed.
+// Determine if a new observer is required. This might be the case if Replit was restarted. We detect this by
+// checking if the Replit's AXUIElement has changed.
 fn is_new_replit_observer_registration_required(
     known_replit_app: &mut Option<AXUIElement>,
 ) -> Result<bool, Error> {
-    let replit_ui_element = AXUIElement::application_with_bundle(EDITOR_XCODE_BUNDLE_ID)?;
+    let replit_ui_element = AXUIElement::application_with_bundle(CHROME_BUNDLE_ID)?;
 
     if let Some(replit_app) = &known_replit_app {
-        // Case: XCode has a new AXUIElement, telling us it was restarted
+        // Case: Replit has a new AXUIElement, telling us it was restarted
         if replit_ui_element != *replit_app {
             *known_replit_app = Some(replit_ui_element);
             return Ok(true);
         }
     } else {
-        // Case: XCode was never started while the program was running; it's UI element is not known yet
+        // Case: Replit was never started while the program was running; it's UI element is not known yet
         *known_replit_app = Some(replit_ui_element);
         return Ok(true);
     }
@@ -115,7 +115,7 @@ fn create_observer_and_add_notifications(
                 let _ = replit_observer.add_notification(
                     notification,
                     &ui_element,
-                    XCodeObserverState {
+                    ReplitObserverState {
                         app_handle: app_handle_move_copy.clone(),
                         window_list: Vec::new(),
                     },
