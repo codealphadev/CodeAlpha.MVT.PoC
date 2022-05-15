@@ -5,11 +5,11 @@ use crate::ax_interaction::{
     AXEventReplit, ReplitObserverState,
 };
 
-/// Notify Tauri that XCode has been activated, which means focus has moved to XCode from a different application.
+/// Notify Tauri that Replit has been activated, which means focus has moved to Replit from a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
 pub fn notifiy_app_activated(
     app_element: &AXUIElement,
-    xcode_observer_state: &ReplitObserverState,
+    replit_observer_state: &ReplitObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
     assert_eq!(role.to_string(), "AXApplication");
@@ -25,16 +25,16 @@ pub fn notifiy_app_activated(
     let activation_event = AXEventReplit::EditorAppActivated(activation_msg);
 
     // Emit to rust listeners
-    activation_event.publish_to_tauri(&xcode_observer_state.app_handle);
+    activation_event.publish_to_tauri(&replit_observer_state.app_handle);
 
     Ok(())
 }
 
-/// Notify Tauri that XCode has been deactivated, which means focus has moved away from XCode to a different application.
+/// Notify Tauri that Replit has been deactivated, which means focus has moved away from Replit to a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
 pub fn notifiy_app_deactivated(
     app_element: &AXUIElement,
-    xcode_observer_state: &ReplitObserverState,
+    replit_observer_state: &ReplitObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
     assert_eq!(role.to_string(), "AXApplication");
@@ -50,7 +50,7 @@ pub fn notifiy_app_deactivated(
     let deactivation_event = AXEventReplit::EditorAppDeactivated(deactivation_msg);
 
     // Emit to rust listeners
-    deactivation_event.publish_to_tauri(&xcode_observer_state.app_handle);
+    deactivation_event.publish_to_tauri(&replit_observer_state.app_handle);
 
     Ok(())
 }
