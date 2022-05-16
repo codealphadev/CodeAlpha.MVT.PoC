@@ -1,3 +1,5 @@
+use std::thread;
+
 use cocoa::{appkit::NSWindowOrderingMode, base::id};
 use objc::{msg_send, sel, sel_impl};
 use tauri::{Error, Manager};
@@ -37,6 +39,45 @@ fn reposition(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     let widget_size = get_size(&app_handle, AppWindow::Widget)?;
     let content_position = get_position(&app_handle, AppWindow::Content)?;
     let content_size = get_size(&app_handle, AppWindow::Content)?;
+
+    let mut new_content_pos = tauri::LogicalPosition {
+        x: widget_position.x + (widget_size.width - content_size.width) + POSITIONING_OFFSET_X,
+        y: widget_position.y - content_size.height - POSITIONING_OFFSET_Y,
+    };
+
+    // Check if content window orientation should be flipped in case it would go out of the left side of the screen
+    let screen = current_monitor_of_window(&app_handle, AppWindow::Widget).unwrap();
+    let screen_position = screen.position().to_logical::<f64>(screen.scale_factor());
+
+    let mut bubble_orientation_right = true;
+    if screen_position.x > new_content_pos.x {
+        new_content_pos.x = widget_position.x - POSITIONING_OFFSET_X;
+        bubble_orientation_right = false;
+    }
+
+    // Emit event to content window to update its orientation
+    app_handle.emit_to(
+        &AppWindow::Content.to_string(),
+        "evt-content-window-orientation",
+        ContentWindowOrientationEvent {
+            orientation_right: bubble_orientation_right,
+        },
+    )?;
+
+    if content_position != new_content_pos {
+        set_position(&app_handle, AppWindow::Content, &new_content_pos)
+    } else {
+        Ok(())
+    }
+}
+
+fn reposition_with_known_content_size(
+    app_handle: &tauri::AppHandle,
+    content_size: &tauri::LogicalSize<f64>,
+) -> Result<(), Error> {
+    let widget_position = get_position(&app_handle, AppWindow::Widget)?;
+    let widget_size = get_size(&app_handle, AppWindow::Widget)?;
+    let content_position = get_position(&app_handle, AppWindow::Content)?;
 
     let mut new_content_pos = tauri::LogicalPosition {
         x: widget_position.x + (widget_size.width - content_size.width) + POSITIONING_OFFSET_X,
@@ -130,13 +171,13 @@ pub fn is_open(app_handle: &tauri::AppHandle) -> Result<bool, Error> {
 
 #[tauri::command]
 pub fn cmd_resize_content_window(app_handle: tauri::AppHandle, size_x: u32, size_y: u32) {
-    let _ = resize(
-        &app_handle,
-        &tauri::LogicalSize {
-            width: size_x as f64,
-            height: size_y as f64,
-        },
-    );
+    let updated_content_size = tauri::LogicalSize {
+        width: size_x as f64,
+        height: size_y as f64,
+    };
+
+    let _ = reposition_with_known_content_size(&app_handle, &updated_content_size);
+    let _ = resize(&app_handle, &updated_content_size);
 }
 
 #[tauri::command]
