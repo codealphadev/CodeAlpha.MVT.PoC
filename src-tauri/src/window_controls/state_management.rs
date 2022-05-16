@@ -10,7 +10,7 @@ use crate::ax_interaction::{
     AXEventReplit, AXEventXcode, AX_EVENT_REPLIT_CHANNEL, AX_EVENT_XCODE_CHANNEL,
 };
 
-use super::{editor_window::EditorWindow, WidgetWindow};
+use super::{actions::open_window, editor_window::EditorWindow, WidgetWindow};
 
 #[allow(dead_code)]
 pub struct WindowStateManager {
@@ -29,6 +29,7 @@ impl WindowStateManager {
     ) -> Self {
         // Register listener for xcode events to create / remove editor
         let editor_windows_move_copy = editor_windows.clone();
+        let handle_move_copy = app_handle.clone();
         app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
             let axevent_xcode: AXEventXcode =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
@@ -43,6 +44,10 @@ impl WindowStateManager {
                 AXEventXcode::EditorAppClosed(_) => {
                     let mut editors_locked = editor_windows_move_copy.lock().unwrap();
                     *editors_locked = HashMap::new();
+                }
+                AXEventXcode::EditorAppCodeSelected(msg) => {
+                    handle_move_copy.emit_all("evt-repair-opened", msg).unwrap();
+                    open_window(&handle_move_copy, super::AppWindow::Repair);
                 }
                 _ => {}
             }

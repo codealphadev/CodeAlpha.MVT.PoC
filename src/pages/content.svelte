@@ -11,8 +11,6 @@
 	import Tutorial from '../components/content/tutorial.svelte';
 	import { fly } from 'svelte/transition';
 
-	appWindow.setAlwaysOnTop(true);
-
 	// Logic to always resize the content window to the size of the HTML
 	afterUpdate(() => {
 		setTimeout(async () => {
