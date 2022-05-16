@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use super::models::editor::{
-    EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
-    EditorUIElementFocusedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
-    EditorWindowMovedMessage, EditorWindowResizedMessage,
+    EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
+    EditorAppDeactivatedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
+    EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
 };
 
 pub static AX_EVENT_XCODE_CHANNEL: &str = "AXEventXcode";
@@ -22,6 +22,7 @@ pub enum AXEventXcode {
     EditorAppActivated(EditorAppActivatedMessage),
     EditorAppDeactivated(EditorAppDeactivatedMessage),
     EditorAppClosed(EditorAppClosedMessage),
+    EditorAppCodeSelected(EditorAppCodeSelectedMessage),
     None,
 }
 
@@ -36,6 +37,7 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorAppActivated(_) => write!(f, "EditorAppActivated"),
             AXEventXcode::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
             AXEventXcode::EditorAppClosed(_) => write!(f, "EditorClosed"),
+            AXEventXcode::EditorAppCodeSelected(_) => write!(f, "EditorAppCodeSelected"),
             AXEventXcode::None => write!(f, "None"),
         }
     }

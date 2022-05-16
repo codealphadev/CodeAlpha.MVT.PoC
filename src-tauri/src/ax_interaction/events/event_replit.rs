@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use super::models::editor::{
-    EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
-    EditorUIElementFocusedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
-    EditorWindowMovedMessage, EditorWindowResizedMessage,
+    EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
+    EditorAppDeactivatedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
+    EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
 };
 
 pub static AX_EVENT_REPLIT_CHANNEL: &str = "AXEventReplit";
@@ -22,6 +22,7 @@ pub enum AXEventReplit {
     EditorAppActivated(EditorAppActivatedMessage),
     EditorAppDeactivated(EditorAppDeactivatedMessage),
     EditorAppClosed(EditorAppClosedMessage),
+    EditorAppCodeSelected(EditorAppCodeSelectedMessage),
     None,
 }
 
@@ -36,6 +37,7 @@ impl fmt::Display for AXEventReplit {
             AXEventReplit::EditorAppActivated(_) => write!(f, "EditorAppActivated"),
             AXEventReplit::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
             AXEventReplit::EditorAppClosed(_) => write!(f, "EditorClosed"),
+            AXEventReplit::EditorAppCodeSelected(_) => write!(f, "EditorAppCodeSelected"),
             AXEventReplit::None => write!(f, "None"),
         }
     }
