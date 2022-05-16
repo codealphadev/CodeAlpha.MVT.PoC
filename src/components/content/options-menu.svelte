@@ -10,6 +10,12 @@
 	$: openDebug = () => {
 		invoke('cmd_toggle_window', { windowLabel: 'Analytics' });
 	};
+
+	export let componentToShow = 0;
+
+	$: setComponentToShowSearchAndReplace = () => {
+		componentToShow = 4;
+	};
 </script>
 
 <Menu as="div" class="relative">
@@ -43,6 +49,15 @@
 						on:click={openSettings}
 						type="button"
 						class="block px-4 py-2 text-sm text-gray-700">Settings</button
+					>
+				</MenuItem>
+			</div>
+			<div class="hover:bg-gray-100">
+				<MenuItem let:active>
+					<button
+						on:click={setComponentToShowSearchAndReplace}
+						type="button"
+						class="block px-4 py-2 text-sm text-gray-700">Test: Search & Replace</button
 					>
 				</MenuItem>
 			</div>

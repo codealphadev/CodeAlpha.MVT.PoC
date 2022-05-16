@@ -1,5 +1,3 @@
-use std::thread;
-
 use cocoa::{appkit::NSWindowOrderingMode, base::id};
 use objc::{msg_send, sel, sel_impl};
 use tauri::{Error, Manager};
