@@ -47,7 +47,7 @@ pub fn notify_window_resized(
             textarea_size: None,
         };
 
-        if "AXScrollBar" == ui_element.attribute(&AXAttribute::role())? {
+        if "AXTextArea" == ui_element.attribute(&AXAttribute::role())? {
             // Determine editor textarea dimensions
             // For now at least, ignore errors and still continue with control flow.
             let _ = derive_resize_parameters_from_scrollbar(&mut resize_msg, ui_element);
@@ -91,10 +91,6 @@ fn derive_resize_parameters_from_scrollbar(
     resize_msg: &mut EditorWindowResizedMessage,
     scrollbar_element: &AXUIElement,
 ) -> Result<(), Error> {
-    let role = scrollbar_element.attribute(&AXAttribute::role())?;
-
-    assert_eq!(role.to_string(), "AXScrollBar");
-
     let (position, size) = derive_textarea_dimensions(scrollbar_element)?;
 
     // Update EditorWindowResizedMessage
@@ -116,43 +112,14 @@ pub fn derive_textarea_dimensions(
     let scrollarea_origin = scrollarea_pos_ax_value.get_value::<CGPoint>()?;
     let scrollarea_size = scrollarea_size_ax_value.get_value::<CGSize>()?;
 
-    // Get all children
-    let mut updated_width = scrollarea_size.width;
-    let mut updated_origin_x = scrollarea_origin.x;
-    let children_elements = scrollarea_element.attribute(&AXAttribute::children())?;
-
-    for child in &children_elements {
-        if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
-            let identifier_list: [&str; 3] = [
-                "Source Editor Change Gutter",
-                "Source Editor Gutter",
-                "Source Editor Minimap",
-            ];
-
-            if identifier_list.contains(&identifier.to_string().as_str()) {
-                updated_width -= child
-                    .attribute(&AXAttribute::size())?
-                    .get_value::<CGSize>()?
-                    .width;
-
-                if identifier.to_string() != "Source Editor Minimap" {
-                    updated_origin_x += child
-                        .attribute(&AXAttribute::size())?
-                        .get_value::<CGSize>()?
-                        .width;
-                }
-            }
-        }
-    }
-
     // Update EditorWindowResizedMessage
     let position = tauri::LogicalPosition {
-        x: updated_origin_x,
+        x: scrollarea_origin.x,
         y: scrollarea_origin.y,
     };
 
     let size = tauri::LogicalSize {
-        width: updated_width,
+        width: scrollarea_size.width,
         height: scrollarea_size.height,
     };
 

@@ -6,8 +6,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use colored::Colorize;
-
 use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
     window_controls::{
@@ -20,12 +18,12 @@ use crate::{
 
 use super::{
     dimension_calculations::prevent_widget_position_off_screen,
-    listeners::{register_listener_app, register_listener_xcode},
+    listeners::{register_listener_app, register_listener_replit, register_listener_xcode},
     prevent_misalignement_of_content_and_widget,
 };
 
 pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
-pub static XCODE_EDITOR_NAME: &str = "Xcode";
+pub static SUPPORTED_EDITORS: &[&str] = &["Xcode", "Replit"];
 
 #[derive(Clone, Debug)]
 pub struct WidgetWindow {
@@ -45,8 +43,8 @@ pub struct WidgetWindow {
     /// only 'temporary_hide_until_instant' will be updated.
     pub temporary_hide_check_active: bool,
 
-    /// Boolean saying if the currently focused application is Xcode.
-    pub is_xcode_focused: bool,
+    /// Boolean saying if the currently focused application is a supported editor.
+    pub is_editor_focused: bool,
 
     /// Boolean saying if the currently focused application is our app.
     pub is_app_focused: bool,
@@ -77,7 +75,7 @@ impl WidgetWindow {
             temporary_hide_until_instant: Instant::now(),
             temporary_hide_check_active: false,
             currently_focused_editor_window: None,
-            is_xcode_focused: false,
+            is_editor_focused: false,
             is_app_focused: false,
             currently_focused_app_window: None,
         }
@@ -92,6 +90,9 @@ impl WidgetWindow {
 
         // Register listener for xcode events relevant for displaying/hiding and positioning the widget
         register_listener_xcode(app_handle, &widget_window);
+
+        // Register listener for replit events relevant for displaying/hiding and positioning the widget
+        register_listener_replit(app_handle, &widget_window);
     }
 }
 
@@ -146,7 +147,6 @@ pub fn show_widget_routine(
     widget: &WidgetWindow,
     editor_windows: &HashMap<uuid::Uuid, EditorWindow>,
 ) {
-    println!("{}", "show_widget_routine".to_string().blue());
     // Check if the widget position should be updated before showing it
     if let Some(focused_window_id) = widget.currently_focused_editor_window {
         if let Some(editor_window) = editor_windows.get(&focused_window_id) {

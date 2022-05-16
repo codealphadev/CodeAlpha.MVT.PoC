@@ -2,13 +2,13 @@ use std::thread;
 
 use accessibility_sys::{
     kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
-    kAXApplicationHiddenNotification, kAXApplicationShownNotification,
+    kAXApplicationHiddenNotification, kAXApplicationShownNotification, kAXErrorNoValue,
     kAXFocusedUIElementChangedNotification, kAXMainWindowChangedNotification,
     kAXValueChangedNotification, kAXWindowCreatedNotification, kAXWindowDeminiaturizedNotification,
     kAXWindowMiniaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification,
 };
 
-use accessibility::{AXObserver, AXUIElement, Error};
+use accessibility::{AXAttribute, AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
 
 use super::callback_replit_notifications;
@@ -16,9 +16,10 @@ use crate::ax_interaction::{
     models::editor::EditorAppClosedMessage, AXEventReplit, ReplitObserverState,
 };
 
-static CHROME_BUNDLE_ID: &str = "com.google.Chrome";
-static OBSERVER_REGISTRATION_DELAY_IN_MILLIS: u64 = 2000;
+static SUPPORTED_BROWSERS: &[&str] = &["com.google.Chrome", "com.apple.Safari"];
+static SUPPORTED_FILETYPES: &[&str] = &["swift", "ts", "js", "txt"];
 
+static OBSERVER_REGISTRATION_DELAY_IN_MILLIS: u64 = 2000;
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXApplicationActivatedNotification,
     kAXApplicationDeactivatedNotification,
@@ -35,56 +36,91 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
 ];
 
 pub fn register_observer_replit(
-    known_replit_app: &mut Option<AXUIElement>,
+    known_replit_editors: &mut Vec<(String, AXUIElement)>,
     app_handle: &tauri::AppHandle,
-) -> Result<(), Error> {
-    // Register Replit observer
-    // =======================
-    // Happens only once when replit is launched; is retriggered if replit is restarted
-    let registration_required_res = is_new_replit_observer_registration_required(known_replit_app);
-    if let Ok(registration_required) = registration_required_res {
-        if registration_required {
-            if let Some(ref replit_app) = known_replit_app {
-                create_observer_and_add_notifications(replit_app, &app_handle)?;
+) {
+    for browser in SUPPORTED_BROWSERS {
+        if let Ok(new_editors) = new_replit_editors(known_replit_editors, browser) {
+            for replit_ui_element in new_editors {
+                let _ = create_observer_and_add_notifications(&replit_ui_element, &app_handle);
             }
         }
-    } else {
-        // Case: Replit is not running
-        if let Some(ref replit_app) = known_replit_app {
-            // Case: Replit was just closed
+    }
 
-            AXEventReplit::EditorAppClosed(EditorAppClosedMessage {
-                editor_name: "Replit".to_string(),
-                pid: replit_app.pid().unwrap().try_into().unwrap(),
-            })
-            .publish_to_tauri(&app_handle);
-
-            *known_replit_app = None;
+    // Determine which of the supported browsers are not currently open
+    let mut closed_browsers: Vec<String> = Vec::new();
+    for browser in SUPPORTED_BROWSERS {
+        if let Err(_) = AXUIElement::application_with_bundle(browser) {
+            closed_browsers.push(browser.to_string());
         }
     }
-    Ok(())
+
+    for browser in closed_browsers {
+        // Remove all editors from browsers which are closed
+        known_replit_editors.retain(|editor| {
+            if editor.0 == browser {
+                AXEventReplit::EditorAppClosed(EditorAppClosedMessage {
+                    editor_name: "Replit".to_string(),
+                    pid: editor.1.pid().unwrap().try_into().unwrap(),
+                    browser: Some(editor.0.clone()),
+                })
+                .publish_to_tauri(&app_handle);
+                return false;
+            }
+            return true;
+        });
+    }
+
+    // println!("{:?}", known_replit_editors);
 }
 
-// Determine if a new observer is required. This might be the case if Replit was restarted. We detect this by
-// checking if the Replit's AXUIElement has changed.
-fn is_new_replit_observer_registration_required(
-    known_replit_app: &mut Option<AXUIElement>,
-) -> Result<bool, Error> {
-    let replit_ui_element = AXUIElement::application_with_bundle(CHROME_BUNDLE_ID)?;
+fn new_replit_editors(
+    known_replit_editors: &mut Vec<(String, AXUIElement)>,
+    browser_name: &str,
+) -> Result<Vec<AXUIElement>, Error> {
+    let browser_ui_element = AXUIElement::application_with_bundle(browser_name)?;
+    let browser_windows = browser_ui_element.attribute(&AXAttribute::children())?;
 
-    if let Some(replit_app) = &known_replit_app {
-        // Case: Replit has a new AXUIElement, telling us it was restarted
-        if replit_ui_element != *replit_app {
-            *known_replit_app = Some(replit_ui_element);
-            return Ok(true);
+    let mut new_replit_editors: Vec<AXUIElement> = Vec::new();
+    for window in &browser_windows {
+        if let Ok(window_title) = window.attribute(&AXAttribute::title()) {
+            // Check if the currently activated tab in the editor is a Replit tab
+            if !window_title.to_string().contains("Replit") {
+                continue;
+            }
+
+            // check if the Replit tab shows an editor window - indicated by a file extension in the tab's title
+            let mut replit_window_has_editor_open = false;
+            for file_suffix in SUPPORTED_FILETYPES {
+                let match_str = format!(".{}", file_suffix);
+
+                if window_title.to_string().contains(&match_str) {
+                    replit_window_has_editor_open = true;
+                }
+            }
+            if !replit_window_has_editor_open {
+                continue;
+            }
+
+            // Check if the Replit window is already known
+            let valid_replit_editor_window_already_known =
+                (&known_replit_editors).iter().find(|elem| {
+                    // if the Replit window is already known, we don't need to create a new observer
+                    *window == elem.1
+                });
+
+            if valid_replit_editor_window_already_known.is_some() {
+                continue;
+            } else {
+            }
+
+            // If we reach this point, we have found a new valid Replit editor window
+            known_replit_editors.push((browser_name.to_string(), window.clone()));
+            new_replit_editors.push(window.clone());
         }
-    } else {
-        // Case: Replit was never started while the program was running; it's UI element is not known yet
-        *known_replit_app = Some(replit_ui_element);
-        return Ok(true);
     }
 
-    Ok(false)
+    Ok(new_replit_editors)
 }
 
 // This function is called to create a new observer and add the notifications to it.
@@ -94,7 +130,11 @@ fn create_observer_and_add_notifications(
     app_handle: &tauri::AppHandle,
 ) -> Result<(), Error> {
     let pid = replit_ui_element.pid().unwrap();
+    let window_title = replit_ui_element
+        .attribute(&AXAttribute::title())?
+        .to_string();
     let app_handle_move_copy = app_handle.clone();
+
     thread::spawn(move || {
         // 0. Delay observer registration on macOS, because there is a good chance no
         // notifications will be received despite seemingly successful observer registration
@@ -104,28 +144,48 @@ fn create_observer_and_add_notifications(
 
         // 1. Create AXObserver
         let replit_observer = AXObserver::new(pid, callback_replit_notifications);
-        let ui_element = AXUIElement::application(pid);
 
-        if let Ok(mut replit_observer) = replit_observer {
-            // 2. Start AXObserver before adding notifications
-            replit_observer.start();
+        // 2. Find the Replit window's UIElement --> we can't move AXUIElement to different thread
+        //    because Send is not implemented.
+        if let Ok(_) = ui_element_window_by_title(pid, &window_title) {
+            println!("Found Replit window: {}", window_title);
+            let ui_element = AXUIElement::application(pid); // <- TODO
+            if let Ok(mut replit_observer) = replit_observer {
+                // 2. Start AXObserver before adding notifications
+                replit_observer.start();
 
-            // 3. Add notifications
-            for notification in OBSERVER_NOTIFICATIONS.iter() {
-                let _ = replit_observer.add_notification(
-                    notification,
-                    &ui_element,
-                    ReplitObserverState {
-                        app_handle: app_handle_move_copy.clone(),
-                        window_list: Vec::new(),
-                    },
-                );
+                // 3. Add notifications
+                for notification in OBSERVER_NOTIFICATIONS.iter() {
+                    let _ = replit_observer.add_notification(
+                        notification,
+                        &ui_element,
+                        ReplitObserverState {
+                            app_handle: app_handle_move_copy.clone(),
+                            window_list: Vec::new(),
+                        },
+                    );
+                }
+
+                // 4. Kick of RunLoop on this thread
+                CFRunLoop::run_current();
             }
-
-            // 4. Kick of RunLoop on this thread
-            CFRunLoop::run_current();
         }
     });
 
     Ok(())
+}
+
+fn ui_element_window_by_title(pid: i32, title: &str) -> Result<AXUIElement, Error> {
+    let app_ui_element = AXUIElement::application(pid);
+    let app_windows = app_ui_element.attribute(&AXAttribute::children())?;
+
+    for window in &app_windows {
+        if let Ok(window_title) = window.attribute(&AXAttribute::title()) {
+            if window_title.to_string() == title {
+                return Ok(window.clone());
+            }
+        }
+    }
+
+    Err(Error::Ax(kAXErrorNoValue))
 }

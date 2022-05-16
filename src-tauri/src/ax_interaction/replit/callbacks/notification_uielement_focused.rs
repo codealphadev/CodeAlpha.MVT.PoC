@@ -40,8 +40,6 @@ pub fn notify_uielement_focused(
             uielement_focused_msg.focused_ui_element = FocusedUIElement::Textarea;
             uielement_focused_msg.textarea_position = Some(position);
             uielement_focused_msg.textarea_size = Some(size);
-
-            parse_text_properties(&uielement_element);
         }
 
         AXEventReplit::EditorUIElementFocused(uielement_focused_msg)
@@ -49,18 +47,4 @@ pub fn notify_uielement_focused(
     }
 
     Ok(())
-}
-
-fn parse_text_properties(editor_content_uielement: &AXUIElement) {
-    println!(
-        "{:?}",
-        editor_content_uielement.attribute(&AXAttribute::size())
-    );
-    println!(
-        "{:?}",
-        editor_content_uielement.attribute(&AXAttribute::position())
-    );
-    // println!("{:?}", editor_content_uielement.attribute(&AXAttribute::));
-    // println!("{:?}", editor_content_uielement.attribute(&AXAttribute::));
-    // println!("{:?}", editor_content_uielement.attribute(&AXAttribute::));
 }
