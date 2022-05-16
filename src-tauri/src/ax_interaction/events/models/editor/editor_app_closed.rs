@@ -4,4 +4,5 @@ use serde::{Deserialize, Serialize};
 pub struct EditorAppClosedMessage {
     pub editor_name: String,
     pub pid: u32,
+    pub browser: Option<String>,
 }

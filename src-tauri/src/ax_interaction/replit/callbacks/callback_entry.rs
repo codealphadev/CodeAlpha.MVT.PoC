@@ -48,7 +48,7 @@ pub unsafe extern "C" fn callback_replit_notifications(
         kAXValueChangedNotification => {
             // Check, weather the ui element changed is the scroll bar of text area
             if let Ok(role) = element.attribute(&AXAttribute::role()) {
-                if role.to_string() == "AXScrollBar" {
+                if role.to_string() == "AXTextArea" {
                     let _ = notify_window_resized(&element, &mut (*context));
                 }
             }

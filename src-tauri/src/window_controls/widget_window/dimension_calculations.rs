@@ -1,4 +1,3 @@
-use colored::Colorize;
 use tauri::{LogicalPosition, LogicalSize};
 
 use crate::window_controls::{
@@ -15,7 +14,6 @@ pub fn prevent_widget_position_off_screen(
     app_handle: &tauri::AppHandle,
     widget_position: &mut LogicalPosition<f64>,
 ) {
-    println!("{}", "prevent_widget_position_off_screen".to_string().red());
     let widget_size = LogicalSize {
         width: default_properties::size(&AppWindow::Widget).0,
         height: default_properties::size(&AppWindow::Widget).1,
@@ -35,7 +33,6 @@ pub fn calc_off_screen_distance(
     window_position: &LogicalPosition<f64>,
     window_size: &LogicalSize<f64>,
 ) -> Option<LogicalSize<f64>> {
-    println!("{}", "calc_off_screen_distance".to_string().red());
     if let Some(monitor) = current_monitor_of_window(&app_handle, AppWindow::Widget) {
         // 0. Get Screen dimensions
         // TODO: figure out the correct screen
@@ -77,12 +74,6 @@ pub fn prevent_misalignement_of_content_and_widget(
     app_handle: &tauri::AppHandle,
     widget_position: &mut LogicalPosition<f64>,
 ) {
-    println!(
-        "{}",
-        "prevent_misalignement_of_content_and_widget"
-            .to_string()
-            .red()
-    );
     if let Ok(content_size) = get_size(&app_handle, AppWindow::Content) {
         // TODO: select the correct screen
         if let Some(monitor) = current_monitor_of_window(&app_handle, AppWindow::Widget) {

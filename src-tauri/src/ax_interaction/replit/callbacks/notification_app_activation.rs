@@ -14,11 +14,10 @@ pub fn notifiy_app_activated(
     let role = app_element.attribute(&AXAttribute::role())?;
     assert_eq!(role.to_string(), "AXApplication");
 
-    let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
 
     let activation_msg = EditorAppActivatedMessage {
-        editor_name: name.to_string(),
+        editor_name: "Replit".to_string(),
         pid: pid.try_into().unwrap(),
     };
 
@@ -39,11 +38,10 @@ pub fn notifiy_app_deactivated(
     let role = app_element.attribute(&AXAttribute::role())?;
     assert_eq!(role.to_string(), "AXApplication");
 
-    let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
 
     let deactivation_msg = EditorAppDeactivatedMessage {
-        editor_name: name.to_string(),
+        editor_name: "Replit".to_string(),
         pid: pid.try_into().unwrap(),
     };
 

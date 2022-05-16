@@ -65,29 +65,13 @@ pub fn focused_uielement_of_app(app_pid: pid_t) -> Result<AXUIElement, Error> {
 
 pub fn is_focused_uielement_of_app_xcode_editor_field(app_pid: pid_t) -> Result<bool, Error> {
     let focused_ui_element = focused_uielement_of_app(app_pid)?;
-    let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
-    let parent = focused_window.attribute(&AXAttribute::parent())?;
-    let title = parent.attribute(&AXAttribute::title())?;
+    // let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
+    // let parent = focused_window.attribute(&AXAttribute::parent())?;
+    // let title = parent.attribute(&AXAttribute::title())?;
 
     let role = focused_ui_element.attribute(&AXAttribute::role())?;
 
-    if role == "AXTextArea" && title == EDITOR_NAME {
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}
-
-pub fn is_focused_uielement_of_app_replit_editor_field(app_pid: pid_t) -> Result<bool, Error> {
-    todo!();
-    let focused_ui_element = focused_uielement_of_app(app_pid)?;
-    let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
-    let parent = focused_window.attribute(&AXAttribute::parent())?;
-    let title = parent.attribute(&AXAttribute::title())?;
-
-    let role = focused_ui_element.attribute(&AXAttribute::role())?;
-
-    if role == "AXTextArea" && title == EDITOR_NAME {
+    if role == "AXTextArea" {
         Ok(true)
     } else {
         Ok(false)

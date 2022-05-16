@@ -1,10 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use colored::Colorize;
 use tauri::Manager;
 
 use crate::{
-    ax_interaction::{AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_XCODE_CHANNEL},
+    ax_interaction::{
+        AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_REPLIT_CHANNEL,
+        AX_EVENT_XCODE_CHANNEL,
+    },
     window_controls::AppWindow,
 };
 
@@ -54,6 +56,43 @@ pub fn register_listener_xcode(
     });
 }
 
+pub fn register_listener_replit(
+    app_handle: &tauri::AppHandle,
+    widget_props: &Arc<Mutex<WidgetWindow>>,
+) {
+    let widget_props_move_copy = (widget_props).clone();
+    let app_handle_move_copy = app_handle.clone();
+    app_handle.listen_global(AX_EVENT_REPLIT_CHANNEL, move |msg| {
+        let axevent_replit: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
+
+        match axevent_replit {
+            AXEventXcode::EditorWindowResized(msg) => {
+                on_resize_editor_window(&app_handle_move_copy, &widget_props_move_copy, &msg);
+            }
+            AXEventXcode::EditorWindowMoved(msg) => {
+                on_move_editor_window(&app_handle_move_copy, &widget_props_move_copy, &msg);
+            }
+            AXEventXcode::EditorUIElementFocused(msg) => {
+                on_editor_ui_element_focus_change(
+                    &app_handle_move_copy,
+                    &widget_props_move_copy,
+                    &msg,
+                );
+            }
+            AXEventXcode::EditorAppActivated(msg) => {
+                on_activate_editor_app(&widget_props_move_copy, &msg)
+            }
+            AXEventXcode::EditorAppDeactivated(msg) => {
+                on_deactivate_editor_app(&widget_props_move_copy, &msg)
+            }
+            AXEventXcode::EditorAppClosed(msg) => {
+                on_close_editor_app(&widget_props_move_copy, &msg)
+            }
+            _ => {}
+        }
+    });
+}
+
 pub fn register_listener_app(
     app_handle: &tauri::AppHandle,
     widget_props: &Arc<Mutex<WidgetWindow>>,
@@ -61,11 +100,6 @@ pub fn register_listener_app(
     let widget_props_move_copy = (widget_props).clone();
     app_handle.listen_global(AX_EVENT_APP_CHANNEL, move |msg| {
         let axevent_app: AXEventApp = serde_json::from_str(&msg.payload().unwrap()).unwrap();
-
-        println!(
-            "AX_EVENT_APP_CHANNEL: {}",
-            format!("{:?}", axevent_app).yellow()
-        );
 
         match &axevent_app {
             AXEventApp::AppWindowFocused(msg) => {

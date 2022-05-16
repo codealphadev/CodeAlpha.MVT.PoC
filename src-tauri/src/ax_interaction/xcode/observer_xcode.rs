@@ -56,6 +56,7 @@ pub fn register_observer_xcode(
             AXEventXcode::EditorAppClosed(EditorAppClosedMessage {
                 editor_name: "Xcode".to_string(),
                 pid: xcode_app.pid().unwrap().try_into().unwrap(),
+                browser: None,
             })
             .publish_to_tauri(&app_handle);
 
