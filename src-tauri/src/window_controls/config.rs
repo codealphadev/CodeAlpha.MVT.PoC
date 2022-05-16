@@ -7,6 +7,7 @@ pub enum AppWindow {
     Analytics,
     Widget,
     Content,
+    Repair,
     None,
 }
 
@@ -37,7 +38,9 @@ pub mod default_properties {
             AppWindow::Content => {
                 format!("{}{}", r"\", AppWindow::Content.to_string().to_lowercase())
             }
-
+            AppWindow::Repair => {
+                format!("{}{}", r"\", AppWindow::Repair.to_string().to_lowercase())
+            }
             AppWindow::None => "".to_string(),
         }
     }
@@ -51,6 +54,7 @@ pub mod default_properties {
             AppWindow::Analytics => "CodeAlpha - Analytics".to_string(),
             AppWindow::Widget => "CodeAlpha - Widget".to_string(),
             AppWindow::Content => "CodeAlpha - Guide".to_string(),
+            AppWindow::Repair => "CodeAlpha - Explanation".to_string(),
             AppWindow::None => "".to_string(),
         }
     }
@@ -61,6 +65,7 @@ pub mod default_properties {
             AppWindow::Analytics => (1280.0, 786.0),
             AppWindow::Widget => (48.0, 48.0),
             AppWindow::Content => (322.0, 398.0),
+            AppWindow::Repair => (513.0, 500.0),
             AppWindow::None => (0.0, 0.0),
         }
     }
@@ -71,6 +76,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
+            AppWindow::Repair => false,
             AppWindow::None => false,
         }
     }
@@ -80,6 +86,7 @@ pub mod default_properties {
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
             AppWindow::Content => true,
+            AppWindow::Repair => true,
             AppWindow::None => false,
         }
     }
@@ -90,6 +97,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
+            AppWindow::Repair => false,
             AppWindow::None => false,
         }
     }
@@ -100,6 +108,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
+            AppWindow::Repair => true,
             AppWindow::None => true,
         }
     }
@@ -110,6 +119,7 @@ pub mod default_properties {
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
             AppWindow::Content => true,
+            AppWindow::Repair => true,
             AppWindow::None => false,
         }
     }
@@ -120,6 +130,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => true,
             AppWindow::Content => true,
+            AppWindow::Repair => true,
             AppWindow::None => true,
         }
     }
