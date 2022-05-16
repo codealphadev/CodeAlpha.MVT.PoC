@@ -17,8 +17,10 @@ use core_foundation::{
 };
 
 use crate::ax_interaction::{
+    focused_uielement_of_app,
+    models::editor::EditorAppCodeSelectedMessage,
     xcode::callbacks::{notify_window_created, notify_window_destroyed},
-    XCodeObserverState,
+    AXEventXcode, XCodeObserverState,
 };
 
 use super::{
@@ -50,6 +52,29 @@ pub unsafe extern "C" fn callback_xcode_notifications(
             if let Ok(role) = element.attribute(&AXAttribute::role()) {
                 if role.to_string() == "AXScrollBar" {
                     let _ = notify_window_resized(&element, &mut (*context));
+                }
+            }
+
+            if let Ok(role) = element.attribute(&AXAttribute::role()) {
+                if role.to_string() == "AXStaticText" {
+                    if let Ok(pid) = element.pid() {
+                        if let Ok(text_area_ui_element) = focused_uielement_of_app(pid) {
+                            if let Ok(selected_text) =
+                                text_area_ui_element.attribute(&AXAttribute::selected_text())
+                            {
+                                let text_str = selected_text.to_string();
+
+                                if text_str.len() > 10 && text_str.len() < 15 {
+                                    let code_selected_msg = EditorAppCodeSelectedMessage {
+                                        code_selected: true,
+                                    };
+
+                                    AXEventXcode::EditorAppCodeSelected(code_selected_msg)
+                                        .publish_to_tauri(&(*context).app_handle);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
