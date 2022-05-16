@@ -17,9 +17,11 @@
 </script>
 
 <form class="space-y-3 ">
-	<div class="mt-1">
+	<div class="mt-1 mx-2">
 		<div>
-			<h3 class="text-lg leading-6 font-medium text-gray-900 outline-none">Search and Replace</h3>
+			<h3 class="pt-4 text-lg leading-6 font-medium text-gray-900 outline-none">
+				Search and Replace
+			</h3>
 			<p class="mt-1 text-base font-normal text-gray-500">
 				Type a character sequence and press “swap” to replace all instances in the currently focused
 				editor.
@@ -47,7 +49,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="pt-5">
+	<div class="pt-5 mx-2">
 		<button
 			type="button"
 			on:click={swapStrings}

@@ -2,6 +2,7 @@
 	import { Router, Route, Link } from 'svelte-navigator';
 	import Analytics from './pages/analytics.svelte';
 	import Content from './pages/content.svelte';
+	import Repair from './pages/repair.svelte';
 	import Settings from './pages/settings.svelte';
 	import Widget from './pages/widget.svelte';
 </script>
@@ -16,6 +17,10 @@
 
 	<Route path="settings">
 		<Settings />
+	</Route>
+
+	<Route path="repair">
+		<Repair />
 	</Route>
 
 	<Route path="analytics">

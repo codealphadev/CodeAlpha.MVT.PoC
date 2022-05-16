@@ -5,15 +5,15 @@
 		DialogOverlay,
 		DialogTitle,
 		TransitionChild,
-		Transition,
-	} from "@rgossiaux/svelte-headlessui";
-	import { CheckIcon } from "@rgossiaux/svelte-heroicons/outline";
+		Transition
+	} from '@rgossiaux/svelte-headlessui';
+	import { CheckIcon } from '@rgossiaux/svelte-heroicons/outline';
 
-	import type AXEvent from "../../models/AXEvent";
-	import { axEventTableStore } from "./AXEventsTableStore";
+	import type AXEvent from '../../models/AXEvent';
+	import { axEventTableStore } from './AXEventsTableStore';
 
-	import { HighlightSvelte } from "svelte-highlight";
-	import github from "svelte-highlight/src/styles/github";
+	import { HighlightSvelte } from 'svelte-highlight';
+	import github from 'svelte-highlight/src/styles/github';
 
 	const { inspectModal } = axEventTableStore;
 
@@ -44,9 +44,7 @@
 				leaveFrom="opacity-100"
 				leaveTo="opacity-0"
 			>
-				<DialogOverlay
-					class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-				/>
+				<DialogOverlay class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
 			</TransitionChild>
 
 			<TransitionChild
@@ -57,10 +55,7 @@
 				leaveFrom="opacity-100 translate-y-0 sm:scale-100"
 				leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 			>
-				<span
-					class="hidden sm:inline-block sm:align-middle sm:h-screen "
-					aria-hidden="true"
-				>
+				<span class="hidden sm:inline-block sm:align-middle sm:h-screen " aria-hidden="true">
 					&#8203;
 				</span>
 				<div
@@ -68,10 +63,7 @@
 				>
 					<div>
 						<div class="mt-3  sm:mt-5">
-							<DialogTitle
-								as="h3"
-								class="text-lg text-center leading-6 font-medium text-gray-900"
-							>
+							<DialogTitle as="h3" class="text-lg text-center leading-6 font-medium text-gray-900">
 								{event?.eventName}
 							</DialogTitle>
 							<div class="mt-5 text-sm text-left border rounded-lg px-3">
