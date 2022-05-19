@@ -14,7 +14,7 @@
 </script>
 
 <form class="space-y-3">
-	<div class="mx-2">
+	<div>
 		<h3 class="text-lg leading-6 font-medium text-gray-900 pt-4 outline-none">
 			Good morning Adrian!
 		</h3>

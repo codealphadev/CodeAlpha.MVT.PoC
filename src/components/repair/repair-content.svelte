@@ -5,8 +5,12 @@
 	let searchString: string;
 	const add_docstring = () => {
 		invoke('cmd_add_docstring', {
-			replaceStr: prepare_docstring()
+			replaceStr: docText
 		});
+
+		setTimeout(() => {
+			appWindow.hide();
+		}, 100);
 	};
 
 	const prepare_docstring = () => {
@@ -14,16 +18,19 @@
 		let docstring = '// ' + searchString.match(/.{1,70}/g).join('\n// ');
 		return docstring;
 	};
+
+	let docText =
+		"/**\r\n * \"If the node's value matches the value we're looking for, return the node. Otherwise, recursively\r\n * search the node's children.\"\r\n * \r\n * The function starts by checking if the node has children. If it doesn't, it returns null. If it\r\n * does, it checks if the node's value matches the value we're looking for. If it does, it returns the\r\n * node. If it doesn't, it loops through the node's children, calling the function recursively on each\r\n * child. If the function returns a node, it returns that node. Otherwise, it returns null\r\n * \n * @param {TreeNode | null} node - The node to start searching from.\r\n * @param {string} value - The value of the node you're looking for.\r\n * @returns The first node that matches the value.\r\n */";
 </script>
 
 <h2 class="text-md font-medium text-gray-900">Code block explanation:</h2>
 <p
-	class="mt-2 text-sm font- text-gray-500 border-l-2 pl-3 py-1 bg-slate-50"
+	class="mt-2 text-sm font- text-gray-500 border-l-4 border px-3 py-1 bg-gray-50"
 	bind:textContent={searchString}
 	contenteditable
 >
 	<!-- prettier-ignore -->
-	If an event requires the widget to be temporarily hidden, it triggers a routine that monitors when the widget should be shown again. In case another event occurs and this variable is set to true,	only 'temporary_hide_until_instant' will be updated.
+	If the node's value matches the value we're looking for, return the node. Otherwise, recursively search the node's children.
 	<!-- prettier-ignore -->
 </p>
 <h2 class="mt-2 text-md font-medium text-gray-900">Control flow steps:</h2>
@@ -35,31 +42,67 @@
 					<tbody class="divide-y divide-gray-200 bg-white">
 						<tr>
 							<td
-								class="whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
+								class="rounded-lg whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
 								>Step 1</td
 							>
-							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500">It should do this</td>
+							<td class=" rounded-lg whitespace-nowrap px-3 py-2 text-sm text-gray-500"
+								>The function starts by checking if the node has children.</td
+							>
 						</tr>
 						<tr>
 							<td
 								class="whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
 								>Step 2</td
 							>
-							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500">It should do this</td>
+							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500"
+								>If it doesn't, it returns null.</td
+							>
 						</tr>
 						<tr>
 							<td
 								class="whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
 								>Step 3</td
 							>
-							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500">It should do this</td>
+							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500"
+								>If it does, it checks if the node's value matches the value<br />we're looking for.
+							</td>
 						</tr>
 						<tr>
 							<td
 								class="whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
 								>Step 4</td
 							>
-							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500">It should do this</td>
+							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500"
+								>If it does, it returns the node.</td
+							>
+						</tr>
+						<tr>
+							<td
+								class="whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
+								>Step 5</td
+							>
+							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500"
+								>If it doesn't, it loops through the node's children, calling the<br />function
+								recursively on each child.</td
+							>
+						</tr>
+						<tr>
+							<td
+								class="whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
+								>Step 6</td
+							>
+							<td class="whitespace-nowrap px-3 py-2 text-sm text-gray-500"
+								>If the function returns a node, it returns that node.</td
+							>
+						</tr>
+						<tr>
+							<td
+								class="rounded-lg whitespace-nowrap py-2 pl-4 pr-3 w-16 text-sm font-medium text-gray-900 sm:pl-6"
+								>Step 7</td
+							>
+							<td class="rounded-lg whitespace-nowrap px-3 py-2 text-sm text-gray-500"
+								>Otherwise, it returns null.</td
+							>
 						</tr>
 					</tbody>
 				</table>

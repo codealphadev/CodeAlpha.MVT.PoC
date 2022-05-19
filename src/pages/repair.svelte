@@ -72,6 +72,13 @@
 			</div>
 		{:else}
 			<div in:fly>
+				<div as="div" class="relative">
+					<button as="div" on:click={close_window} class="absolute -top-3 -right-3 outline-none">
+						<button type="button" class="bg-white rounded-md text-gray-200 hover:text-gray-500 ">
+							<X class="h-5 w-5" />
+						</button>
+					</button>
+				</div>
 				<LoadingSpinner />
 			</div>
 		{/if}
