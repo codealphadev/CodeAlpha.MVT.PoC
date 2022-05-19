@@ -64,7 +64,7 @@ pub unsafe extern "C" fn callback_xcode_notifications(
                             {
                                 let text_str = selected_text.to_string();
 
-                                if text_str.len() > 10 && text_str.len() < 15 {
+                                if text_str.len() > 378 && text_str.len() < 400 {
                                     let code_selected_msg = EditorAppCodeSelectedMessage {
                                         code_selected: true,
                                     };
