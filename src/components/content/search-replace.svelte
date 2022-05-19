@@ -17,7 +17,7 @@
 </script>
 
 <form class="space-y-3 ">
-	<div class="mt-1 mx-2">
+	<div class="mt-1">
 		<div>
 			<h3 class="pt-4 text-lg leading-6 font-medium text-gray-900 outline-none">
 				Search and Replace
@@ -49,7 +49,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="pt-5 mx-2">
+	<div class="pt-5">
 		<button
 			type="button"
 			on:click={swapStrings}
