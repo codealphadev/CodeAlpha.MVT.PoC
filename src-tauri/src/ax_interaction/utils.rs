@@ -1,11 +1,15 @@
 #![allow(dead_code)]
 
-use accessibility::{AXAttribute, AXUIElement, Error};
+use accessibility::{AXAttribute, AXUIElement, AXUIElementAttributes, Error};
 use accessibility_sys::{
-    kAXTrustedCheckOptionPrompt, pid_t, AXIsProcessTrusted, AXIsProcessTrustedWithOptions,
+    kAXErrorNoValue, kAXTrustedCheckOptionPrompt, pid_t, AXIsProcessTrusted,
+    AXIsProcessTrustedWithOptions,
 };
 use core_foundation::{
-    base::TCFType, boolean::CFBoolean, dictionary::CFDictionary, string::CFString,
+    base::{CFHash, TCFType},
+    boolean::CFBoolean,
+    dictionary::CFDictionary,
+    string::CFString,
 };
 
 static EDITOR_NAME: &str = "Xcode";
@@ -96,15 +100,43 @@ pub fn application_is_trusted_with_prompt() -> bool {
     }
 }
 
+pub fn generate_axui_element_hash(ui_element: &AXUIElement) -> usize {
+    unsafe { CFHash(ui_element.as_CFTypeRef()) }
+}
+
+pub fn window_ui_element_from_hash(pid: pid_t, hash: usize) -> Result<AXUIElement, Error> {
+    let application = AXUIElement::application(pid);
+
+    let app_windows = application.windows()?;
+
+    for window in &app_windows {
+        if generate_axui_element_hash(&window) == hash {
+            return Ok(window.clone());
+        }
+    }
+
+    Err(Error::Ax(kAXErrorNoValue))
+}
+
 #[derive(Debug, Clone)]
 pub struct XCodeObserverState {
     pub app_handle: tauri::AppHandle,
-    pub window_list: Vec<(uuid::Uuid, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
+    pub window_list: Vec<(
+        uuid::Uuid,
+        AXUIElement,
+        Option<tauri::LogicalSize<f64>>,
+        usize,
+    )>,
 }
 
 pub struct ReplitObserverState {
     pub app_handle: tauri::AppHandle,
-    pub window_list: Vec<(uuid::Uuid, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
+    pub window_list: Vec<(
+        uuid::Uuid,
+        AXUIElement,
+        Option<tauri::LogicalSize<f64>>,
+        usize,
+    )>,
 }
 
 #[derive(Debug, Clone)]

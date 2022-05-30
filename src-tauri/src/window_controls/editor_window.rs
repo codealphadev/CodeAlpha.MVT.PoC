@@ -23,6 +23,8 @@ enum VerticalBoundary {
 pub struct EditorWindow {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
     pub id: uuid::Uuid,
+    /// The reference to the AXUIElement of the editor window.
+    pub uielement_hash: usize,
 
     /// The application name of the editor this window belongs to. For XCode it is "Xcode".
     editor_name: String,
@@ -64,6 +66,7 @@ impl EditorWindow {
     pub fn new(created_msg: &EditorWindowCreatedMessage) -> Self {
         Self {
             id: created_msg.id,
+            uielement_hash: created_msg.ui_elem_hash,
             editor_name: created_msg.editor_name.clone(),
             pid: created_msg.pid,
             window_position: created_msg.window_position,

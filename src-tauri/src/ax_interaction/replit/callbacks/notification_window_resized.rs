@@ -62,7 +62,12 @@ pub fn notify_window_resized(
                 }
             }
 
-            let new_tuple = (window.0, window.1.clone(), resize_msg.textarea_size.clone());
+            let new_tuple = (
+                window.0,
+                window.1.clone(),
+                resize_msg.textarea_size.clone(),
+                window.3,
+            );
 
             // Remove item window_list
             replit_observer_state
