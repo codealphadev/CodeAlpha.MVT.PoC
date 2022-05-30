@@ -2,7 +2,7 @@
 
 use std::{ffi::c_void, mem};
 
-use accessibility::{AXAttribute, AXObserver, AXUIElement};
+use accessibility::{AXAttribute, AXObserver, AXUIElement, AXUIElementAttributes};
 use accessibility_sys::{
     kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
     kAXApplicationHiddenNotification, kAXApplicationShownNotification,
@@ -42,6 +42,15 @@ pub unsafe extern "C" fn callback_xcode_notifications(
     let element: AXUIElement = TCFType::wrap_under_get_rule(element);
     let notification = CFString::wrap_under_get_rule(notification);
     let context: *mut XCodeObserverState = mem::transmute(context);
+
+    // In case the window that contains the ui element which triggered this notification is not
+    // yet contained in the window_list of XCodeObserverState, we trigger notify_window_created() msg first.
+    let xcode_observer_state = &(*context);
+    if xcode_observer_state.window_list.len() == 0 {
+        if let Ok(window_elem) = element.window() {
+            let _ = notify_window_created(&window_elem, &mut (*context));
+        }
+    }
 
     match notification.to_string().as_str() {
         kAXFocusedUIElementChangedNotification => {
