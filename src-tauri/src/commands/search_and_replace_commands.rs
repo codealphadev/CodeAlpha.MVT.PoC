@@ -12,8 +12,14 @@ pub fn cmd_search_and_replace(
     replace_str: String,
     widget_state: tauri::State<'_, Arc<Mutex<WidgetWindow>>>,
 ) {
-    let widget_window = &*(widget_state.lock().unwrap());
-    let editor_windows = &*(widget_window.editor_windows.lock().unwrap());
+    let widget_window = &*(match widget_state.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+    let editor_windows = &*(match widget_window.editor_windows.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
 
     if let Some(focused_editor_window_id) = widget_window.currently_focused_editor_window {
         if let Some(editor_window) = editor_windows.get(&focused_editor_window_id) {

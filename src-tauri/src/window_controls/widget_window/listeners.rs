@@ -103,29 +103,44 @@ pub fn register_listener_app(
 
         match &axevent_app {
             AXEventApp::AppWindowFocused(msg) => {
-                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                let widget_props = &mut *(match widget_props_move_copy.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                });
                 widget_props.currently_focused_app_window = Some(msg.window);
             }
             AXEventApp::AppWindowMoved(msg) => {
-                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                let widget_props = &mut *(match widget_props_move_copy.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                });
                 on_move_app_window(widget_props, &msg);
             }
             AXEventApp::AppUIElementFocused(_) => {}
             AXEventApp::AppActivated(_) => {
-                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                let widget_props = &mut *(match widget_props_move_copy.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                });
                 widget_props.is_app_focused = true;
             }
             AXEventApp::AppDeactivated(msg) => {
                 on_deactivate_app(&widget_props_move_copy, &msg);
             }
             AXEventApp::AppContentActivationChange(msg) => {
-                let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+                let widget_props = &mut *(match widget_props_move_copy.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                });
                 on_toggle_content_window(widget_props, msg);
             }
             AXEventApp::None => {}
         }
 
-        let widget_props = &mut *(widget_props_move_copy.lock().unwrap());
+        let widget_props = &mut *(match widget_props_move_copy.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
 
         let app_handle = (*widget_props).app_handle.clone();
         let is_app_focused = (*widget_props).is_app_focused;

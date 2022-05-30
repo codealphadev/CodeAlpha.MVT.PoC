@@ -42,7 +42,10 @@ impl WindowStateManager {
                     Self::remove_editor_window(&editor_windows_move_copy, &msg);
                 }
                 AXEventXcode::EditorAppClosed(_) => {
-                    let mut editors_locked = editor_windows_move_copy.lock().unwrap();
+                    let mut editors_locked = match editor_windows_move_copy.lock() {
+                        Ok(guard) => guard,
+                        Err(poisoned) => poisoned.into_inner(),
+                    };
                     *editors_locked = HashMap::new();
                 }
                 AXEventXcode::EditorAppCodeSelected(msg) => {
@@ -67,7 +70,10 @@ impl WindowStateManager {
                     Self::remove_editor_window(&editor_windows_move_copy, &msg);
                 }
                 AXEventReplit::EditorAppClosed(_) => {
-                    let mut editors_locked = editor_windows_move_copy.lock().unwrap();
+                    let mut editors_locked = match editor_windows_move_copy.lock() {
+                        Ok(guard) => guard,
+                        Err(poisoned) => poisoned.into_inner(),
+                    };
                     *editors_locked = HashMap::new();
                 }
                 _ => {}
@@ -85,7 +91,10 @@ impl WindowStateManager {
         editor_window_list: &Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
         created_msg: &EditorWindowCreatedMessage,
     ) {
-        let mut editor_list_locked = editor_window_list.lock().unwrap();
+        let mut editor_list_locked = match editor_window_list.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
 
         // check if window is already contained in list of windows
         if (*editor_list_locked).get(&created_msg.id).is_none() {
@@ -97,7 +106,10 @@ impl WindowStateManager {
         editor_window_list: &Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
         destroyed_msg: &EditorWindowDestroyedMessage,
     ) {
-        let mut editor_list_locked = editor_window_list.lock().unwrap();
+        let mut editor_list_locked = match editor_window_list.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
 
         let _ = &editor_list_locked.remove(&destroyed_msg.id);
     }

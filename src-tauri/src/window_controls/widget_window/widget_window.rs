@@ -101,7 +101,10 @@ pub fn temporary_hide_check_routine(
     widget_props: &Arc<Mutex<WidgetWindow>>,
 ) {
     {
-        let widget = &mut *(widget_props.lock().unwrap());
+        let widget = &mut *(match widget_props.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
 
         // Update the Instant time stamp when the widget should be shown again
         widget.temporary_hide_until_instant =
@@ -115,7 +118,10 @@ pub fn temporary_hide_check_routine(
         }
 
         // Gracefully hide widget
-        let editor_windows = &mut *(widget.editor_windows.lock().unwrap());
+        let editor_windows = &mut *(match widget.editor_windows.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
         hide_widget_routine(app_handle, widget, editor_windows);
     }
 
@@ -129,10 +135,16 @@ pub fn temporary_hide_check_routine(
         thread::sleep(std::time::Duration::from_millis(25));
         // ==================================================================
 
-        let widget_window = &mut *(widget_props_move_copy.lock().unwrap());
+        let widget_window = &mut *(match widget_props_move_copy.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
 
         if widget_window.temporary_hide_until_instant < Instant::now() {
-            let editor_windows = &mut *(widget_window.editor_windows.lock().unwrap());
+            let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => poisoned.into_inner(),
+            });
             show_widget_routine(&app_handle_move_copy, &widget_window, &editor_windows);
 
             // Indicate that the routine finished
