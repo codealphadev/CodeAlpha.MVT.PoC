@@ -22,8 +22,14 @@ pub fn on_resize_editor_window(
     resize_msg: &EditorWindowResizedMessage,
 ) {
     {
-        let widget_props = &mut *(widget_arc.lock().unwrap());
-        let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
+        let widget_props = &mut *(match widget_arc.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
+        let mut editor_list_locked = match widget_props.editor_windows.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
 
         if let Some(editor_window) = editor_list_locked.get_mut(&resize_msg.id) {
             editor_window.update_window_dimensions(
@@ -46,8 +52,14 @@ pub fn on_move_editor_window(
     moved_msg: &EditorWindowMovedMessage,
 ) {
     {
-        let widget_props = &mut *(widget_arc.lock().unwrap());
-        let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
+        let widget_props = &mut *(match widget_arc.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
+        let mut editor_list_locked = match widget_props.editor_windows.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
 
         if let Some(editor_window) = editor_list_locked.get_mut(&moved_msg.id) {
             editor_window.update_window_dimensions(
@@ -76,8 +88,14 @@ pub fn on_editor_ui_element_focus_change(
     let mut need_temporary_hide = false;
 
     {
-        let widget_props = &mut *(widget_arc.lock().unwrap());
-        let mut editor_list_locked = widget_props.editor_windows.lock().unwrap();
+        let widget_props = &mut *(match widget_arc.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
+        let mut editor_list_locked = match widget_props.editor_windows.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
 
         // Update the focused ui element on the corresponding editor window instance.
         if let Some(editor_window) = editor_list_locked.get_mut(&focus_msg.window_id) {
@@ -132,7 +150,10 @@ pub fn on_deactivate_editor_app(
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     deactivated_msg: &EditorAppDeactivatedMessage,
 ) {
-    let widget_window = &mut *(widget_arc.lock().unwrap());
+    let widget_window = &mut *(match widget_arc.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
 
     if SUPPORTED_EDITORS.contains(&deactivated_msg.editor_name.as_str()) {
         widget_window.is_editor_focused = false;
@@ -140,7 +161,10 @@ pub fn on_deactivate_editor_app(
 
     if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {
-            let editor_windows = &mut *(widget_window.editor_windows.lock().unwrap());
+            let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => poisoned.into_inner(),
+            });
             hide_widget_routine(&widget_window.app_handle, &widget_window, editor_windows);
         }
     }
@@ -150,12 +174,18 @@ pub fn on_close_editor_app(
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     closed_msg: &EditorAppClosedMessage,
 ) {
-    let widget_window = &mut *(widget_arc.lock().unwrap());
+    let widget_window = &mut *(match widget_arc.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
 
     if SUPPORTED_EDITORS.contains(&closed_msg.editor_name.as_str()) {
         widget_window.is_editor_focused = false;
 
-        let editor_windows = &mut *(widget_window.editor_windows.lock().unwrap());
+        let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
         hide_widget_routine(&widget_window.app_handle, &widget_window, editor_windows);
     }
 }
@@ -164,8 +194,14 @@ pub fn on_activate_editor_app(
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     activated_msg: &EditorAppActivatedMessage,
 ) {
-    let widget_props = &mut *(widget_arc.lock().unwrap());
-    let editor_list_locked = widget_props.editor_windows.lock().unwrap();
+    let widget_props = &mut *(match widget_arc.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+    let editor_list_locked = match widget_props.editor_windows.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
 
     // Check if focused ui element of the currently focused editor window is textarea.
     if let Some(currently_focused_editor_window_id) = widget_props.currently_focused_editor_window {
