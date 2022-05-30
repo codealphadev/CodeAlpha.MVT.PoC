@@ -142,6 +142,7 @@ pub fn register_listener_app(
             Err(poisoned) => poisoned.into_inner(),
         });
 
+        // Checking if the widget window is focused and if it is, it starts dragging it.
         let app_handle = (*widget_props).app_handle.clone();
         let is_app_focused = (*widget_props).is_app_focused;
         let focused_window = (*widget_props).currently_focused_app_window;
