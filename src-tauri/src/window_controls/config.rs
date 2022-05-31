@@ -8,6 +8,7 @@ pub enum AppWindow {
     Widget,
     Content,
     Repair,
+    CodeOverlay,
     None,
 }
 
@@ -42,6 +43,13 @@ pub mod default_properties {
                 format!("{}{}", r"\", AppWindow::Repair.to_string().to_lowercase())
             }
             AppWindow::None => "".to_string(),
+            AppWindow::CodeOverlay => {
+                format!(
+                    "{}{}",
+                    r"\",
+                    AppWindow::CodeOverlay.to_string().to_lowercase()
+                )
+            }
         }
     }
 
@@ -56,6 +64,7 @@ pub mod default_properties {
             AppWindow::Content => "CodeAlpha - Guide".to_string(),
             AppWindow::Repair => "CodeAlpha - Explanation".to_string(),
             AppWindow::None => "".to_string(),
+            AppWindow::CodeOverlay => "CodeAlpha - CodeOverlay".to_string(),
         }
     }
 
@@ -67,6 +76,7 @@ pub mod default_properties {
             AppWindow::Content => (322.0, 398.0),
             AppWindow::Repair => (513.0, 500.0),
             AppWindow::None => (0.0, 0.0),
+            AppWindow::CodeOverlay => (0.0, 0.0),
         }
     }
 
@@ -78,6 +88,7 @@ pub mod default_properties {
             AppWindow::Content => false,
             AppWindow::Repair => false,
             AppWindow::None => false,
+            AppWindow::CodeOverlay => false,
         }
     }
     pub fn is_transparent(window: &AppWindow) -> bool {
@@ -88,6 +99,7 @@ pub mod default_properties {
             AppWindow::Content => true,
             AppWindow::Repair => true,
             AppWindow::None => false,
+            AppWindow::CodeOverlay => true,
         }
     }
 
@@ -99,6 +111,7 @@ pub mod default_properties {
             AppWindow::Content => false,
             AppWindow::Repair => false,
             AppWindow::None => false,
+            AppWindow::CodeOverlay => false,
         }
     }
 
@@ -110,6 +123,7 @@ pub mod default_properties {
             AppWindow::Content => false,
             AppWindow::Repair => true,
             AppWindow::None => true,
+            AppWindow::CodeOverlay => false,
         }
     }
 
@@ -121,6 +135,7 @@ pub mod default_properties {
             AppWindow::Content => true,
             AppWindow::Repair => true,
             AppWindow::None => false,
+            AppWindow::CodeOverlay => true,
         }
     }
 
@@ -132,6 +147,7 @@ pub mod default_properties {
             AppWindow::Content => true,
             AppWindow::Repair => true,
             AppWindow::None => true,
+            AppWindow::CodeOverlay => true,
         }
     }
 }

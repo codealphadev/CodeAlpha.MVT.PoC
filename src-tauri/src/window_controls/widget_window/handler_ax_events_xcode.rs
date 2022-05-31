@@ -151,8 +151,6 @@ pub fn on_editor_ui_element_focus_change(
     }
 
     if need_temporary_hide {
-        println!("on_editor_ui_element_focus_change: 5");
-
         temporary_hide_check_routine(&app_handle, widget_arc);
     }
 }

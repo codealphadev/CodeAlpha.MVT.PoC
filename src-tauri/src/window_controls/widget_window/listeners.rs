@@ -101,46 +101,31 @@ pub fn register_listener_app(
     app_handle.listen_global(AX_EVENT_APP_CHANNEL, move |msg| {
         let axevent_app: AXEventApp = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
-        match &axevent_app {
-            AXEventApp::AppWindowFocused(msg) => {
-                let widget_props = &mut *(match widget_props_move_copy.lock() {
-                    Ok(guard) => guard,
-                    Err(poisoned) => poisoned.into_inner(),
-                });
-                widget_props.currently_focused_app_window = Some(msg.window);
-            }
-            AXEventApp::AppWindowMoved(msg) => {
-                let widget_props = &mut *(match widget_props_move_copy.lock() {
-                    Ok(guard) => guard,
-                    Err(poisoned) => poisoned.into_inner(),
-                });
-                on_move_app_window(widget_props, &msg);
-            }
-            AXEventApp::AppUIElementFocused(_) => {}
-            AXEventApp::AppActivated(_) => {
-                let widget_props = &mut *(match widget_props_move_copy.lock() {
-                    Ok(guard) => guard,
-                    Err(poisoned) => poisoned.into_inner(),
-                });
-                widget_props.is_app_focused = true;
-            }
-            AXEventApp::AppDeactivated(msg) => {
-                on_deactivate_app(&widget_props_move_copy, &msg);
-            }
-            AXEventApp::AppContentActivationChange(msg) => {
-                let widget_props = &mut *(match widget_props_move_copy.lock() {
-                    Ok(guard) => guard,
-                    Err(poisoned) => poisoned.into_inner(),
-                });
-                on_toggle_content_window(widget_props, msg);
-            }
-            AXEventApp::None => {}
-        }
-
         let widget_props = &mut *(match widget_props_move_copy.lock() {
             Ok(guard) => guard,
             Err(poisoned) => poisoned.into_inner(),
         });
+
+        match &axevent_app {
+            AXEventApp::AppWindowFocused(msg) => {
+                widget_props.currently_focused_app_window = Some(msg.window);
+            }
+            AXEventApp::AppWindowMoved(msg) => {
+                on_move_app_window(widget_props, &msg);
+            }
+            AXEventApp::AppUIElementFocused(_) => {}
+            AXEventApp::AppActivated(msg) => {
+                widget_props.is_app_focused = true;
+                widget_props.currently_focused_app_window = msg.focused_app_window;
+            }
+            AXEventApp::AppDeactivated(msg) => {
+                on_deactivate_app(widget_props, &msg);
+            }
+            AXEventApp::AppContentActivationChange(msg) => {
+                on_toggle_content_window(widget_props, msg);
+            }
+            AXEventApp::None => {}
+        }
 
         // Checking if the widget window is focused and if it is, it starts dragging it.
         let app_handle = (*widget_props).app_handle.clone();
