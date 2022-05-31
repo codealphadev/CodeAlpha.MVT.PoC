@@ -1,8 +1,11 @@
-use accessibility::{AXAttribute, AXUIElement, Error};
+use accessibility::{AXAttribute, AXUIElement, AXUIElementAttributes, Error};
 
-use crate::ax_interaction::{
-    models::app::{AppActivatedMessage, AppDeactivatedMessage},
-    AXEventApp, AppObserverState,
+use crate::{
+    ax_interaction::{
+        models::app::{AppActivatedMessage, AppDeactivatedMessage},
+        AXEventApp, AppObserverState,
+    },
+    window_controls::AppWindow,
 };
 
 /// Notify Tauri that our app has been activated, which means focus has moved to our app from a different application.
@@ -17,9 +20,29 @@ pub fn notifiy_app_activated(
     let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
 
+    // attempt to get the currently focused window
+    let mut app_window: Option<AppWindow> = None;
+    if let Ok(focused_element) = app_element.focused_uielement() {
+        if let Ok(window_element) = focused_element.window() {
+            if let Ok(title) = window_element.title() {
+                #[allow(unused_assignments)]
+                match title.to_string().as_str() {
+                    "CodeAlpha - Guide" => app_window = Some(AppWindow::Content),
+                    "CodeAlpha - Settings" => app_window = Some(AppWindow::Settings),
+                    "CodeAlpha - Analytics" => app_window = Some(AppWindow::Analytics),
+                    "CodeAlpha - Widget" => app_window = Some(AppWindow::Widget),
+                    _ => app_window = Some(AppWindow::None),
+                }
+            } else {
+                app_window = Some(AppWindow::None);
+            }
+        }
+    }
+
     let activation_msg = AppActivatedMessage {
         app_name: name.to_string(),
         pid: pid.try_into().unwrap(),
+        focused_app_window: app_window,
     };
 
     let activation_event = AXEventApp::AppActivated(activation_msg);

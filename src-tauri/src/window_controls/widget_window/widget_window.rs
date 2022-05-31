@@ -181,9 +181,15 @@ pub fn show_widget_routine(
             match editor_window.content_window_state {
                 ContentWindowState::Active => {
                     let _ = content_window::open(&app_handle);
+
+                    // Open the code overlay window
+                    let _ = editor_window.show_code_overlay(app_handle);
                 }
                 ContentWindowState::Inactive => {
                     let _ = content_window::hide(&app_handle);
+
+                    // Close the code overlay window
+                    let _ = editor_window.hide_code_overlay(app_handle);
                 }
             }
         }
@@ -193,9 +199,16 @@ pub fn show_widget_routine(
 }
 
 pub fn hide_widget_routine(
-    _app_handle: &tauri::AppHandle,
+    app_handle: &tauri::AppHandle,
     widget: &WidgetWindow,
-    _editor_windows: &mut HashMap<uuid::Uuid, EditorWindow>,
+    editor_windows: &mut HashMap<uuid::Uuid, EditorWindow>,
 ) {
-    close_window(&widget.app_handle, AppWindow::Widget)
+    close_window(&widget.app_handle, AppWindow::Widget);
+
+    // Close the code overlay window
+    if let Some(focused_window_id) = widget.currently_focused_editor_window {
+        if let Some(editor_window) = editor_windows.get(&focused_window_id) {
+            let _ = editor_window.hide_code_overlay(app_handle);
+        }
+    }
 }

@@ -1,10 +1,15 @@
 #![allow(dead_code)]
 
-use tauri::{LogicalPosition, LogicalSize};
+use tauri::{Error, LogicalPosition, LogicalSize, Manager};
 
 use crate::ax_interaction::models::{
     app::ContentWindowState,
     editor::{EditorWindowCreatedMessage, FocusedUIElement},
+};
+
+use super::{
+    actions::{close_window, open_window, resize_window, set_position},
+    AppWindow,
 };
 
 #[derive(Debug)]
@@ -284,5 +289,40 @@ impl EditorWindow {
                 });
             }
         }
+    }
+
+    /// It opens the code overlay window and sets its position and size to match the textarea
+    ///
+    /// Arguments:
+    ///
+    /// * `app_handle`: The handle to the application.
+    ///
+    /// Returns:
+    ///
+    /// A Result<(), Error>
+    pub fn show_code_overlay(&self, app_handle: &tauri::AppHandle) -> Result<(), Error> {
+        if let (Some(origin), Some(size)) = (self.textarea_position, self.textarea_size) {
+            resize_window(app_handle, AppWindow::CodeOverlay, &size)?;
+            set_position(app_handle, AppWindow::CodeOverlay, &origin)?;
+
+            open_window(app_handle, AppWindow::CodeOverlay);
+
+            app_handle.emit_to(
+                &AppWindow::CodeOverlay.to_string(),
+                "event-compute-height",
+                {},
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// It closes the code overlay window
+    ///
+    /// Arguments:
+    ///
+    /// * `app_handle`: The handle to the tauri app.
+    pub fn hide_code_overlay(&self, app_handle: &tauri::AppHandle) {
+        close_window(app_handle, AppWindow::CodeOverlay);
     }
 }

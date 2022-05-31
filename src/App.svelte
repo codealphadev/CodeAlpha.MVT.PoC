@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Router, Route, Link } from 'svelte-navigator';
 	import Analytics from './pages/analytics.svelte';
+	import CodeOverlay from './pages/code-overlay.svelte';
 	import Content from './pages/content.svelte';
 	import Repair from './pages/repair.svelte';
 	import Settings from './pages/settings.svelte';
@@ -33,5 +34,9 @@
 
 	<Route path="widget">
 		<Widget />
+	</Route>
+
+	<Route path="codeoverlay">
+		<CodeOverlay />
 	</Route>
 </Router>

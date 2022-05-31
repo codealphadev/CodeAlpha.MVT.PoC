@@ -95,7 +95,7 @@ fn main() {
                 Arc::new(Mutex::new(HashMap::new()));
 
             let _ = create_window(&handle, AppWindow::Content);
-            let _ = create_window(&handle, AppWindow::Repair);
+            let _ = create_window(&handle, AppWindow::CodeOverlay);
 
             // Create instance of widget window; panics if creation fails
             let widget_window = WidgetWindow::new(&handle, &editor_windows_arc);
