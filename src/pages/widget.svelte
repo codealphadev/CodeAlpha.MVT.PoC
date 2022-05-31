@@ -1,9 +1,7 @@
 <script lang="ts">
 	import WidgetIcon from '../components/widget/widget-icon.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { appWindow, getAll, WebviewWindow } from '@tauri-apps/api/window';
-
-	appWindow.setAlwaysOnTop(true);
+	import { appWindow } from '@tauri-apps/api/window';
 
 	let ghostClickAlreadyHappened = true;
 
