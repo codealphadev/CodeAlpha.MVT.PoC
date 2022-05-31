@@ -33,6 +33,7 @@ accessibility-sys = { git = "https://github.com/Hupka/accessibility" }
 
 # Miscellaneous
 colored = "2"
+enigo = "0.0.14"
 
 [dev-dependencies]
 pretty_assertions = "1.2.0"
