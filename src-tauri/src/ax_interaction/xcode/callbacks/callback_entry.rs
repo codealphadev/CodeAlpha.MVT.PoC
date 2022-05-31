@@ -17,7 +17,7 @@ use core_foundation::{
 };
 
 use crate::ax_interaction::{
-    focused_uielement_of_app,
+    focused_uielement_of_app, generate_axui_element_hash,
     models::editor::EditorAppCodeSelectedMessage,
     xcode::callbacks::{notify_window_created, notify_window_destroyed},
     AXEventXcode, XCodeObserverState,
@@ -123,6 +123,41 @@ pub unsafe extern "C" fn callback_xcode_notifications(
         }
         _other => {
             println!("Forgotten notification: {:?}", _other)
+        }
+    }
+}
+
+/// It prints out all the windows of the application that owns the active window, and highlights the
+/// active window
+///
+/// Arguments:
+///
+/// * `elem`: The element that was updated.
+/// * `_state`: The state of the observer.
+fn _plot_active_window(elem: &AXUIElement, _state: &XCodeObserverState) {
+    if let Ok(window_elem) = elem.window() {
+        if let Ok(application) = window_elem.parent() {
+            if let Ok(windows) = application.windows() {
+                println!("==========================");
+                println!("All windows:");
+
+                let window_hash = generate_axui_element_hash(&window_elem);
+
+                let mut found_hash = false;
+                for elem in &windows {
+                    let elem_hash = generate_axui_element_hash(&elem);
+                    if elem_hash == window_hash {
+                        println!("-> Hash {}", elem_hash);
+                        found_hash = true;
+                    } else {
+                        println!("Hash {}", elem_hash);
+                    }
+                }
+
+                if !found_hash {
+                    println!("No window with hash {} found", window_hash);
+                }
+            }
         }
     }
 }
