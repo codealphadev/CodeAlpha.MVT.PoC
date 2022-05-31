@@ -25,4 +25,4 @@
 	listenTauriEvents();
 </script>
 
-<div style="height: {height}px" class="bg-teal-600 opacity-50 h-full w-full" />
+<div style="height: {height}px" class="bg-teal-300 opacity-20 h-full w-full " />

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use cocoa::base::id;
+use cocoa::{base::id, foundation::NSInteger};
 use objc::{msg_send, sel, sel_impl};
 use tauri::{Error, LogicalPosition, LogicalSize, Manager};
 
@@ -337,12 +337,29 @@ impl EditorWindow {
     ///
     /// * `app_handle`: The app handle that you can get from the tauri::AppBuilder.
     fn configure_code_overlay_properties(app_handle: &tauri::AppHandle) {
-        if let Some(overlay_window) = app_handle.get_window(&AppWindow::CodeOverlay.to_string()) {
-            if let Ok(ns_window_ptr) = overlay_window.ns_window() {
+        if let (Some(overlay_window), Some(widget_window)) = (
+            app_handle.get_window(&AppWindow::CodeOverlay.to_string()),
+            app_handle.get_window(&AppWindow::Widget.to_string()),
+        ) {
+            if let (Ok(ns_window_ptr_overlay), Ok(ns_window_ptr_widget)) =
+                (overlay_window.ns_window(), widget_window.ns_window())
+            {
+                // Setting the mouse events to be ignored for the overlay window.
                 unsafe {
-                    if !msg_send![ns_window_ptr as id, ignoresMouseEvents] {
-                        let _: () = msg_send![ns_window_ptr as id, setIgnoresMouseEvents: true];
+                    if !msg_send![ns_window_ptr_overlay as id, ignoresMouseEvents] {
+                        let _: () =
+                            msg_send![ns_window_ptr_overlay as id, setIgnoresMouseEvents: true];
                     }
+                }
+
+                // Ordering the widget window to the front. This prevents overlap.
+                unsafe {
+                    let overlay_window_level: i64 = msg_send![ns_window_ptr_overlay as id, level];
+
+                    let _: () = msg_send![
+                        ns_window_ptr_widget as id,
+                        setLevel: overlay_window_level + 1 as NSInteger
+                    ];
                 }
             }
         }
