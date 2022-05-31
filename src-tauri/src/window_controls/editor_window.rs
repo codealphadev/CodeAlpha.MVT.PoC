@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use cocoa::base::id;
+use objc::{msg_send, sel, sel_impl};
 use tauri::{Error, LogicalPosition, LogicalSize, Manager};
 
 use crate::ax_interaction::models::{
@@ -314,6 +316,8 @@ impl EditorWindow {
             )?;
         }
 
+        Self::configure_code_overlay_properties(app_handle);
+
         Ok(())
     }
 
@@ -324,5 +328,23 @@ impl EditorWindow {
     /// * `app_handle`: The handle to the tauri app.
     pub fn hide_code_overlay(&self, app_handle: &tauri::AppHandle) {
         close_window(app_handle, AppWindow::CodeOverlay);
+    }
+
+    /// It gets the window handle for the code overlay window, and then sets the `ignoresMouseEvents`
+    /// property to `true`
+    ///
+    /// Arguments:
+    ///
+    /// * `app_handle`: The app handle that you can get from the tauri::AppBuilder.
+    fn configure_code_overlay_properties(app_handle: &tauri::AppHandle) {
+        if let Some(overlay_window) = app_handle.get_window(&AppWindow::CodeOverlay.to_string()) {
+            if let Ok(ns_window_ptr) = overlay_window.ns_window() {
+                unsafe {
+                    if !msg_send![ns_window_ptr as id, ignoresMouseEvents] {
+                        let _: () = msg_send![ns_window_ptr as id, setIgnoresMouseEvents: true];
+                    }
+                }
+            }
+        }
     }
 }
