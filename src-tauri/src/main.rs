@@ -16,8 +16,7 @@ use ax_interaction::{
 use commands::search_and_replace_commands;
 use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::{
-    actions::{create_window, resize_window},
-    AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
+    actions::resize_window, AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
 };
 
 use crate::window_controls::content_window::{
@@ -93,9 +92,6 @@ fn main() {
             // Create vector of editor windows
             let editor_windows_arc: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>> =
                 Arc::new(Mutex::new(HashMap::new()));
-
-            let _ = create_window(&handle, AppWindow::Content);
-            let _ = create_window(&handle, AppWindow::CodeOverlay);
 
             // Create instance of widget window; panics if creation fails
             let widget_window = WidgetWindow::new(&handle, &editor_windows_arc);

@@ -1,4 +1,5 @@
 use core::panic;
+
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -58,9 +59,15 @@ impl WidgetWindow {
         app_handle: &tauri::AppHandle,
         editor_windows: &Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
     ) -> Self {
-        // Create Tauri Window
+        // Create App Windows
         if create_window(&app_handle, AppWindow::Widget).is_err() {
             panic!("Could not create Widget Window");
+        }
+        if create_window(&app_handle, AppWindow::Content).is_err() {
+            panic!("Could not create Content Window");
+        }
+        if create_window(&app_handle, AppWindow::CodeOverlay).is_err() {
+            panic!("Could not create CodeOverlay Window");
         }
 
         // Register Observer for Widget AX Events
