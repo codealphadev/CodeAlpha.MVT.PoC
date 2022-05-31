@@ -125,11 +125,7 @@ pub fn temporary_hide_check_routine(
         }
 
         // Gracefully hide widget
-        let editor_windows = &mut *(match widget.editor_windows.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        });
-        hide_widget_routine(app_handle, widget, editor_windows);
+        hide_widget_routine(app_handle);
     }
 
     // Start temporary hide check routine
@@ -205,17 +201,7 @@ pub fn show_widget_routine(
     open_window(&widget.app_handle, AppWindow::Widget)
 }
 
-pub fn hide_widget_routine(
-    app_handle: &tauri::AppHandle,
-    widget: &WidgetWindow,
-    editor_windows: &mut HashMap<uuid::Uuid, EditorWindow>,
-) {
-    close_window(&widget.app_handle, AppWindow::Widget);
-
-    // Close the code overlay window
-    if let Some(focused_window_id) = widget.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows.get(&focused_window_id) {
-            let _ = editor_window.hide_code_overlay(app_handle);
-        }
-    }
+pub fn hide_widget_routine(app_handle: &tauri::AppHandle) {
+    close_window(app_handle, AppWindow::Widget);
+    close_window(app_handle, AppWindow::CodeOverlay);
 }

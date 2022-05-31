@@ -6,7 +6,7 @@ use crate::{
             ContentWindowState,
         },
     },
-    window_controls::{actions::close_window, AppWindow},
+    window_controls::AppWindow,
 };
 
 use super::{widget_window::hide_widget_routine, WidgetWindow};
@@ -63,13 +63,9 @@ pub fn on_deactivate_app(
 
     if let Some(is_focused_app_editor) = is_currently_focused_app_editor() {
         if !is_focused_app_editor {
-            let editor_windows = &mut *(match widget_props.editor_windows.lock() {
-                Ok(guard) => guard,
-                Err(poisoned) => poisoned.into_inner(),
-            });
-            hide_widget_routine(&widget_props.app_handle, &widget_props, editor_windows);
+            hide_widget_routine(&widget_props.app_handle);
         }
     } else {
-        close_window(&widget_props.app_handle, AppWindow::Widget)
+        hide_widget_routine(&widget_props.app_handle);
     }
 }

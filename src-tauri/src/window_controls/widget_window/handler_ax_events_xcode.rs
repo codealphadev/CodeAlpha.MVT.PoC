@@ -113,11 +113,7 @@ pub fn on_editor_ui_element_focus_change(
                 if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
                     need_temporary_hide = true;
                 } else {
-                    hide_widget_routine(
-                        &widget_props.app_handle,
-                        widget_props,
-                        &mut editor_list_locked,
-                    )
+                    hide_widget_routine(&widget_props.app_handle)
                 }
             } else {
                 if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
@@ -127,11 +123,7 @@ pub fn on_editor_ui_element_focus_change(
                         &mut editor_list_locked,
                     )
                 } else {
-                    hide_widget_routine(
-                        &widget_props.app_handle,
-                        widget_props,
-                        &mut editor_list_locked,
-                    )
+                    hide_widget_routine(&widget_props.app_handle)
                 }
             }
         } else {
@@ -170,11 +162,7 @@ pub fn on_deactivate_editor_app(
 
     if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {
-            let editor_windows = &mut *(match widget_window.editor_windows.lock() {
-                Ok(guard) => guard,
-                Err(poisoned) => poisoned.into_inner(),
-            });
-            hide_widget_routine(&widget_window.app_handle, &widget_window, editor_windows);
+            hide_widget_routine(&widget_window.app_handle);
         }
     }
 }
@@ -191,11 +179,7 @@ pub fn on_close_editor_app(
     if SUPPORTED_EDITORS.contains(&closed_msg.editor_name.as_str()) {
         widget_window.is_editor_focused = false;
 
-        let editor_windows = &mut *(match widget_window.editor_windows.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        });
-        hide_widget_routine(&widget_window.app_handle, &widget_window, editor_windows);
+        hide_widget_routine(&widget_window.app_handle);
     }
 }
 
