@@ -68,9 +68,7 @@ pub unsafe extern "C" fn callback_xcode_notifications(
                 if role.to_string() == "AXStaticText" {
                     if let Ok(pid) = element.pid() {
                         if let Ok(text_area_ui_element) = focused_uielement_of_app(pid) {
-                            if let Ok(selected_text) =
-                                text_area_ui_element.attribute(&AXAttribute::selected_text())
-                            {
+                            if let Ok(selected_text) = text_area_ui_element.selected_text() {
                                 let text_str = selected_text.to_string();
 
                                 if text_str.len() > 378 && text_str.len() < 400 {

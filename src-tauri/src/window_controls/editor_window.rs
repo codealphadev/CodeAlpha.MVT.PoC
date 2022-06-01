@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use cocoa::{base::id, foundation::NSInteger};
-use objc::{msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel, sel_impl};
 use tauri::{Error, LogicalPosition, LogicalSize, Manager};
 
 use crate::ax_interaction::models::{
@@ -316,7 +316,9 @@ impl EditorWindow {
             )?;
         }
 
-        Self::configure_code_overlay_properties(app_handle);
+        if is_main_thread().unwrap() {
+            Self::configure_code_overlay_properties(app_handle);
+        }
 
         Ok(())
     }
@@ -364,4 +366,8 @@ impl EditorWindow {
             }
         }
     }
+}
+
+pub fn is_main_thread() -> Option<bool> {
+    unsafe { Some(msg_send![class!(NSThread), isMainThread]) }
 }
