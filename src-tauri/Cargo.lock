@@ -26,7 +26,7 @@ dependencies = [
 [[package]]
 name = "accessibility"
 version = "0.1.6"
-source = "git+https://github.com/Hupka/accessibility#0e83cebb18fe9335bfb763e942c7c37f84e27a80"
+source = "git+https://github.com/Hupka/accessibility#bc92e648b6165f7934e993d4bfcc00d9f1606ec5"
 dependencies = [
  "accessibility-sys",
  "cocoa",
@@ -39,7 +39,7 @@ dependencies = [
 [[package]]
 name = "accessibility-sys"
 version = "0.1.3"
-source = "git+https://github.com/Hupka/accessibility#0e83cebb18fe9335bfb763e942c7c37f84e27a80"
+source = "git+https://github.com/Hupka/accessibility#bc92e648b6165f7934e993d4bfcc00d9f1606ec5"
 dependencies = [
  "core-foundation-sys 0.8.3",
 ]
