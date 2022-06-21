@@ -106,3 +106,38 @@ impl RuleMatch {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::ax_interaction::xcode::get_xcode_editor_content;
+
+    use super::super::SearchRule;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_get_rectangles() {
+        let editor_pid = 12538 as i32;
+        if let Ok(editor_content_option) = get_xcode_editor_content(editor_pid) {
+            if let Some(editor_content) = editor_content_option {
+                let search_str = "text ever since ".to_string();
+                let mut rule = SearchRule::new();
+                rule.run(&editor_content, &search_str);
+
+                if let Some(mut matches) = rule.rule_matches {
+                    for single_match in matches.iter_mut() {
+                        (*single_match).update_rectangles(editor_pid);
+                    }
+
+                    assert_eq!(matches.len(), 1);
+                } else {
+                    assert!(false);
+                }
+            }
+        }
+
+        // Observed "odd" behavior:
+        // - Word Wrap always draws the bounding around the whole text area (horizontally)
+        // - When matching the last characters a string that wraps around lines, the rect always extents to the maximum end text area's extents
+        // - can not detenct yet on which characters wordwrap appears
+    }
+}
