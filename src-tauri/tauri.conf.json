@@ -139,7 +139,7 @@
       }
     },
     "systemTray": {
-      "iconPath": "icons/icon-template.svg",
+      "iconPath": "icons/icon-template.png",
       "iconAsTemplate": true
     },
     "windows": [],
