@@ -44,9 +44,6 @@ pub struct WidgetWindow {
     /// only 'temporary_hide_until_instant' will be updated.
     pub temporary_hide_check_active: bool,
 
-    /// Boolean saying if the currently focused application is a supported editor.
-    pub is_editor_focused: bool,
-
     /// Boolean saying if the currently focused application is our app.
     pub is_app_focused: bool,
 
@@ -82,7 +79,6 @@ impl WidgetWindow {
             temporary_hide_until_instant: Instant::now(),
             temporary_hide_check_active: false,
             currently_focused_editor_window: None,
-            is_editor_focused: false,
             is_app_focused: false,
             currently_focused_app_window: None,
         }

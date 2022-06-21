@@ -139,7 +139,6 @@ pub fn on_editor_ui_element_focus_change(
 
         // Set which editor window is currently focused
         widget_props.currently_focused_editor_window = Some(focus_msg.window_id);
-        widget_props.is_editor_focused = true;
     }
 
     if need_temporary_hide {
@@ -149,16 +148,12 @@ pub fn on_editor_ui_element_focus_change(
 
 pub fn on_deactivate_editor_app(
     widget_arc: &Arc<Mutex<WidgetWindow>>,
-    deactivated_msg: &EditorAppDeactivatedMessage,
+    _deactivated_msg: &EditorAppDeactivatedMessage,
 ) {
     let widget_window = &mut *(match widget_arc.lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     });
-
-    if SUPPORTED_EDITORS.contains(&deactivated_msg.editor_name.as_str()) {
-        widget_window.is_editor_focused = false;
-    }
 
     if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {
@@ -177,15 +172,13 @@ pub fn on_close_editor_app(
     });
 
     if SUPPORTED_EDITORS.contains(&closed_msg.editor_name.as_str()) {
-        widget_window.is_editor_focused = false;
-
         hide_widget_routine(&widget_window.app_handle);
     }
 }
 
 pub fn on_activate_editor_app(
     widget_arc: &Arc<Mutex<WidgetWindow>>,
-    activated_msg: &EditorAppActivatedMessage,
+    _activated_msg: &EditorAppActivatedMessage,
 ) {
     let widget_props = &mut *(match widget_arc.lock() {
         Ok(guard) => guard,
@@ -205,9 +198,5 @@ pub fn on_activate_editor_app(
                 }
             }
         }
-    }
-
-    if SUPPORTED_EDITORS.contains(&activated_msg.editor_name.as_str()) {
-        widget_props.is_editor_focused = true;
     }
 }
