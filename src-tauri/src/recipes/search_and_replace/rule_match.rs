@@ -1,27 +1,17 @@
-use accessibility::{AXAttribute, AXValue};
-use core_foundation::{base::CFRange, number::CFNumber};
-use core_graphics_types::geometry::CGRect;
-use tauri::{LogicalPosition, LogicalSize};
-
 use crate::ax_interaction::focused_uielement_of_app;
 
-#[derive(Debug)]
-pub struct Rectangle {
-    pub origin: LogicalPosition<f64>,
-    pub size: LogicalSize<f64>,
-}
+use super::utils::ax_utils::{
+    calc_match_rects_for_wrapped_range, get_bounds_of_MatchRange, get_char_range_of_line,
+    get_line_number_for_range_index, is_text_of_line_wrapped,
+};
 
-#[derive(Debug)]
-pub struct MatchRange {
-    pub index: usize,
-    pub length: usize,
-}
+use super::utils::types::{MatchRange, MatchRectangle};
 
 #[derive(Debug)]
 pub struct RuleMatch {
     pub range: MatchRange,
     pub matched: String,
-    pub rectangles: Vec<Rectangle>,
+    pub rectangles: Vec<MatchRectangle>,
 }
 
 impl RuleMatch {
@@ -38,27 +28,24 @@ impl RuleMatch {
         if let Ok(editor_textarea_ui_element) = focused_uielement_of_app(editor_app_pid) {
             let mut line_match_ranges: Vec<MatchRange> = Vec::new();
 
-            let mut current_match_index = self.range.index;
-            while let Ok(line_number) = editor_textarea_ui_element.parameterized_attribute(
-                &AXAttribute::line_for_index(),
-                &CFNumber::from(current_match_index as i64),
+            let mut current_match_index = dbg!(self.range.index);
+            while let Some(line_number) = get_line_number_for_range_index(
+                current_match_index as i64,
+                &editor_textarea_ui_element,
             ) {
                 // Get line length
-                if let Ok(line_range_as_axval) = editor_textarea_ui_element
-                    .parameterized_attribute(&AXAttribute::range_for_line(), &line_number)
-                {
-                    // Convert AXValue into valid CFRange
-                    let line_range = dbg!(line_range_as_axval).get_value::<CFRange>().unwrap();
-                    let range_index = line_range.location as usize;
-                    let range_length = line_range.length as usize;
-
-                    let line_match_range = MatchRange {
+                if let Some(current_line_range) = dbg!(get_char_range_of_line(
+                    line_number,
+                    &editor_textarea_ui_element
+                )) {
+                    let line_match_range = dbg!(MatchRange {
                         index: current_match_index,
                         length: std::cmp::min(
-                            range_length - (current_match_index - range_index),
+                            current_line_range.length
+                                - (current_match_index - current_line_range.index),
                             self.range.length - (current_match_index - self.range.index),
                         ),
-                    };
+                    });
 
                     current_match_index = current_match_index + line_match_range.length;
                     line_match_ranges.push(line_match_range);
@@ -71,34 +58,28 @@ impl RuleMatch {
 
             dbg!(&line_match_ranges);
 
-            let mut line_match_range_rectangles: Vec<Rectangle> = Vec::new();
+            let mut line_match_range_rectangles: Vec<MatchRectangle> = Vec::new();
             for line_match_range in line_match_ranges {
-                // Get line rectangles
-                let axval_from_cfrange = AXValue::from_CFRange(CFRange {
-                    location: line_match_range.index as isize,
-                    length: line_match_range.length as isize,
-                })
-                .unwrap();
-
-                if let Ok(line_match_rectangle_as_axval) = editor_textarea_ui_element
-                    .parameterized_attribute(&AXAttribute::bounds_for_range(), &axval_from_cfrange)
+                // Check if line_match_range actually wraps into multiple lines
+                // due to activated 'wrap lines' in XCode (default is on)
+                if let Some((range_is_wrapping, wrapped_line_number)) =
+                    is_text_of_line_wrapped(&line_match_range, &editor_textarea_ui_element)
                 {
-                    // Convert AXValue into valid CGRect
-                    let line_rectangle =
-                        line_match_rectangle_as_axval.get_value::<CGRect>().unwrap();
-
-                    let line_match_rectangle = Rectangle {
-                        origin: tauri::LogicalPosition {
-                            x: line_rectangle.origin.x as f64,
-                            y: line_rectangle.origin.y as f64,
-                        },
-                        size: LogicalSize {
-                            width: line_rectangle.size.width as f64,
-                            height: line_rectangle.size.height as f64,
-                        },
-                    };
-
-                    line_match_range_rectangles.push(line_match_rectangle);
+                    if !range_is_wrapping {
+                        println!("Line is not wrapped");
+                        if let Some(line_match_rect) =
+                            get_bounds_of_MatchRange(&line_match_range, &editor_textarea_ui_element)
+                        {
+                            line_match_range_rectangles.push(line_match_rect);
+                        }
+                    } else {
+                        println!("Line is wrapped");
+                        line_match_range_rectangles.extend(calc_match_rects_for_wrapped_range(
+                            wrapped_line_number,
+                            &line_match_range,
+                            &editor_textarea_ui_element,
+                        ));
+                    }
                 }
             }
 
@@ -116,10 +97,10 @@ mod tests {
 
     #[test]
     fn test_get_rectangles() {
-        let editor_pid = 12538 as i32;
+        let editor_pid = 25403 as i32;
         if let Ok(editor_content_option) = get_xcode_editor_content(editor_pid) {
             if let Some(editor_content) = editor_content_option {
-                let search_str = "text ever since ".to_string();
+                let search_str = "text ever since".to_string();
                 let mut rule = SearchRule::new();
                 rule.run(&editor_content, &search_str);
 
@@ -132,12 +113,25 @@ mod tests {
                 } else {
                     assert!(false);
                 }
+            } else {
+                assert!(false, "Focused UI element is not a textarea");
             }
+        } else {
+            assert!(false, "Can not get editor content; presumable XCode is not running or focused UI element is not textarea");
         }
 
         // Observed "odd" behavior:
+        // - If match includes last character of file, the bounds always stretch to the far end of textarea
         // - Word Wrap always draws the bounding around the whole text area (horizontally)
-        // - When matching the last characters a string that wraps around lines, the rect always extents to the maximum end text area's extents
-        // - can not detenct yet on which characters wordwrap appears
+        // - When matching the last characters of a string that wraps around lines, the rect always extents to the maximum end text area's extents
+        // - can not detect yet on which characters wordwrap appears
+
+        // Figuring out word wrap:
+        // - every line match rectangle should have the same height as the height a single character
+        // - if the line match rectangle hight is greater than the height of a single character, then the text of this line is wrapped
+        // - line match rectangle height devided by the height of a single character gives us the number of lines that the text is wrapped into
+        // - First line gets a rectangle from the FIRST character rectangle of the match string to the RIGHT end of the text area
+        // - Last line gets a rectangle from the LAST character rectangle of the match string to the LEFT end of the text area
+        // - All lines inbetween get a rectangle stretching from the LEFT end of the text area to the RIGHT end of the text area
     }
 }

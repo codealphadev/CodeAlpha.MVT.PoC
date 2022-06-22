@@ -2,10 +2,10 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
-use tauri::{LogicalPosition, LogicalSize};
 
 use crate::ax_interaction::{
-    models::editor::EditorWindowResizedMessage, AXEventXcode, XCodeObserverState,
+    derive_xcode_textarea_dimensions, models::editor::EditorWindowResizedMessage, AXEventXcode,
+    XCodeObserverState,
 };
 
 /// Notify Tauri that an editor window has been resized
@@ -100,66 +100,11 @@ fn derive_resize_parameters_from_scrollbar(
 
     assert_eq!(role.to_string(), "AXScrollBar");
 
-    let (position, size) = derive_textarea_dimensions(scrollbar_element)?;
+    let (position, size) = derive_xcode_textarea_dimensions(scrollbar_element)?;
 
     // Update EditorWindowResizedMessage
     resize_msg.textarea_position = Some(position);
     resize_msg.textarea_size = Some(size);
 
     Ok(())
-}
-
-pub fn derive_textarea_dimensions(
-    child_element: &AXUIElement,
-) -> Result<(LogicalPosition<f64>, LogicalSize<f64>), Error> {
-    let scrollarea_element = child_element.attribute(&AXAttribute::parent())?;
-
-    // Get Size and Origin of AXScrollArea
-    let scrollarea_pos_ax_value = scrollarea_element.attribute(&AXAttribute::position())?;
-    let scrollarea_size_ax_value = scrollarea_element.attribute(&AXAttribute::size())?;
-
-    let scrollarea_origin = scrollarea_pos_ax_value.get_value::<CGPoint>()?;
-    let scrollarea_size = scrollarea_size_ax_value.get_value::<CGSize>()?;
-
-    // Get all children
-    let mut updated_width = scrollarea_size.width;
-    let mut updated_origin_x = scrollarea_origin.x;
-    let children_elements = scrollarea_element.attribute(&AXAttribute::children())?;
-
-    for child in &children_elements {
-        if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
-            let identifier_list: [&str; 3] = [
-                "Source Editor Change Gutter",
-                "Source Editor Gutter",
-                "Source Editor Minimap",
-            ];
-
-            if identifier_list.contains(&identifier.to_string().as_str()) {
-                updated_width -= child
-                    .attribute(&AXAttribute::size())?
-                    .get_value::<CGSize>()?
-                    .width;
-
-                if identifier.to_string() != "Source Editor Minimap" {
-                    updated_origin_x += child
-                        .attribute(&AXAttribute::size())?
-                        .get_value::<CGSize>()?
-                        .width;
-                }
-            }
-        }
-    }
-
-    // Update EditorWindowResizedMessage
-    let position = tauri::LogicalPosition {
-        x: updated_origin_x,
-        y: scrollarea_origin.y,
-    };
-
-    let size = tauri::LogicalSize {
-        width: updated_width,
-        height: scrollarea_size.height,
-    };
-
-    return Ok((position, size));
 }
