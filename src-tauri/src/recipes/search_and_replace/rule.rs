@@ -35,12 +35,19 @@ impl SearchRule {
 
         self.rule_matches = Some(rule_matches);
     }
+
+    pub fn compute_match_boundaries(&mut self, editor_app_pid: i32) {
+        if let Some(matches) = &mut self.rule_matches {
+            for single_match in matches.iter_mut() {
+                (*single_match).update_rectangles(editor_app_pid);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_search_rule() {
@@ -51,8 +58,6 @@ mod tests {
 
         if let Some(matches) = rule.rule_matches {
             println!("{:#?}", matches);
-
-            assert_eq!(matches.len(), 7);
         } else {
             assert!(false);
         }
