@@ -15,10 +15,8 @@ impl SearchRule {
 
         let mut rule_matches = Vec::new();
 
-        // split once
         let mut removed_chars = 0;
-
-        while let Some((left_str, rest_str)) = dbg!(mut_content_str.split_once(&search_str)) {
+        while let Some((left_str, rest_str)) = mut_content_str.split_once(&search_str) {
             let char_count_search_str = search_str.to_string().chars().count();
             let char_count_left_str = left_str.to_string().chars().count();
 
@@ -31,7 +29,7 @@ impl SearchRule {
                 rectangles: Vec::new(),
             });
 
-            removed_chars += (char_count_left_str + char_count_search_str);
+            removed_chars += char_count_left_str + char_count_search_str;
             mut_content_str = rest_str.to_string();
         }
 
@@ -46,8 +44,8 @@ mod tests {
 
     #[test]
     fn test_search_rule() {
-        let content_str = "//🤞\n//  AXSwift.h\n//  AXSwift\n//\n//  Created by Tyler Mandry on 10/18/15.\n//  Copyright © 2015 Tyler Mandry. All rights reserved.\n//\n\n#import <Cocoa/Cocoa.h>\n\n//! Project version number for AXSwift.\nFOUNDATION_EXPORT double AXSwiftVersionNumber;\n\n//! Project version string for AXSwift.\nFOUNDATION_EXPORT const unsigned char AXSwiftVersionString[];\n\n// In this header, you should import all the public headers of your framework using statements like\n// #import <AXSwift/PublicHeader.h>\ntext ever since\n".to_string();
-        let search_str = "AXSwift.h".to_string();
+        let content_str = "//*\n//  AXSwift.h\n//  AXSwift\n//\n//  Created by Tyler Mandry on 10/18/15.\n//  Copyright © 2015 Tyler Mandry. All rights reserved.\n//\n\n#import <Cocoa/Cocoa.h>\n\n//! Project version number for AXSwift.\nFOUNDATION_EXPORT double AXSwiftVersionNumber;\n\n//! Project version string for AXSwift.\nFOUNDATION_EXPORT const unsigned char AXSwiftVersionString[];\n\n// In this header, you should import all the public headers of your framework using statements like\n// #import <AXSwift/PublicHeader.h>\ntext ever since \n".to_string();
+        let search_str = "text ever since ".to_string();
         let mut rule = SearchRule::new();
         rule.run(&content_str, &search_str);
 

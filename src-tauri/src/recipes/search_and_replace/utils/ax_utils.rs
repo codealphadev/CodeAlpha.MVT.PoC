@@ -41,7 +41,8 @@ pub fn calc_match_rects_for_wrapped_range(
                     y: last_char_bounds.origin.y,
                 },
                 size: CGSize {
-                    width: last_char_bounds.origin.x - editor_origin.x,
+                    width: last_char_bounds.origin.x - editor_origin.x
+                        + last_char_bounds.size.width,
                     height: last_char_bounds.size.height,
                 },
             };
@@ -68,9 +69,11 @@ pub fn calc_match_rects_for_wrapped_range(
 
                     let mut inbetween_line_rectangles = Vec::<MatchRectangle>::new();
 
-                    // Minus 2 because rectangles for first and last line are already added
+                    // Minus 1 because rectangles for first and last line are already added
                     // E.g. if wrapped_lines_count = 3, we need to add 1 inbetween-rectangle
-                    for i in 1..larger_than_two - 2 {
+                    for i in 1..larger_than_two - 1 {
+                        println!("larger_than_two: {}", larger_than_two);
+                        println!("i: {}", i);
                         let inbetween_line_rect = CGRect {
                             origin: CGPoint {
                                 x: editor_origin.x,
@@ -196,7 +199,9 @@ pub fn get_line_number_for_range_index(
     }
 }
 
-/// It takes a line number and a textarea UI element, and returns the character range of that line
+/// It takes a line number and a textarea UI element, and returns the character range of that line.
+/// The character range of a line in XCode always includes a line break character at the end. Even
+/// at the end of the file. We need to remove that character from the character range.
 ///
 /// Arguments:
 ///
@@ -215,9 +220,11 @@ pub fn get_char_range_of_line(
         &CFNumber::from(line_number as i64),
     ) {
         if let Ok(line_char_CFRange) = line_char_range_as_axval.get_value::<CFRange>() {
+            // The character range of a line in XCode always includes a line break character at the end.
+            // Even at the end of the file. We need to remove that character from the character range.
             Some(MatchRange {
                 index: line_char_CFRange.location as usize,
-                length: line_char_CFRange.length as usize,
+                length: (line_char_CFRange.length - 1) as usize,
             })
         } else {
             None
@@ -256,20 +263,19 @@ pub fn get_bounds_of_first_char_in_range(
     get_bounds_of_CFRange(
         &CFRange {
             location: range.index as isize,
-            length: 0,
+            length: 1,
         },
         textarea_ui_element,
     )
 }
 
-// TODO: Test how to get the bounds right after the last character as a return value here
 pub fn get_bounds_of_last_char_in_range(
     range: &MatchRange,
     textarea_ui_element: &AXUIElement,
 ) -> Option<CGRect> {
     get_bounds_of_CFRange(
         &CFRange {
-            location: range.index as isize,
+            location: (range.index + range.length - 1) as isize,
             length: 1,
         },
         textarea_ui_element,
