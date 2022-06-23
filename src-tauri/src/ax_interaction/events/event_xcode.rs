@@ -5,8 +5,9 @@ use tauri::Manager;
 
 use super::models::editor::{
     EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
-    EditorAppDeactivatedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
-    EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+    EditorAppDeactivatedMessage, EditorTextareaContentChanged, EditorTextareaScrolled,
+    EditorUIElementFocusedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
+    EditorWindowMovedMessage, EditorWindowResizedMessage,
 };
 
 pub static AX_EVENT_XCODE_CHANNEL: &str = "AXEventXcode";
@@ -14,15 +15,17 @@ pub static AX_EVENT_XCODE_CHANNEL: &str = "AXEventXcode";
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
 pub enum AXEventXcode {
+    EditorUIElementFocused(EditorUIElementFocusedMessage),
     EditorWindowCreated(EditorWindowCreatedMessage),
     EditorWindowDestroyed(EditorWindowDestroyedMessage),
     EditorWindowResized(EditorWindowResizedMessage),
     EditorWindowMoved(EditorWindowMovedMessage),
-    EditorUIElementFocused(EditorUIElementFocusedMessage),
     EditorAppActivated(EditorAppActivatedMessage),
     EditorAppDeactivated(EditorAppDeactivatedMessage),
     EditorAppClosed(EditorAppClosedMessage),
     EditorAppCodeSelected(EditorAppCodeSelectedMessage),
+    EditorTextareaScrolled(EditorTextareaScrolled),
+    EditorTextareaContentChanged(EditorTextareaContentChanged),
     None,
 }
 
@@ -38,6 +41,10 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
             AXEventXcode::EditorAppClosed(_) => write!(f, "EditorClosed"),
             AXEventXcode::EditorAppCodeSelected(_) => write!(f, "EditorAppCodeSelected"),
+            AXEventXcode::EditorTextareaScrolled(_) => write!(f, "EditorTextareaScrolled"),
+            AXEventXcode::EditorTextareaContentChanged(_) => {
+                write!(f, "EditorTextareaContentChanged")
+            }
             AXEventXcode::None => write!(f, "None"),
         }
     }
