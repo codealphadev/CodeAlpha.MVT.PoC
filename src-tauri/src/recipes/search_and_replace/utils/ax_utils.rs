@@ -147,51 +147,6 @@ pub fn is_text_of_line_wrapped(
     }
 }
 
-/// If a window hash is provided, get the focused element of this window, otherwise, get the focused
-/// element of the editor application and proceed if it is a textarea
-///
-/// Arguments:
-///
-/// * `editor_app_pid`: The process ID of the editor application.
-/// * `editor_window_hash`: The hash of the editor window that the textarea is in.
-///
-/// Returns:
-///
-/// An Option<AXUIElement>
-pub fn get_textarea_uielement(
-    editor_app_pid: i32,
-    editor_window_hash: Option<usize>,
-) -> Option<AXUIElement> {
-    let focused_uielement = if let Some(editor_window_hash) = editor_window_hash {
-        if let Ok(window_uielement) =
-            window_ui_element_from_hash(editor_app_pid, editor_window_hash)
-        {
-            if let Ok(focused_uielement) = window_uielement.focused_uielement() {
-                focused_uielement
-            } else {
-                return None;
-            }
-        } else {
-            return None;
-        }
-    } else {
-        if let Ok(focused_uielement) = focused_uielement_of_app(editor_app_pid) {
-            focused_uielement
-        } else {
-            return None;
-        }
-    };
-
-    // Only proceed if focused UI element is a textarea
-    if let Ok(role) = focused_uielement.role() {
-        if role == "AXTextArea" {
-            return Some(focused_uielement);
-        }
-    }
-
-    None
-}
-
 /// It calculates the number of lines in a match range by dividing the height of the match rectangle by
 /// the height of a single line
 ///

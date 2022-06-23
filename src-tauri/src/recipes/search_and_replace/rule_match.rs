@@ -1,6 +1,8 @@
+use crate::ax_interaction::get_textarea_uielement;
+
 use super::utils::ax_utils::{
     calc_match_rects_for_wrapped_range, get_bounds_of_CharRange, get_char_range_of_line,
-    get_line_number_for_range_index, get_textarea_uielement, is_text_of_line_wrapped,
+    get_line_number_for_range_index, is_text_of_line_wrapped,
 };
 
 use super::utils::types::{CharRange, MatchRange, MatchRectangle};
@@ -15,7 +17,7 @@ pub struct RuleMatch {
 }
 
 impl RuleMatch {
-    pub fn new(match_range: MatchRange, matched: String) -> Self {
+    pub fn new(match_range: MatchRange) -> Self {
         Self {
             match_range,
             rectangles: Vec::new(),
@@ -130,15 +132,14 @@ mod tests {
     use super::super::SearchRule;
 
     #[test]
+    #[ignore]
     fn test_get_rectangles() {
         let editor_pid = 12538 as i32;
         if let Ok(editor_content_option) = get_xcode_editor_content(editor_pid) {
             if let Some(editor_content) = editor_content_option {
                 let search_str = "]\n)text ever since".to_string();
                 let mut rule = SearchRule::new();
-                rule.update_content(&editor_content);
-                rule.update_search_str(&search_str);
-                rule.run();
+                rule.run(Some(editor_content), Some(search_str));
                 rule.compute_match_boundaries(editor_pid, None);
 
                 dbg!(rule.rule_matches);

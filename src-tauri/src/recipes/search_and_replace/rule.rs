@@ -5,6 +5,9 @@ pub struct SearchRule {
     pub rule_matches: Option<Vec<RuleMatch>>,
     pub search_str: Option<String>,
     pub content: Option<String>,
+
+    search_str_updated: bool,
+    content_updated: bool,
 }
 
 impl SearchRule {
@@ -13,10 +16,20 @@ impl SearchRule {
             rule_matches: None,
             search_str: None,
             content: None,
+            search_str_updated: false,
+            content_updated: false,
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, content_str: Option<String>, search_str: Option<String>) {
+        self.update_content(content_str);
+        self.update_search_str(search_str);
+
+        if !self.search_str_updated && !self.content_updated {
+            // nothing changed, no need to reprocess content
+            return;
+        }
+
         if let (Some(content_str), Some(search_str)) =
             (self.content.as_ref(), self.search_str.as_ref())
         {
@@ -29,17 +42,13 @@ impl SearchRule {
                 let char_count_search_str = search_str.to_string().chars().count();
                 let char_count_left_str = left_str.to_string().chars().count();
 
-                rule_matches.push(RuleMatch {
-                    match_range: MatchRange {
-                        string: search_str.to_string(),
-                        range: CharRange {
-                            index: char_count_left_str + removed_chars,
-                            length: char_count_search_str,
-                        },
+                rule_matches.push(RuleMatch::new(MatchRange {
+                    string: search_str.to_string(),
+                    range: CharRange {
+                        index: char_count_left_str + removed_chars,
+                        length: char_count_search_str,
                     },
-                    rectangles: Vec::new(),
-                    line_matches: Vec::new(),
-                });
+                }));
 
                 removed_chars += char_count_left_str + char_count_search_str;
                 mut_content_str = rest_str.to_string();
@@ -49,12 +58,24 @@ impl SearchRule {
         }
     }
 
-    pub fn update_content(&mut self, content_str: &String) {
-        self.content = Some(content_str.clone());
+    fn update_content(&mut self, content_str: Option<String>) {
+        if let Some(content_str) = content_str {
+            // Update content if it has changed
+            if self.content.is_none() || self.content.as_ref().unwrap() != &content_str {
+                self.content = Some(content_str);
+                self.content_updated = true;
+            }
+        }
     }
 
-    pub fn update_search_str(&mut self, search_str: &str) {
-        self.search_str = Some(search_str.to_string());
+    fn update_search_str(&mut self, search_str: Option<String>) {
+        if let Some(search_str) = search_str {
+            // Update content if it has changed
+            if self.search_str.is_none() || self.search_str.as_ref().unwrap() != &search_str {
+                self.search_str = Some(search_str);
+                self.search_str_updated = true;
+            }
+        }
     }
 
     pub fn compute_match_boundaries(
@@ -79,14 +100,12 @@ mod tests {
         let content_str = "//*\n//  AXSwift.h\n//  AXSwift\n//\n//  Created by Tyler Mandry on 10/18/15.\n//  Copyright © 2015 Tyler Mandry. All rights reserved.\n//\n\n#import <Cocoa/Cocoa.h>\n\n//! Project version number for AXSwift.\nFOUNDATION_EXPORT double AXSwiftVersionNumber;\n\n//! Project version string for AXSwift.\nFOUNDATION_EXPORT const unsigned char AXSwiftVersionString[];\n\n// In this header, you should import all the public headers of your framework using statements like\n// #import <AXSwift/PublicHeader.h>\ntext ever since \n".to_string();
         let search_str = "text ever since ".to_string();
         let mut rule = SearchRule::new();
-        rule.update_content(&content_str);
-        rule.update_search_str(&search_str);
-        rule.run();
+        rule.run(Some(content_str), Some(search_str));
 
         if let Some(matches) = rule.rule_matches {
             println!("{:#?}", matches);
         } else {
-            assert!(false);
+            assert!(false, "No rule matches!");
         }
     }
 }
