@@ -1,4 +1,4 @@
-use accessibility::{AXAttribute, AXUIElement, Error};
+use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
@@ -14,7 +14,9 @@ pub fn notify_window_resized(
     ui_element: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    let window_element = ui_element.attribute(&AXAttribute::window())?;
+    assert_eq!(ui_element.role()?, "AXScrollBar");
+
+    let window_element = ui_element.window()?;
 
     // Find window_element in xcode_observer_state.window_list to get id
     let mut known_window = xcode_observer_state
@@ -26,8 +28,8 @@ pub fn notify_window_resized(
 
     if let Some(window) = &mut known_window {
         // Get updated window position and size
-        let pos_ax_value = window_element.attribute(&AXAttribute::position())?;
-        let size_ax_value = window_element.attribute(&AXAttribute::size())?;
+        let pos_ax_value = window_element.position()?;
+        let size_ax_value = window_element.size()?;
 
         let origin = pos_ax_value.get_value::<CGPoint>()?;
         let size = size_ax_value.get_value::<CGSize>()?;
@@ -47,7 +49,7 @@ pub fn notify_window_resized(
             textarea_size: None,
         };
 
-        if "AXScrollBar" == ui_element.attribute(&AXAttribute::role())? {
+        if "AXScrollBar" == ui_element.role()? {
             // Determine editor textarea dimensions
             // For now at least, ignore errors and still continue with control flow.
             let _ = derive_resize_parameters_from_scrollbar(&mut resize_msg, ui_element);
@@ -96,7 +98,7 @@ fn derive_resize_parameters_from_scrollbar(
     resize_msg: &mut EditorWindowResizedMessage,
     scrollbar_element: &AXUIElement,
 ) -> Result<(), Error> {
-    let role = scrollbar_element.attribute(&AXAttribute::role())?;
+    let role = scrollbar_element.role()?;
 
     assert_eq!(role.to_string(), "AXScrollBar");
 
