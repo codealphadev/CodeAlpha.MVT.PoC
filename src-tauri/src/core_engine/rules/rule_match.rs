@@ -127,9 +127,10 @@ impl RuleMatch {
 
 #[cfg(test)]
 mod tests {
-    use crate::ax_interaction::xcode::get_xcode_editor_content;
-
-    use super::super::SearchRule;
+    use crate::{
+        ax_interaction::xcode::get_xcode_editor_content,
+        core_engine::rules::search_and_replace::SearchRule,
+    };
 
     #[test]
     #[ignore]

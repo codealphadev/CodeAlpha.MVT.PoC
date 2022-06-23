@@ -26,7 +26,7 @@ use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
 
 mod ax_interaction;
 mod commands;
-mod recipes;
+mod core_engine;
 mod window_controls;
 
 #[tauri::command]

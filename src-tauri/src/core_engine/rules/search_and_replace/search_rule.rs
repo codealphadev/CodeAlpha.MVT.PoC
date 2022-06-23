@@ -1,5 +1,7 @@
-use super::utils::types::{CharRange, MatchRange};
-use super::RuleMatch;
+use crate::core_engine::rules::{
+    utils::types::{CharRange, MatchRange},
+    RuleMatch,
+};
 
 pub struct SearchRule {
     pub rule_matches: Option<Vec<RuleMatch>>,

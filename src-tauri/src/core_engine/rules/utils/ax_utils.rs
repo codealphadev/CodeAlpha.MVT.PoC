@@ -1,11 +1,9 @@
-use accessibility::{AXAttribute, AXUIElement, AXUIElementAttributes, AXValue};
+use accessibility::{AXAttribute, AXUIElement, AXValue};
 use cocoa::appkit::CGPoint;
 use core_foundation::{base::CFRange, number::CFNumber};
 use core_graphics_types::geometry::{CGRect, CGSize};
 
-use crate::ax_interaction::{
-    derive_xcode_textarea_dimensions, focused_uielement_of_app, window_ui_element_from_hash,
-};
+use crate::ax_interaction::derive_xcode_textarea_dimensions;
 
 use super::{types::CharRange, MatchRectangle};
 
