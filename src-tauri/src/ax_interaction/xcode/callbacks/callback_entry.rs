@@ -2,7 +2,7 @@
 
 use std::{ffi::c_void, mem};
 
-use accessibility::{AXAttribute, AXObserver, AXUIElement, AXUIElementAttributes};
+use accessibility::{AXObserver, AXUIElement, AXUIElementAttributes};
 use accessibility_sys::{
     kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
     kAXApplicationHiddenNotification, kAXApplicationShownNotification,
@@ -17,15 +17,14 @@ use core_foundation::{
 };
 
 use crate::ax_interaction::{
-    focused_uielement_of_app, generate_axui_element_hash,
-    models::editor::EditorAppCodeSelectedMessage,
+    generate_axui_element_hash,
     xcode::callbacks::{notify_window_created, notify_window_destroyed},
-    AXEventXcode, XCodeObserverState,
+    XCodeObserverState,
 };
 
 use super::{
-    notifiy_app_activated, notifiy_app_deactivated, notify_uielement_focused, notify_window_moved,
-    notify_window_resized,
+    notifiy_app_activated, notifiy_app_deactivated, notify_uielement_focused, notify_value_changed,
+    notify_window_moved, notify_window_resized,
 };
 
 // This file contains the callback function that is registered with the AXObserver
@@ -57,33 +56,7 @@ pub unsafe extern "C" fn callback_xcode_notifications(
             let _ = notify_uielement_focused(&element, &mut (*context));
         }
         kAXValueChangedNotification => {
-            // Check, weather the ui element changed is the scroll bar of text area
-            if let Ok(role) = element.attribute(&AXAttribute::role()) {
-                if role.to_string() == "AXScrollBar" {
-                    let _ = notify_window_resized(&element, &mut (*context));
-                }
-            }
-
-            if let Ok(role) = element.attribute(&AXAttribute::role()) {
-                if role.to_string() == "AXStaticText" {
-                    if let Ok(pid) = element.pid() {
-                        if let Ok(text_area_ui_element) = focused_uielement_of_app(pid) {
-                            if let Ok(selected_text) = text_area_ui_element.selected_text() {
-                                let text_str = selected_text.to_string();
-
-                                if text_str.len() > 378 && text_str.len() < 400 {
-                                    let code_selected_msg = EditorAppCodeSelectedMessage {
-                                        code_selected: true,
-                                    };
-
-                                    AXEventXcode::EditorAppCodeSelected(code_selected_msg)
-                                        .publish_to_tauri(&(*context).app_handle);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            let _ = notify_value_changed(&element, &mut (*context));
         }
         kAXMainWindowChangedNotification => {
             let _ = notify_window_created(&element, &mut (*context));
