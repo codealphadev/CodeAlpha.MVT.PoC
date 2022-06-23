@@ -16,7 +16,7 @@ use ax_interaction::{
 use commands::search_and_replace_commands;
 use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::{
-    actions::resize_window, AppWindow, EditorWindow, WidgetWindow, WindowStateManager,
+    actions::resize_window, AppWindow, EditorWindow, WidgetWindow, WindowControls,
 };
 
 use crate::window_controls::content_window::{
@@ -99,7 +99,7 @@ fn main() {
             let widget_window_arc = Arc::new(Mutex::new(widget_window));
             WidgetWindow::setup_widget_listeners(&handle, &widget_window_arc);
 
-            let _state_manager = WindowStateManager::new(
+            let _state_manager = WindowControls::new(
                 &handle,
                 editor_windows_arc.clone(),
                 widget_window_arc.clone(),

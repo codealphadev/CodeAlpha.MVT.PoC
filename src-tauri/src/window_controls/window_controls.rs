@@ -13,7 +13,7 @@ use crate::ax_interaction::{
 use super::{actions::open_window, editor_window::EditorWindow, WidgetWindow};
 
 #[allow(dead_code)]
-pub struct WindowStateManager {
+pub struct WindowControls {
     tauri_app_handle: tauri::AppHandle,
 
     // List of listeners; stored to be able to safely remove them
@@ -21,7 +21,7 @@ pub struct WindowStateManager {
     widget_window: Arc<Mutex<WidgetWindow>>,
 }
 
-impl WindowStateManager {
+impl WindowControls {
     pub fn new(
         app_handle: &tauri::AppHandle,
         editor_windows: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
