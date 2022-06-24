@@ -21,6 +21,36 @@ struct ContentWindowOrientationEvent {
     orientation_right: bool,
 }
 
+#[tauri::command]
+pub fn cmd_resize_content_window(app_handle: tauri::AppHandle, size_x: u32, size_y: u32) {
+    let updated_content_size = tauri::LogicalSize {
+        width: size_x as f64,
+        height: size_y as f64,
+    };
+
+    let _ = reposition_with_known_content_size(&app_handle, &updated_content_size);
+    let _ = resize(&app_handle, &updated_content_size);
+}
+
+#[tauri::command]
+pub fn cmd_toggle_content_window(app_handle: tauri::AppHandle) {
+    if let Ok(visible) = is_open(&app_handle) {
+        if visible {
+            let _ = hide(&app_handle);
+            AXEventApp::AppContentActivationChange(AppContentActivationMessage {
+                activation_state: ContentWindowState::Inactive,
+            })
+            .publish_to_tauri(&app_handle);
+        } else {
+            let _ = open(&app_handle);
+            AXEventApp::AppContentActivationChange(AppContentActivationMessage {
+                activation_state: ContentWindowState::Active,
+            })
+            .publish_to_tauri(&app_handle);
+        }
+    }
+}
+
 fn resize(
     app_handle: &tauri::AppHandle,
     updated_size: &tauri::LogicalSize<f64>,
@@ -164,36 +194,6 @@ pub fn is_open(app_handle: &tauri::AppHandle) -> Result<bool, Error> {
         content_window.is_visible()
     } else {
         Err(Error::WebviewNotFound)
-    }
-}
-
-#[tauri::command]
-pub fn cmd_resize_content_window(app_handle: tauri::AppHandle, size_x: u32, size_y: u32) {
-    let updated_content_size = tauri::LogicalSize {
-        width: size_x as f64,
-        height: size_y as f64,
-    };
-
-    let _ = reposition_with_known_content_size(&app_handle, &updated_content_size);
-    let _ = resize(&app_handle, &updated_content_size);
-}
-
-#[tauri::command]
-pub fn cmd_toggle_content_window(app_handle: tauri::AppHandle) {
-    if let Ok(visible) = is_open(&app_handle) {
-        if visible {
-            let _ = hide(&app_handle);
-            AXEventApp::AppContentActivationChange(AppContentActivationMessage {
-                activation_state: ContentWindowState::Inactive,
-            })
-            .publish_to_tauri(&app_handle);
-        } else {
-            let _ = open(&app_handle);
-            AXEventApp::AppContentActivationChange(AppContentActivationMessage {
-                activation_state: ContentWindowState::Active,
-            })
-            .publish_to_tauri(&app_handle);
-        }
     }
 }
 

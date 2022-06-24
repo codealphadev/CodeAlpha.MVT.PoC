@@ -9,6 +9,7 @@ use std::{
 
 use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
+    core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     window_controls::{
         actions::{close_window, create_window, open_window, set_position},
         code_overlay::{hide_code_overlay, show_code_overlay},
@@ -201,11 +202,23 @@ impl WidgetWindow {
             }
         }
 
-        open_window(&widget.app_handle, AppWindow::Widget)
+        if open_window(&widget.app_handle, AppWindow::Widget) {
+            EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
+                engine_active: Some(true),
+                active_feature: None,
+            })
+            .publish_to_tauri(&app_handle);
+        }
     }
 
     pub fn hide_widget_routine(app_handle: &tauri::AppHandle) {
         close_window(app_handle, AppWindow::Widget);
         close_window(app_handle, AppWindow::CodeOverlay);
+
+        EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
+            engine_active: Some(false),
+            active_feature: None,
+        })
+        .publish_to_tauri(&app_handle);
     }
 }
