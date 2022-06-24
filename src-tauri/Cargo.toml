@@ -18,7 +18,7 @@ tauri = { version = "1.0.0", features = ["macos-private-api", "notification", "s
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-uuid = { version = "0.8.2", features = ["v4", "serde"] }
+uuid = { version = "1.1.2", features = ["v4", "serde"] }
 tokio = { version=  "1.17.0",features = ["full"] }
 
 # macOS dependencies (crucial for Accessibility features to work)
@@ -32,8 +32,9 @@ accessibility = { git = "https://github.com/Hupka/accessibility" }
 accessibility-sys = { git = "https://github.com/Hupka/accessibility" }
 
 # Miscellaneous
-colored = "2"
-enigo = "0.0.14"
+colored = "2" # Coloring console output
+enigo = "0.0.14" # Enigo keyboard library
+ts-rs = {version = "6.2.0", features = ["serde-compat", "format", "uuid-impl"] }
 
 [dev-dependencies]
 pretty_assertions = "1.2.0"
