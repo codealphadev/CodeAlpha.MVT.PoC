@@ -16,7 +16,7 @@ use ax_interaction::{
 use commands::search_and_replace_commands;
 use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::{
-    actions::resize_window, AppWindow, EditorWindow, WidgetWindow, WindowControls,
+    actions::resize_window, config::AppWindow, EditorWindow, WidgetWindow, WindowControls,
 };
 
 use crate::window_controls::content_window::{
