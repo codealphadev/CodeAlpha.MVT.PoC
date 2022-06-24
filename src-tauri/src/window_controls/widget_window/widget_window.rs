@@ -11,9 +11,10 @@ use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
     window_controls::{
         actions::{close_window, create_window, open_window, set_position},
+        code_overlay::{hide_code_overlay, show_code_overlay},
+        config::AppWindow,
         content_window,
         editor_window::EditorWindow,
-        AppWindow,
     },
 };
 
@@ -182,13 +183,17 @@ pub fn show_widget_routine(
                     let _ = content_window::open(&app_handle);
 
                     // Open the code overlay window
-                    let _ = editor_window.show_code_overlay(app_handle);
+                    let _ = show_code_overlay(
+                        app_handle,
+                        editor_window.textarea_position,
+                        editor_window.textarea_size,
+                    );
                 }
                 ContentWindowState::Inactive => {
                     let _ = content_window::hide(&app_handle);
 
                     // Close the code overlay window
-                    let _ = editor_window.hide_code_overlay(app_handle);
+                    let _ = hide_code_overlay(app_handle);
                 }
             }
         }

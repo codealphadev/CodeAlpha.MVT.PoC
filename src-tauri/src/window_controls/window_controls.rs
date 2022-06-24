@@ -10,7 +10,7 @@ use crate::ax_interaction::{
     AXEventReplit, AXEventXcode, AX_EVENT_REPLIT_CHANNEL, AX_EVENT_XCODE_CHANNEL,
 };
 
-use super::{actions::open_window, editor_window::EditorWindow, WidgetWindow};
+use super::{actions::open_window, config::AppWindow, editor_window::EditorWindow, WidgetWindow};
 
 #[allow(dead_code)]
 pub struct WindowControls {
@@ -50,7 +50,7 @@ impl WindowControls {
                 }
                 AXEventXcode::EditorAppCodeSelected(msg) => {
                     handle_move_copy.emit_all("evt-repair-opened", msg).unwrap();
-                    open_window(&handle_move_copy, super::AppWindow::Repair);
+                    open_window(&handle_move_copy, AppWindow::Repair);
                 }
                 _ => {}
             }

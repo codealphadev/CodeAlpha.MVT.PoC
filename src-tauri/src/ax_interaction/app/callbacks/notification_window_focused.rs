@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::{
     ax_interaction::{models::app::AppWindowFocusedMessage, AXEventApp, AppObserverState},
-    window_controls::AppWindow,
+    window_controls::config::AppWindow,
 };
 
 /// Notify Tauri that a window of our app has been focused

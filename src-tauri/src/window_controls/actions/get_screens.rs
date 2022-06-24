@@ -2,7 +2,7 @@
 
 use tauri::{Manager, Monitor};
 
-use crate::window_controls::AppWindow;
+use crate::window_controls::config::AppWindow;
 
 /// Returns the `tauri::Monitor` object which the window of `window_label` is currently
 /// positioned on. If a `window_label` of a non-existing window is provided the result will

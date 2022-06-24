@@ -6,7 +6,10 @@ use crate::{
             ContentWindowState,
         },
     },
-    window_controls::AppWindow,
+    window_controls::{
+        code_overlay::{hide_code_overlay, show_code_overlay},
+        config::AppWindow,
+    },
 };
 
 use super::{widget_window::hide_widget_routine, WidgetWindow};
@@ -44,11 +47,15 @@ pub fn on_toggle_content_window(
             match editor_window.content_window_state {
                 ContentWindowState::Active => {
                     // Open the code overlay window
-                    let _ = editor_window.show_code_overlay(&widget_props.app_handle);
+                    let _ = show_code_overlay(
+                        &widget_props.app_handle,
+                        editor_window.textarea_position,
+                        editor_window.textarea_size,
+                    );
                 }
                 ContentWindowState::Inactive => {
                     // Close the code overlay window
-                    let _ = editor_window.hide_code_overlay(&widget_props.app_handle);
+                    let _ = hide_code_overlay(&widget_props.app_handle);
                 }
             }
         }

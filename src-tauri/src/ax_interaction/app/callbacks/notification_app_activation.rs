@@ -8,7 +8,7 @@ use crate::{
     },
     window_controls::{
         actions::{get_position, get_size},
-        AppWindow,
+        config::AppWindow,
     },
 };
 

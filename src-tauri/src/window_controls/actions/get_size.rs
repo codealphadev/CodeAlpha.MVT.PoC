@@ -1,6 +1,6 @@
 use tauri::{Error, LogicalSize, Manager};
 
-use crate::window_controls::AppWindow;
+use crate::window_controls::config::AppWindow;
 
 pub fn get_size(
     app_handle: &tauri::AppHandle,

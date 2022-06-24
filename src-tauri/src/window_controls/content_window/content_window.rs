@@ -9,10 +9,10 @@ use crate::{
     },
     window_controls::{
         actions::{current_monitor_of_window, get_position, get_size, set_position},
+        config::AppWindow,
         widget_window::{
             prevent_misalignement_of_content_and_widget, POSITIONING_OFFSET_X, POSITIONING_OFFSET_Y,
         },
-        AppWindow,
     },
 };
 

@@ -2,7 +2,8 @@ use tauri::{LogicalPosition, LogicalSize};
 
 use crate::window_controls::{
     actions::{current_monitor_of_window, get_size},
-    default_properties, AppWindow,
+    config::AppWindow,
+    default_properties,
 };
 
 // Hard coded values for the positioning of the content window to a widget of size 48px

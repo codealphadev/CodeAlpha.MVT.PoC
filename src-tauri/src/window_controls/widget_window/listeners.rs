@@ -7,7 +7,7 @@ use crate::{
         AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_REPLIT_CHANNEL,
         AX_EVENT_XCODE_CHANNEL,
     },
-    window_controls::AppWindow,
+    window_controls::config::AppWindow,
 };
 
 use super::{
