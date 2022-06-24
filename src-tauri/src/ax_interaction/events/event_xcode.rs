@@ -3,14 +3,14 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
+use crate::utils::messaging::ChannelList;
+
 use super::models::editor::{
     EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
     EditorAppDeactivatedMessage, EditorTextareaContentChanged, EditorTextareaScrolled,
     EditorUIElementFocusedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
     EditorWindowMovedMessage, EditorWindowResizedMessage,
 };
-
-pub static AX_EVENT_XCODE_CHANNEL: &str = "AXEventXcode";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
@@ -52,7 +52,7 @@ impl fmt::Display for AXEventXcode {
 
 impl AXEventXcode {
     pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
-        let event_name = AX_EVENT_XCODE_CHANNEL.to_string();
+        let event_name = ChannelList::AXEventXcode.to_string();
 
         // Emit to rust listeners
         app_handle.trigger_global(

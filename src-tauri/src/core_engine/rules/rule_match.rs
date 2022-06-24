@@ -1,3 +1,6 @@
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
 use crate::ax_interaction::get_textarea_uielement;
 
 use super::utils::ax_utils::{
@@ -9,11 +12,12 @@ use super::utils::types::{CharRange, MatchRange, MatchRectangle};
 
 type LineMatch = (MatchRange, Vec<MatchRectangle>);
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/rules/")]
 pub struct RuleMatch {
-    pub match_range: MatchRange,
-    pub line_matches: Vec<LineMatch>,
-    pub rectangles: Vec<MatchRectangle>,
+    match_range: MatchRange,
+    line_matches: Vec<LineMatch>,
+    rectangles: Vec<MatchRectangle>,
 }
 
 impl RuleMatch {
@@ -23,6 +27,18 @@ impl RuleMatch {
             rectangles: Vec::new(),
             line_matches: Vec::new(),
         }
+    }
+
+    pub fn match_range(&self) -> &MatchRange {
+        &self.match_range
+    }
+
+    pub fn line_matches(&self) -> &Vec<LineMatch> {
+        &self.line_matches
+    }
+
+    pub fn rectangles(&self) -> &Vec<MatchRectangle> {
+        &self.rectangles
     }
 
     pub fn update_rectangles(&mut self, editor_app_pid: i32, editor_window_hash: Option<usize>) {
@@ -143,7 +159,7 @@ mod tests {
                 rule.run(Some(editor_content), Some(search_str));
                 rule.compute_match_boundaries(editor_pid, None);
 
-                dbg!(rule.rule_matches);
+                dbg!(rule.rule_matches());
             } else {
                 assert!(false, "Focused UI element is not a textarea");
             }

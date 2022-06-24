@@ -4,9 +4,9 @@ use crate::core_engine::rules::{
 };
 
 pub struct SearchRule {
-    pub rule_matches: Option<Vec<RuleMatch>>,
-    pub search_str: Option<String>,
-    pub content: Option<String>,
+    rule_matches: Option<Vec<RuleMatch>>,
+    search_str: Option<String>,
+    content: Option<String>,
 
     search_str_updated: bool,
     content_updated: bool,
@@ -21,6 +21,10 @@ impl SearchRule {
             search_str_updated: false,
             content_updated: false,
         }
+    }
+
+    pub fn rule_matches(&self) -> &Option<Vec<RuleMatch>> {
+        &self.rule_matches
     }
 
     pub fn run(&mut self, content_str: Option<String>, search_str: Option<String>) {

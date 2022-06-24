@@ -3,12 +3,12 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
+use crate::utils::messaging::ChannelList;
+
 use super::models::app::{
     AppActivatedMessage, AppContentActivationMessage, AppDeactivatedMessage,
     AppUIElementFocusedMessage, AppWindowFocusedMessage, AppWindowMovedMessage,
 };
-
-pub static AX_EVENT_APP_CHANNEL: &str = "AXEventApp";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
@@ -38,7 +38,7 @@ impl fmt::Display for AXEventApp {
 
 impl AXEventApp {
     pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
-        let event_name = AX_EVENT_APP_CHANNEL.to_string();
+        let event_name = ChannelList::AXEventApp.to_string();
 
         // Emit to rust listeners
         app_handle.trigger_global(

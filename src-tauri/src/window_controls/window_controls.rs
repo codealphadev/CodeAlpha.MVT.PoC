@@ -5,9 +5,12 @@ use std::{
 
 use tauri::Manager;
 
-use crate::ax_interaction::{
-    models::editor::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
-    AXEventReplit, AXEventXcode, AX_EVENT_REPLIT_CHANNEL, AX_EVENT_XCODE_CHANNEL,
+use crate::{
+    ax_interaction::{
+        models::editor::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
+        AXEventReplit, AXEventXcode,
+    },
+    utils::messaging::ChannelList,
 };
 
 use super::{actions::open_window, config::AppWindow, editor_window::EditorWindow, WidgetWindow};
@@ -30,7 +33,7 @@ impl WindowControls {
         // Register listener for xcode events to create / remove editor
         let editor_windows_move_copy = editor_windows.clone();
         let handle_move_copy = app_handle.clone();
-        app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
+        app_handle.listen_global(ChannelList::AXEventXcode.to_string(), move |msg| {
             let axevent_xcode: AXEventXcode =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
@@ -58,7 +61,7 @@ impl WindowControls {
 
         // Register listener for Replit events to create / remove editor
         let editor_windows_move_copy = editor_windows.clone();
-        app_handle.listen_global(AX_EVENT_REPLIT_CHANNEL, move |msg| {
+        app_handle.listen_global(ChannelList::AXEventReplit.to_string(), move |msg| {
             let axevent_replit: AXEventReplit =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
 

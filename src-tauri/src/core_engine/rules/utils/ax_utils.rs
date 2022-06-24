@@ -3,7 +3,10 @@ use cocoa::appkit::CGPoint;
 use core_foundation::{base::CFRange, number::CFNumber};
 use core_graphics_types::geometry::{CGRect, CGSize};
 
-use crate::ax_interaction::derive_xcode_textarea_dimensions;
+use crate::{
+    ax_interaction::derive_xcode_textarea_dimensions,
+    utils::geometry::{LogicalPosition, LogicalSize},
+};
 
 use super::{types::CharRange, MatchRectangle};
 
@@ -245,14 +248,8 @@ pub fn get_char_range_of_line(
 /// A MatchRectangle
 pub fn get_MatchRect_from_CGRect(cgrect: &CGRect) -> MatchRectangle {
     MatchRectangle {
-        origin: tauri::LogicalPosition {
-            x: cgrect.origin.x as f64,
-            y: cgrect.origin.y as f64,
-        },
-        size: tauri::LogicalSize {
-            width: cgrect.size.width as f64,
-            height: cgrect.size.height as f64,
-        },
+        origin: LogicalPosition::from_CGRect(cgrect),
+        size: LogicalSize::from_CGRect(cgrect),
     }
 }
 

@@ -3,10 +3,8 @@ use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 use crate::{
-    ax_interaction::{
-        AXEventApp, AXEventXcode, AX_EVENT_APP_CHANNEL, AX_EVENT_REPLIT_CHANNEL,
-        AX_EVENT_XCODE_CHANNEL,
-    },
+    ax_interaction::{AXEventApp, AXEventXcode},
+    utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
 
@@ -25,7 +23,7 @@ pub fn register_listener_xcode(
 ) {
     let widget_props_move_copy = (widget_props).clone();
     let app_handle_move_copy = app_handle.clone();
-    app_handle.listen_global(AX_EVENT_XCODE_CHANNEL, move |msg| {
+    app_handle.listen_global(ChannelList::AXEventXcode.to_string(), move |msg| {
         let axevent_xcode: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
         match axevent_xcode {
@@ -62,7 +60,7 @@ pub fn register_listener_replit(
 ) {
     let widget_props_move_copy = (widget_props).clone();
     let app_handle_move_copy = app_handle.clone();
-    app_handle.listen_global(AX_EVENT_REPLIT_CHANNEL, move |msg| {
+    app_handle.listen_global(ChannelList::AXEventReplit.to_string(), move |msg| {
         let axevent_replit: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
         match axevent_replit {
@@ -98,7 +96,7 @@ pub fn register_listener_app(
     widget_props: &Arc<Mutex<WidgetWindow>>,
 ) {
     let widget_props_move_copy = (widget_props).clone();
-    app_handle.listen_global(AX_EVENT_APP_CHANNEL, move |msg| {
+    app_handle.listen_global(ChannelList::AXEventApp.to_string(), move |msg| {
         let axevent_app: AXEventApp = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
         let widget_props = &mut *(match widget_props_move_copy.lock() {
