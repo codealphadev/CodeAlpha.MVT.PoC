@@ -9,12 +9,7 @@ use crate::ax_interaction::{
     },
 };
 
-use super::{
-    widget_window::{
-        hide_widget_routine, show_widget_routine, temporary_hide_check_routine, SUPPORTED_EDITORS,
-    },
-    WidgetWindow,
-};
+use super::{widget_window::SUPPORTED_EDITORS, WidgetWindow};
 
 pub fn on_resize_editor_window(
     app_handle: &tauri::AppHandle,
@@ -43,7 +38,7 @@ pub fn on_resize_editor_window(
         }
     }
 
-    temporary_hide_check_routine(&app_handle, widget_arc);
+    WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc);
 }
 
 pub fn on_move_editor_window(
@@ -73,7 +68,7 @@ pub fn on_move_editor_window(
         }
     }
 
-    temporary_hide_check_routine(&app_handle, widget_arc);
+    WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc);
 }
 
 /// Update EditorWindow to which of it's ui elements is currently in focus. Furthermore, also update
@@ -113,23 +108,23 @@ pub fn on_editor_ui_element_focus_change(
                 if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
                     need_temporary_hide = true;
                 } else {
-                    hide_widget_routine(&widget_props.app_handle)
+                    WidgetWindow::hide_widget_routine(&widget_props.app_handle)
                 }
             } else {
                 if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-                    show_widget_routine(
+                    WidgetWindow::show_widget_routine(
                         &widget_props.app_handle,
                         widget_props,
                         &mut editor_list_locked,
                     )
                 } else {
-                    hide_widget_routine(&widget_props.app_handle)
+                    WidgetWindow::hide_widget_routine(&widget_props.app_handle)
                 }
             }
         } else {
             // Case: app was started while focus was already on a valid editor textarea.
             if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-                show_widget_routine(
+                WidgetWindow::show_widget_routine(
                     &widget_props.app_handle,
                     widget_props,
                     &mut editor_list_locked,
@@ -142,7 +137,7 @@ pub fn on_editor_ui_element_focus_change(
     }
 
     if need_temporary_hide {
-        temporary_hide_check_routine(&app_handle, widget_arc);
+        WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc);
     }
 }
 
@@ -157,7 +152,7 @@ pub fn on_deactivate_editor_app(
 
     if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {
-            hide_widget_routine(&widget_window.app_handle);
+            WidgetWindow::hide_widget_routine(&widget_window.app_handle);
         }
     }
 }
@@ -172,7 +167,7 @@ pub fn on_close_editor_app(
     });
 
     if SUPPORTED_EDITORS.contains(&closed_msg.editor_name.as_str()) {
-        hide_widget_routine(&widget_window.app_handle);
+        WidgetWindow::hide_widget_routine(&widget_window.app_handle);
     }
 }
 
@@ -194,7 +189,11 @@ pub fn on_activate_editor_app(
         if let Some(editor_window) = editor_list_locked.get(&currently_focused_editor_window_id) {
             if let Some(focused_ui_element) = &editor_window.focused_ui_element {
                 if *focused_ui_element == FocusedUIElement::Textarea {
-                    show_widget_routine(&widget_props.app_handle, widget_props, &editor_list_locked)
+                    WidgetWindow::show_widget_routine(
+                        &widget_props.app_handle,
+                        widget_props,
+                        &editor_list_locked,
+                    )
                 }
             }
         }

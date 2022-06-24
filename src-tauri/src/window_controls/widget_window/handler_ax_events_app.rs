@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-use super::{widget_window::hide_widget_routine, WidgetWindow};
+use super::WidgetWindow;
 
 pub fn on_move_app_window(widget_props: &mut WidgetWindow, move_msg: &AppWindowMovedMessage) {
     if move_msg.window != AppWindow::Widget {
@@ -70,9 +70,9 @@ pub fn on_deactivate_app(
 
     if let Some(is_focused_app_editor) = is_currently_focused_app_editor() {
         if !is_focused_app_editor {
-            hide_widget_routine(&widget_props.app_handle);
+            WidgetWindow::hide_widget_routine(&widget_props.app_handle);
         }
     } else {
-        hide_widget_routine(&widget_props.app_handle);
+        WidgetWindow::hide_widget_routine(&widget_props.app_handle);
     }
 }

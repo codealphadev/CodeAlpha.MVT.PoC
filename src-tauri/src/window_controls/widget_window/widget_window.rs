@@ -98,111 +98,114 @@ impl WidgetWindow {
         // Register listener for replit events relevant for displaying/hiding and positioning the widget
         register_listener_replit(app_handle, &widget_window);
     }
-}
 
-pub fn temporary_hide_check_routine(
-    app_handle: &tauri::AppHandle,
-    widget_props: &Arc<Mutex<WidgetWindow>>,
-) {
-    {
-        let widget = &mut *(match widget_props.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        });
-
-        // Update the Instant time stamp when the widget should be shown again
-        widget.temporary_hide_until_instant =
-            Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
-
-        // Check if another instance of this routine is already running
-        if widget.temporary_hide_check_active {
-            return;
-        } else {
-            widget.temporary_hide_check_active = true;
-        }
-
-        // Gracefully hide widget
-        hide_widget_routine(app_handle);
-    }
-
-    // Start temporary hide check routine
-    let widget_props_move_copy = widget_props.clone();
-    let app_handle_move_copy = app_handle.clone();
-
-    thread::spawn(move || loop {
-        // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
-        // ==================================================================
-        thread::sleep(std::time::Duration::from_millis(25));
-        // ==================================================================
-
-        let widget_window = &mut *(match widget_props_move_copy.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        });
-
-        if widget_window.temporary_hide_until_instant < Instant::now() {
-            let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+    pub fn temporary_hide_check_routine(
+        app_handle: &tauri::AppHandle,
+        widget_props: &Arc<Mutex<WidgetWindow>>,
+    ) {
+        {
+            let widget = &mut *(match widget_props.lock() {
                 Ok(guard) => guard,
                 Err(poisoned) => poisoned.into_inner(),
             });
-            show_widget_routine(&app_handle_move_copy, &widget_window, &editor_windows);
 
-            // Indicate that the routine finished
-            widget_window.temporary_hide_check_active = false;
-            break;
-        }
-    });
-}
+            // Update the Instant time stamp when the widget should be shown again
+            widget.temporary_hide_until_instant =
+                Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
 
-pub fn show_widget_routine(
-    app_handle: &tauri::AppHandle,
-    widget: &WidgetWindow,
-    editor_windows: &HashMap<uuid::Uuid, EditorWindow>,
-) {
-    // Check if the widget position should be updated before showing it
-    if let Some(focused_window_id) = widget.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows.get(&focused_window_id) {
-            if let Some(mut widget_position) = editor_window.widget_position {
-                prevent_widget_position_off_screen(&app_handle, &mut widget_position);
-
-                // If content window was open before, also check that it would not go offscreen
-                if editor_window.content_window_state == ContentWindowState::Active {
-                    prevent_misalignement_of_content_and_widget(&app_handle, &mut widget_position);
-                }
-
-                let _ = set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
+            // Check if another instance of this routine is already running
+            if widget.temporary_hide_check_active {
+                return;
+            } else {
+                widget.temporary_hide_check_active = true;
             }
+
+            // Gracefully hide widget
+            Self::hide_widget_routine(app_handle);
         }
+
+        // Start temporary hide check routine
+        let widget_props_move_copy = widget_props.clone();
+        let app_handle_move_copy = app_handle.clone();
+
+        thread::spawn(move || loop {
+            // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
+            // ==================================================================
+            thread::sleep(std::time::Duration::from_millis(25));
+            // ==================================================================
+
+            let widget_window = &mut *(match widget_props_move_copy.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => poisoned.into_inner(),
+            });
+
+            if widget_window.temporary_hide_until_instant < Instant::now() {
+                let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                });
+                Self::show_widget_routine(&app_handle_move_copy, &widget_window, &editor_windows);
+
+                // Indicate that the routine finished
+                widget_window.temporary_hide_check_active = false;
+                break;
+            }
+        });
     }
 
-    // Recover ContentWindowState for this editor window
-    if let Some(focused_window_id) = widget.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows.get(&focused_window_id) {
-            match editor_window.content_window_state {
-                ContentWindowState::Active => {
-                    let _ = content_window::open(&app_handle);
+    pub fn show_widget_routine(
+        app_handle: &tauri::AppHandle,
+        widget: &WidgetWindow,
+        editor_windows: &HashMap<uuid::Uuid, EditorWindow>,
+    ) {
+        // Check if the widget position should be updated before showing it
+        if let Some(focused_window_id) = widget.currently_focused_editor_window {
+            if let Some(editor_window) = editor_windows.get(&focused_window_id) {
+                if let Some(mut widget_position) = editor_window.widget_position {
+                    prevent_widget_position_off_screen(&app_handle, &mut widget_position);
 
-                    // Open the code overlay window
-                    let _ = show_code_overlay(
-                        app_handle,
-                        editor_window.textarea_position,
-                        editor_window.textarea_size,
-                    );
-                }
-                ContentWindowState::Inactive => {
-                    let _ = content_window::hide(&app_handle);
+                    // If content window was open before, also check that it would not go offscreen
+                    if editor_window.content_window_state == ContentWindowState::Active {
+                        prevent_misalignement_of_content_and_widget(
+                            &app_handle,
+                            &mut widget_position,
+                        );
+                    }
 
-                    // Close the code overlay window
-                    let _ = hide_code_overlay(app_handle);
+                    let _ = set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
                 }
             }
         }
+
+        // Recover ContentWindowState for this editor window
+        if let Some(focused_window_id) = widget.currently_focused_editor_window {
+            if let Some(editor_window) = editor_windows.get(&focused_window_id) {
+                match editor_window.content_window_state {
+                    ContentWindowState::Active => {
+                        let _ = content_window::open(&app_handle);
+
+                        // Open the code overlay window
+                        let _ = show_code_overlay(
+                            app_handle,
+                            editor_window.textarea_position,
+                            editor_window.textarea_size,
+                        );
+                    }
+                    ContentWindowState::Inactive => {
+                        let _ = content_window::hide(&app_handle);
+
+                        // Close the code overlay window
+                        let _ = hide_code_overlay(app_handle);
+                    }
+                }
+            }
+        }
+
+        open_window(&widget.app_handle, AppWindow::Widget)
     }
 
-    open_window(&widget.app_handle, AppWindow::Widget)
-}
-
-pub fn hide_widget_routine(app_handle: &tauri::AppHandle) {
-    close_window(app_handle, AppWindow::Widget);
-    close_window(app_handle, AppWindow::CodeOverlay);
+    pub fn hide_widget_routine(app_handle: &tauri::AppHandle) {
+        close_window(app_handle, AppWindow::Widget);
+        close_window(app_handle, AppWindow::CodeOverlay);
+    }
 }
