@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
 
-	import { getCurrent, LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
-	import { HighlightSvelte } from 'svelte-highlight';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { RuleResults } from '../../src-tauri/bindings/rules/RuleResults';
 	import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 
-	import { Annotation, annotate } from 'svelte-rough-notation';
 	import { onMount } from 'svelte';
+	import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize';
+	import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
 
 	let rn;
 	let visible = false;
@@ -22,19 +21,6 @@
 	let outerSize: LogicalSize | null = null;
 	let outerPosition: LogicalPosition | null = null;
 
-	const fetchWindowHeight = async () => {
-		const outerSizeFetched = await getCurrent().outerSize();
-		const outerPositionFetched = await getCurrent().outerPosition();
-		const scaleFactor = await getCurrent().scaleFactor();
-		const logicalSize = outerSizeFetched.toLogical(scaleFactor);
-		const logicalPosition = outerPositionFetched.toLogical(scaleFactor);
-
-		outerSize = logicalSize;
-		outerPosition = logicalPosition;
-
-		height = logicalSize.height;
-	};
-
 	let results: RuleResults | null = null;
 
 	const listenTauriEvents = async () => {
@@ -44,6 +30,7 @@
 
 			outerSize = payload.size;
 			outerPosition = payload.origin;
+			height = payload.size.height;
 
 			compute_rects();
 		});
