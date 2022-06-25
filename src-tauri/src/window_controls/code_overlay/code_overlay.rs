@@ -3,9 +3,13 @@ use tauri::{Error, Manager};
 use cocoa::{base::id, foundation::NSInteger};
 use objc::{class, msg_send, sel, sel_impl};
 
-use crate::window_controls::{
-    actions::{close_window, open_window, resize_window, set_position},
-    config::AppWindow,
+use crate::{
+    core_engine::MatchRectangle,
+    utils::geometry::{LogicalPosition, LogicalSize},
+    window_controls::{
+        actions::{close_window, open_window, resize_window, set_position},
+        config::AppWindow,
+    },
 };
 
 /// It opens the code overlay window and sets its position and size to match the textarea
@@ -31,7 +35,12 @@ pub fn show_code_overlay(
         app_handle.emit_to(
             &AppWindow::CodeOverlay.to_string(),
             "event-compute-height",
-            {},
+            {
+                MatchRectangle {
+                    origin: LogicalPosition::from_tauri_LogicalPosition(&origin),
+                    size: LogicalSize::from_tauri_LogicalSize(&size),
+                }
+            },
         )?;
     }
 

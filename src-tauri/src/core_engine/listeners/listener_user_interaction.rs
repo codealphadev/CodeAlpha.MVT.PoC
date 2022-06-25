@@ -13,11 +13,15 @@ use crate::{
         },
         CoreEngine,
     },
+    utils::messaging::ChannelList,
 };
 
-pub fn register_listener(app_handle: &tauri::AppHandle, core_engine: &Arc<Mutex<CoreEngine>>) {
+pub fn register_listener_user_interactions(
+    app_handle: &tauri::AppHandle,
+    core_engine: &Arc<Mutex<CoreEngine>>,
+) {
     let core_engine_move_copy = (core_engine).clone();
-    app_handle.listen_global("EVENT_USER_INTERACTIONS_CHANNEL", move |msg| {
+    app_handle.listen_global(ChannelList::EventUserInteractions.to_string(), move |msg| {
         let event_user_interaction: EventUserInteraction =
             serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
@@ -55,7 +59,7 @@ fn on_search_query_by_user(
     };
 
     // Fetch latest content from editor
-    let textarea_uielement = if let Some(uielement) = get_textarea_uielement(pid, None) {
+    let textarea_uielement = if let Some(uielement) = get_textarea_uielement(pid) {
         uielement
     } else {
         return;

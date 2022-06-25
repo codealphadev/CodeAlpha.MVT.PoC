@@ -75,8 +75,6 @@ pub fn calc_match_rects_for_wrapped_range(
                     // Minus 1 because rectangles for first and last line are already added
                     // E.g. if wrapped_lines_count = 3, we need to add 1 inbetween-rectangle
                     for i in 1..larger_than_two - 1 {
-                        println!("larger_than_two: {}", larger_than_two);
-                        println!("i: {}", i);
                         let inbetween_line_rect = CGRect {
                             origin: CGPoint {
                                 x: editor_origin.x,
@@ -140,7 +138,6 @@ pub fn is_text_of_line_wrapped(
         } else if line_count == 1 {
             Some((false, line_count))
         } else {
-            assert!(false, "Case line_count = 0 should never happen");
             None
         }
     } else {

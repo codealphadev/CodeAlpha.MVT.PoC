@@ -113,28 +113,12 @@ pub fn application_is_trusted_with_prompt() -> bool {
 /// Returns:
 ///
 /// An Option<AXUIElement>
-pub fn get_textarea_uielement(
-    editor_app_pid: i32,
-    editor_window_hash: Option<usize>,
-) -> Option<AXUIElement> {
-    let focused_uielement = if let Some(editor_window_hash) = editor_window_hash {
-        if let Ok(window_uielement) =
-            window_ui_element_from_hash(editor_app_pid, editor_window_hash)
-        {
-            if let Ok(focused_uielement) = window_uielement.focused_uielement() {
-                focused_uielement
-            } else {
-                return None;
-            }
-        } else {
-            return None;
-        }
+pub fn get_textarea_uielement(editor_app_pid: i32) -> Option<AXUIElement> {
+    let focused_uielement = if let Ok(focused_uielement) = focused_uielement_of_app(editor_app_pid)
+    {
+        focused_uielement
     } else {
-        if let Ok(focused_uielement) = focused_uielement_of_app(editor_app_pid) {
-            focused_uielement
-        } else {
-            return None;
-        }
+        return None;
     };
 
     // Only proceed if focused UI element is a textarea

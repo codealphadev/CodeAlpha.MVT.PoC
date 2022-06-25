@@ -14,7 +14,13 @@ pub fn create_window(handle: &tauri::AppHandle, window_label: AppWindow) -> Resu
 
     let window_builder = create_default_window_builder(&handle, window_label)?;
 
-    window_builder.build()
+    let window = window_builder.build()?;
+
+    if window_label == AppWindow::CodeOverlay {
+        // window.open_devtools();
+    }
+
+    Ok(window)
 }
 
 pub fn create_default_window_builder(

@@ -3,7 +3,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use super::{rules::RuleType, CodeDocument};
+use super::{
+    listeners::{register_listener_user_interactions, register_listener_xcode},
+    rules::RuleType,
+    CodeDocument,
+};
 
 pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<uuid::Uuid, CodeDocument>>>;
 
@@ -25,8 +29,8 @@ impl CoreEngine {
         Self {
             app_handle: app_handle.clone(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
-            active_feature: RuleType::None,
-            engine_active: false,
+            active_feature: RuleType::SearchAndReplace,
+            engine_active: true,
         }
     }
 
@@ -52,5 +56,13 @@ impl CoreEngine {
         if let Some(active_feature) = active_feature {
             self.active_feature = active_feature;
         }
+    }
+
+    pub fn start_core_engine_listeners(
+        app_handle: &tauri::AppHandle,
+        core_engine: &Arc<Mutex<CoreEngine>>,
+    ) {
+        register_listener_xcode(app_handle, &core_engine);
+        register_listener_user_interactions(app_handle, &core_engine);
     }
 }

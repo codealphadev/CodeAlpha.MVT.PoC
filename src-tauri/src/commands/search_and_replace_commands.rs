@@ -1,39 +1,9 @@
-use std::sync::{Arc, Mutex};
-
-use crate::{
-    ax_interaction::xcode::{get_xcode_editor_content, update_xcode_editor_content},
-    window_controls::WidgetWindow,
-};
+use crate::core_engine::events::{models::SearchQueryMessage, EventUserInteraction};
 
 /// This command contains too much accessibility logic - going to give us a harder time in the future. Need better design.
 #[tauri::command]
-pub fn cmd_search_and_replace(
-    search_str: String,
-    replace_str: String,
-    widget_state: tauri::State<'_, Arc<Mutex<WidgetWindow>>>,
-) {
-    let widget_window = &*(match widget_state.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    });
-    let editor_windows = &*(match widget_window.editor_windows.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    });
-
-    if let Some(focused_editor_window_id) = widget_window.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows.get(&focused_editor_window_id) {
-            let content = get_xcode_editor_content(editor_window.pid.try_into().unwrap());
-
-            if let Ok(content) = content {
-                if let Some(content_str) = content {
-                    let content_str = content_str.replace(&search_str, &replace_str);
-                    let _ = update_xcode_editor_content(
-                        editor_window.pid.try_into().unwrap(),
-                        &content_str,
-                    );
-                }
-            }
-        }
-    }
+pub fn cmd_search_and_replace(app_handle: tauri::AppHandle, search_str: String) {
+    println!("cmd_search_and_replace: search_str: {}", search_str);
+    EventUserInteraction::SearchQuery(SearchQueryMessage { query: search_str })
+        .publish_to_tauri(&app_handle);
 }

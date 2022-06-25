@@ -84,14 +84,10 @@ impl SearchRule {
         }
     }
 
-    pub fn compute_match_boundaries(
-        &mut self,
-        editor_app_pid: i32,
-        editor_window_hash: Option<usize>,
-    ) {
+    pub fn compute_match_boundaries(&mut self, editor_app_pid: i32) {
         if let Some(matches) = &mut self.rule_matches {
             for single_match in matches.iter_mut() {
-                (*single_match).update_rectangles(editor_app_pid, editor_window_hash);
+                (*single_match).update_rectangles(editor_app_pid);
             }
         }
     }

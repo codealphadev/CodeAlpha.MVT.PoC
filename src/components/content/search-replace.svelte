@@ -3,15 +3,12 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 
 	let searchString: string;
-	let replaceString: string;
 
 	$: console.log(searchString);
-	$: console.log(replaceString);
 
 	const swapStrings = () => {
 		invoke('cmd_search_and_replace', {
-			searchStr: searchString,
-			replaceStr: replaceString
+			searchStr: searchString
 		});
 	};
 </script>
@@ -23,8 +20,7 @@
 				Search and Replace
 			</h3>
 			<p class="mt-1 text-base font-normal text-gray-500">
-				Type a character sequence and press “swap” to replace all instances in the currently focused
-				editor.
+				Type a character sequence and press “Run Search” to find all instances.
 			</p>
 		</div>
 		<div class="pt-3">
@@ -33,17 +29,6 @@
 				<input
 					type="text"
 					bind:value={searchString}
-					class="py-2 px-3 border w-full outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 focus:border-gray-300 border-gray-300 rounded-md"
-				/>
-			</div>
-		</div>
-
-		<div class="pt-3">
-			<label for="replace-str" class="font-medium text-gray-700 sm:pt-2"> Replace with </label>
-			<div class="mt-1">
-				<input
-					type="text"
-					bind:value={replaceString}
 					class="py-2 px-3 border w-full outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 focus:border-gray-300 border-gray-300 rounded-md"
 				/>
 			</div>
@@ -57,7 +42,7 @@
 		>
 			<div class="inline-flex items-center justify-center text-base font-medium text-white ">
 				<SwitchHorizontalIcon class="-ml-1 mr-3 h-5 w-5" aria-hidden="true" />
-				Swap strings
+				Run Search
 			</div>
 		</button>
 	</div>

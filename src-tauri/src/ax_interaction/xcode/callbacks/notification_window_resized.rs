@@ -14,8 +14,6 @@ pub fn notify_window_resized(
     ui_element: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    assert_eq!(ui_element.role()?, "AXScrollBar");
-
     let window_element = ui_element.window()?;
 
     // Find window_element in xcode_observer_state.window_list to get id

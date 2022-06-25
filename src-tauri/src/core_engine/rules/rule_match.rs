@@ -29,26 +29,24 @@ impl RuleMatch {
         }
     }
 
+    #[allow(unused)]
     pub fn match_range(&self) -> &MatchRange {
         &self.match_range
     }
 
+    #[allow(unused)]
     pub fn line_matches(&self) -> &Vec<LineMatch> {
         &self.line_matches
     }
 
+    #[allow(unused)]
     pub fn rectangles(&self) -> &Vec<MatchRectangle> {
         &self.rectangles
     }
 
-    pub fn update_rectangles(&mut self, editor_app_pid: i32, editor_window_hash: Option<usize>) {
+    pub fn update_rectangles(&mut self, editor_app_pid: i32) {
         // 1. Get Editor TextArea UI Element
-        // If specific window hash is provided, attempt to get the textarea element of this window,
-        // otherwise, get the focused element of the editor application and proceed if it is a textarea.
-
-        if let Some(editor_textarea_ui_element) =
-            get_textarea_uielement(editor_app_pid, editor_window_hash)
-        {
+        if let Some(editor_textarea_ui_element) = get_textarea_uielement(editor_app_pid) {
             let mut line_match_ranges: Vec<MatchRange> = Vec::new();
 
             // 2. Break up match range into individual matches that only span one line in the editor
@@ -157,7 +155,7 @@ mod tests {
                 let search_str = "]\n)text ever since".to_string();
                 let mut rule = SearchRule::new();
                 rule.run(Some(editor_content), Some(search_str));
-                rule.compute_match_boundaries(editor_pid, None);
+                rule.compute_match_boundaries(editor_pid);
 
                 dbg!(rule.rule_matches());
             } else {

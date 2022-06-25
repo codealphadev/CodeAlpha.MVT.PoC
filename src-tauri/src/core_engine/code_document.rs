@@ -1,4 +1,8 @@
-use super::rules::search_and_replace::SearchRule;
+use tauri::Manager;
+
+use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
+
+use super::rules::{search_and_replace::SearchRule, RuleResults};
 
 pub struct EditorWindowProps {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
@@ -38,6 +42,7 @@ impl CodeDocument {
         &self.editor_window_props
     }
 
+    #[allow(unused)]
     pub fn search_and_replace_rule(&self) -> &SearchRule {
         &self.search_and_replace_rule
     }
@@ -51,11 +56,19 @@ impl CodeDocument {
     }
 
     pub fn compute_search_and_replace_rule_visualization(&mut self) {
-        self.search_and_replace_rule.compute_match_boundaries(
-            self.editor_window_props.pid,
-            Some(self.editor_window_props.uielement_hash),
-        );
+        self.search_and_replace_rule
+            .compute_match_boundaries(self.editor_window_props.pid);
 
         // Publish to Frontend using tauri app handle
+        if let Some(rule_results) = self.search_and_replace_rule.rule_matches() {
+            let _ = self.app_handle.emit_to(
+                &AppWindow::CodeOverlay.to_string(),
+                &ChannelList::RuleResults.to_string(),
+                RuleResults {
+                    rule: super::rules::RuleType::SearchAndReplace,
+                    results: rule_results.clone(),
+                },
+            );
+        }
     }
 }

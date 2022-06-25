@@ -14,6 +14,7 @@ use ax_interaction::{
     xcode::{get_xcode_editor_content, update_xcode_editor_content},
 };
 use commands::search_and_replace_commands;
+use core_engine::CoreEngine;
 use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::{
     actions::resize_window, config::AppWindow, EditorWindow, WidgetWindow, WindowControls,
@@ -94,6 +95,9 @@ fn main() {
             // Create vector of editor windows
             let editor_windows_arc: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>> =
                 Arc::new(Mutex::new(HashMap::new()));
+
+            let core_engine_arc = Arc::new(Mutex::new(CoreEngine::new(&handle)));
+            CoreEngine::start_core_engine_listeners(&handle, &core_engine_arc);
 
             // Create instance of widget window; panics if creation fails
             let widget_window = WidgetWindow::new(&handle, &editor_windows_arc);

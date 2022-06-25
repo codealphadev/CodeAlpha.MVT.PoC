@@ -1,3 +1,4 @@
+#![allow(unused)]
 /// A file containing utilities that are used/shared across all modules of the project
 
 pub mod geometry {
@@ -72,6 +73,7 @@ pub mod messaging {
     #[ts(export)]
     pub enum ChannelList {
         EventUserInteractions,
+        RuleResults,
         AXEventApp,
         AXEventReplit,
         AXEventXcode,
@@ -80,6 +82,7 @@ pub mod messaging {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
                 ChannelList::EventUserInteractions => write!(f, "EventUserInteractions"),
+                ChannelList::RuleResults => write!(f, "RuleResults"),
                 ChannelList::AXEventApp => write!(f, "AXEventApp"),
                 ChannelList::AXEventReplit => write!(f, "AXEventReplit"),
                 ChannelList::AXEventXcode => write!(f, "AXEventXcode"),

@@ -121,8 +121,8 @@ impl WidgetWindow {
                 widget.temporary_hide_check_active = true;
             }
 
-            // Gracefully hide widget
-            Self::hide_widget_routine(app_handle);
+            close_window(app_handle, AppWindow::Widget);
+            close_window(app_handle, AppWindow::CodeOverlay);
         }
 
         // Start temporary hide check routine
