@@ -8,8 +8,9 @@ use tauri::Manager;
 use crate::{
     ax_interaction::{
         models::editor::{
-            EditorTextareaContentChanged, EditorTextareaScrolled, EditorWindowCreatedMessage,
-            EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+            EditorTextareaContentChanged, EditorTextareaScrolledMessage,
+            EditorTextareaZoomedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
+            EditorWindowMovedMessage, EditorWindowResizedMessage,
         },
         AXEventXcode,
     },
@@ -38,6 +39,9 @@ pub fn register_listener_xcode(
             }
             AXEventXcode::EditorTextareaScrolled(msg) => {
                 on_editor_textarea_scrolled(&core_engine_move_copy, &msg);
+            }
+            AXEventXcode::EditorTextareaZoomed(msg) => {
+                on_editor_textarea_zoomed(&core_engine_move_copy, &msg);
             }
             AXEventXcode::EditorTextareaContentChanged(msg) => {
                 on_editor_textarea_content_changed(&core_engine_move_copy, &msg);
@@ -85,7 +89,7 @@ fn on_editor_textarea_content_changed(
 
 fn on_editor_textarea_scrolled(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
-    scrolled_msg: &EditorTextareaScrolled,
+    scrolled_msg: &EditorTextareaScrolledMessage,
 ) {
     let core_engine = &mut *(match core_engine_arc.lock() {
         Ok(guard) => guard,
@@ -105,6 +109,32 @@ fn on_editor_textarea_scrolled(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&scrolled_msg.id) {
+        code_doc.compute_search_and_replace_rule_visualization();
+    }
+}
+
+fn on_editor_textarea_zoomed(
+    core_engine_arc: &Arc<Mutex<CoreEngine>>,
+    zoomed_msg: &EditorTextareaZoomedMessage,
+) {
+    let core_engine = &mut *(match core_engine_arc.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
+    // returns.
+    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleType::SearchAndReplace)
+    {
+        return;
+    }
+
+    let code_documents = &mut *(match core_engine.code_documents().lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.id) {
         code_doc.compute_search_and_replace_rule_visualization();
     }
 }

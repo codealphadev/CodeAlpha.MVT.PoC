@@ -2,14 +2,14 @@ use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
-    models::editor::EditorTextareaScrolledMessage, AXEventXcode, XCodeObserverState,
+    models::editor::EditorTextareaZoomedMessage, AXEventXcode, XCodeObserverState,
 };
 
-pub fn notifiy_textarea_scrolled(
+pub fn notifiy_textarea_zoomed(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    assert_eq!(uielement.role()?, "AXScrollBar");
+    assert_eq!(uielement.role()?, "AXTextArea");
 
     let window_element = uielement.window()?;
 
@@ -22,7 +22,7 @@ pub fn notifiy_textarea_scrolled(
         });
 
     if let Some(window) = &mut known_window {
-        AXEventXcode::EditorTextareaScrolled(EditorTextareaScrolledMessage { id: window.0 })
+        AXEventXcode::EditorTextareaZoomed(EditorTextareaZoomedMessage { id: window.0 })
             .publish_to_tauri(&xcode_observer_state.app_handle);
     }
 
