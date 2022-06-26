@@ -15,6 +15,7 @@ type LineMatch = (MatchRange, Vec<MatchRectangle>);
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
 pub struct RuleMatch {
+    id: uuid::Uuid,
     match_range: MatchRange,
     line_matches: Vec<LineMatch>,
     rectangles: Vec<MatchRectangle>,
@@ -26,6 +27,7 @@ impl RuleMatch {
             match_range,
             rectangles: Vec::new(),
             line_matches: Vec::new(),
+            id: uuid::Uuid::new_v4(),
         }
     }
 

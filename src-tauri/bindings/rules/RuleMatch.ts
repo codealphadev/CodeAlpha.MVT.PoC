@@ -3,6 +3,7 @@ import type { MatchRange } from "./utils/MatchRange";
 import type { MatchRectangle } from "./utils/MatchRectangle";
 
 export interface RuleMatch {
+  id: string;
   match_range: MatchRange;
   line_matches: Array<[MatchRange, Array]>;
   rectangles: Array<MatchRectangle>;
