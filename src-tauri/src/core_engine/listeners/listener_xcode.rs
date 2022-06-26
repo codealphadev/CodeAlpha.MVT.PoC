@@ -79,6 +79,7 @@ fn on_editor_textarea_content_changed(
 
     if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.id) {
         code_doc.compute_search_and_replace_rule(Some(content_changed_msg.content.clone()), None);
+        code_doc.compute_search_and_replace_rule_visualization();
     }
 }
 
