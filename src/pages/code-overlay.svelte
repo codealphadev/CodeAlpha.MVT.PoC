@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { listen } from '@tauri-apps/api/event';
+	import { listen, Event } from '@tauri-apps/api/event';
 
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { RuleResults } from '../../src-tauri/bindings/rules/RuleResults';
