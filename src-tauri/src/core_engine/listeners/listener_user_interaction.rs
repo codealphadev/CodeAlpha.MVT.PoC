@@ -121,6 +121,5 @@ fn on_core_activation_status_update(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    core_engine.set_active_feature(core_activation_status_msg.active_feature.clone());
     core_engine.set_engine_active(core_activation_status_msg.engine_active);
 }
