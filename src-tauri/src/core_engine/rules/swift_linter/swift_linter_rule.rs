@@ -3,11 +3,12 @@ use std::process::Command;
 use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::rules::{
+        rule_match::RuleMatchProps,
         utils::{
             ax_utils::get_char_range_of_line,
             types::{CharRange, MatchRange},
         },
-        RuleBase, RuleMatch, RuleName, RuleResults,
+        RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
     },
 };
 
@@ -81,6 +82,11 @@ impl RuleBase for SwiftLinterRule {
                             index: char_range_for_line.index + lint_alert.column,
                             length: 1,
                         },
+                    },
+                    RuleMatchProps {
+                        identifier: lint_alert.identifier,
+                        description: lint_alert.message,
+                        category: RuleMatchCategory::from_lint_level(lint_alert.level),
                     },
                 );
 
@@ -177,6 +183,10 @@ impl SwiftLinterRule {
         let parts: Vec<&str> = line.split(":").collect();
         let (_, last_parts) = parts.split_at(4);
 
+        let last_parts = last_parts.join(":").to_string();
+        let message_parts: Vec<&str> = last_parts.split("(").collect();
+        let (message, identifier) = message_parts.split_at(1);
+
         LintAlert {
             file_path: parts[0].to_string(),
             line: parts[1].parse::<usize>().unwrap(),
@@ -186,7 +196,8 @@ impl SwiftLinterRule {
             } else {
                 LintLevel::Warning
             },
-            message: last_parts.join(":").to_string(),
+            message: message.join("(").to_string(),
+            identifier: identifier.join("(").to_string().clone(),
         }
     }
 }

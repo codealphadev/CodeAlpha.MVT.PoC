@@ -7,11 +7,19 @@ use super::utils::ax_utils::{
     calc_match_rects_for_wrapped_range, get_bounds_of_CharRange, get_char_range_of_line,
     get_line_number_for_range_index, is_text_of_line_wrapped,
 };
-use super::RuleName;
+use super::{RuleMatchCategory, RuleName};
 
 use super::utils::types::{CharRange, MatchRange, MatchRectangle};
 
 type LineMatch = (MatchRange, Vec<MatchRectangle>);
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/rules/")]
+pub struct RuleMatchProps {
+    pub identifier: String,
+    pub description: String,
+    pub category: RuleMatchCategory,
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
@@ -21,16 +29,22 @@ pub struct RuleMatch {
     line_matches: Vec<LineMatch>,
     rectangles: Vec<MatchRectangle>,
     rule_name: RuleName,
+    match_properties: RuleMatchProps,
 }
 
 impl RuleMatch {
-    pub fn new(rule_name: RuleName, match_range: MatchRange) -> Self {
+    pub fn new(
+        rule_name: RuleName,
+        match_range: MatchRange,
+        match_properties: RuleMatchProps,
+    ) -> Self {
         Self {
             match_range,
             rectangles: Vec::new(),
             line_matches: Vec::new(),
             id: uuid::Uuid::new_v4(),
             rule_name,
+            match_properties,
         }
     }
 

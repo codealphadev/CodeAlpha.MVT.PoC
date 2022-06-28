@@ -1,6 +1,7 @@
 use crate::core_engine::rules::{
+    rule_match::RuleMatchProps,
     utils::types::{CharRange, MatchRange},
-    RuleBase, RuleMatch, RuleName, RuleResults,
+    RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
 };
 
 pub struct SearchRuleProps {
@@ -64,6 +65,11 @@ impl RuleBase for SearchRule {
                             index: char_count_left_str + removed_chars,
                             length: char_count_search_str,
                         },
+                    },
+                    RuleMatchProps {
+                        identifier: "".to_string(),
+                        description: "lint_alert.message".to_string(),
+                        category: RuleMatchCategory::None,
                     },
                 ));
 

@@ -12,6 +12,7 @@ pub struct LintAlert {
     pub column: usize,
     pub level: LintLevel,
     pub message: String,
+    pub identifier: String,
 }
 
 #[derive(Debug, Serialize, Clone)]
