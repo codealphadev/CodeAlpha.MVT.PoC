@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct EditorTextareaContentChanged {
+pub struct EditorTextareaContentChangedMessage {
     pub id: uuid::Uuid,
     pub content: String,
+    pub file_path_as_str: String,
 }

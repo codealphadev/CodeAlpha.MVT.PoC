@@ -11,6 +11,7 @@ use crate::{
             models::{CoreActivationStatusMessage, SearchQueryMessage},
             EventUserInteraction,
         },
+        rules::{search_and_replace::SearchRuleProps, RuleType},
         CoreEngine,
     },
     utils::messaging::ChannelList,
@@ -91,16 +92,23 @@ fn on_search_query_by_user(
         .iter_mut()
         .find(|(_, code_doc)| code_doc.editor_window_props().uielement_hash == window_hash)
     {
-        code_doc_of_active_editor_window
-            .1
-            .compute_search_and_replace_rule(
-                Some(textarea_content.clone()),
-                Some(search_query_msg.query.clone()),
-            );
+        // Update properties of all rules
+        for rule in code_doc_of_active_editor_window.1.rules_mut() {
+            match rule {
+                RuleType::SearchRule(search_rule) => {
+                    search_rule.update_properties(SearchRuleProps {
+                        search_str: Some(search_query_msg.query.clone()),
+                        content: Some(textarea_content.clone()),
+                    })
+                }
+                RuleType::SwiftLinter(_) => {}
+            }
+        }
 
+        code_doc_of_active_editor_window.1.process_rules();
         code_doc_of_active_editor_window
             .1
-            .compute_search_and_replace_rule_visualization();
+            .compute_rule_visualizations();
     }
 }
 

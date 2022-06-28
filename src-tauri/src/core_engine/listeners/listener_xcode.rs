@@ -8,14 +8,14 @@ use tauri::Manager;
 use crate::{
     ax_interaction::{
         models::editor::{
-            EditorTextareaContentChanged, EditorTextareaScrolledMessage,
+            EditorTextareaContentChangedMessage, EditorTextareaScrolledMessage,
             EditorTextareaZoomedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
             EditorWindowMovedMessage, EditorWindowResizedMessage,
         },
         AXEventXcode,
     },
     core_engine::{
-        rules::{search_and_replace::SearchRule, RuleType},
+        rules::{RuleName, RuleType, SearchRuleProps, SwiftLinterProps},
         CodeDocument, CoreEngine, EditorWindowProps,
     },
     utils::messaging::ChannelList,
@@ -31,7 +31,6 @@ pub fn register_listener_xcode(
 
         match axevent_xcode {
             AXEventXcode::EditorWindowMoved(msg) => {
-                // TODO: dont't handle this here, but in the frontend -> more efficient implementation
                 on_editor_window_moved(&core_engine_move_copy, &msg);
             }
             AXEventXcode::EditorWindowResized(msg) => {
@@ -62,7 +61,7 @@ pub fn register_listener_xcode(
 
 fn on_editor_textarea_content_changed(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
-    content_changed_msg: &EditorTextareaContentChanged,
+    content_changed_msg: &EditorTextareaContentChangedMessage,
 ) {
     let core_engine = &mut *(match core_engine_arc.lock() {
         Ok(guard) => guard,
@@ -71,7 +70,7 @@ fn on_editor_textarea_content_changed(
 
     // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
     // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleType::SearchAndReplace)
+    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
     {
         return;
     }
@@ -82,8 +81,25 @@ fn on_editor_textarea_content_changed(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.id) {
-        code_doc.compute_search_and_replace_rule(Some(content_changed_msg.content.clone()), None);
-        code_doc.compute_search_and_replace_rule_visualization();
+        for rule in code_doc.rules_mut() {
+            match rule {
+                RuleType::SearchRule(search_rule) => {
+                    search_rule.update_properties(SearchRuleProps {
+                        search_str: None,
+                        content: Some(content_changed_msg.content.clone()),
+                    })
+                }
+                RuleType::SwiftLinter(swift_linter_rule) => {
+                    swift_linter_rule.update_properties(SwiftLinterProps {
+                        file_path_as_str: Some(content_changed_msg.file_path_as_str.clone()),
+                        linter_config: None,
+                    })
+                }
+            }
+        }
+
+        code_doc.process_rules();
+        code_doc.compute_rule_visualizations();
     }
 }
 
@@ -98,7 +114,7 @@ fn on_editor_textarea_scrolled(
 
     // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
     // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleType::SearchAndReplace)
+    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
     {
         return;
     }
@@ -109,7 +125,7 @@ fn on_editor_textarea_scrolled(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&scrolled_msg.id) {
-        code_doc.compute_search_and_replace_rule_visualization();
+        code_doc.compute_rule_visualizations();
     }
 }
 
@@ -124,7 +140,7 @@ fn on_editor_textarea_zoomed(
 
     // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
     // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleType::SearchAndReplace)
+    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
     {
         return;
     }
@@ -135,7 +151,7 @@ fn on_editor_textarea_zoomed(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.id) {
-        code_doc.compute_search_and_replace_rule_visualization();
+        code_doc.compute_rule_visualizations();
     }
 }
 
@@ -150,7 +166,7 @@ fn on_editor_window_resized(
 
     // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
     // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleType::SearchAndReplace)
+    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
     {
         return;
     }
@@ -161,7 +177,7 @@ fn on_editor_window_resized(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&resized_msg.id) {
-        code_doc.compute_search_and_replace_rule_visualization();
+        code_doc.compute_rule_visualizations();
     }
 }
 
@@ -176,7 +192,7 @@ fn on_editor_window_moved(
 
     // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
     // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleType::SearchAndReplace)
+    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
     {
         return;
     }
@@ -187,7 +203,7 @@ fn on_editor_window_moved(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&moved_msg.id) {
-        code_doc.compute_search_and_replace_rule_visualization();
+        code_doc.compute_rule_visualizations();
     }
 }
 
@@ -221,7 +237,6 @@ fn on_editor_window_created(
             uielement_hash: created_msg.ui_elem_hash,
             pid: created_msg.pid,
         },
-        SearchRule::new(),
     );
 
     let code_documents = &mut *(match core_engine.code_documents().lock() {

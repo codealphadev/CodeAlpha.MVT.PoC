@@ -8,16 +8,16 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
-pub enum RuleType {
+pub enum RuleName {
     SearchAndReplace,
-    Linting,
+    SwiftLinter,
     None,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
 pub struct RuleResults {
-    pub rule: RuleType,
+    pub rule: RuleName,
     pub results: Vec<RuleMatch>,
 }
 

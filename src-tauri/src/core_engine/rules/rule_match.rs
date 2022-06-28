@@ -7,6 +7,7 @@ use super::utils::ax_utils::{
     calc_match_rects_for_wrapped_range, get_bounds_of_CharRange, get_char_range_of_line,
     get_line_number_for_range_index, is_text_of_line_wrapped,
 };
+use super::RuleName;
 
 use super::utils::types::{CharRange, MatchRange, MatchRectangle};
 
@@ -19,15 +20,17 @@ pub struct RuleMatch {
     match_range: MatchRange,
     line_matches: Vec<LineMatch>,
     rectangles: Vec<MatchRectangle>,
+    rule_name: RuleName,
 }
 
 impl RuleMatch {
-    pub fn new(match_range: MatchRange) -> Self {
+    pub fn new(rule_name: RuleName, match_range: MatchRange) -> Self {
         Self {
             match_range,
             rectangles: Vec::new(),
             line_matches: Vec::new(),
             id: uuid::Uuid::new_v4(),
+            rule_name,
         }
     }
 
@@ -145,7 +148,7 @@ impl RuleMatch {
 mod tests {
     use crate::{
         ax_interaction::xcode::get_xcode_editor_content,
-        core_engine::rules::search_and_replace::SearchRule,
+        core_engine::rules::{RuleBase, SearchRule, SearchRuleProps},
     };
 
     #[test]
@@ -156,8 +159,12 @@ mod tests {
             if let Some(editor_content) = editor_content_option {
                 let search_str = "]\n)text ever since".to_string();
                 let mut rule = SearchRule::new();
-                rule.run(Some(editor_content), Some(search_str));
-                rule.compute_match_boundaries(editor_pid);
+                rule.update_properties(SearchRuleProps {
+                    search_str: Some(editor_content),
+                    content: Some(search_str),
+                });
+                rule.run();
+                rule.compute_rule_match_rectangles(editor_pid);
 
                 dbg!(rule.rule_matches());
             } else {

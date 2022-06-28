@@ -131,6 +131,13 @@ pub fn get_textarea_uielement(editor_app_pid: i32) -> Option<AXUIElement> {
     None
 }
 
+pub fn get_file_path_from_window(window: &AXUIElement) -> Result<String, Error> {
+    let full_file_path = window.document()?.to_string();
+    let (_, file_path) = full_file_path.split_at(7);
+
+    Ok(file_path.to_string())
+}
+
 pub fn generate_axui_element_hash(ui_element: &AXUIElement) -> usize {
     unsafe { CFHash(ui_element.as_CFTypeRef()) }
 }

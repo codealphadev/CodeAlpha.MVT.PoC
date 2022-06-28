@@ -5,7 +5,8 @@ use core_foundation::{
 };
 
 use crate::ax_interaction::{
-    models::editor::EditorTextareaContentChanged, AXEventXcode, XCodeObserverState,
+    get_file_path_from_window, models::editor::EditorTextareaContentChangedMessage, AXEventXcode,
+    XCodeObserverState,
 };
 
 /// It checks if the `AXUIElement`'s role is a `AXScrollBar` or a `AXTextArea` and if it is, it sends a
@@ -40,9 +41,10 @@ pub fn notify_textarea_content_changed(
         let content_str = content.downcast::<CFString>();
 
         if let Some(cf_str) = content_str {
-            AXEventXcode::EditorTextareaContentChanged(EditorTextareaContentChanged {
+            AXEventXcode::EditorTextareaContentChanged(EditorTextareaContentChangedMessage {
                 id: window.0,
                 content: cf_str.to_string(),
+                file_path_as_str: get_file_path_from_window(&window.1)?,
             })
             .publish_to_tauri(&xcode_observer_state.app_handle);
         }

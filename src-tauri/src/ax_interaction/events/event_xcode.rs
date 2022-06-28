@@ -7,9 +7,10 @@ use crate::utils::messaging::ChannelList;
 
 use super::models::editor::{
     EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
-    EditorAppDeactivatedMessage, EditorTextareaContentChanged, EditorTextareaScrolledMessage,
-    EditorTextareaZoomedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
-    EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+    EditorAppDeactivatedMessage, EditorTextareaContentChangedMessage,
+    EditorTextareaScrolledMessage, EditorTextareaZoomedMessage, EditorUIElementFocusedMessage,
+    EditorWindowCreatedMessage, EditorWindowDestroyedMessage, EditorWindowMovedMessage,
+    EditorWindowResizedMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -26,7 +27,7 @@ pub enum AXEventXcode {
     EditorAppCodeSelected(EditorAppCodeSelectedMessage),
     EditorTextareaScrolled(EditorTextareaScrolledMessage),
     EditorTextareaZoomed(EditorTextareaZoomedMessage),
-    EditorTextareaContentChanged(EditorTextareaContentChanged),
+    EditorTextareaContentChanged(EditorTextareaContentChangedMessage),
     None,
 }
 

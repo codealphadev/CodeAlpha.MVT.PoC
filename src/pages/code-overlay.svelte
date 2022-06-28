@@ -8,20 +8,13 @@
 	import { onMount } from 'svelte';
 	import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize';
 	import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
-
-	let rn;
-	let visible = false;
-	onMount(() => {
-		setTimeout(() => {
-			visible = true; // or rn.visible = true or rn.show()
-		}, 1000);
-	});
+	import type { RuleName } from '../../src-tauri/bindings/rules/RuleName';
 
 	let height = 0;
 	let outerSize: LogicalSize | null = null;
 	let outerPosition: LogicalPosition | null = null;
 
-	let results: RuleResults | null = null;
+	let rule_results_arr: Array<RuleResults> | null = null;
 
 	const listenTauriEvents = async () => {
 		await listen('event-compute-height', (event) => {
@@ -37,44 +30,45 @@
 
 		let ResultsChannel: ChannelList = 'RuleResults';
 		await listen(ResultsChannel, (event) => {
-			const tauriEvent = event as Event<RuleResults>;
-			results = tauriEvent.payload;
+			const tauriEvent = event as Event<Array<RuleResults>>;
+			rule_results_arr = tauriEvent.payload;
 
 			compute_rects();
 		});
 	};
 
-	let rectangles: Array<MatchRectangle> = [];
+	let rectangles: Array<[RuleName, MatchRectangle]> = [];
 
 	const compute_rects = () => {
-		if (results === null) {
+		if (rule_results_arr === null) {
 			return;
 		}
 
-		let new_rectangles: Array<MatchRectangle> = [];
-		for (const result of results.results) {
-			// push all rectangles of result into rectangles
+		let new_rectangles: Array<[RuleName, MatchRectangle]> = [];
+		for (const rule_results of rule_results_arr) {
+			for (const result of rule_results.results) {
+				// push all rectangles of result into rectangles
+				for (const rect of result.rectangles) {
+					let rect_adjusted: MatchRectangle = {
+						origin: {
+							x: rect.origin.x - outerPosition!.x,
+							y: rect.origin.y - outerPosition!.y
+						},
+						size: {
+							width: rect.size.width,
+							height: rect.size.height
+						}
+					};
 
-			for (const rect of result.rectangles) {
-				let rect_adjusted: MatchRectangle = {
-					origin: {
-						x: rect.origin.x - outerPosition!.x,
-						y: rect.origin.y - outerPosition!.y
-					},
-					size: {
-						width: rect.size.width,
-						height: rect.size.height
+					// only add rectangles that are inside the window
+					if (
+						rects_overlap(rect_adjusted, {
+							origin: { x: 0, y: 0 },
+							size: { width: outerSize!.width, height: outerSize!.height }
+						})
+					) {
+						new_rectangles.push([rule_results.rule, rect_adjusted]);
 					}
-				};
-
-				// only add rectangles that are inside the window
-				if (
-					rects_overlap(rect_adjusted, {
-						origin: { x: 0, y: 0 },
-						size: { width: outerSize!.width, height: outerSize!.height }
-					})
-				) {
-					new_rectangles.push(rect_adjusted);
 				}
 			}
 		}
@@ -97,11 +91,13 @@
 <div style="height: {height}px;" class=" h-full w-full">
 	{#each rectangles as rect}
 		<div
-			style="position: absolute; top: {Math.round(rect.origin.y)}px; left: {Math.round(
-				rect.origin.x
-			)}px; width: {Math.round(rect.size.width)}px;height: {Math.round(
-				rect.size.height
-			)}px; background-color: rgba(255,0,0,0.2)"
+			style="position: absolute; top: {Math.round(rect[1].origin.y)}px; left: {Math.round(
+				rect[1].origin.x
+			)}px; width: {Math.round(rect[1].size.width)}px;height: {Math.round(
+				rect[1].size.height
+			)}px; background-color: rgba({rect[0] === 'SearchAndReplace'
+				? '255,0,0,0.2'
+				: '0,255,0,0.4'})"
 		/>
 	{/each}
 </div>

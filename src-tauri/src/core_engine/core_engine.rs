@@ -5,7 +5,7 @@ use std::{
 
 use super::{
     listeners::{register_listener_user_interactions, register_listener_xcode},
-    rules::RuleType,
+    rules::RuleName,
     CodeDocument,
 };
 
@@ -18,7 +18,7 @@ pub struct CoreEngine {
     code_documents: CodeDocumentsArcMutex,
 
     /// It's a way to keep track of what feature is currently active.
-    active_feature: RuleType,
+    active_feature: RuleName,
 
     /// Identifier indicating if the app is currently active and supposed to give suggestions
     engine_active: bool,
@@ -29,12 +29,12 @@ impl CoreEngine {
         Self {
             app_handle: app_handle.clone(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
-            active_feature: RuleType::SearchAndReplace,
+            active_feature: RuleName::SearchAndReplace,
             engine_active: true,
         }
     }
 
-    pub fn active_feature(&self) -> RuleType {
+    pub fn active_feature(&self) -> RuleName {
         self.active_feature.clone()
     }
 
@@ -52,7 +52,7 @@ impl CoreEngine {
         }
     }
 
-    pub fn set_active_feature(&mut self, active_feature: Option<RuleType>) {
+    pub fn set_active_feature(&mut self, active_feature: Option<RuleName>) {
         if let Some(active_feature) = active_feature {
             self.active_feature = active_feature;
         }
