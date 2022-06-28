@@ -4,10 +4,7 @@ use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::rules::{
         rule_match::RuleMatchProps,
-        utils::{
-            ax_utils::get_char_range_of_line,
-            types::{CharRange, MatchRange},
-        },
+        utils::{ax_utils::get_char_range_of_line, text_types::TextRange, types::MatchRange},
         RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
     },
 };
@@ -78,7 +75,7 @@ impl RuleBase for SwiftLinterRule {
                     RuleName::SwiftLinter,
                     MatchRange {
                         string: "todo!()".to_string(),
-                        range: CharRange {
+                        range: TextRange {
                             index: char_range_for_line.index + lint_alert.column,
                             length: 1,
                         },

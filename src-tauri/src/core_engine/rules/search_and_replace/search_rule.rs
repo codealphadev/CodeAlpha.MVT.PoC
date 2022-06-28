@@ -1,6 +1,6 @@
 use crate::core_engine::rules::{
     rule_match::RuleMatchProps,
-    utils::types::{CharRange, MatchRange},
+    utils::{text_types::TextRange, types::MatchRange},
     RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
 };
 
@@ -61,7 +61,7 @@ impl RuleBase for SearchRule {
                     RuleName::SearchAndReplace,
                     MatchRange {
                         string: search_str.to_string(),
-                        range: CharRange {
+                        range: TextRange {
                             index: char_count_left_str + removed_chars,
                             length: char_count_search_str,
                         },

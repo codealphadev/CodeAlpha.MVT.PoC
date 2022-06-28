@@ -4,12 +4,13 @@ use ts_rs::TS;
 use crate::ax_interaction::get_textarea_uielement;
 
 use super::utils::ax_utils::{
-    calc_match_rects_for_wrapped_range, get_bounds_of_CharRange, get_char_range_of_line,
+    calc_match_rects_for_wrapped_range, get_bounds_of_TextRange, get_char_range_of_line,
     get_line_number_for_range_index, is_text_of_line_wrapped,
 };
+use super::utils::text_types::TextRange;
 use super::{RuleMatchCategory, RuleName};
 
-use super::utils::types::{CharRange, MatchRange, MatchRectangle};
+use super::utils::types::{MatchRange, MatchRectangle};
 
 type LineMatch = (MatchRange, Vec<MatchRectangle>);
 
@@ -77,7 +78,7 @@ impl RuleMatch {
                 if let Some(current_line_range) =
                     get_char_range_of_line(line_number, &editor_textarea_ui_element)
                 {
-                    let matched_char_range = CharRange {
+                    let matched_char_range = TextRange {
                         index: current_match_index,
                         length: std::cmp::min(
                             current_line_range.length
@@ -127,7 +128,7 @@ impl RuleMatch {
                     is_text_of_line_wrapped(&line_match_range.range, &editor_textarea_ui_element)
                 {
                     if !range_is_wrapping {
-                        if let Some(line_match_rect) = get_bounds_of_CharRange(
+                        if let Some(line_match_rect) = get_bounds_of_TextRange(
                             &line_match_range.range,
                             &editor_textarea_ui_element,
                         ) {
