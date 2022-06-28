@@ -97,7 +97,7 @@ fn on_editor_textarea_content_changed(
                 }
                 RuleType::SwiftLinter(swift_linter_rule) => {
                     swift_linter_rule.update_properties(SwiftLinterProps {
-                        file_path_as_str: Some(content_changed_msg.file_path_as_str.clone()),
+                        file_path_as_str: content_changed_msg.file_path_as_str.clone(),
                         linter_config: None,
                     })
                 }

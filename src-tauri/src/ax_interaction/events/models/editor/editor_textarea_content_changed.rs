@@ -4,5 +4,5 @@ use serde::{Deserialize, Serialize};
 pub struct EditorTextareaContentChangedMessage {
     pub id: uuid::Uuid,
     pub content: String,
-    pub file_path_as_str: String,
+    pub file_path_as_str: Option<String>,
 }

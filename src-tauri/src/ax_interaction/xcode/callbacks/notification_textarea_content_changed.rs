@@ -40,11 +40,17 @@ pub fn notify_textarea_content_changed(
         let content = uielement.value()?;
         let content_str = content.downcast::<CFString>();
 
+        let file_path = if let Ok(file_path) = get_file_path_from_window(&window.1) {
+            Some(file_path)
+        } else {
+            None
+        };
+
         if let Some(cf_str) = content_str {
             AXEventXcode::EditorTextareaContentChanged(EditorTextareaContentChangedMessage {
                 id: window.0,
                 content: cf_str.to_string(),
-                file_path_as_str: get_file_path_from_window(&window.1)?,
+                file_path_as_str: file_path,
             })
             .publish_to_tauri(&xcode_observer_state.app_handle);
         }
