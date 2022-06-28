@@ -66,7 +66,7 @@ impl RuleBase for SwiftLinterRule {
 
             for lint_alert in linter_results.lints {
                 let char_range_for_line = if let Some(char_range_for_line) =
-                    get_char_range_of_line(lint_alert.line as i64, &textarea_uielement)
+                    get_char_range_of_line(lint_alert.line as i64 - 1, &textarea_uielement)
                 {
                     char_range_for_line
                 } else {
@@ -86,6 +86,13 @@ impl RuleBase for SwiftLinterRule {
 
                 rule_matches.push(rule_match);
             }
+
+            rule_matches.sort_by(|a, b| {
+                a.match_range()
+                    .range
+                    .index
+                    .cmp(&b.match_range().range.index)
+            });
 
             self.rule_matches = Some(rule_matches);
         } else {
@@ -112,7 +119,7 @@ impl SwiftLinterRule {
             rule_matches: None,
             file_path_updated: false,
             file_path_as_str: None,
-            linter_config: Some("--quiet --enable-all-rules".to_string()),
+            linter_config: Some("--quiet".to_string()),
             linter_config_updated: false,
             rule_type: RuleName::SwiftLinter,
             editor_app_pid,
@@ -193,9 +200,8 @@ mod tests {
     #[test]
     #[ignore]
     fn test_swift_linter() {
-        let file_path_as_str =
-            "/Users/adrian/Developer/learn/learning-macOS/AXSwift/Sources/UIElement.swift";
-        let editor_app_pid = 4018;
+        let file_path_as_str = "/Users/adam/codealpha/code/adam-test/Shared/ContentView.swift";
+        let editor_app_pid = 2763;
         let mut rule = SwiftLinterRule::new(editor_app_pid);
         rule.update_properties(SwiftLinterProps {
             file_path_as_str: Some(file_path_as_str.to_string()),
