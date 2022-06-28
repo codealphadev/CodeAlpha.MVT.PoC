@@ -3,19 +3,23 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use accessibility::AXUIElementAttributes;
+use core_foundation::string::CFString;
 use tauri::Manager;
 
 use crate::{
     ax_interaction::{
+        get_file_path_from_window, get_textarea_uielement,
         models::editor::{
             EditorTextareaContentChangedMessage, EditorTextareaScrolledMessage,
-            EditorTextareaZoomedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
-            EditorWindowMovedMessage, EditorWindowResizedMessage,
+            EditorTextareaZoomedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
+            EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+            FocusedUIElement,
         },
         AXEventXcode,
     },
     core_engine::{
-        rules::{RuleName, RuleType, SearchRuleProps, SwiftLinterProps},
+        rules::{RuleType, SearchRuleProps, SwiftLinterProps},
         CodeDocument, CoreEngine, EditorWindowProps,
     },
     utils::messaging::ChannelList,
@@ -54,6 +58,9 @@ pub fn register_listener_xcode(
             AXEventXcode::EditorWindowDestroyed(msg) => {
                 on_editor_window_destroyed(&core_engine_move_copy, &msg);
             }
+            AXEventXcode::EditorUIElementFocused(msg) => {
+                on_editor_focused_uielement_changed(&core_engine_move_copy, &msg);
+            }
             _ => {}
         }
     });
@@ -68,10 +75,8 @@ fn on_editor_textarea_content_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
-    // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
-    {
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine.engine_active() {
         return;
     }
 
@@ -81,6 +86,7 @@ fn on_editor_textarea_content_changed(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.id) {
+        // Update rule properties
         for rule in code_doc.rules_mut() {
             match rule {
                 RuleType::SearchRule(search_rule) => {
@@ -112,10 +118,8 @@ fn on_editor_textarea_scrolled(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
-    // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
-    {
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine.engine_active() {
         return;
     }
 
@@ -138,10 +142,8 @@ fn on_editor_textarea_zoomed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
-    // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
-    {
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine.engine_active() {
         return;
     }
 
@@ -164,10 +166,8 @@ fn on_editor_window_resized(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
-    // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
-    {
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine.engine_active() {
         return;
     }
 
@@ -190,10 +190,8 @@ fn on_editor_window_moved(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    // Checking if the engine is active and if the active feature is SearchAndReplace. If not, it
-    // returns.
-    if !core_engine.engine_active() || !(core_engine.active_feature() == RuleName::SearchAndReplace)
-    {
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine.engine_active() {
         return;
     }
 
@@ -265,4 +263,76 @@ fn on_editor_window_destroyed(
     });
 
     let _ = &code_documents.remove(&destroyed_msg.id);
+}
+
+fn on_editor_focused_uielement_changed(
+    core_engine_arc: &Arc<Mutex<CoreEngine>>,
+    uielement_focus_changed_msg: &EditorUIElementFocusedMessage,
+) {
+    if uielement_focus_changed_msg.focused_ui_element != FocusedUIElement::Textarea {
+        return;
+    }
+
+    let core_engine = &mut *(match core_engine_arc.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine.engine_active() {
+        return;
+    }
+
+    let code_documents = &mut *(match core_engine.code_documents().lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    if let Some(code_doc) = code_documents.get_mut(&uielement_focus_changed_msg.window_id) {
+        let textarea_uielement =
+            if let Some(uielem) = get_textarea_uielement(code_doc.editor_window_props().pid) {
+                uielem
+            } else {
+                return;
+            };
+
+        // Update rule properties
+        for rule in code_doc.rules_mut() {
+            match rule {
+                // Attempt to get content from the textarea.
+                RuleType::SearchRule(search_rule) => {
+                    if let Ok(content) = textarea_uielement.value() {
+                        let content_str = if let Some(content_str) = content.downcast::<CFString>()
+                        {
+                            content_str.to_string()
+                        } else {
+                            continue;
+                        };
+
+                        search_rule.update_properties(SearchRuleProps {
+                            search_str: None,
+                            content: Some(content_str),
+                        })
+                    }
+                }
+                RuleType::SwiftLinter(swift_linter_rule) => {
+                    let window_uielem = if let Ok(uielem) = textarea_uielement.window() {
+                        uielem
+                    } else {
+                        continue;
+                    };
+
+                    if let Ok(file_path) = get_file_path_from_window(&window_uielem) {
+                        swift_linter_rule.update_properties(SwiftLinterProps {
+                            file_path_as_str: Some(file_path),
+                            linter_config: None,
+                        })
+                    }
+                }
+            }
+        }
+
+        code_doc.process_rules();
+        code_doc.compute_rule_visualizations();
+    }
 }
