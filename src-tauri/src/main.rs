@@ -31,47 +31,6 @@ mod core_engine;
 mod utils;
 mod window_controls;
 
-#[tauri::command]
-fn cmd_resize_repair_window(app_handle: tauri::AppHandle, size_x: u32, size_y: u32) {
-    let updated_content_size = tauri::LogicalSize {
-        width: size_x as f64,
-        height: size_y as f64,
-    };
-
-    let _ = resize_window(&app_handle, AppWindow::Repair, &updated_content_size);
-}
-
-#[tauri::command]
-fn cmd_add_docstring(
-    replace_str: String,
-    widget_state: tauri::State<'_, Arc<Mutex<WidgetWindow>>>,
-) {
-    let widget_window = &*(match widget_state.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    });
-    let editor_windows = &*(match widget_window.editor_windows.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    });
-
-    if let Some(focused_editor_window_id) = widget_window.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows.get(&focused_editor_window_id) {
-            let content = get_xcode_editor_content(editor_window.pid.try_into().unwrap());
-
-            if let Ok(content) = content {
-                if let Some(content_str) = content {
-                    let content_str = format!("{}\n{}", replace_str, content_str);
-                    let _ = update_xcode_editor_content(
-                        editor_window.pid.try_into().unwrap(),
-                        &content_str,
-                    );
-                }
-            }
-        }
-    }
-}
-
 fn main() {
     // Configure system tray
     // here `"quit".to_string()` defines the menu item id, and the second parameter is the menu item label.
@@ -83,8 +42,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             search_and_replace_commands::cmd_search_and_replace,
             cmd_resize_content_window,
-            cmd_resize_repair_window,
-            cmd_add_docstring,
             cmd_toggle_content_window
         ])
         .setup(|app| {
@@ -100,17 +57,15 @@ fn main() {
             CoreEngine::start_core_engine_listeners(&handle, &core_engine_arc);
 
             // Create instance of widget window; panics if creation fails
-            let widget_window = WidgetWindow::new(&handle, &editor_windows_arc);
-            let widget_window_arc = Arc::new(Mutex::new(widget_window));
+            let widget_window_arc =
+                Arc::new(Mutex::new(WidgetWindow::new(&handle, &editor_windows_arc)));
             WidgetWindow::setup_widget_listeners(&handle, &widget_window_arc);
 
-            let _state_manager = WindowControls::new(
+            let _window_controls = WindowControls::new(
                 &handle,
                 editor_windows_arc.clone(),
                 widget_window_arc.clone(),
             );
-
-            app.manage(widget_window_arc);
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
             let handle_move_copy = app.handle().clone();
