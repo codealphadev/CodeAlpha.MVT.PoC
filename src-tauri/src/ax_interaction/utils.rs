@@ -55,8 +55,6 @@ pub fn is_currently_focused_app_our_app() -> Option<bool> {
                 return Some(false);
             }
         }
-    } else {
-        return Some(false);
     }
 
     None
