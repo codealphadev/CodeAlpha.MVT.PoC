@@ -161,7 +161,7 @@ impl RuleMatch {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ax_interaction::xcode::get_xcode_editor_content,
+        ax_interaction::get_xcode_editor_content,
         core_engine::rules::{RuleBase, SearchRule, SearchRuleProps},
     };
 
