@@ -11,7 +11,7 @@ use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
     core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     window_controls::{
-        actions::{close_window, create_window, get_position, open_window, set_position},
+        actions::{close_window, create_window, open_window, set_position},
         code_overlay::{hide_code_overlay, show_code_overlay},
         config::AppWindow,
         content_window,
