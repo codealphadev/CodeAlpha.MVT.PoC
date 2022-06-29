@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
-use tree_sitter::Point;
 use ts_rs::TS;
 
 /// A position in a multi-line text document, in terms of rows and columns.
@@ -18,36 +17,54 @@ impl TextPosition {
         Self { row, column }
     }
 
-    pub fn from_TSPoint(tree_sitter_point: &Point) -> Self {
+    pub fn from_TSPoint(tree_sitter_point: &tree_sitter::Point) -> Self {
         Self {
             row: tree_sitter_point.row,
             column: tree_sitter_point.column,
         }
     }
 
+    /// > Given a string and an index, return the row number and column number of the character at that
+    /// index. Different from TextPosition, index does include the newline character.
+    /// In case the index references a new line character in the text, we return the position of the
+    /// next valid character.
+    ///
+    /// Arguments:
+    ///
+    /// * `text`: The text to search through.
+    /// * `index`: The index of the character in the text.
+    ///
+    /// Returns:
+    ///
+    /// A TextPosition struct
     pub fn from_TextIndex(text: &String, index: usize) -> Option<TextPosition> {
         let mut position: Option<TextPosition> = None;
 
         let mut char_count = 0;
         let mut line_number = 0;
-        while let Some(line) = text.lines().next() {
-            while let Some((col, _)) = line.char_indices().next() {
+        let mut lines = text.lines();
+        'outer: while let Some(line) = lines.next() {
+            let mut char_indices = line.char_indices();
+            '_inner: while let Some((col, _)) = char_indices.next() {
                 if index == char_count {
                     position = Some(TextPosition {
                         row: line_number,
                         column: col,
                     });
+
+                    break 'outer;
                 }
                 char_count += 1;
             }
+            char_count += 1;
             line_number += 1;
         }
 
         position
     }
 
-    pub fn as_TSPoint(&self) -> Point {
-        Point {
+    pub fn as_TSPoint(&self) -> tree_sitter::Point {
+        tree_sitter::Point {
             row: self.row,
             column: self.column,
         }
@@ -58,10 +75,14 @@ impl TextPosition {
 
         let mut char_count = 0;
         let mut line_number = 0;
-        while let Some(line) = text.lines().next() {
-            while let Some((col, _)) = line.char_indices().next() {
+        let mut lines = text.lines();
+        'outer: while let Some(line) = lines.next() {
+            let mut char_indices = line.char_indices();
+            '_inner: while let Some((col, _)) = char_indices.next() {
                 if self.column == col && self.row == line_number {
                     index = Some(char_count);
+
+                    break 'outer;
                 }
                 char_count += 1;
             }
@@ -69,6 +90,97 @@ impl TextPosition {
         }
 
         index
+    }
+}
+
+#[cfg(test)]
+mod tests_TextPosition {
+    use crate::core_engine::rules::utils::text_types::TextPosition;
+
+    #[test]
+    fn test_TextPosition_from_TextIndex_respects_new_line_character() {
+        let text = "\nHello, World!";
+        let index = 0;
+        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+
+        assert_eq!(position_option.is_some(), true);
+
+        let position = position_option.unwrap();
+
+        assert_eq!(position.row, 0);
+        assert_eq!(position.column, 0);
+    }
+
+    #[test]
+    fn test_TextPosition_from_TextIndex_one_line() {
+        let text = "Hello, World!";
+        let index = 5;
+        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+
+        assert_eq!(position_option.is_some(), true);
+
+        let position = position_option.unwrap();
+
+        assert_eq!(position.row, 0);
+        assert_eq!(position.column, 5);
+    }
+
+    #[test]
+    fn test_TextPosition_from_TextIndex_two_lines() {
+        let text = "Hello, World!\nGoodbye, World!";
+        let index = 20;
+        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+
+        assert_eq!(position_option.is_some(), true);
+
+        let position = position_option.unwrap();
+
+        assert_eq!(position.row, 1);
+        assert_eq!(position.column, 7);
+    }
+
+    #[test]
+    fn test_TextPosition_from_TextIndex_too_far() {
+        let text = "Hello, World!";
+        let index = 100;
+        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+
+        assert_eq!(position_option.is_none(), true);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex() {
+        let text = "Hello, World!";
+        let position = TextPosition::new(0, 5);
+        let index_option = position.as_TextIndex(&text.to_string());
+
+        assert_eq!(index_option.is_some(), true);
+
+        let index = index_option.unwrap();
+
+        assert_eq!(index, 5);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_multi_line() {
+        let text = "Hello,\n World\n!";
+        let position = TextPosition::new(2, 0);
+        let index_option = position.as_TextIndex(&text.to_string());
+
+        assert_eq!(index_option.is_some(), true);
+
+        let index = index_option.unwrap();
+
+        assert_eq!(index, 12);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_too_far() {
+        let text = "Hello, World!";
+        let position = TextPosition::new(0, 100);
+        let index_option = position.as_TextIndex(&text.to_string());
+
+        assert_eq!(index_option.is_none(), true);
     }
 }
 
@@ -134,8 +246,8 @@ impl TextRange {
 
     pub fn from_StartEndTSPoint(
         text: &String,
-        start_position: &Point,
-        end_position: &Point,
+        start_position: &tree_sitter::Point,
+        end_position: &tree_sitter::Point,
     ) -> Option<TextRange> {
         Self::from_StartEndTextPosition(
             text,
@@ -154,7 +266,10 @@ impl TextRange {
         (self.index, self.index + self.length)
     }
 
-    pub fn as_StartEndTSPoint(&self, text: &String) -> Option<(Point, Point)> {
+    pub fn as_StartEndTSPoint(
+        &self,
+        text: &String,
+    ) -> Option<(tree_sitter::Point, tree_sitter::Point)> {
         if let Some((start_position, end_position)) =
             StartEndTextPosition_from_TextRange(text, self)
         {
@@ -195,8 +310,8 @@ pub fn StartEndIndex_from_StartEndTextPosition(
 
 pub fn StartEndIndex_from_StartEndTSPoint(
     text: &String,
-    start_point: &Point,
-    end_point: &Point,
+    start_point: &tree_sitter::Point,
+    end_point: &tree_sitter::Point,
 ) -> Option<(usize, usize)> {
     StartEndIndex_from_StartEndTextPosition(
         text,
@@ -264,8 +379,8 @@ pub fn StartEndTextPosition_from_StartEndIndex(
 }
 
 pub fn StartEndTextPosition_from_StartEndTSPoint(
-    start_point: &Point,
-    end_point: &Point,
+    start_point: &tree_sitter::Point,
+    end_point: &tree_sitter::Point,
 ) -> (TextPosition, TextPosition) {
     (
         TextPosition::from_TSPoint(start_point),

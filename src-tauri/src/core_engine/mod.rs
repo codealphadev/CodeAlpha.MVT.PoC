@@ -7,3 +7,4 @@ mod core_engine;
 pub mod events;
 mod listeners;
 mod rules;
+mod syntax_tree;
