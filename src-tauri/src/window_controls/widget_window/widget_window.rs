@@ -11,7 +11,7 @@ use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
     core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     window_controls::{
-        actions::{close_window, create_window, open_window, set_position},
+        actions::{close_window, create_window, get_position, open_window, set_position},
         code_overlay::{hide_code_overlay, show_code_overlay},
         config::AppWindow,
         content_window,
@@ -130,7 +130,7 @@ impl WidgetWindow {
         let widget_props_move_copy = widget_props.clone();
         let app_handle_move_copy = app_handle.clone();
 
-        let foo = thread::spawn(move || loop {
+        thread::spawn(move || loop {
             // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
             // ==================================================================
             thread::sleep(std::time::Duration::from_millis(25));
@@ -153,8 +153,6 @@ impl WidgetWindow {
                 break;
             }
         });
-
-        let _ = foo.join();
     }
 
     pub fn show_widget_routine(
@@ -179,6 +177,8 @@ impl WidgetWindow {
                     let _ = set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
                 }
             }
+        } else {
+            return;
         }
 
         // Recover ContentWindowState for this editor window
