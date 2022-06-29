@@ -9,7 +9,6 @@ default-run = "CodeAlpha"
 edition = "2021"
 rust-version = "1.57"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
 tauri-build = { version = "1.0.0", features = [] }
 
@@ -36,6 +35,10 @@ colored = "2" # Coloring console output
 enigo = "0.0.14" # Enigo keyboard library
 ts-rs = {version = "6.2.0", features = ["serde-compat", "format", "uuid-impl"] }
 
+# Parsing source files into syntax trees
+tree-sitter = "0.20.0"
+tree-sitter-swift = "=0.3.0"
+
 [dev-dependencies]
 pretty_assertions = "1.2.0"
 
@@ -43,6 +46,7 @@ pretty_assertions = "1.2.0"
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
 default = [ "custom-protocol" ]
+
 # this feature is used used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
