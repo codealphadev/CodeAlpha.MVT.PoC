@@ -9,16 +9,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use ax_interaction::{
-    setup_observers,
-    xcode::{get_xcode_editor_content, update_xcode_editor_content},
-};
+use ax_interaction::setup_observers;
 use commands::search_and_replace_commands;
 use core_engine::CoreEngine;
-use tauri::{Manager, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
-use window_controls::{
-    actions::resize_window, config::AppWindow, EditorWindow, WidgetWindow, WindowControls,
-};
+use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
+use window_controls::{EditorWindow, WidgetWindow, WindowControls};
 
 use crate::window_controls::content_window::{
     cmd_resize_content_window, cmd_toggle_content_window,

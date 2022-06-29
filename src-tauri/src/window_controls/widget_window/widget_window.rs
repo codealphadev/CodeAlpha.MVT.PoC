@@ -77,7 +77,6 @@ impl WidgetWindow {
         Self {
             app_handle: app_handle.clone(),
             editor_windows: editor_windows.clone(),
-            // content_window: content_window.clone(),
             temporary_hide_until_instant: Instant::now(),
             temporary_hide_check_active: false,
             currently_focused_editor_window: None,
@@ -121,6 +120,8 @@ impl WidgetWindow {
                 widget.temporary_hide_check_active = true;
             }
 
+            // Call these here and not hide_widget_routine to not send a message to the core engine
+            // that would stop it from running its checks.
             close_window(app_handle, AppWindow::Widget);
             close_window(app_handle, AppWindow::CodeOverlay);
         }
@@ -129,7 +130,7 @@ impl WidgetWindow {
         let widget_props_move_copy = widget_props.clone();
         let app_handle_move_copy = app_handle.clone();
 
-        thread::spawn(move || loop {
+        let foo = thread::spawn(move || loop {
             // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
             // ==================================================================
             thread::sleep(std::time::Duration::from_millis(25));
@@ -152,6 +153,8 @@ impl WidgetWindow {
                 break;
             }
         });
+
+        let _ = foo.join();
     }
 
     pub fn show_widget_routine(
