@@ -3,6 +3,3 @@ pub mod callbacks;
 
 pub use observer_xcode::register_observer_xcode;
 pub mod observer_xcode;
-
-pub use actions::*;
-pub mod actions;
