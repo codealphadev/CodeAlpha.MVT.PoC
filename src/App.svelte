@@ -1,42 +1,20 @@
 <script lang="ts">
-	import { Router, Route, Link } from 'svelte-navigator';
-	import Analytics from './pages/analytics.svelte';
+	import { Router, Route } from 'yrv';
 	import CodeOverlay from './pages/code-overlay.svelte';
 	import Content from './pages/content.svelte';
-	import Repair from './pages/repair.svelte';
-	import Settings from './pages/settings.svelte';
 	import Widget from './pages/widget.svelte';
 </script>
 
 <Router>
-	<Link to="/" />
-	<Link to="settings" />
-
-	<Route path="/">
-		<Widget />
-	</Route>
-
-	<Route path="settings">
-		<Settings />
-	</Route>
-
-	<Route path="repair">
-		<Repair />
-	</Route>
-
-	<Route path="analytics">
-		<Analytics />
-	</Route>
-
-	<Route path="content">
+	<Route path="/content">
 		<Content />
 	</Route>
 
-	<Route path="widget">
+	<Route path="/widget">
 		<Widget />
 	</Route>
 
-	<Route path="codeoverlay">
+	<Route path="/codeoverlay">
 		<CodeOverlay />
 	</Route>
 </Router>

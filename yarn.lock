@@ -4619,6 +4619,11 @@
   "resolved" "https://registry.npmjs.org/yocto-queue/-/yocto-queue-1.0.0.tgz"
   "version" "1.0.0"
 
+"yrv@^0.0.57":
+  "integrity" "sha512-aKrepVSVULwrg/eWVt+cahlwWiqo6fuLv5g+Z29Dgt5d718r/6RhoJhgYOQCiTF0zTokbM4FRM/YswDwSqE3fg=="
+  "resolved" "https://registry.npmjs.org/yrv/-/yrv-0.0.57.tgz"
+  "version" "0.0.57"
+
 "zopflipng-bin@^6.0.0":
   "integrity" "sha512-+aybvXv/xafL6I67uSH5yLHrSy4/OaSOV9tniw4yZFIHpINXUcctVHE/WzHxOONrL2GHzJ8Fd4iDrNyaS6TVbg=="
   "resolved" "https://registry.npmjs.org/zopflipng-bin/-/zopflipng-bin-6.0.1.tgz"
