@@ -33,6 +33,13 @@ pub fn notify_uielement_focused(
         };
 
         let role = uielement_element.attribute(&AXAttribute::role())?;
+
+        // Some ui elements get focused programatically that don't mean anything to the user.
+        // We skip those
+        if role.to_string() == "AXSplitGroup" {
+            return Ok(());
+        }
+
         if role.to_string() == "AXTextArea" {
             let (position, size) = derive_xcode_textarea_dimensions(uielement_element)?;
 

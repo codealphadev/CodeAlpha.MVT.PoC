@@ -159,7 +159,6 @@ pub fn open(app_handle: &tauri::AppHandle) -> Result<(), Error> {
             }
         }
 
-        // 4. Show content
         content_window.show()
     } else {
         Err(Error::WebviewNotFound)
