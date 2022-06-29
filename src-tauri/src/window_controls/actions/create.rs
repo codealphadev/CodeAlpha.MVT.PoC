@@ -1,4 +1,5 @@
 use tauri::{window::WindowBuilder, Error, Manager, Window, WindowUrl};
+use window_shadows::set_shadow;
 
 use crate::window_controls::config::{default_properties, AppWindow};
 
@@ -17,7 +18,9 @@ pub fn create_window(handle: &tauri::AppHandle, window_label: AppWindow) -> Resu
     let window = window_builder.build()?;
 
     if window_label == AppWindow::CodeOverlay {
-        // window.open_devtools();
+        set_shadow(&window, false).expect("Unsupported platform!");
+    } else {
+        set_shadow(&window, true).expect("Unsupported platform!");
     }
 
     Ok(window)
