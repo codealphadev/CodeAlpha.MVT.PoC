@@ -67,6 +67,35 @@ pub fn focused_uielement_of_app(app_pid: pid_t) -> Result<AXUIElement, Error> {
     Ok(focused_ui_element)
 }
 
+pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
+    if is_focused_uielement_of_app_xcode_editor_field(pid)? {
+        let editor_element = focused_uielement_of_app(pid)?;
+
+        let content = editor_element.attribute(&AXAttribute::value())?;
+        let content_str = content.downcast::<CFString>();
+
+        if let Some(cf_str) = content_str {
+            return Ok(Some(cf_str.to_string()));
+        }
+    }
+
+    Ok(None)
+}
+
+pub fn update_xcode_editor_content(pid: pid_t, content: &str) -> Result<bool, Error> {
+    if is_focused_uielement_of_app_xcode_editor_field(pid)? {
+        let editor_element = focused_uielement_of_app(pid)?;
+
+        let content_cf_str: CFString = content.into();
+
+        editor_element.set_attribute(&AXAttribute::value(), content_cf_str.as_CFType())?;
+
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
 pub fn is_focused_uielement_of_app_xcode_editor_field(app_pid: pid_t) -> Result<bool, Error> {
     let focused_ui_element = focused_uielement_of_app(app_pid)?;
     // let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
