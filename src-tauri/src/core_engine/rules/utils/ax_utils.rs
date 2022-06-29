@@ -8,11 +8,11 @@ use crate::{
     utils::geometry::{LogicalPosition, LogicalSize},
 };
 
-use super::{types::CharRange, MatchRectangle};
+use super::{text_types::TextRange, MatchRectangle};
 
 pub fn calc_match_rects_for_wrapped_range(
     wrapped_lines_count: usize,
-    match_range: &CharRange,
+    match_range: &TextRange,
     textarea_ui_element: &AXUIElement,
 ) -> Vec<MatchRectangle> {
     if wrapped_lines_count == 1 || wrapped_lines_count == 0 {
@@ -114,23 +114,23 @@ pub fn calc_match_rects_for_wrapped_range(
     }
 }
 
-/// > Given a CharRange, it returns a tuple of (is_wrapped, line_count)
+/// > Given a TextRange, it returns a tuple of (is_wrapped, line_count)
 ///
 /// Arguments:
 ///
-/// * `range`: &CharRange
+/// * `range`: &TextRange
 /// * `textarea_ui_element`: The AXUIElement of the textarea
 ///
 /// Returns:
 ///
 /// A tuple of bool and usize
 pub fn is_text_of_line_wrapped(
-    range: &CharRange,
+    range: &TextRange,
     textarea_ui_element: &AXUIElement,
 ) -> Option<(bool, usize)> {
-    // Get rectangle of CharRange from AX apis
-    if let Some(line_match_rect) = get_bounds_of_CharRange(range, textarea_ui_element) {
-        // Calculate across how many line the CharRange is extends
+    // Get rectangle of TextRange from AX apis
+    if let Some(line_match_rect) = get_bounds_of_TextRange(range, textarea_ui_element) {
+        // Calculate across how many line the TextRange is extends
         let line_count =
             calc_line_count_of_char_range(range, &line_match_rect, textarea_ui_element);
         if line_count > 1 {
@@ -158,7 +158,7 @@ pub fn is_text_of_line_wrapped(
 ///
 /// The number of lines in the match range.
 pub fn calc_line_count_of_char_range(
-    line_match_range: &CharRange,
+    line_match_range: &TextRange,
     line_match_rectangle: &MatchRectangle,
     textarea_ui_element: &AXUIElement,
 ) -> usize {
@@ -210,11 +210,11 @@ pub fn get_line_number_for_range_index(
 ///
 /// Returns:
 ///
-/// A CharRange representing the character range of that line.
+/// A TextRange representing the character range of that line.
 pub fn get_char_range_of_line(
     line_number: i64,
     textarea_ui_element: &AXUIElement,
-) -> Option<CharRange> {
+) -> Option<TextRange> {
     if let Ok(line_char_range_as_axval) = textarea_ui_element.parameterized_attribute(
         &AXAttribute::range_for_line(),
         &CFNumber::from(line_number as i64),
@@ -222,7 +222,7 @@ pub fn get_char_range_of_line(
         if let Ok(line_char_CFRange) = line_char_range_as_axval.get_value::<CFRange>() {
             // The character range of a line in XCode always includes a line break character at the end.
             // Even at the end of the file. We need to remove that character from the character range.
-            Some(CharRange {
+            Some(TextRange {
                 index: line_char_CFRange.location as usize,
                 length: (line_char_CFRange.length - 1) as usize,
             })
@@ -251,7 +251,7 @@ pub fn get_MatchRect_from_CGRect(cgrect: &CGRect) -> MatchRectangle {
 }
 
 pub fn get_bounds_of_first_char_in_range(
-    range: &CharRange,
+    range: &TextRange,
     textarea_ui_element: &AXUIElement,
 ) -> Option<CGRect> {
     get_bounds_of_CFRange(
@@ -264,7 +264,7 @@ pub fn get_bounds_of_first_char_in_range(
 }
 
 pub fn get_bounds_of_last_char_in_range(
-    range: &CharRange,
+    range: &TextRange,
     textarea_ui_element: &AXUIElement,
 ) -> Option<CGRect> {
     get_bounds_of_CFRange(
@@ -276,8 +276,8 @@ pub fn get_bounds_of_last_char_in_range(
     )
 }
 
-pub fn get_bounds_of_CharRange(
-    range: &CharRange,
+pub fn get_bounds_of_TextRange(
+    range: &TextRange,
     textarea_ui_element: &AXUIElement,
 ) -> Option<MatchRectangle> {
     let cf_range_val = CFRange {

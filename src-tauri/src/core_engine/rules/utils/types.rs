@@ -7,6 +7,8 @@ use crate::{
     utils::geometry::{LogicalPosition, LogicalSize},
 };
 
+use super::text_types::TextRange;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
 pub enum RuleName {
@@ -31,16 +33,9 @@ pub struct MatchRectangle {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
-pub struct CharRange {
-    pub index: usize,
-    pub length: usize,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/rules/utils/")]
 pub struct MatchRange {
     pub string: String,
-    pub range: CharRange,
+    pub range: TextRange,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]

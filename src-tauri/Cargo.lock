@@ -20,6 +20,8 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tokio",
+ "tree-sitter",
+ "tree-sitter-swift",
  "ts-rs",
  "uuid 0.8.2",
 ]
@@ -3374,6 +3376,26 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "tree-sitter"
+version = "0.20.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "268bf3e3ca0c09e5d21b59c2638e12cb6dcf7ea2681250a696a2d0936cb57ba0"
+dependencies = [
+ "cc",
+ "regex",
+]
+
+[[package]]
+name = "tree-sitter-swift"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "090310d23c7a0a96cece88376ad7acf53ce47a036a64145ef2523a336c1d2051"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]
