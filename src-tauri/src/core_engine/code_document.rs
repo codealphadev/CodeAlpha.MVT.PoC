@@ -2,8 +2,12 @@ use tauri::Manager;
 
 use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
-use super::rules::{
-    RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps, SwiftLinterRule,
+use super::{
+    rules::{
+        RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
+        SwiftLinterRule,
+    },
+    syntax_tree::SwiftSyntaxTree,
 };
 
 pub struct EditorWindowProps {
@@ -33,6 +37,9 @@ pub struct CodeDocument {
     /// loaded its contents purely through the AX API from a textarea that is not linked
     /// to a file on disk.
     file_path: Option<String>,
+
+    /// The syntax tree of the loaded code document.
+    swift_syntax_tree: SwiftSyntaxTree,
 }
 
 impl CodeDocument {
@@ -49,6 +56,7 @@ impl CodeDocument {
             editor_window_props,
             text: "".to_string(),
             file_path: None,
+            swift_syntax_tree: SwiftSyntaxTree::new(),
         }
     }
 
@@ -57,8 +65,17 @@ impl CodeDocument {
     }
 
     pub fn update_doc_properties(&mut self, text: &String, file_path: &Option<String>) {
-        self.text = text.clone();
-        self.file_path = file_path.clone();
+        let text_updated = if text != &self.text { true } else { false };
+        let file_path_updated = self.file_path_updated(file_path);
+
+        if file_path_updated {
+            self.swift_syntax_tree.reset();
+            self.file_path = file_path.clone();
+        }
+
+        if text_updated {
+            self.text = text.clone();
+        }
 
         for rule in self.rules_mut() {
             match rule {
@@ -76,6 +93,9 @@ impl CodeDocument {
                 }
             }
         }
+
+        // rerun syntax tree parser
+        self.swift_syntax_tree.parse(&self.text);
     }
 
     pub fn process_rules(&mut self) {
@@ -111,5 +131,25 @@ impl CodeDocument {
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {
         &mut self.rules
+    }
+
+    fn file_path_updated(&self, file_path_new: &Option<String>) -> bool {
+        if let Some(file_path_old) = &self.file_path {
+            if let Some(file_path_new) = file_path_new {
+                if file_path_old != file_path_new {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                true
+            }
+        } else {
+            if let Some(_) = file_path_new {
+                true
+            } else {
+                false
+            }
+        }
     }
 }
