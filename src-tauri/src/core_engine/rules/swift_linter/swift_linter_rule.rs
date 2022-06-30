@@ -182,7 +182,10 @@ impl SwiftLinterRule {
 
         let last_parts = last_parts.join(":").to_string();
         let message_parts: Vec<&str> = last_parts.split("(").collect();
-        let (message, identifier) = message_parts.split_at(1);
+        let (message, identifier_str) = message_parts.split_at(1);
+
+        let mut identifier = identifier_str.join("(").to_string();
+        identifier.pop();
 
         LintAlert {
             file_path: parts[0].to_string(),
@@ -194,7 +197,7 @@ impl SwiftLinterRule {
                 LintLevel::Warning
             },
             message: message.join("(").to_string(),
-            identifier: identifier.join("(").to_string().clone(),
+            identifier: identifier.clone(),
         }
     }
 }
