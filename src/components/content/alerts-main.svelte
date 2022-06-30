@@ -4,29 +4,26 @@
 	import { alerts } from '../../state';
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col items-stretch p-1 space-y-1">
 	{#each $alerts as alert}
-		<Disclosure>
-			<DisclosureButton class="flex items-stretch">
+		<Disclosure class="border rounded-md">
+			<DisclosureButton class="flex items-stretch w-full">
 				<div
 					class="{alert.match_properties.category == 'Error'
 						? 'bg-red-500'
-						: 'bg-yellow-500'} w-12 text-white text-sm"
+						: 'bg-yellow-500'} w-12 text-white text-sm rounded-l-md"
 				>
 					{alert.rule_name}
 				</div>
-				<div class="flex-1 border-t border-r border-b border-gray-200 bg-white text-left">
-					<div class="px-4 py-2 text-sm">
-						<a href="/" class="text-gray-900 font-medium">
-							{alert.match_properties.identifier}
-						</a>
-						<p class="text-gray-500">{alert.match_properties.description}</p>
-					</div>
+				<div
+					class="grow border-gray-200 bg-white text-left px-4 py-2 text-sm text-gray-900 font-medium"
+				>
+					<p>{alert.match_properties.identifier}</p>
 				</div>
 			</DisclosureButton>
 
 			<DisclosurePanel>
-				Yes! You can purchase a license that you can share with your entire team.
+				<p class="text-gray-500 text-sm">{alert.match_properties.description}</p>
 			</DisclosurePanel>
 		</Disclosure>
 	{/each}
