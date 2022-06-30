@@ -1,28 +1,10 @@
 <script lang="ts">
-	/* This example requires Tailwind CSS v2.0+ */
 	import { DotsVertical } from '@rgossiaux/svelte-heroicons/solid/DotsVertical';
-	import { Event, listen } from '@tauri-apps/api/event';
-	import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
-	import type { RuleMatch } from '../../../src-tauri/bindings/rules/RuleMatch';
-	import type { RuleResults } from '../../../src-tauri/bindings/rules/RuleResults';
-
-	let alerts: RuleMatch[] = [];
-	const listenToGlobalEvents = async () => {
-		await listen('RuleResults' as ChannelList, (event) => {
-			const tauriEvent = event as Event<any>;
-			let ruleResults: RuleResults[] = tauriEvent.payload;
-			alerts = [];
-			for (let ruleResult of ruleResults) {
-				alerts = alerts.concat(ruleResult.results);
-			}
-		});
-	};
-
-	listenToGlobalEvents();
+	import { alerts } from '../../state';
 </script>
 
 <ul class="mt-3 grid grid-cols-1 gap-5">
-	{#each alerts as alert}
+	{#each $alerts as alert}
 		<li class="col-span-1 flex shadow-sm rounded-md">
 			<div
 				class="{alert.match_properties.category == 'Error'
