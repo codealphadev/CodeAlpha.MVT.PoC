@@ -85,18 +85,21 @@ fn on_editor_textarea_content_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    let new_doc_created =
-        check_if_code_doc_needs_to_be_created(&app_handle, code_documents, content_changed_msg);
+    let _ = check_if_code_doc_needs_to_be_created(
+        &app_handle,
+        code_documents,
+        EditorWindowProps {
+            id: content_changed_msg.id,
+            pid: content_changed_msg.pid,
+            uielement_hash: content_changed_msg.ui_elem_hash,
+        },
+    );
 
     if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.id) {
-        // Update rule properties
-        if new_doc_created {
-            code_doc.update_doc_properties(
-                &content_changed_msg.content,
-                &content_changed_msg.file_path_as_str,
-            );
-        }
-
+        code_doc.update_doc_properties(
+            &content_changed_msg.content,
+            &content_changed_msg.file_path_as_str,
+        );
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();
     }
@@ -215,22 +218,20 @@ fn on_close_editor_app(core_engine_arc: &Arc<Mutex<CoreEngine>>) {
 fn check_if_code_doc_needs_to_be_created(
     app_handle: &tauri::AppHandle,
     code_documents: &mut HashMap<uuid::Uuid, CodeDocument>,
-    created_msg: &EditorTextareaContentChangedMessage,
+    editor_window_props: EditorWindowProps,
 ) -> bool {
     let new_code_doc = CodeDocument::new(
         app_handle.clone(),
         EditorWindowProps {
-            id: created_msg.id,
-            uielement_hash: created_msg.ui_elem_hash,
-            pid: created_msg.pid,
+            id: editor_window_props.id,
+            pid: editor_window_props.pid,
+            uielement_hash: editor_window_props.uielement_hash,
         },
-        created_msg.content.clone(),
-        created_msg.file_path_as_str.clone(),
     );
 
     // check if code document is already contained in list of documents
-    if (*code_documents).get(&created_msg.id).is_none() {
-        (*code_documents).insert(created_msg.id, new_code_doc);
+    if (*code_documents).get(&editor_window_props.id).is_none() {
+        (*code_documents).insert(editor_window_props.id, new_code_doc);
         true
     } else {
         false
@@ -272,40 +273,52 @@ fn on_editor_focused_uielement_changed(
         return;
     }
 
+    let app_handle = core_engine.app_handle.clone();
+
     let code_documents = &mut *(match core_engine.code_documents().lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     });
 
+    let textarea_uielement =
+        if let Some(uielem) = get_textarea_uielement(uielement_focus_changed_msg.pid) {
+            uielem
+        } else {
+            return;
+        };
+
+    // Update rule properties
+    let content_str = if let Ok(content) = textarea_uielement.value() {
+        if let Some(content_str) = content.downcast::<CFString>() {
+            content_str.to_string()
+        } else {
+            return;
+        }
+    } else {
+        return;
+    };
+
+    let file_path = if let Ok(uielem) = textarea_uielement.window() {
+        if let Ok(file_path) = get_file_path_from_window(&uielem) {
+            Some(file_path)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    _ = check_if_code_doc_needs_to_be_created(
+        &app_handle,
+        code_documents,
+        EditorWindowProps {
+            id: uielement_focus_changed_msg.window_id,
+            pid: uielement_focus_changed_msg.pid,
+            uielement_hash: uielement_focus_changed_msg.ui_elem_hash,
+        },
+    );
+
     if let Some(code_doc) = code_documents.get_mut(&uielement_focus_changed_msg.window_id) {
-        let textarea_uielement =
-            if let Some(uielem) = get_textarea_uielement(code_doc.editor_window_props().pid) {
-                uielem
-            } else {
-                return;
-            };
-
-        // Update rule properties
-        let content_str = if let Ok(content) = textarea_uielement.value() {
-            if let Some(content_str) = content.downcast::<CFString>() {
-                content_str.to_string()
-            } else {
-                return;
-            }
-        } else {
-            return;
-        };
-
-        let file_path = if let Ok(uielem) = textarea_uielement.window() {
-            if let Ok(file_path) = get_file_path_from_window(&uielem) {
-                Some(file_path)
-            } else {
-                None
-            }
-        } else {
-            return;
-        };
-
         code_doc.update_doc_properties(&content_str, &file_path);
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();

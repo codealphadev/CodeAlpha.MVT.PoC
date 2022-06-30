@@ -23,10 +23,15 @@ pub struct CodeDocument {
     /// Properties of the editor window that contains this code document.
     editor_window_props: EditorWindowProps,
 
+    /// The list of rules that are applied to this code document.
     rules: Vec<RuleType>,
 
+    /// The content of the loaded code document.
     text: String,
 
+    /// The file path of the loaded code document. If it is none, then the code document
+    /// loaded its contents purely through the AX API from a textarea that is not linked
+    /// to a file on disk.
     file_path: Option<String>,
 }
 
@@ -34,8 +39,6 @@ impl CodeDocument {
     pub fn new(
         app_handle: tauri::AppHandle,
         editor_window_props: EditorWindowProps,
-        text: String,
-        file_path: Option<String>,
     ) -> CodeDocument {
         CodeDocument {
             app_handle,
@@ -44,8 +47,8 @@ impl CodeDocument {
                 RuleType::SwiftLinter(SwiftLinterRule::new(editor_window_props.pid)),
             ],
             editor_window_props,
-            text,
-            file_path,
+            text: "".to_string(),
+            file_path: None,
         }
     }
 

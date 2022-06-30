@@ -31,6 +31,8 @@ pub fn notify_uielement_focused(
             focused_ui_element: FocusedUIElement::Other,
             textarea_position: None,
             textarea_size: None,
+            ui_elem_hash: window.3,
+            pid: window.1.pid()?,
         };
 
         let role = uielement_element.attribute(&AXAttribute::role())?;
