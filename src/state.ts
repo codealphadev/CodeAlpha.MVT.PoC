@@ -10,7 +10,6 @@ export const alerts = writable([]);
 const listenToGlobalEvents = async () => {
   let ruleMatches: RuleMatch[] = [];
   await listen('RuleResults' as ChannelList, (event) => {
-    console.log('RuleResults', event);
     const tauriEvent = event as Event<any>;
     let ruleResults: RuleResults[] = tauriEvent.payload;
     ruleMatches = [];

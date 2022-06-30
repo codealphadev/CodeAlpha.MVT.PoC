@@ -5,16 +5,19 @@
 	import type { RuleResults } from '../../src-tauri/bindings/rules/RuleResults';
 	import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 
-	import { onMount } from 'svelte';
 	import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize';
 	import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
 	import type { RuleName } from '../../src-tauri/bindings/rules/RuleName';
+	import type { RuleMatch } from '../../src-tauri/bindings/rules/RuleMatch';
+
+	type MatchId = string;
 
 	let height = 0;
 	let outerSize: LogicalSize | null = null;
 	let outerPosition: LogicalPosition | null = null;
 
 	let rule_results_arr: Array<RuleResults> | null = null;
+	let highlightedRectangleMatchId = null;
 
 	const listenTauriEvents = async () => {
 		await listen('event-compute-height', (event) => {
@@ -35,16 +38,32 @@
 
 			compute_rects();
 		});
+
+		await listen('alert-selected', (event) => {
+			const tauriEvent = event as Event<any>;
+			highlightedRectangleMatchId = tauriEvent.payload;
+
+			compute_rects();
+		});
+
+		await listen('alert-deselected', (_) => {
+			highlightedRectangleMatchId = null;
+
+			compute_rects();
+		});
 	};
 
-	let rectangles: Array<[RuleName, MatchRectangle]> = [];
+	let rectangles: Array<[RuleName, MatchId, MatchRectangle]> = [];
 
 	const compute_rects = () => {
 		if (rule_results_arr === null) {
 			return;
 		}
+		if (outerPosition === null) {
+			return;
+		}
 
-		let new_rectangles: Array<[RuleName, MatchRectangle]> = [];
+		let new_rectangles: Array<[RuleName, MatchId, MatchRectangle]> = [];
 		for (const rule_results of rule_results_arr) {
 			for (const result of rule_results.results) {
 				// push all rectangles of result into rectangles
@@ -67,7 +86,7 @@
 							size: { width: outerSize!.width, height: outerSize!.height }
 						})
 					) {
-						new_rectangles.push([rule_results.rule, rect_adjusted]);
+						new_rectangles.push([rule_results.rule, result.id, rect_adjusted]);
 					}
 				}
 			}
@@ -90,14 +109,25 @@
 
 <div style="height: {height}px;" class=" h-full w-full">
 	{#each rectangles as rect}
-		<div
-			style="position: absolute; top: {Math.round(rect[1].origin.y)}px; left: {Math.round(
-				rect[1].origin.x
-			)}px; width: {Math.round(rect[1].size.width)}px;height: {Math.round(
-				rect[1].size.height
-			)}px; background-color: rgba({rect[0] === 'SearchAndReplace'
-				? '255,0,0,0.2'
-				: '0,255,0,0.4'})"
-		/>
+		{#if rect[1] === highlightedRectangleMatchId}
+			<div
+				class="bg-blue-500 w-5 h-5"
+				style="position: absolute; top: {Math.round(rect[2].origin.y)}px; left: {Math.round(
+					rect[2].origin.x
+				)}px; width: {Math.round(rect[2].size.width)}px;height: {Math.round(
+					rect[2].size.height
+				)}px; background-color: rgba(255,0,0,0.4)"
+			/>
+		{:else}
+			<div
+				style="position: absolute; top: {Math.round(rect[2].origin.y)}px; left: {Math.round(
+					rect[2].origin.x
+				)}px; width: {Math.round(rect[2].size.width)}px;height: {Math.round(
+					rect[2].size.height
+				)}px; background-color: rgba({rect[0] === 'SearchAndReplace'
+					? '0,0,255,0.2'
+					: '0,255,0,0.4'})"
+			/>
+		{/if}
 	{/each}
 </div>
