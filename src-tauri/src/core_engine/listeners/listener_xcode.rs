@@ -12,16 +12,13 @@ use crate::{
         get_file_path_from_window, get_textarea_uielement,
         models::editor::{
             EditorTextareaContentChangedMessage, EditorTextareaScrolledMessage,
-            EditorTextareaZoomedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
+            EditorTextareaZoomedMessage, EditorUIElementFocusedMessage,
             EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
             FocusedUIElement,
         },
         AXEventXcode,
     },
-    core_engine::{
-        rules::{RuleType, SearchRuleProps, SwiftLinterProps},
-        CodeDocument, CoreEngine, EditorWindowProps,
-    },
+    core_engine::{CodeDocument, CoreEngine, EditorWindowProps},
     utils::messaging::ChannelList,
 };
 
@@ -52,8 +49,9 @@ pub fn register_listener_xcode(
             AXEventXcode::EditorAppClosed(_) => {
                 on_close_editor_app(&core_engine_move_copy);
             }
-            AXEventXcode::EditorWindowCreated(msg) => {
-                on_editor_window_created(&core_engine_move_copy, &msg);
+            AXEventXcode::EditorWindowCreated(_) => {
+                // We don't do anything because we don't keep track of open windows, here we are only
+                // interested in the displayed document
             }
             AXEventXcode::EditorWindowDestroyed(msg) => {
                 on_editor_window_destroyed(&core_engine_move_copy, &msg);
@@ -80,28 +78,23 @@ fn on_editor_textarea_content_changed(
         return;
     }
 
+    let app_handle = core_engine.app_handle.clone();
+
     let code_documents = &mut *(match core_engine.code_documents().lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     });
 
+    let new_doc_created =
+        check_if_code_doc_needs_to_be_created(&app_handle, code_documents, content_changed_msg);
+
     if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.id) {
         // Update rule properties
-        for rule in code_doc.rules_mut() {
-            match rule {
-                RuleType::SearchRule(search_rule) => {
-                    search_rule.update_properties(SearchRuleProps {
-                        search_str: None,
-                        content: Some(content_changed_msg.content.clone()),
-                    })
-                }
-                RuleType::SwiftLinter(swift_linter_rule) => {
-                    swift_linter_rule.update_properties(SwiftLinterProps {
-                        file_path_as_str: content_changed_msg.file_path_as_str.clone(),
-                        linter_config: None,
-                    })
-                }
-            }
+        if new_doc_created {
+            code_doc.update_doc_properties(
+                &content_changed_msg.content,
+                &content_changed_msg.file_path_as_str,
+            );
         }
 
         code_doc.process_rules();
@@ -219,32 +212,28 @@ fn on_close_editor_app(core_engine_arc: &Arc<Mutex<CoreEngine>>) {
     *code_documents = HashMap::new();
 }
 
-fn on_editor_window_created(
-    core_engine_arc: &Arc<Mutex<CoreEngine>>,
-    created_msg: &EditorWindowCreatedMessage,
-) {
-    let core_engine = &mut *(match core_engine_arc.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    });
-
+fn check_if_code_doc_needs_to_be_created(
+    app_handle: &tauri::AppHandle,
+    code_documents: &mut HashMap<uuid::Uuid, CodeDocument>,
+    created_msg: &EditorTextareaContentChangedMessage,
+) -> bool {
     let new_code_doc = CodeDocument::new(
-        core_engine.app_handle.clone(),
+        app_handle.clone(),
         EditorWindowProps {
             id: created_msg.id,
             uielement_hash: created_msg.ui_elem_hash,
             pid: created_msg.pid,
         },
+        created_msg.content.clone(),
+        created_msg.file_path_as_str.clone(),
     );
-
-    let code_documents = &mut *(match core_engine.code_documents().lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    });
 
     // check if code document is already contained in list of documents
     if (*code_documents).get(&created_msg.id).is_none() {
         (*code_documents).insert(created_msg.id, new_code_doc);
+        true
+    } else {
+        false
     }
 }
 
@@ -297,41 +286,27 @@ fn on_editor_focused_uielement_changed(
             };
 
         // Update rule properties
-        for rule in code_doc.rules_mut() {
-            match rule {
-                // Attempt to get content from the textarea.
-                RuleType::SearchRule(search_rule) => {
-                    if let Ok(content) = textarea_uielement.value() {
-                        let content_str = if let Some(content_str) = content.downcast::<CFString>()
-                        {
-                            content_str.to_string()
-                        } else {
-                            continue;
-                        };
-
-                        search_rule.update_properties(SearchRuleProps {
-                            search_str: None,
-                            content: Some(content_str),
-                        })
-                    }
-                }
-                RuleType::SwiftLinter(swift_linter_rule) => {
-                    let window_uielem = if let Ok(uielem) = textarea_uielement.window() {
-                        uielem
-                    } else {
-                        continue;
-                    };
-
-                    if let Ok(file_path) = get_file_path_from_window(&window_uielem) {
-                        swift_linter_rule.update_properties(SwiftLinterProps {
-                            file_path_as_str: Some(file_path),
-                            linter_config: None,
-                        })
-                    }
-                }
+        let content_str = if let Ok(content) = textarea_uielement.value() {
+            if let Some(content_str) = content.downcast::<CFString>() {
+                content_str.to_string()
+            } else {
+                return;
             }
-        }
+        } else {
+            return;
+        };
 
+        let file_path = if let Ok(uielem) = textarea_uielement.window() {
+            if let Ok(file_path) = get_file_path_from_window(&uielem) {
+                Some(file_path)
+            } else {
+                None
+            }
+        } else {
+            return;
+        };
+
+        code_doc.update_doc_properties(&content_str, &file_path);
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();
     }

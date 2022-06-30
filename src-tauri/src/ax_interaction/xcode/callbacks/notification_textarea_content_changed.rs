@@ -51,6 +51,8 @@ pub fn notify_textarea_content_changed(
                 id: window.0,
                 content: cf_str.to_string(),
                 file_path_as_str: file_path,
+                ui_elem_hash: window.3,
+                pid: window.1.pid()?,
             })
             .publish_to_tauri(&xcode_observer_state.app_handle);
         }

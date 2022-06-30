@@ -2,7 +2,9 @@ use tauri::Manager;
 
 use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
-use super::rules::{RuleBase, RuleResults, RuleType, SearchRule, SwiftLinterRule};
+use super::rules::{
+    RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps, SwiftLinterRule,
+};
 
 pub struct EditorWindowProps {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
@@ -22,12 +24,18 @@ pub struct CodeDocument {
     editor_window_props: EditorWindowProps,
 
     rules: Vec<RuleType>,
+
+    text: String,
+
+    file_path: Option<String>,
 }
 
 impl CodeDocument {
     pub fn new(
         app_handle: tauri::AppHandle,
         editor_window_props: EditorWindowProps,
+        text: String,
+        file_path: Option<String>,
     ) -> CodeDocument {
         CodeDocument {
             app_handle,
@@ -36,11 +44,35 @@ impl CodeDocument {
                 RuleType::SwiftLinter(SwiftLinterRule::new(editor_window_props.pid)),
             ],
             editor_window_props,
+            text,
+            file_path,
         }
     }
 
     pub fn editor_window_props(&self) -> &EditorWindowProps {
         &self.editor_window_props
+    }
+
+    pub fn update_doc_properties(&mut self, text: &String, file_path: &Option<String>) {
+        self.text = text.clone();
+        self.file_path = file_path.clone();
+
+        for rule in self.rules_mut() {
+            match rule {
+                RuleType::SearchRule(search_rule) => {
+                    search_rule.update_properties(SearchRuleProps {
+                        search_str: None,
+                        content: Some(text.clone()),
+                    })
+                }
+                RuleType::SwiftLinter(swift_linter_rule) => {
+                    swift_linter_rule.update_properties(SwiftLinterProps {
+                        file_path_as_str: file_path.clone(),
+                        linter_config: None,
+                    })
+                }
+            }
+        }
     }
 
     pub fn process_rules(&mut self) {
