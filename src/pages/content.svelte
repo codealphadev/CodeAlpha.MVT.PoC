@@ -36,11 +36,7 @@
 	listenToGlobalEvents();
 </script>
 
-<div
-	class="flex flex-col relative max-w-xs align-bottom transform overflow-hidden {`${
-		bubbleOrientationRight ? 'items-end' : ''
-	}`}"
->
+<div class="flex flex-col relative max-w-xs align-bottom transform overflow-hidden">
 	<div class="flex flex-col bg-white rounded-md">
 		<div class="h-10">
 			<OptionsMenu />
@@ -56,7 +52,7 @@
 			</Router>
 		</div>
 	</div>
-	<div class="h-6 mr-4 ml-4">
+	<div class="h-6 mr-4 ml-4 {`${bubbleOrientationRight ? 'ml-auto' : 'ml-4'}`}">
 		<BubbleIcon />
 	</div>
 </div>
