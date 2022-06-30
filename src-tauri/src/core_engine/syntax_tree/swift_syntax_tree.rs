@@ -40,8 +40,8 @@ impl SwiftSyntaxTree {
     }
 
     #[allow(dead_code)]
-    pub fn get_tree(&self) -> Option<&Tree> {
-        self.tree_sitter_tree.as_ref()
+    pub fn get_tree(&self) -> Option<Tree> {
+        self.tree_sitter_tree.clone()
     }
 
     #[allow(dead_code)]

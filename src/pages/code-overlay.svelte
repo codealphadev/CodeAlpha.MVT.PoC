@@ -126,7 +126,7 @@
 					rect[2].size.height
 				)}px; background-color: rgba({rect[0] === 'SearchAndReplace'
 					? '0,0,255,0.2'
-					: '0,255,0,0.4'})"
+					: '0,255,0,0.1'})"
 			/>
 		{/if}
 	{/each}

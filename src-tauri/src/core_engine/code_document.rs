@@ -51,7 +51,7 @@ impl CodeDocument {
             app_handle,
             rules: vec![
                 RuleType::SearchRule(SearchRule::new()),
-                RuleType::SwiftLinter(SwiftLinterRule::new(editor_window_props.pid)),
+                RuleType::SwiftLinter(SwiftLinterRule::new()),
             ],
             editor_window_props,
             text: "".to_string(),
@@ -77,6 +77,11 @@ impl CodeDocument {
             self.text = text.clone();
         }
 
+        // rerun syntax tree parser
+        self.swift_syntax_tree.parse(&self.text);
+        let new_tree = self.swift_syntax_tree.get_tree();
+        let new_content = self.text.clone();
+
         for rule in self.rules_mut() {
             match rule {
                 RuleType::SearchRule(search_rule) => {
@@ -89,13 +94,12 @@ impl CodeDocument {
                     swift_linter_rule.update_properties(SwiftLinterProps {
                         file_path_as_str: file_path.clone(),
                         linter_config: None,
+                        swift_syntax_tree: new_tree.clone(),
+                        file_content: Some(new_content.clone()),
                     })
                 }
             }
         }
-
-        // rerun syntax tree parser
-        self.swift_syntax_tree.parse(&self.text);
     }
 
     pub fn process_rules(&mut self) {
