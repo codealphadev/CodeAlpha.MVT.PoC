@@ -169,14 +169,14 @@ mod tests {
     #[test]
     #[ignore]
     fn test_get_rectangles() {
-        let editor_pid = 12538 as i32;
+        let editor_pid = 27069 as i32;
         if let Ok(editor_content_option) = get_xcode_editor_content(editor_pid) {
             if let Some(editor_content) = editor_content_option {
-                let search_str = "]\n)text ever since".to_string();
+                let search_str = "text ever since".to_string();
                 let mut rule = SearchRule::new();
                 rule.update_properties(SearchRuleProps {
-                    search_str: Some(editor_content),
-                    content: Some(search_str),
+                    search_str: Some(search_str),
+                    content: Some(editor_content),
                 });
                 rule.run();
                 rule.compute_rule_match_rectangles(editor_pid);

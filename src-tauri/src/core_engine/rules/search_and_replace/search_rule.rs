@@ -141,11 +141,11 @@ mod tests {
     #[test]
     fn test_search_rule() {
         let content_str = "//*\n//  AXSwift.h\n//  AXSwift\n//\n//  Created by Tyler Mandry on 10/18/15.\n//  Copyright © 2015 Tyler Mandry. All rights reserved.\n//\n\n#import <Cocoa/Cocoa.h>\n\n//! Project version number for AXSwift.\nFOUNDATION_EXPORT double AXSwiftVersionNumber;\n\n//! Project version string for AXSwift.\nFOUNDATION_EXPORT const unsigned char AXSwiftVersionString[];\n\n// In this header, you should import all the public headers of your framework using statements like\n// #import <AXSwift/PublicHeader.h>\ntext ever since \n".to_string();
-        let search_str = "text ever since ".to_string();
+        let search_str = "\ntext ever since".to_string();
         let mut rule = SearchRule::new();
         rule.update_properties(SearchRuleProps {
-            search_str: Some(content_str),
-            content: Some(search_str),
+            search_str: Some(search_str),
+            content: Some(content_str),
         });
         rule.run();
 
