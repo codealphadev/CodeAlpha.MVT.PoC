@@ -36,10 +36,11 @@ pub fn notify_window_destroyed(
         }
 
         if !still_exists {
-            if let Ok(msg) = window_destroyed_msg(known_window.0) {
-                // Emit to rust listeners
-                msg.publish_to_tauri(&xcode_observer_state.app_handle);
-            }
+            AXEventXcode::EditorWindowDestroyed(EditorWindowDestroyedMessage {
+                id: known_window.0,
+                uielement_hash: known_window.3,
+            })
+            .publish_to_tauri(&xcode_observer_state.app_handle);
         }
 
         // returning false in Vec::retain() will remove the element from the vector
@@ -47,10 +48,4 @@ pub fn notify_window_destroyed(
     });
 
     Ok(())
-}
-
-fn window_destroyed_msg(id: uuid::Uuid) -> Result<AXEventXcode, Error> {
-    let window_created_msg = EditorWindowDestroyedMessage { id };
-
-    Ok(AXEventXcode::EditorWindowDestroyed(window_created_msg))
 }

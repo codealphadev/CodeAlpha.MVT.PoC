@@ -44,6 +44,7 @@ pub fn notify_window_moved(
                 width: size.width,
                 height: size.height,
             },
+            uielement_hash: window.3,
         };
 
         AXEventReplit::EditorWindowMoved(msg).publish_to_tauri(&replit_observer_state.app_handle);

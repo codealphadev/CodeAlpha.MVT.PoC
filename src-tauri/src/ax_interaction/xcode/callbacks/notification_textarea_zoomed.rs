@@ -22,8 +22,11 @@ pub fn notifiy_textarea_zoomed(
         });
 
     if let Some(window) = &mut known_window {
-        AXEventXcode::EditorTextareaZoomed(EditorTextareaZoomedMessage { id: window.0 })
-            .publish_to_tauri(&xcode_observer_state.app_handle);
+        AXEventXcode::EditorTextareaZoomed(EditorTextareaZoomedMessage {
+            id: window.0,
+            uielement_hash: window.3,
+        })
+        .publish_to_tauri(&xcode_observer_state.app_handle);
     }
 
     Ok(())

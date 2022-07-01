@@ -18,7 +18,7 @@ use crate::{
         },
         AXEventXcode,
     },
-    core_engine::{CodeDocument, CoreEngine, EditorWindowProps},
+    core_engine::{core_engine::UIElementHash, CodeDocument, CoreEngine, EditorWindowProps},
     utils::messaging::ChannelList,
 };
 
@@ -95,7 +95,7 @@ fn on_editor_textarea_content_changed(
         },
     );
 
-    if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.id) {
+    if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.ui_elem_hash) {
         code_doc.update_doc_properties(
             &content_changed_msg.content,
             &content_changed_msg.file_path_as_str,
@@ -124,7 +124,7 @@ fn on_editor_textarea_scrolled(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    if let Some(code_doc) = code_documents.get_mut(&scrolled_msg.id) {
+    if let Some(code_doc) = code_documents.get_mut(&scrolled_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
     }
 }
@@ -148,7 +148,7 @@ fn on_editor_textarea_zoomed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.id) {
+    if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
     }
 }
@@ -172,7 +172,7 @@ fn on_editor_window_resized(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    if let Some(code_doc) = code_documents.get_mut(&resized_msg.id) {
+    if let Some(code_doc) = code_documents.get_mut(&resized_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
     }
 }
@@ -196,7 +196,7 @@ fn on_editor_window_moved(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    if let Some(code_doc) = code_documents.get_mut(&moved_msg.id) {
+    if let Some(code_doc) = code_documents.get_mut(&moved_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
     }
 }
@@ -217,7 +217,7 @@ fn on_close_editor_app(core_engine_arc: &Arc<Mutex<CoreEngine>>) {
 
 fn check_if_code_doc_needs_to_be_created(
     app_handle: &tauri::AppHandle,
-    code_documents: &mut HashMap<uuid::Uuid, CodeDocument>,
+    code_documents: &mut HashMap<UIElementHash, CodeDocument>,
     editor_window_props: EditorWindowProps,
 ) -> bool {
     let new_code_doc = CodeDocument::new(
@@ -230,8 +230,11 @@ fn check_if_code_doc_needs_to_be_created(
     );
 
     // check if code document is already contained in list of documents
-    if (*code_documents).get(&editor_window_props.id).is_none() {
-        (*code_documents).insert(editor_window_props.id, new_code_doc);
+    if (*code_documents)
+        .get(&editor_window_props.uielement_hash)
+        .is_none()
+    {
+        (*code_documents).insert(editor_window_props.uielement_hash, new_code_doc);
         true
     } else {
         false
@@ -252,7 +255,7 @@ fn on_editor_window_destroyed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    let _ = &code_documents.remove(&destroyed_msg.id);
+    let _ = &code_documents.remove(&destroyed_msg.uielement_hash);
 }
 
 fn on_editor_focused_uielement_changed(
@@ -318,7 +321,7 @@ fn on_editor_focused_uielement_changed(
         },
     );
 
-    if let Some(code_doc) = code_documents.get_mut(&uielement_focus_changed_msg.window_id) {
+    if let Some(code_doc) = code_documents.get_mut(&uielement_focus_changed_msg.ui_elem_hash) {
         code_doc.update_doc_properties(&content_str, &file_path);
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();

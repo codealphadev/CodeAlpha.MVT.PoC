@@ -45,6 +45,7 @@ pub fn notify_window_resized(
             },
             textarea_position: None,
             textarea_size: None,
+            uielement_hash: window.3,
         };
 
         if "AXTextArea" == ui_element.attribute(&AXAttribute::role())? {
