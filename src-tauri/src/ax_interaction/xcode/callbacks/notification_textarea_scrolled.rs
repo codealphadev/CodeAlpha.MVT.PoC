@@ -1,7 +1,9 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
-use crate::ax_interaction::XCodeObserverState;
+use crate::ax_interaction::{
+    models::editor::EditorTextareaScrolledMessage, AXEventXcode, XCodeObserverState,
+};
 
 pub fn notifiy_textarea_scrolled(
     uielement: &AXUIElement,
@@ -19,7 +21,7 @@ pub fn notifiy_textarea_scrolled(
             CFEqual(window_element.as_CFTypeRef(), vec_elem.1.as_CFTypeRef()) != 0
         });
 
-    if let Some(_window) = &mut known_window {
+    if let Some(window) = &mut known_window {
         AXEventXcode::EditorTextareaScrolled(EditorTextareaScrolledMessage {
             id: window.0,
             uielement_hash: window.3,
