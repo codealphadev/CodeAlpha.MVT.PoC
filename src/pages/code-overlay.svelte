@@ -111,22 +111,23 @@
 	{#each rectangles as rect}
 		{#if rect[1] === highlightedRectangleMatchId}
 			<div
-				class="bg-blue-500 w-5 h-5"
 				style="position: absolute; top: {Math.round(rect[2].origin.y)}px; left: {Math.round(
 					rect[2].origin.x
 				)}px; width: {Math.round(rect[2].size.width)}px;height: {Math.round(
 					rect[2].size.height
-				)}px; background-color: rgba(255,0,0,0.4)"
+				)}px; background-color: rgba(0,0,255,0.2); border-style: solid; border-bottom-width: 2px; border-color: rgba(0,0,255,0.4)"
 			/>
 		{:else}
 			<div
+				class="border-indigo-500"
 				style="position: absolute; top: {Math.round(rect[2].origin.y)}px; left: {Math.round(
 					rect[2].origin.x
 				)}px; width: {Math.round(rect[2].size.width)}px;height: {Math.round(
 					rect[2].size.height
-				)}px; background-color: rgba({rect[0] === 'SearchAndReplace'
-					? '0,0,255,0.2'
-					: '0,255,0,0.1'})"
+				)}px; border-style: solid; border-bottom-width: 2px; border-color: rgba({rect[0] ===
+				'SearchAndReplace'
+					? '255,0,255,0.4'
+					: '0,0,255,0.1'})"
 			/>
 		{/if}
 	{/each}

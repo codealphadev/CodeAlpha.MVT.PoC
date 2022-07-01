@@ -50,7 +50,7 @@ impl RuleBase for SwiftLinterRule {
     }
 
     fn run(&mut self) -> Option<RuleResults> {
-        if !self.linter_config_updated && !self.file_path_updated {
+        if !self.linter_config_updated && !self.file_path_updated && !self.file_content_updated {
             // nothing changed, no need to reprocess, return cached results
             return self.rule_results();
         }
