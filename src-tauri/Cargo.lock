@@ -15,6 +15,7 @@ dependencies = [
  "enigo",
  "objc",
  "pretty_assertions",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "tauri",

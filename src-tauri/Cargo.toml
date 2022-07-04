@@ -32,6 +32,7 @@ accessibility-sys = { git = "https://github.com/Hupka/accessibility" }
 
 # Miscellaneous
 colored = "2" # Coloring console output
+rand = "0.8.5" # Random number generator
 enigo = "0.0.14" # Enigo keyboard library
 ts-rs = {version = "6.2.0", features = ["serde-compat", "format", "uuid-impl"] }
 
