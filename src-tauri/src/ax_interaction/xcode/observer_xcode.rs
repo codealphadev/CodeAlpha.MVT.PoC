@@ -4,8 +4,9 @@ use accessibility_sys::{
     kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
     kAXApplicationHiddenNotification, kAXApplicationShownNotification,
     kAXFocusedUIElementChangedNotification, kAXMainWindowChangedNotification,
-    kAXValueChangedNotification, kAXWindowCreatedNotification, kAXWindowDeminiaturizedNotification,
-    kAXWindowMiniaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification,
+    kAXMenuItemSelectedNotification, kAXValueChangedNotification, kAXWindowCreatedNotification,
+    kAXWindowDeminiaturizedNotification, kAXWindowMiniaturizedNotification,
+    kAXWindowMovedNotification, kAXWindowResizedNotification,
 };
 
 use accessibility::{AXObserver, AXUIElement, Error};
@@ -17,7 +18,7 @@ use crate::ax_interaction::{
 };
 
 static EDITOR_XCODE_BUNDLE_ID: &str = "com.apple.dt.Xcode";
-static OBSERVER_REGISTRATION_DELAY_IN_MILLIS: u64 = 2000;
+static OBSERVER_REGISTRATION_DELAY_IN_MILLIS: u64 = 500;
 
 static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXApplicationActivatedNotification,
@@ -32,6 +33,7 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXWindowMiniaturizedNotification,
     kAXWindowMovedNotification,
     kAXWindowResizedNotification,
+    kAXMenuItemSelectedNotification,
 ];
 
 pub fn register_observer_xcode(

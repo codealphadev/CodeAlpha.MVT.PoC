@@ -7,9 +7,9 @@ use accessibility_sys::{
     kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
     kAXApplicationHiddenNotification, kAXApplicationShownNotification,
     kAXFocusedUIElementChangedNotification, kAXMainWindowChangedNotification,
-    kAXValueChangedNotification, kAXWindowCreatedNotification, kAXWindowDeminiaturizedNotification,
-    kAXWindowMiniaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification,
-    AXObserverRef, AXUIElementRef,
+    kAXMenuItemSelectedNotification, kAXValueChangedNotification, kAXWindowCreatedNotification,
+    kAXWindowDeminiaturizedNotification, kAXWindowMiniaturizedNotification,
+    kAXWindowMovedNotification, kAXWindowResizedNotification, AXObserverRef, AXUIElementRef,
 };
 use core_foundation::{
     base::TCFType,
@@ -23,8 +23,8 @@ use crate::ax_interaction::{
 };
 
 use super::{
-    notifiy_app_activated, notifiy_app_deactivated, notify_uielement_focused, notify_value_changed,
-    notify_window_moved, notify_window_resized,
+    notification_key_press_save, notifiy_app_activated, notifiy_app_deactivated,
+    notify_uielement_focused, notify_value_changed, notify_window_moved, notify_window_resized,
 };
 
 // This file contains the callback function that is registered with the AXObserver
@@ -91,6 +91,9 @@ pub unsafe extern "C" fn callback_xcode_notifications(
         }
         kAXWindowDeminiaturizedNotification => {
             // Here we do nothing, because this behavior would be duplicated with kAXFocusedUIElementChangedNotification
+        }
+        kAXMenuItemSelectedNotification => {
+            let _ = notification_key_press_save(&element, &mut (*context));
         }
         _other => {
             println!("Forgotten notification: {:?}", _other)

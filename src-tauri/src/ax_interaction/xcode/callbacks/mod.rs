@@ -1,5 +1,7 @@
 pub use callback_entry::callback_xcode_notifications;
-pub use notification_app_activation::*;
+pub use notification_app_activation::notifiy_app_activated;
+pub use notification_app_activation::notifiy_app_deactivated;
+pub use notification_shortcut_pressed::notification_key_press_save;
 pub use notification_textarea_content_changed::notify_textarea_content_changed;
 pub use notification_textarea_scrolled::notifiy_textarea_scrolled;
 pub use notification_textarea_zoomed::notifiy_textarea_zoomed;
@@ -12,6 +14,7 @@ pub use notification_window_resized::notify_window_resized;
 
 pub mod callback_entry;
 mod notification_app_activation;
+mod notification_shortcut_pressed;
 mod notification_textarea_content_changed;
 mod notification_textarea_scrolled;
 mod notification_textarea_zoomed;

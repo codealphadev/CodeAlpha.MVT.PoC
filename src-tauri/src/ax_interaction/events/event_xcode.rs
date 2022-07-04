@@ -7,7 +7,7 @@ use crate::utils::messaging::ChannelList;
 
 use super::models::editor::{
     EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
-    EditorAppDeactivatedMessage, EditorTextareaContentChangedMessage,
+    EditorAppDeactivatedMessage, EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
     EditorTextareaScrolledMessage, EditorTextareaZoomedMessage, EditorUIElementFocusedMessage,
     EditorWindowCreatedMessage, EditorWindowDestroyedMessage, EditorWindowMovedMessage,
     EditorWindowResizedMessage,
@@ -28,6 +28,7 @@ pub enum AXEventXcode {
     EditorTextareaScrolled(EditorTextareaScrolledMessage),
     EditorTextareaZoomed(EditorTextareaZoomedMessage),
     EditorTextareaContentChanged(EditorTextareaContentChangedMessage),
+    EditorShortcutPressed(EditorShortcutPressedMessage),
     None,
 }
 
@@ -43,6 +44,7 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
             AXEventXcode::EditorAppClosed(_) => write!(f, "EditorClosed"),
             AXEventXcode::EditorAppCodeSelected(_) => write!(f, "EditorAppCodeSelected"),
+            AXEventXcode::EditorShortcutPressed(_) => write!(f, "EditorShortcutPressed"),
             AXEventXcode::EditorTextareaScrolled(_) => write!(f, "EditorTextareaScrolled"),
             AXEventXcode::EditorTextareaZoomed(_) => write!(f, "EditorTextareaZoomed"),
             AXEventXcode::EditorTextareaContentChanged(_) => {

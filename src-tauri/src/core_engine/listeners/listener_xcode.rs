@@ -11,10 +11,10 @@ use crate::{
     ax_interaction::{
         get_file_path_from_window, get_textarea_uielement,
         models::editor::{
-            EditorTextareaContentChangedMessage, EditorTextareaScrolledMessage,
-            EditorTextareaZoomedMessage, EditorUIElementFocusedMessage,
-            EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
-            FocusedUIElement,
+            EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
+            EditorTextareaScrolledMessage, EditorTextareaZoomedMessage,
+            EditorUIElementFocusedMessage, EditorWindowDestroyedMessage, EditorWindowMovedMessage,
+            EditorWindowResizedMessage, FocusedUIElement,
         },
         AXEventXcode,
     },
@@ -59,9 +59,27 @@ pub fn register_listener_xcode(
             AXEventXcode::EditorUIElementFocused(msg) => {
                 on_editor_focused_uielement_changed(&core_engine_move_copy, &msg);
             }
+            AXEventXcode::EditorShortcutPressed(msg) => {
+                on_editor_shortcut_pressed(&core_engine_move_copy, &msg);
+            }
             _ => {}
         }
     });
+}
+
+fn on_editor_shortcut_pressed(
+    _core_engine_move_copy: &Mutex<CoreEngine>,
+    _msg: &EditorShortcutPressedMessage,
+) {
+    // match _msg.modifier {
+    //     ModifierKey::Cmd => match _msg.key.as_str() {
+    //         "S" => {
+    //             println!("Saving file");
+    //         }
+    //         _ => {}
+    //     },
+    //     _ => {}
+    // }
 }
 
 fn on_editor_textarea_content_changed(
