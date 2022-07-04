@@ -51,7 +51,7 @@ impl CodeDocument {
             app_handle,
             rules: vec![
                 RuleType::SearchRule(SearchRule::new()),
-                RuleType::SwiftLinter(SwiftLinterRule::new()),
+                RuleType::SwiftLinter(SwiftLinterRule::new(editor_window_props.pid)),
             ],
             editor_window_props,
             text: "".to_string(),

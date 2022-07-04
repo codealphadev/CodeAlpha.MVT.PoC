@@ -107,7 +107,7 @@
 	listenTauriEvents();
 </script>
 
-<div style="height: {height}px;" class=" h-full w-full">
+<div style="height: {height}px; background-color: rgba(125,125,125,0.1);" class=" h-full w-full">
 	{#each rectangles as rect}
 		{#if rect[1] === highlightedRectangleMatchId}
 			<div

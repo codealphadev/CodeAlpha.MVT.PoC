@@ -2,10 +2,13 @@ use std::process::Command;
 
 use tree_sitter::{Point, Tree};
 
-use crate::core_engine::rules::{
-    rule_match::RuleMatchProps,
-    utils::{text_types::TextRange, types::MatchRange},
-    RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
+use crate::{
+    ax_interaction::get_textarea_uielement,
+    core_engine::rules::{
+        rule_match::RuleMatchProps,
+        utils::{ax_utils::get_char_range_of_line, text_types::TextRange, types::MatchRange},
+        RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
+    },
 };
 
 use super::types::{LintAlert, LintLevel, LintResults};
@@ -27,6 +30,7 @@ pub struct SwiftLinterRule {
     linter_config: Option<String>,
     swift_syntax_tree: Option<Tree>,
     linter_config_updated: bool,
+    editor_app_pid: i32,
 }
 
 impl RuleBase for SwiftLinterRule {
@@ -68,6 +72,13 @@ impl RuleBase for SwiftLinterRule {
             return None;
         };
 
+        let textarea_uielement =
+            if let Some(textarea_uielement) = get_textarea_uielement(self.editor_app_pid) {
+                textarea_uielement
+            } else {
+                return None;
+            };
+
         // Process all found linter results
         if let Some(linter_results) = self.lint_swift_file() {
             let mut rule_matches = Vec::new();
@@ -91,7 +102,7 @@ impl RuleBase for SwiftLinterRule {
                 };
 
                 // Get text range of node to compute rectangles from AX API.
-                let text_range = if let Some(range) = TextRange::from_StartEndTSPoint(
+                let _text_range = if let Some(range) = TextRange::from_StartEndTSPoint(
                     file_content,
                     &node.start_position(),
                     &node.end_position(),
@@ -112,11 +123,22 @@ impl RuleBase for SwiftLinterRule {
                 // );
                 // println!("=================");
 
+                let char_range_for_line = if let Some(char_range_for_line) =
+                    get_char_range_of_line(lint_alert.1.line as i64 - 1, &textarea_uielement)
+                {
+                    char_range_for_line
+                } else {
+                    continue;
+                };
+
                 let rule_match = RuleMatch::new(
                     RuleName::SwiftLinter,
                     MatchRange {
                         string: "unknown yet".to_string(),
-                        range: text_range,
+                        range: TextRange {
+                            index: char_range_for_line.index + lint_alert.1.column,
+                            length: 1,
+                        },
                     },
                     RuleMatchProps {
                         identifier: lint_alert.1.identifier.clone(),
@@ -155,7 +177,7 @@ impl RuleBase for SwiftLinterRule {
 }
 
 impl SwiftLinterRule {
-    pub fn new() -> Self {
+    pub fn new(editor_app_pid: i32) -> Self {
         Self {
             rule_matches: None,
             file_path_updated: false,
@@ -166,6 +188,7 @@ impl SwiftLinterRule {
             rule_type: RuleName::SwiftLinter,
             file_content: None,
             file_content_updated: false,
+            editor_app_pid,
         }
     }
 
@@ -274,7 +297,7 @@ mod tests {
     #[ignore]
     fn test_swift_linter() {
         let file_path_as_str = "/Users/adam/codealpha/code/adam-test/Shared/ContentView.swift";
-        let mut rule = SwiftLinterRule::new();
+        let mut rule = SwiftLinterRule::new(12345);
         rule.update_properties(SwiftLinterProps {
             file_path_as_str: Some(file_path_as_str.to_string()),
             linter_config: None,
