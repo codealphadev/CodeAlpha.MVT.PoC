@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-use accessibility::{AXAttribute, AXUIElement, AXUIElementAttributes, Error};
+use accessibility::{AXAttribute, AXUIElement, AXUIElementAttributes, AXValue, Error};
 use accessibility_sys::{
     kAXErrorNoValue, kAXTrustedCheckOptionPrompt, pid_t, AXIsProcessTrusted,
     AXIsProcessTrustedWithOptions,
 };
 use cocoa::appkit::CGPoint;
 use core_foundation::{
-    base::{CFHash, TCFType},
+    base::{CFHash, CFRange, TCFType},
     boolean::CFBoolean,
     dictionary::CFDictionary,
     string::CFString,
@@ -98,6 +98,25 @@ pub fn update_xcode_editor_content(pid: pid_t, content: &str) -> Result<bool, Er
         let content_cf_str: CFString = content.into();
 
         editor_element.set_attribute(&AXAttribute::value(), content_cf_str.as_CFType())?;
+
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+pub fn set_selected_text_range(pid: pid_t, index: usize, length: usize) -> Result<bool, Error> {
+    if is_focused_uielement_of_app_xcode_editor_field(pid)? {
+        let editor_element = focused_uielement_of_app(pid)?;
+        let range = CFRange {
+            location: index as isize,
+            length: length as isize,
+        };
+
+        editor_element.set_attribute(
+            &AXAttribute::selected_text_range(),
+            AXValue::from_CFRange(range).unwrap(),
+        )?;
 
         return Ok(true);
     }

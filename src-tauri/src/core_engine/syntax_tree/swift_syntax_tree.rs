@@ -17,10 +17,6 @@ impl SwiftSyntaxTree {
             .set_language(tree_sitter_swift::language())
             .expect("Swift Language not found");
 
-        #[cfg(debug_assertions)]
-        // if let Err(error) = Self::start_logging(&mut parser, "../public/build/") {
-        //     println!("Error: {}", error);
-        // }
         Self {
             tree_sitter_parser: parser,
             tree_sitter_tree: None,

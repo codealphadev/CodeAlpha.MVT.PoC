@@ -8,9 +8,9 @@ use crate::utils::messaging::ChannelList;
 use super::models::editor::{
     EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
     EditorAppDeactivatedMessage, EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
-    EditorTextareaScrolledMessage, EditorTextareaZoomedMessage, EditorUIElementFocusedMessage,
-    EditorWindowCreatedMessage, EditorWindowDestroyedMessage, EditorWindowMovedMessage,
-    EditorWindowResizedMessage,
+    EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
+    EditorTextareaZoomedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
+    EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -28,6 +28,7 @@ pub enum AXEventXcode {
     EditorTextareaScrolled(EditorTextareaScrolledMessage),
     EditorTextareaZoomed(EditorTextareaZoomedMessage),
     EditorTextareaContentChanged(EditorTextareaContentChangedMessage),
+    EditorTextareaSelectedTextChanged(EditorTextareaSelectedTextChangedMessage),
     EditorShortcutPressed(EditorShortcutPressedMessage),
     None,
 }
@@ -47,6 +48,9 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorShortcutPressed(_) => write!(f, "EditorShortcutPressed"),
             AXEventXcode::EditorTextareaScrolled(_) => write!(f, "EditorTextareaScrolled"),
             AXEventXcode::EditorTextareaZoomed(_) => write!(f, "EditorTextareaZoomed"),
+            AXEventXcode::EditorTextareaSelectedTextChanged(_) => {
+                write!(f, "EditorTextareaSelectedTextChanged")
+            }
             AXEventXcode::EditorTextareaContentChanged(_) => {
                 write!(f, "EditorTextareaContentChanged")
             }

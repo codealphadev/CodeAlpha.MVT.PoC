@@ -22,7 +22,9 @@
         "icons/icon.ico"
       ],
       "resources": [],
-      "externalBin": [],
+      "externalBin": [
+        "binaries/swiftformat"
+      ],
       "copyright": "",
       "category": "DeveloperTool",
       "shortDescription": "",
@@ -107,8 +109,13 @@
         "all": false,
         "execute": false,
         "open": false,
-        "scope": [],
-        "sidecar": false
+        "scope": [
+          {
+            "name": "binaries/swiftformat",
+            "sidecar": true
+          }
+        ],
+        "sidecar": true
       },
       "window": {
         "all": false,

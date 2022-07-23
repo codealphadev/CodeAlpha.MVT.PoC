@@ -6,11 +6,13 @@ pub use search_and_replace::SearchRuleProps;
 pub use swift_linter::SwiftLinterProps;
 pub use swift_linter::SwiftLinterRule;
 pub use utils::fs_utils::*;
+pub use utils::text_types::*;
 pub use utils::types::*;
 
 pub mod rule_base;
 pub mod rule_match;
 
 pub mod search_and_replace;
+
 pub mod swift_linter;
 mod utils;
