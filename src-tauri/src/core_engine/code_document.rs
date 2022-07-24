@@ -1,11 +1,16 @@
 use tauri::Manager;
 
-use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
+use crate::{
+    ax_interaction::{set_selected_text_range, update_xcode_editor_content},
+    utils::messaging::ChannelList,
+    window_controls::config::AppWindow,
+};
 
 use super::{
+    formatter::get_format_swift_file,
     rules::{
         RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
-        SwiftLinterRule,
+        SwiftLinterRule, TextRange,
     },
     syntax_tree::SwiftSyntaxTree,
 };
@@ -40,6 +45,8 @@ pub struct CodeDocument {
 
     /// The syntax tree of the loaded code document.
     swift_syntax_tree: SwiftSyntaxTree,
+
+    selected_text_range: Option<TextRange>,
 }
 
 impl CodeDocument {
@@ -57,6 +64,7 @@ impl CodeDocument {
             text: "".to_string(),
             file_path: None,
             swift_syntax_tree: SwiftSyntaxTree::new(),
+            selected_text_range: None,
         }
     }
 
@@ -84,20 +92,16 @@ impl CodeDocument {
 
         for rule in self.rules_mut() {
             match rule {
-                RuleType::SearchRule(search_rule) => {
-                    search_rule.update_properties(SearchRuleProps {
-                        search_str: None,
-                        content: Some(text.clone()),
-                    })
-                }
-                RuleType::SwiftLinter(swift_linter_rule) => {
-                    swift_linter_rule.update_properties(SwiftLinterProps {
-                        file_path_as_str: file_path.clone(),
-                        linter_config: None,
-                        swift_syntax_tree: new_tree.clone(),
-                        file_content: Some(new_content.clone()),
-                    })
-                }
+                RuleType::SearchRule(rule) => rule.update_properties(SearchRuleProps {
+                    search_str: None,
+                    content: Some(text.clone()),
+                }),
+                RuleType::SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
+                    file_path_as_str: file_path.clone(),
+                    linter_config: None,
+                    swift_syntax_tree: new_tree.clone(),
+                    file_content: Some(new_content.clone()),
+                }),
             }
         }
     }
@@ -131,6 +135,44 @@ impl CodeDocument {
             &ChannelList::RuleResults.to_string(),
             &rule_results,
         );
+    }
+
+    pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
+        self.selected_text_range = Some(TextRange { length, index });
+    }
+
+    pub fn on_save(&mut self) {
+        if let (Some(file_path), Some(selected_text_range)) =
+            (self.file_path.clone(), self.selected_text_range.clone())
+        {
+            let formatted_content_option =
+                get_format_swift_file(file_path, selected_text_range.clone(), self.text.clone());
+            if let Some(formatted_content) = formatted_content_option {
+                if formatted_content.content == self.text.clone() {
+                    return;
+                }
+                // Update content
+                if let Ok(_) = update_xcode_editor_content(
+                    self.editor_window_props.pid,
+                    &formatted_content.content,
+                ) {
+                } else {
+                    assert!(false, "Could not update Xcode editor content");
+                }
+
+                // TODO: Restore scroll position
+
+                // Restore cursor position
+                if let Ok(_) = set_selected_text_range(
+                    self.editor_window_props.pid,
+                    selected_text_range.index,
+                    selected_text_range.length,
+                ) {
+                } else {
+                    assert!(false, "Could not set cursor position");
+                }
+            }
+        }
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {

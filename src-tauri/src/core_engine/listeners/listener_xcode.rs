@@ -12,9 +12,10 @@ use crate::{
         get_file_path_from_window, get_textarea_uielement,
         models::editor::{
             EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
-            EditorTextareaScrolledMessage, EditorTextareaZoomedMessage,
-            EditorUIElementFocusedMessage, EditorWindowDestroyedMessage, EditorWindowMovedMessage,
-            EditorWindowResizedMessage, FocusedUIElement,
+            EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
+            EditorTextareaZoomedMessage, EditorUIElementFocusedMessage,
+            EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+            FocusedUIElement, ModifierKey,
         },
         AXEventXcode,
     },
@@ -26,7 +27,7 @@ pub fn register_listener_xcode(
     app_handle: &tauri::AppHandle,
     core_engine: &Arc<Mutex<CoreEngine>>,
 ) {
-    let core_engine_move_copy = (core_engine).clone();
+    let core_engine_move_copy = core_engine.clone();
     app_handle.listen_global(ChannelList::AXEventXcode.to_string(), move |msg| {
         let axevent_xcode: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
@@ -45,6 +46,9 @@ pub fn register_listener_xcode(
             }
             AXEventXcode::EditorTextareaContentChanged(msg) => {
                 on_editor_textarea_content_changed(&core_engine_move_copy, &msg);
+            }
+            AXEventXcode::EditorTextareaSelectedTextChanged(msg) => {
+                on_editor_textarea_selected_text_changed(&core_engine_move_copy, &msg);
             }
             AXEventXcode::EditorAppClosed(_) => {
                 on_close_editor_app(&core_engine_move_copy);
@@ -68,18 +72,54 @@ pub fn register_listener_xcode(
 }
 
 fn on_editor_shortcut_pressed(
-    _core_engine_move_copy: &Mutex<CoreEngine>,
-    _msg: &EditorShortcutPressedMessage,
+    core_engine_arc: &Arc<Mutex<CoreEngine>>,
+    msg: &EditorShortcutPressedMessage,
 ) {
-    // match _msg.modifier {
-    //     ModifierKey::Cmd => match _msg.key.as_str() {
-    //         "S" => {
-    //             println!("Saving file");
-    //         }
-    //         _ => {}
-    //     },
-    //     _ => {}
-    // }
+    match msg.modifier {
+        ModifierKey::Cmd => match msg.key.as_str() {
+            "S" => {
+                let core_engine = &mut *(match core_engine_arc.lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                });
+
+                // Checking if the engine is active. If not, it returns.
+                if !core_engine.engine_active() {
+                    return;
+                }
+
+                let code_documents = &mut *(match core_engine.code_documents().lock() {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                });
+
+                if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
+                    code_doc.on_save();
+                }
+            }
+            _ => {}
+        },
+        _ => {}
+    }
+}
+
+fn on_editor_textarea_selected_text_changed(
+    core_engine_arc: &Arc<Mutex<CoreEngine>>,
+    msg: &EditorTextareaSelectedTextChangedMessage,
+) {
+    let core_engine = &mut *(match core_engine_arc.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    let code_documents = &mut *(match core_engine.code_documents().lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
+        code_doc.set_selected_text_range(msg.index, msg.length);
+    }
 }
 
 fn on_editor_textarea_content_changed(

@@ -1,8 +1,9 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 
 use crate::ax_interaction::{
+    generate_axui_element_hash,
     models::editor::{EditorShortcutPressedMessage, ModifierKey},
-    AXEventXcode, XCodeObserverState,
+    AXEventXcode, XCodeObserverState, currently_focused_window,
 };
 
 pub fn notification_key_press_save(
@@ -32,11 +33,13 @@ pub fn notification_key_press_save(
             }
             _ => {}
         }
+        let ui_elem_hash = generate_axui_element_hash(&currently_focused_window()?);
 
         AXEventXcode::EditorShortcutPressed(EditorShortcutPressedMessage {
             modifier: cmd_modifier,
             key: cmd_char.to_string(),
             menu_item_title: cmd_title.to_string(),
+            ui_elem_hash,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
     }

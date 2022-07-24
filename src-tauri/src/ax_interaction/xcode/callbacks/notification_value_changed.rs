@@ -1,6 +1,9 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 
-use crate::ax_interaction::XCodeObserverState;
+use crate::ax_interaction::{
+    get_textarea_uielement, xcode::callbacks::notifiy_textarea_selected_text_changed,
+    XCodeObserverState,
+};
 
 use super::{
     notifiy_textarea_scrolled, notifiy_textarea_zoomed, notify_textarea_content_changed,
@@ -17,6 +20,18 @@ pub fn notify_value_changed(
         "AXScrollBar" => {
             notify_window_resized(&uielement, &mut (*xcode_observer_state))?;
             notifiy_textarea_scrolled(&uielement, &mut (*xcode_observer_state))?;
+            Ok(())
+        }
+        "AXStaticText" => {
+            let uielement_textarea = get_textarea_uielement(uielement.pid()?);
+
+            if let Some(uielement_textarea) = uielement_textarea {
+                notifiy_textarea_selected_text_changed(
+                    &uielement,
+                    &uielement_textarea,
+                    &mut (*xcode_observer_state),
+                )?;
+            }
 
             Ok(())
         }
