@@ -102,6 +102,7 @@ fn on_editor_shortcut_pressed(
         _ => {}
     }
 }
+
 fn on_editor_textarea_selected_text_changed(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
     msg: &EditorTextareaSelectedTextChangedMessage,
@@ -110,11 +111,6 @@ fn on_editor_textarea_selected_text_changed(
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     });
-
-    // Checking if the engine is active. If not, it returns.
-    if !core_engine.engine_active() {
-        return;
-    }
 
     let code_documents = &mut *(match core_engine.code_documents().lock() {
         Ok(guard) => guard,

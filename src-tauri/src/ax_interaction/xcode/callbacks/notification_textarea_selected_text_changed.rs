@@ -1,6 +1,5 @@
-use accessibility::{AXAttribute, AXUIElement, AXUIElementAttributes, Error};
+use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, CFRange, TCFType};
-use serde::Serialize;
 
 use crate::ax_interaction::{
     models::editor::EditorTextareaSelectedTextChangedMessage, AXEventXcode, XCodeObserverState,
@@ -24,28 +23,18 @@ pub fn notifiy_textarea_selected_text_changed(
         });
 
     if let Some(window) = &mut known_window {
-        let text_range = uielement_textarea.attribute(&AXAttribute::selected_text_range())?;
+        let text_range = uielement_textarea.selected_text_range()?;
         let text_range_str = text_range.get_value::<CFRange>()?;
 
         AXEventXcode::EditorTextareaSelectedTextChanged(EditorTextareaSelectedTextChangedMessage {
             id: window.0,
-            ui_elem_hash: window.3,
             index: text_range_str.location as usize,
             length: text_range_str.length as usize,
+            selected_text: (uielement_textarea.selected_text()?).to_string(),
+            ui_elem_hash: window.3,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
     }
 
     Ok(())
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct UIElementAttribute {
-    pub name: String,
-    pub value: String,
-}
-
-#[derive(Serialize)]
-pub struct UIElementAttributes {
-    pub data: Vec<UIElementAttribute>,
 }
