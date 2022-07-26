@@ -13,7 +13,6 @@ pub struct FormattedContent {
 pub fn get_format_swift_file(
     file_path: String,
     selected_text_range: TextRange,
-    _old_content: String,
 ) -> Option<FormattedContent> {
     let handle = format_file(file_path);
     let formatted_file = block_on(handle);

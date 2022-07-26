@@ -1,9 +1,9 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 
 use crate::ax_interaction::{
-    generate_axui_element_hash,
+    currently_focused_window, generate_axui_element_hash,
     models::editor::{EditorShortcutPressedMessage, ModifierKey},
-    AXEventXcode, XCodeObserverState, currently_focused_window,
+    AXEventXcode, XCodeObserverState,
 };
 
 pub fn notification_key_press_save(
