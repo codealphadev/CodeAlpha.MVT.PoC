@@ -10,7 +10,7 @@ use super::{
     formatter::get_format_swift_file,
     rules::{
         RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
-        SwiftLinterRule, TextRange,
+        SwiftLinterRule, TextPosition, TextRange,
     },
     syntax_tree::SwiftSyntaxTree,
 };
@@ -163,9 +163,16 @@ impl CodeDocument {
                 // TODO: Restore scroll position
 
                 // Restore cursor position
+                // Keep cursor on same line as before or end of file
+                let new_index = get_new_cursor_index(
+                    &self.text,
+                    &formatted_content.content,
+                    selected_text_range.index,
+                );
+
                 if let Ok(_) = set_selected_text_range(
                     self.editor_window_props.pid,
-                    selected_text_range.index,
+                    new_index,
                     selected_text_range.length,
                 ) {
                 } else {
@@ -198,4 +205,15 @@ impl CodeDocument {
             }
         }
     }
+}
+
+fn get_new_cursor_index(old_content: &String, formatted_content: &String, index: usize) -> usize {
+    let mut new_index = formatted_content.len();
+    if let Some(text_position) = TextPosition::from_TextIndex(old_content, index) {
+        if let Some(text_index) = text_position.as_TextIndex_stay_on_line(formatted_content, true) {
+            new_index = text_index;
+        }
+    }
+
+    new_index
 }

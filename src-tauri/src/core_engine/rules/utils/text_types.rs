@@ -69,6 +69,10 @@ impl TextPosition {
     }
 
     pub fn as_TextIndex(&self, text: &String) -> Option<usize> {
+        self.as_TextIndex_stay_on_line(text, false)
+    }
+
+    pub fn as_TextIndex_stay_on_line(&self, text: &String, stay_on_line: bool) -> Option<usize> {
         let mut row = 0;
         let mut col = 0;
         let mut text_iter = text.char_indices();
@@ -78,6 +82,9 @@ impl TextPosition {
             }
 
             if char == '\n' {
+                if stay_on_line && self.row == row {
+                    return Some(text_index.clone());
+                }
                 row += 1;
                 col = 0;
                 continue;
