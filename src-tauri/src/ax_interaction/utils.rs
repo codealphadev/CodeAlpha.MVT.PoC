@@ -106,14 +106,11 @@ pub fn get_textarea_origin(pid: pid_t) -> Result<Option<tauri::LogicalPosition<f
     Ok(None)
 }
 
-pub fn send_event_mouse_wheel(
-    pid: pid_t,
-    delta: tauri::LogicalPosition<f64>,
-) -> Result<bool, Error> {
+pub fn send_event_mouse_wheel(pid: pid_t, delta: tauri::LogicalSize<f64>) -> Result<bool, Error> {
     if is_focused_uielement_of_app_xcode_editor_field(pid)? {
         let event_type = EventType::Wheel {
-            delta_x: delta.x as i64,
-            delta_y: delta.y as i64,
+            delta_x: delta.width as i64,
+            delta_y: delta.height as i64,
         };
 
         match simulate(&event_type) {

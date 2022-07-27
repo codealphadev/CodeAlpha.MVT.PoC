@@ -189,6 +189,24 @@ mod tests_TextPosition {
 
         assert_eq!(index_option.is_none(), true);
     }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line() {
+        let text = "Hello,\nWorld!\n";
+        let position = TextPosition::new(0, 100);
+        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), true);
+
+        assert_eq!(index_option.unwrap(), 6);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_false() {
+        let text = "Hello,\nWorld!\n";
+        let position = TextPosition::new(0, 100);
+        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), false);
+
+        assert_eq!(index_option.is_none(), true);
+    }
 }
 
 /// A position in a multi-line text document, in terms of index and length.

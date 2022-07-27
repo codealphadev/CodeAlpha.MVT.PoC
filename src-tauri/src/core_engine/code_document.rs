@@ -153,7 +153,6 @@ impl CodeDocument {
             {
                 formatted_content
             } else {
-                assert!(false, "Could not format content");
                 return;
             };
 
@@ -166,7 +165,6 @@ impl CodeDocument {
             {
                 old_scroll_position
             } else {
-                assert!(false, "Could not get scroll position");
                 return;
             };
 
@@ -176,7 +174,7 @@ impl CodeDocument {
                 &formatted_content.content,
             ) {
             } else {
-                assert!(false, "Could not update Xcode editor content");
+                return;
             };
 
             // Restore cursor position
@@ -189,10 +187,7 @@ impl CodeDocument {
                     selected_text_range.index,
                 ),
                 selected_text_range.length,
-            ) {
-            } else {
-                assert!(false, "Could not set cursor position");
-            }
+            ) {}
 
             // Restore scroll position
             let new_scroll_position = if let Ok(Some(new_scroll_prosition)) =
@@ -200,19 +195,15 @@ impl CodeDocument {
             {
                 new_scroll_prosition
             } else {
-                assert!(false, "Could not get scroll position");
                 return;
             };
             if let Ok(true) = send_event_mouse_wheel(
                 self.editor_window_props.pid,
-                tauri::LogicalPosition {
-                    x: new_scroll_position.x - old_scroll_position.x,
-                    y: new_scroll_position.y - old_scroll_position.y,
+                tauri::LogicalSize {
+                    width: new_scroll_position.x - old_scroll_position.x,
+                    height: new_scroll_position.y - old_scroll_position.y,
                 },
-            ) {
-            } else {
-                assert!(false, "Could not set scroll position");
-            }
+            ) {}
         }
     }
 
