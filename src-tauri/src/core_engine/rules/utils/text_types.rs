@@ -82,6 +82,7 @@ impl TextPosition {
             }
 
             if char == '\n' {
+                // if stay_on_line is true, we want to return the index of the last character of the line self.row
                 if stay_on_line && self.row == row {
                     return Some(text_index.clone());
                 }
