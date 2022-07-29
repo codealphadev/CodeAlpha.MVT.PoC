@@ -69,6 +69,10 @@ impl TextPosition {
     }
 
     pub fn as_TextIndex(&self, text: &String) -> Option<usize> {
+        self.as_TextIndex_stay_on_line(text, false)
+    }
+
+    pub fn as_TextIndex_stay_on_line(&self, text: &String, stay_on_line: bool) -> Option<usize> {
         let mut row = 0;
         let mut col = 0;
         let mut text_iter = text.char_indices();
@@ -78,6 +82,10 @@ impl TextPosition {
             }
 
             if char == '\n' {
+                // if stay_on_line is true, we want to return the index of the last character of the line self.row
+                if stay_on_line && self.row == row {
+                    return Some(text_index.clone());
+                }
                 row += 1;
                 col = 0;
                 continue;
@@ -179,6 +187,24 @@ mod tests_TextPosition {
         let text = "Hello, World!";
         let position = TextPosition::new(0, 100);
         let index_option = position.as_TextIndex(&text.to_string());
+
+        assert_eq!(index_option.is_none(), true);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line() {
+        let text = "Hello,\nWorld!\n";
+        let position = TextPosition::new(0, 100);
+        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), true);
+
+        assert_eq!(index_option.unwrap(), 6);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_false() {
+        let text = "Hello,\nWorld!\n";
+        let position = TextPosition::new(0, 100);
+        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), false);
 
         assert_eq!(index_option.is_none(), true);
     }

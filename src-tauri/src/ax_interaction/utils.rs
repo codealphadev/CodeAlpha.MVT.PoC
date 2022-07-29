@@ -13,6 +13,7 @@ use core_foundation::{
     string::CFString,
 };
 use core_graphics_types::geometry::CGSize;
+use rdev::{simulate, EventType};
 
 static EDITOR_NAME: &str = "Xcode";
 
@@ -71,7 +72,7 @@ pub fn is_currently_focused_app_our_app() -> Option<bool> {
 
 pub fn focused_uielement_of_app(app_pid: pid_t) -> Result<AXUIElement, Error> {
     let application = AXUIElement::application(app_pid);
-    let focused_ui_element = application.attribute(&AXAttribute::focused_uielement())?;
+    let focused_ui_element = application.focused_uielement()?;
 
     Ok(focused_ui_element)
 }
@@ -80,7 +81,7 @@ pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
     if is_focused_uielement_of_app_xcode_editor_field(pid)? {
         let editor_element = focused_uielement_of_app(pid)?;
 
-        let content = editor_element.attribute(&AXAttribute::value())?;
+        let content = editor_element.value()?;
         let content_str = content.downcast::<CFString>();
 
         if let Some(cf_str) = content_str {
@@ -89,6 +90,39 @@ pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
     }
 
     Ok(None)
+}
+
+pub fn get_textarea_origin(pid: pid_t) -> Result<Option<tauri::LogicalPosition<f64>>, Error> {
+    if is_focused_uielement_of_app_xcode_editor_field(pid)? {
+        let editor_element = focused_uielement_of_app(pid)?;
+
+        let point = (editor_element.position()?).get_value::<CGPoint>()?;
+        let scroll_position = tauri::LogicalPosition {
+            x: point.x as f64,
+            y: point.y as f64,
+        };
+        return Ok(Some(scroll_position));
+    }
+    Ok(None)
+}
+
+pub fn send_event_mouse_wheel(pid: pid_t, delta: tauri::LogicalSize<f64>) -> Result<bool, Error> {
+    if is_focused_uielement_of_app_xcode_editor_field(pid)? {
+        let event_type = EventType::Wheel {
+            delta_x: delta.width as i64,
+            delta_y: delta.height as i64,
+        };
+
+        match simulate(&event_type) {
+            Ok(()) => {
+                return Ok(true);
+            }
+            Err(_) => {
+                println!("We could not send {:?}", event_type);
+            }
+        }
+    }
+    Ok(false)
 }
 
 pub fn update_xcode_editor_content(pid: pid_t, content: &str) -> Result<bool, Error> {

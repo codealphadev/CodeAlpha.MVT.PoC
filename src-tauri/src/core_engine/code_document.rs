@@ -1,7 +1,10 @@
 use tauri::Manager;
 
 use crate::{
-    ax_interaction::{set_selected_text_range, update_xcode_editor_content},
+    ax_interaction::{
+        get_textarea_origin, send_event_mouse_wheel, set_selected_text_range,
+        update_xcode_editor_content,
+    },
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
@@ -10,7 +13,7 @@ use super::{
     formatter::get_format_swift_file,
     rules::{
         RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
-        SwiftLinterRule, TextRange,
+        SwiftLinterRule, TextPosition, TextRange,
     },
     syntax_tree::SwiftSyntaxTree,
 };
@@ -145,33 +148,62 @@ impl CodeDocument {
         if let (Some(file_path), Some(selected_text_range)) =
             (self.file_path.clone(), self.selected_text_range.clone())
         {
-            let formatted_content_option =
-                get_format_swift_file(file_path, selected_text_range.clone(), self.text.clone());
-            if let Some(formatted_content) = formatted_content_option {
-                if formatted_content.content == self.text.clone() {
-                    return;
-                }
-                // Update content
-                if let Ok(_) = update_xcode_editor_content(
-                    self.editor_window_props.pid,
-                    &formatted_content.content,
-                ) {
-                } else {
-                    assert!(false, "Could not update Xcode editor content");
-                }
+            let formatted_content = if let Some(formatted_content) =
+                get_format_swift_file(file_path, selected_text_range.clone())
+            {
+                formatted_content
+            } else {
+                return;
+            };
 
-                // TODO: Restore scroll position
-
-                // Restore cursor position
-                if let Ok(_) = set_selected_text_range(
-                    self.editor_window_props.pid,
-                    selected_text_range.index,
-                    selected_text_range.length,
-                ) {
-                } else {
-                    assert!(false, "Could not set cursor position");
-                }
+            if formatted_content.content == self.text.clone() {
+                return;
             }
+            // Save scroll position
+            let old_scroll_position = if let Ok(Some(old_scroll_position)) =
+                get_textarea_origin(self.editor_window_props.pid)
+            {
+                old_scroll_position
+            } else {
+                return;
+            };
+
+            // Update content
+            if let Ok(_) = update_xcode_editor_content(
+                self.editor_window_props.pid,
+                &formatted_content.content,
+            ) {
+            } else {
+                return;
+            };
+
+            // Restore cursor position
+            // Keep cursor on same line as before or end of file
+            if let Ok(_) = set_selected_text_range(
+                self.editor_window_props.pid,
+                get_new_cursor_index(
+                    &self.text,
+                    &formatted_content.content,
+                    selected_text_range.index,
+                ),
+                selected_text_range.length,
+            ) {}
+
+            // Restore scroll position
+            let new_scroll_position = if let Ok(Some(new_scroll_prosition)) =
+                get_textarea_origin(self.editor_window_props.pid)
+            {
+                new_scroll_prosition
+            } else {
+                return;
+            };
+            if let Ok(true) = send_event_mouse_wheel(
+                self.editor_window_props.pid,
+                tauri::LogicalSize {
+                    width: new_scroll_position.x - old_scroll_position.x,
+                    height: new_scroll_position.y - old_scroll_position.y,
+                },
+            ) {}
         }
     }
 
@@ -198,4 +230,15 @@ impl CodeDocument {
             }
         }
     }
+}
+
+fn get_new_cursor_index(old_content: &String, formatted_content: &String, index: usize) -> usize {
+    let mut new_index = formatted_content.len();
+    if let Some(text_position) = TextPosition::from_TextIndex(old_content, index) {
+        if let Some(text_index) = text_position.as_TextIndex_stay_on_line(formatted_content, true) {
+            new_index = text_index;
+        }
+    }
+
+    new_index
 }
