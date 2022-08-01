@@ -265,7 +265,11 @@ impl TextRange {
     }
 
     pub fn as_StartEndIndex(&self) -> (usize, usize) {
-        (self.index, self.index + self.length - 1)
+        if self.length == 0 {
+            return (self.index, self.index);
+        } else {
+            return (self.index, self.index + self.length - 1);
+        }
     }
 
     pub fn as_StartEndTextPosition(&self, text: &String) -> Option<(TextPosition, TextPosition)> {
@@ -380,6 +384,24 @@ mod tests_TextRange {
         let range = TextRange::new(0, 6);
 
         assert_eq!(range.as_StartEndIndex(), (0, 5));
+    }
+
+    #[test]
+    fn test_TextRange_as_StartEndIndex_index_and_length_zero() {
+        // "Hello, World!";
+        // >| <- Length is 0 characters, start is 0, end is 0
+        let range = TextRange::new(0, 0);
+
+        assert_eq!(range.as_StartEndIndex(), (0, 0));
+    }
+
+    #[test]
+    fn test_TextRange_as_StartEndIndex_length_zero() {
+        // "Hello, World!";
+        // >| <- Length is 0 characters, start is 25, end is 25
+        let range = TextRange::new(25, 0);
+
+        assert_eq!(range.as_StartEndIndex(), (25, 25));
     }
 
     // test TextRange as_StartEndPosition
