@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    formatter::get_format_swift_file,
+    formatter::format_swift_file,
     rules::{
         RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
         SwiftLinterRule, TextPosition, TextRange,
@@ -149,7 +149,7 @@ impl CodeDocument {
             (self.file_path.clone(), self.selected_text_range.clone())
         {
             let formatted_content = if let Some(formatted_content) =
-                get_format_swift_file(file_path, selected_text_range.clone())
+                format_swift_file(file_path, selected_text_range.clone())
             {
                 formatted_content
             } else {

@@ -1,32 +1,32 @@
 use std::{
     fs::{create_dir_all, File},
-    io::{Read, Write},
+    io::{Error, ErrorKind, Read, Write},
     path::PathBuf,
     process::Command,
 };
 
-type Result<T> = std::result::Result<T, std::io::Error>;
+type Result<T> = std::result::Result<T, Error>;
 
 /// It creates a directory if it doesn't exist, creates a file in that directory, and writes the text content
 /// to the file.
 ///
 /// Arguments:
 ///
-/// * `app_dir_path`: The directory where the file will be saved.
-/// * `file_name`: The name of the file to be created.
+/// * `file_path`: The file path where the file will be saved.
 /// * `content`: The content of the file to be saved.
 ///
 /// Returns:
 ///
 /// A Result<PathBuf> to the newly created file.
 #[allow(dead_code)]
-pub fn write_text_to_file(
-    app_dir_path: PathBuf,
-    file_name: &str,
-    content: &str,
-) -> Result<PathBuf> {
-    let file_path = app_dir_path.join(file_name);
-    create_dir_all(&app_dir_path)
+pub fn write_text_to_file(file_path: PathBuf, content: &str) -> Result<PathBuf> {
+    let mut dir_path = file_path.clone();
+    if dir_path.extension().is_some() {
+        dir_path.pop();
+    } else {
+        return Err(Error::new(ErrorKind::Other, "No extension found"));
+    }
+    create_dir_all(&dir_path)
         .and_then(|_| File::create(&file_path).map_err(Into::into))
         .and_then(|mut f| f.write_all(content.as_bytes()).map_err(Into::into))?;
 
@@ -120,7 +120,6 @@ mod tests_fs_utils {
     use super::*;
 
     #[test]
-    #[ignore]
     fn test_write_text_to_file() {
         let mut rng = rand::thread_rng();
         let n1: u32 = rng.gen::<u32>();
@@ -128,15 +127,16 @@ mod tests_fs_utils {
         let content = format!("{}", n1);
         let file_name = "test.txt";
 
-        // Using the Tauri AppHandle one can get the app directory, by calling
-        // app_handle.path_resolver().app_dir().unwrap()
-
         let path_buf = std::env::temp_dir();
 
-        let _ = write_text_to_file(path_buf, file_name, &content);
+        // Check if error is returned if no extension exists
+        let result_no_extension = write_text_to_file(path_buf, &content);
+        assert!(result_no_extension.is_err());
 
-        // Check if file exists
+        // Check if file is written
         let file_path = std::env::temp_dir().join(file_name);
+        let result_with_extension = write_text_to_file(file_path.clone(), &content);
+        assert!(result_with_extension.is_ok());
         assert!(file_path.exists());
 
         // Check if content stored in file is correct
