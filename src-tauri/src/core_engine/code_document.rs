@@ -2,9 +2,10 @@ use tauri::Manager;
 
 use crate::{
     ax_interaction::{
-        get_textarea_origin, send_event_mouse_wheel, set_selected_text_range,
-        update_xcode_editor_content,
+        derive_xcode_textarea_dimensions, get_textarea_uielement, send_event_mouse_wheel,
+        set_selected_text_range, update_xcode_editor_content,
     },
+    core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
@@ -159,14 +160,27 @@ impl CodeDocument {
             if formatted_content.content == self.text.clone() {
                 return;
             }
-            // Save scroll position
-            let old_scroll_position = if let Ok(Some(old_scroll_position)) =
-                get_textarea_origin(self.editor_window_props.pid)
+
+            // Get position of selected text
+            let mut scroll_delta = None;
+            if let Some(editor_textarea_ui_element) =
+                get_textarea_uielement(self.editor_window_props.pid)
             {
-                old_scroll_position
-            } else {
-                return;
-            };
+                // Get the dimensions of the textarea viewport
+                if let Ok(textarea_viewport) =
+                    derive_xcode_textarea_dimensions(&editor_textarea_ui_element)
+                {
+                    if let Some(bounds_of_selected_text) = get_bounds_of_first_char_in_range(
+                        &selected_text_range,
+                        &editor_textarea_ui_element,
+                    ) {
+                        scroll_delta = Some(tauri::LogicalSize {
+                            width: textarea_viewport.0.x - bounds_of_selected_text.origin.x,
+                            height: bounds_of_selected_text.origin.y - textarea_viewport.0.y,
+                        });
+                    }
+                }
+            }
 
             // Update content
             if let Ok(_) = update_xcode_editor_content(
@@ -178,7 +192,7 @@ impl CodeDocument {
             };
 
             // Restore cursor position
-            // Keep cursor on same line as before or end of file
+            // At this point we only place the curser a the exact same ROW | COL as before the formatting.
             if let Ok(_) = set_selected_text_range(
                 self.editor_window_props.pid,
                 get_new_cursor_index(
@@ -189,21 +203,14 @@ impl CodeDocument {
                 selected_text_range.length,
             ) {}
 
-            // Restore scroll position
-            let new_scroll_position = if let Ok(Some(new_scroll_prosition)) =
-                get_textarea_origin(self.editor_window_props.pid)
-            {
-                new_scroll_prosition
-            } else {
-                return;
-            };
-            if let Ok(true) = send_event_mouse_wheel(
-                self.editor_window_props.pid,
-                tauri::LogicalSize {
-                    width: new_scroll_position.x - old_scroll_position.x,
-                    height: new_scroll_position.y - old_scroll_position.y,
-                },
-            ) {}
+            // Scroll to the same position as before the formatting
+            let pid_move_copy = self.editor_window_props.pid;
+            if let Some(scroll_delta) = scroll_delta {
+                tauri::async_runtime::spawn(async move {
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                    if let Ok(true) = send_event_mouse_wheel(pid_move_copy, scroll_delta) {}
+                });
+            }
         }
     }
 
