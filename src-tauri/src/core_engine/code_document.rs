@@ -75,16 +75,19 @@ impl CodeDocument {
     }
 
     pub fn update_doc_properties(&mut self, text: &String, file_path: &Option<String>) {
-        let text_updated = if text != &self.text { true } else { false };
-        let file_path_updated = self.file_path_updated(file_path);
-
-        if file_path_updated {
+        let is_file_path_new = self.is_file_path_new(file_path);
+        let is_file_text_new = text != &self.text;
+        if is_file_path_new {
             self.swift_syntax_tree.reset();
             self.file_path = file_path.clone();
         }
-
-        if text_updated {
+        if is_file_text_new {
             self.text = text.clone();
+        }
+
+        if !is_file_path_new && !is_file_text_new {
+            // Return early if the file path and text are the same.
+            return;
         }
 
         // rerun syntax tree parser
@@ -219,7 +222,7 @@ impl CodeDocument {
         &mut self.rules
     }
 
-    fn file_path_updated(&self, file_path_new: &Option<String>) -> bool {
+    fn is_file_path_new(&self, file_path_new: &Option<String>) -> bool {
         if let Some(file_path_old) = &self.file_path {
             if let Some(file_path_new) = file_path_new {
                 if file_path_old != file_path_new {
