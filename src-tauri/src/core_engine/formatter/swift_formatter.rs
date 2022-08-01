@@ -57,6 +57,9 @@ async fn format_file(file_path: String) -> Option<String> {
 
 #[cfg(test)]
 mod tests_swift_formatter {
+    use std::path::PathBuf;
+    use std::process::Command as StdCommand;
+
     use rand::Rng;
 
     // use crate::core_engine::rules::write_text_to_file;
