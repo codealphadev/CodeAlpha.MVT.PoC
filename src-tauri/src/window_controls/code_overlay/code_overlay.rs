@@ -4,7 +4,7 @@ use cocoa::{base::id, foundation::NSInteger};
 use objc::{class, msg_send, sel, sel_impl};
 
 use crate::{
-    core_engine::MatchRectangle,
+    core_engine::types::MatchRectangle,
     utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::{
         actions::{close_window, open_window, resize_window, set_position},
