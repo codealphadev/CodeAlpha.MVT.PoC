@@ -13,7 +13,7 @@ rust-version = "1.57"
 tauri-build = { version = "1.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "1.0.0", features = ["macos-private-api", "notification", "process-command-api", "shell-sidecar", "system-tray", "window-close", "window-hide", "window-start-dragging"] }
+tauri = { version = "1.0.0", features = ["clipboard", "macos-private-api", "notification", "process-command-api", "shell-sidecar", "system-tray", "window-close", "window-hide", "window-start-dragging"] }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

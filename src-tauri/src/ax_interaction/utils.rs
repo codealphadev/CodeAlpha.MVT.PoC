@@ -15,6 +15,8 @@ use core_foundation::{
 use core_graphics_types::geometry::CGSize;
 use rdev::{simulate, EventType};
 
+use crate::core_engine::text_types::TextRange;
+
 static EDITOR_NAME: &str = "Xcode";
 
 // Method to get the focused AXUIElement's top-level window
@@ -156,6 +158,22 @@ pub fn set_selected_text_range(pid: pid_t, index: usize, length: usize) -> Resul
     }
 
     Ok(false)
+}
+
+pub fn get_selected_text_range(pid: pid_t) -> Result<Option<TextRange>, Error> {
+    if is_focused_uielement_of_app_xcode_editor_field(pid)? {
+        let editor_element = focused_uielement_of_app(pid)?;
+
+        let selected_text_range_ax_value = editor_element.selected_text_range()?;
+        let selected_text_range_cf_range = selected_text_range_ax_value.get_value::<CFRange>()?;
+
+        return Ok(Some(TextRange {
+            index: selected_text_range_cf_range.location as usize,
+            length: selected_text_range_cf_range.length as usize,
+        }));
+    }
+
+    Ok(None)
 }
 
 pub fn is_focused_uielement_of_app_xcode_editor_field(app_pid: pid_t) -> Result<bool, Error> {

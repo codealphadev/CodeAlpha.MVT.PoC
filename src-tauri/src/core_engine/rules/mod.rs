@@ -16,4 +16,4 @@ pub mod rule_match;
 pub mod search_and_replace;
 
 pub mod swift_linter;
-mod utils;
+pub mod utils;
