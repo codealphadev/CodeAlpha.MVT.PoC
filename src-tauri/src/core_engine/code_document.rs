@@ -14,8 +14,8 @@ use super::{
     events::EventRuleExecutionState,
     formatter::format_swift_file,
     rules::{
-        RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
-        TextPosition, TextRange,
+        BracketHighlightProps, BracketHighlightRule, RuleBase, RuleName, RuleResults, RuleType,
+        SearchRule, SearchRuleProps, SwiftLinterProps, TextPosition, TextRange,
     },
     syntax_tree::SwiftSyntaxTree,
 };
@@ -59,13 +59,19 @@ impl CodeDocument {
         app_handle: tauri::AppHandle,
         editor_window_props: EditorWindowProps,
     ) -> CodeDocument {
+        let swift_syntax_tree = SwiftSyntaxTree::new();
         CodeDocument {
             app_handle,
-            rules: vec![RuleType::SearchRule(SearchRule::new())],
+            rules: vec![
+                RuleType::SearchRule(SearchRule::new()),
+                RuleType::BracketHighlight(BracketHighlightRule::new(
+                    swift_syntax_tree.get_tree_copy().clone(),
+                )),
+            ],
             editor_window_props,
             text: "".to_string(),
             file_path: None,
-            swift_syntax_tree: SwiftSyntaxTree::new(),
+            swift_syntax_tree,
             selected_text_range: None,
         }
     }
@@ -92,8 +98,8 @@ impl CodeDocument {
 
         // rerun syntax tree parser
         self.swift_syntax_tree.parse(&self.text);
-        let new_tree = self.swift_syntax_tree.get_tree();
         let new_content = self.text.clone();
+        let new_tree = self.swift_syntax_tree.get_tree_copy();
 
         for rule in self.rules_mut() {
             match rule {
@@ -104,8 +110,12 @@ impl CodeDocument {
                 RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
                     file_path_as_str: file_path.clone(),
                     linter_config: None,
-                    swift_syntax_tree: new_tree.clone(),
                     file_content: Some(new_content.clone()),
+                }),
+                RuleType::BracketHighlight(rule) => rule.update_properties(BracketHighlightProps {
+                    selected_text_range: None,
+                    swift_syntax_tree: new_tree.clone(),
+                    text_content: new_content.clone(),
                 }),
             }
         }
@@ -144,6 +154,19 @@ impl CodeDocument {
 
     pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
         self.selected_text_range = Some(TextRange { length, index });
+        let new_tree = self.swift_syntax_tree.get_tree_copy();
+        let mut bracket_highlight_rule = BracketHighlightRule::new(new_tree.clone());
+        bracket_highlight_rule.update_properties(BracketHighlightProps {
+            selected_text_range: self.selected_text_range.clone(),
+            swift_syntax_tree: new_tree,
+            text_content: self.text.clone(),
+        });
+        bracket_highlight_rule.run();
+        for rule in self.rules_mut() {
+            if rule.rule_type() == RuleName::BracketHighlight {
+                rule.run();
+            }
+        }
     }
 
     pub fn on_save(&mut self) {

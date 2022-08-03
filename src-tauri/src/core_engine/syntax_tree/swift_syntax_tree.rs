@@ -2,7 +2,6 @@ use std::{
     io::Write,
     process::{Command, Stdio},
 };
-
 use tree_sitter::{Parser, Tree};
 
 pub struct SwiftSyntaxTree {
@@ -35,8 +34,7 @@ impl SwiftSyntaxTree {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_tree(&self) -> Option<Tree> {
+    pub fn get_tree_copy(&self) -> Option<Tree> {
         self.tree_sitter_tree.clone()
     }
 
