@@ -14,7 +14,7 @@ use super::{
     formatter::format_swift_file,
     rules::{
         RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
-        SwiftLinterRule, TextPosition, TextRange,
+        TextPosition, TextRange,
     },
     syntax_tree::SwiftSyntaxTree,
 };
@@ -60,10 +60,7 @@ impl CodeDocument {
     ) -> CodeDocument {
         CodeDocument {
             app_handle,
-            rules: vec![
-                RuleType::SearchRule(SearchRule::new()),
-                RuleType::SwiftLinter(SwiftLinterRule::new(editor_window_props.pid)),
-            ],
+            rules: vec![RuleType::SearchRule(SearchRule::new())],
             editor_window_props,
             text: "".to_string(),
             file_path: None,
@@ -100,7 +97,7 @@ impl CodeDocument {
                     search_str: None,
                     content: Some(text.clone()),
                 }),
-                RuleType::SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
+                RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
                     file_path_as_str: file_path.clone(),
                     linter_config: None,
                     swift_syntax_tree: new_tree.clone(),

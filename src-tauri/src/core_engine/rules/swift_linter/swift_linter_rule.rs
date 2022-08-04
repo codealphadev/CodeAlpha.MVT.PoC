@@ -177,7 +177,7 @@ impl RuleBase for SwiftLinterRule {
 }
 
 impl SwiftLinterRule {
-    pub fn new(editor_app_pid: i32) -> Self {
+    pub fn _new(editor_app_pid: i32) -> Self {
         Self {
             rule_matches: None,
             file_path_updated: false,
@@ -297,7 +297,7 @@ mod tests {
     #[ignore]
     fn test_swift_linter() {
         let file_path_as_str = "/Users/adam/codealpha/code/adam-test/Shared/ContentView.swift";
-        let mut rule = SwiftLinterRule::new(12345);
+        let mut rule = SwiftLinterRule::_new(12345);
         rule.update_properties(SwiftLinterProps {
             file_path_as_str: Some(file_path_as_str.to_string()),
             linter_config: None,

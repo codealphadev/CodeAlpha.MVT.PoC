@@ -101,7 +101,7 @@ fn on_search_query_by_user(
                         content: Some(textarea_content.clone()),
                     })
                 }
-                RuleType::SwiftLinter(_) => {}
+                RuleType::_SwiftLinter(_) => {}
             }
         }
 
