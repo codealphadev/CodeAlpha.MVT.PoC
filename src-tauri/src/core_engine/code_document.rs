@@ -1,24 +1,22 @@
-use tauri::Manager;
-
+use super::{
+    events::EventRuleExecutionState,
+    formatter::format_swift_file,
+    rules::{
+        BracketHighlightProps, BracketHighlightRule, RuleBase, RuleResults, RuleType, SearchRule,
+        SearchRuleProps, SwiftLinterProps, TextPosition, TextRange,
+    },
+    syntax_tree::SwiftSyntaxTree,
+};
 use crate::{
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement, send_event_mouse_wheel,
-        set_selected_text_range, update_xcode_editor_content,
+        derive_xcode_textarea_dimensions, get_selected_text_range, get_textarea_uielement,
+        send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
     },
     core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
-
-use super::{
-    events::EventRuleExecutionState,
-    formatter::format_swift_file,
-    rules::{
-        BracketHighlightProps, BracketHighlightRule, RuleBase, RuleName, RuleResults, RuleType,
-        SearchRule, SearchRuleProps, SwiftLinterProps, TextPosition, TextRange,
-    },
-    syntax_tree::SwiftSyntaxTree,
-};
+use tauri::Manager;
 
 pub struct EditorWindowProps {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
@@ -89,6 +87,7 @@ impl CodeDocument {
         }
         if is_file_text_new {
             self.text = text.clone();
+            self.swift_syntax_tree = SwiftSyntaxTree::new();
         }
 
         if !is_file_path_new && !is_file_text_new {
@@ -118,6 +117,9 @@ impl CodeDocument {
                     text_content: new_content.clone(),
                 }),
             }
+        }
+        if let Ok(Some(range)) = get_selected_text_range(self.editor_window_props.pid) {
+            self.set_selected_text_range(range.index, range.length)
         }
     }
 
@@ -154,19 +156,17 @@ impl CodeDocument {
 
     pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
         self.selected_text_range = Some(TextRange { length, index });
-        let new_tree = self.swift_syntax_tree.get_tree_copy();
-        let mut bracket_highlight_rule = BracketHighlightRule::new(new_tree.clone());
-        bracket_highlight_rule.update_properties(BracketHighlightProps {
-            selected_text_range: self.selected_text_range.clone(),
-            swift_syntax_tree: new_tree,
-            text_content: self.text.clone(),
-        });
-        bracket_highlight_rule.run();
         for rule in self.rules_mut() {
-            if rule.rule_type() == RuleName::BracketHighlight {
-                rule.run();
+            match rule {
+                RuleType::BracketHighlight(rule) => {
+                    rule.update_selected_text_range(TextRange { length, index });
+                    rule.run_results();
+                }
+                _ => (),
             }
         }
+
+        self.compute_rule_visualizations();
     }
 
     pub fn on_save(&mut self) {

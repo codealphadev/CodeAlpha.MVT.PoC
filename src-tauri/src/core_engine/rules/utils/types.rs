@@ -81,8 +81,10 @@ pub struct MatchRange {
 pub enum RuleMatchCategory {
     Error,
     Warning,
-    BracketHighlightLine,
-    BracketHighlightTouch,
+    BracketHighlightLineFirst,
+    BracketHighlightLineLast,
+    BracketHighlightTouchFirst,
+    BracketHighlightTouchLast,
     None,
 }
 

@@ -124,17 +124,24 @@ impl RuleMatch {
                 // Check if line_match_range actually wraps into multiple lines
                 // due to activated 'wrap lines' in XCode (default is on)
 
+                let line_match_rect = if let Some(line_match_rect) =
+                    get_bounds_of_TextRange(&line_match_range.range, &editor_textarea_ui_element)
+                {
+                    line_match_rect
+                } else {
+                    println!(
+                        "Could not get bounds of match_range: {:?}",
+                        line_match_range
+                    );
+                    continue;
+                };
+
                 if let Some((range_is_wrapping, wrapped_line_number)) =
                     is_text_of_line_wrapped(&line_match_range.range, &editor_textarea_ui_element)
                 {
                     if !range_is_wrapping {
-                        if let Some(line_match_rect) = get_bounds_of_TextRange(
-                            &line_match_range.range,
-                            &editor_textarea_ui_element,
-                        ) {
-                            rule_match_rectangles.push(line_match_rect.clone());
-                            line_matches.push((line_match_range, vec![line_match_rect]));
-                        }
+                        rule_match_rectangles.push(line_match_rect.clone());
+                        line_matches.push((line_match_range, vec![line_match_rect]));
                     } else {
                         let line_match_rectangles = calc_match_rects_for_wrapped_range(
                             wrapped_line_number,
@@ -147,9 +154,11 @@ impl RuleMatch {
                             &line_match_range.range,
                             &editor_textarea_ui_element,
                         ));
-
                         line_matches.push((line_match_range, line_match_rectangles));
                     }
+                } else {
+                    rule_match_rectangles.push(line_match_rect.clone());
+                    line_matches.push((line_match_range, vec![line_match_rect]));
                 }
             }
 

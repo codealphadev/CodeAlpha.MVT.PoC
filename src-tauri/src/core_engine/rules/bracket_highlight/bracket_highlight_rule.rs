@@ -38,81 +38,8 @@ impl RuleBase for BracketHighlightRule {
             None
         }
     }
-
     fn run(&mut self) -> Option<RuleResults> {
-        println!("\n\n");
-        let (selected_node, selected_text_range) = if let (Some(node), Some(selected_text_range)) = (
-            self.get_selected_code_node(),
-            self.selected_text_range.clone(),
-        ) {
-            (node, selected_text_range)
-        } else {
-            // Failed to get selected_node or selected_text_range
-            return None;
-        };
-        println!(
-            "SELECTED_NODE: {:?} Range: {:?}",
-            selected_node,
-            selected_node.range()
-        );
-
-        let code_block_node = if let Some(code_block_node) = get_code_block_parent(selected_node) {
-            code_block_node
-        } else {
-            println!("Failed to get code_block_node");
-            return None;
-        };
-        println!(
-            "CODE_BLOCK_NODE: {:?} Range: {:?}",
-            code_block_node,
-            code_block_node.range()
-        );
-
-        // If cursor is touchin first or last character of range: also return parents bounds
-        println!("SELECTED_TEXT_RANGE: {:?}", selected_text_range);
-
-        let is_touching_left_first_char =
-            selected_text_range.index == code_block_node.range().start_byte;
-        let is_touching_right_first_char =
-            selected_text_range.index == code_block_node.range().start_byte + 1;
-        // Need to figure out how to check last character touch
-
-        println!(
-            "IS_TOUCHING_LEFT_FIRST_CHAR: {:?}",
-            is_touching_left_first_char
-        );
-
-        let mut line_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
-            &code_block_node,
-            RuleMatchCategory::BracketHighlightLine,
-        );
-        let mut touch_rule_matches: Vec<RuleMatch> = vec![];
-        if is_touching_left_first_char || is_touching_right_first_char {
-            touch_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
-                &code_block_node,
-                RuleMatchCategory::BracketHighlightTouch,
-            );
-            // Get line bounds of parent
-            if is_touching_left_first_char {
-                println!("Get line bounds of parent");
-                if let Some(code_block_parent_node) = get_code_block_parent(code_block_node) {
-                    println!("code_block_parent_node {:?}", code_block_parent_node);
-                    line_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
-                        &code_block_parent_node,
-                        RuleMatchCategory::BracketHighlightLine,
-                    );
-                }
-            }
-        }
-
-        self.rule_matches = Some(
-            line_rule_matches
-                .into_iter()
-                .chain(touch_rule_matches)
-                .collect(),
-        );
-        println!("RULE_MATCHES: {:?}", self.rule_matches);
-        self.rule_results()
+        None
     }
 
     fn compute_rule_match_rectangles(&mut self, editor_app_pid: i32) -> Option<RuleResults> {
@@ -146,6 +73,86 @@ impl BracketHighlightRule {
         self.text_content = properties.text_content;
     }
 
+    pub fn update_selected_text_range(&mut self, selected_text_range: TextRange) {
+        self.selected_text_range = Some(selected_text_range);
+    }
+
+    pub fn run_results(&mut self) -> Option<RuleResults> {
+        let (selected_node, selected_text_range) = if let (Some(node), Some(selected_text_range)) = (
+            self.get_selected_code_node(),
+            self.selected_text_range.clone(),
+        ) {
+            (node, selected_text_range)
+        } else {
+            // Failed to get selected_node or selected_text_range
+            println!("Failed to get selected_node or selected_text_range");
+            return None;
+        };
+        println!(
+            "SELECTED_NODE: {:?} Range: {:?}",
+            selected_node,
+            selected_node.range()
+        );
+
+        let code_block_node = if let Some(code_block_node) = get_code_block_parent(selected_node) {
+            code_block_node
+        } else {
+            println!("Failed to get code_block_node");
+            self.rule_matches = None;
+            return None;
+        };
+        println!(
+            "CODE_BLOCK_NODE: {:?} Range: {:?}",
+            code_block_node,
+            code_block_node.range()
+        );
+
+        // If cursor is touchin first or last character of range: also return parents bounds
+        println!("SELECTED_TEXT_RANGE: {:?}", selected_text_range);
+
+        let is_touching_left_first_char =
+            selected_text_range.index == code_block_node.range().start_byte;
+        let is_touching_right_first_char =
+            selected_text_range.index == code_block_node.range().start_byte + 1;
+        // Need to figure out how to check last character touch
+
+        println!(
+            "IS_TOUCHING_LEFT_FIRST_CHAR: {:?}",
+            is_touching_left_first_char
+        );
+
+        let mut line_rule_matches =
+            get_rule_matches_of_first_and_last_char_in_node(&code_block_node, CategoryGroup::Line);
+        let mut touch_rule_matches: Vec<RuleMatch> = vec![];
+        if is_touching_left_first_char || is_touching_right_first_char {
+            touch_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
+                &code_block_node,
+                CategoryGroup::Touch,
+            );
+            // Get line bounds of parent
+            if is_touching_left_first_char {
+                println!("Get line bounds of parent");
+                if let Some(parent_node) = code_block_node.clone().parent() {
+                    if let Some(code_block_parent_node) = get_code_block_parent(parent_node) {
+                        println!("code_block_parent_node {:?}", code_block_parent_node);
+                        line_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
+                            &code_block_parent_node,
+                            CategoryGroup::Line,
+                        );
+                    }
+                }
+            }
+        }
+
+        self.rule_matches = Some(
+            line_rule_matches
+                .into_iter()
+                .chain(touch_rule_matches)
+                .collect(),
+        );
+        self.rule_results()
+    }
+
     fn get_selected_code_node(&self) -> Option<Node> {
         if let (Some(selected_text_range), Some(syntax_tree)) =
             (self.selected_text_range.clone(), &self.swift_syntax_tree)
@@ -166,6 +173,10 @@ impl BracketHighlightRule {
 
                 return node;
             }
+        } else {
+            println!("{:?}", self.swift_syntax_tree);
+            println!("{:?}", self.selected_text_range);
+            println!("Failed to get selected_text_range syntax_tree");
         }
         None
     }
@@ -188,6 +199,7 @@ fn rule_match_from_range(range: TextRange, category: RuleMatchCategory) -> RuleM
 
 fn get_code_block_parent(node_input: Node) -> Option<Node> {
     let code_block_kinds = vec![
+        // "source_file",
         "value_arguments",
         "array_type",
         "array_literal",
@@ -208,7 +220,9 @@ fn get_code_block_parent(node_input: Node) -> Option<Node> {
     ];
 
     let mut node = node_input.clone();
+
     loop {
+        println!("NODE IN LOOP: {:?}", node);
         if code_block_kinds.contains(&node.kind()) {
             return Some(node);
         }
@@ -221,24 +235,39 @@ fn get_code_block_parent(node_input: Node) -> Option<Node> {
     }
 }
 
+#[derive(PartialEq)]
+enum CategoryGroup {
+    Line,
+    Touch,
+}
 fn get_rule_matches_of_first_and_last_char_in_node(
     node: &Node,
-    category: RuleMatchCategory,
+    category_group: CategoryGroup,
 ) -> Vec<RuleMatch> {
+    let category_first = if category_group == CategoryGroup::Line {
+        RuleMatchCategory::BracketHighlightLineFirst
+    } else {
+        RuleMatchCategory::BracketHighlightTouchFirst
+    };
+    let category_last = if category_group == CategoryGroup::Line {
+        RuleMatchCategory::BracketHighlightLineLast
+    } else {
+        RuleMatchCategory::BracketHighlightTouchLast
+    };
     let mut rule_matches: Vec<RuleMatch> = vec![];
     rule_matches.push(rule_match_from_range(
         TextRange {
             index: node.range().start_byte,
             length: 1,
         },
-        category.clone(),
+        category_first,
     ));
     rule_matches.push(rule_match_from_range(
         TextRange {
-            index: node.range().end_byte,
+            index: node.range().end_byte - 1,
             length: 1,
         },
-        category.clone(),
+        category_last,
     ));
     rule_matches
 }
