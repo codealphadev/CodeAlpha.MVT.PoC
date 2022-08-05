@@ -15,8 +15,8 @@ use core_engine::CoreEngine;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::{EditorWindow, WidgetWindow, WindowControls};
 
-use crate::window_controls::content_window::{
-    cmd_resize_content_window, cmd_toggle_content_window,
+use crate::window_controls::{
+    cmd_toggle_app_activation, content_window::cmd_resize_content_window,
 };
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
 
@@ -37,7 +37,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             search_and_replace_commands::cmd_search_and_replace,
             cmd_resize_content_window,
-            cmd_toggle_content_window
+            cmd_toggle_app_activation
         ])
         .setup(|app| {
             setup_observers(&app.handle());

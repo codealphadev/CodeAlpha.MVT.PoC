@@ -75,19 +75,19 @@ fn on_editor_shortcut_pressed(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
     msg: &EditorShortcutPressedMessage,
 ) {
+    let core_engine = &mut *(match core_engine_arc.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    // Checking if the engine is active. If not, don't continue.
+    if !core_engine.engine_active() {
+        return;
+    }
+
     match msg.modifier {
         ModifierKey::Cmd => match msg.key.as_str() {
             "S" => {
-                let core_engine = &mut *(match core_engine_arc.lock() {
-                    Ok(guard) => guard,
-                    Err(poisoned) => poisoned.into_inner(),
-                });
-
-                // Checking if the engine is active. If not, it returns.
-                if !core_engine.engine_active() {
-                    return;
-                }
-
                 let code_documents = &mut *(match core_engine.code_documents().lock() {
                     Ok(guard) => guard,
                     Err(poisoned) => poisoned.into_inner(),
@@ -112,6 +112,8 @@ fn on_editor_textarea_selected_text_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
+    let core_engine_active_status = core_engine.engine_active();
+
     let code_documents = &mut *(match core_engine.code_documents().lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
@@ -119,6 +121,11 @@ fn on_editor_textarea_selected_text_changed(
 
     if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
         code_doc.set_selected_text_range(msg.index, msg.length);
+    }
+
+    // Checking if the engine is active. If not, don't continue.
+    if !core_engine_active_status {
+        return;
     }
 }
 
@@ -131,10 +138,7 @@ fn on_editor_textarea_content_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    // Checking if the engine is active. If not, it returns.
-    if !core_engine.engine_active() {
-        return;
-    }
+    let core_engine_active_status = core_engine.engine_active();
 
     let app_handle = core_engine.app_handle.clone();
 
@@ -158,6 +162,12 @@ fn on_editor_textarea_content_changed(
             &content_changed_msg.content,
             &content_changed_msg.file_path_as_str,
         );
+
+        // Checking if the engine is active. If not, it returns.
+        if !core_engine_active_status {
+            return;
+        }
+
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();
     }
@@ -329,10 +339,7 @@ fn on_editor_focused_uielement_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    // Checking if the engine is active. If not, it returns.
-    if !core_engine.engine_active() {
-        return;
-    }
+    let core_engine_active_status = core_engine.engine_active();
 
     let app_handle = core_engine.app_handle.clone();
 
@@ -381,6 +388,12 @@ fn on_editor_focused_uielement_changed(
 
     if let Some(code_doc) = code_documents.get_mut(&uielement_focus_changed_msg.ui_elem_hash) {
         code_doc.update_doc_properties(&content_str, &file_path);
+
+        // Checking if the engine is active. If not, it returns.
+        if !core_engine_active_status {
+            return;
+        }
+
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();
     }

@@ -2,6 +2,8 @@
 
 export type ChannelList =
   | "EventUserInteractions"
+  | "EventRuleExecutionState"
+  | "EventWindowControls"
   | "RuleResults"
   | "AXEventApp"
   | "AXEventReplit"

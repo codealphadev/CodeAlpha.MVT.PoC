@@ -10,6 +10,7 @@ use crate::{
         models::editor::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
         AXEventReplit, AXEventXcode,
     },
+    core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     utils::messaging::ChannelList,
 };
 
@@ -116,4 +117,13 @@ impl WindowControls {
 
         let _ = &editor_list_locked.remove(&destroyed_msg.id);
     }
+}
+
+#[tauri::command]
+pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool) {
+    EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
+        engine_active: Some(app_active),
+        active_feature: None,
+    })
+    .publish_to_tauri(&app_handle);
 }

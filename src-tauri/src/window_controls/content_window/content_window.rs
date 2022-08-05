@@ -33,8 +33,8 @@ pub fn cmd_resize_content_window(app_handle: tauri::AppHandle, size_x: u32, size
 }
 
 #[tauri::command]
-pub fn cmd_toggle_content_window(app_handle: tauri::AppHandle) {
-    if let Ok(visible) = is_open(&app_handle) {
+pub fn _cmd_toggle_content_window(app_handle: tauri::AppHandle) {
+    if let Ok(visible) = _is_open(&app_handle) {
         if visible {
             let _ = hide(&app_handle);
             AXEventApp::AppContentActivationChange(AppContentActivationMessage {
@@ -188,7 +188,7 @@ pub fn hide(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     }
 }
 
-pub fn is_open(app_handle: &tauri::AppHandle) -> Result<bool, Error> {
+pub fn _is_open(app_handle: &tauri::AppHandle) -> Result<bool, Error> {
     if let Some(content_window) = app_handle.get_window(&AppWindow::Content.to_string()) {
         content_window.is_visible()
     } else {

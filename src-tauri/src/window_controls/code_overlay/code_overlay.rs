@@ -44,9 +44,9 @@ pub fn show_code_overlay(
         )?;
     }
 
-    if is_main_thread().unwrap() {
-        configure_code_overlay_properties(app_handle);
-    }
+    // if is_main_thread().unwrap() {
+    configure_code_overlay_properties(app_handle);
+    // }
 
     Ok(())
 }
@@ -90,7 +90,11 @@ fn configure_code_overlay_properties(app_handle: &tauri::AppHandle) {
                     setLevel: overlay_window_level + 1 as NSInteger
                 ];
             }
+        } else {
+            println!("Error getting the window handles");
         }
+    } else {
+        println!("Could not get the window handles for the code overlay and widget windows");
     }
 }
 

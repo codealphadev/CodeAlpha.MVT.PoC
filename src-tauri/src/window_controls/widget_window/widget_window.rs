@@ -9,7 +9,6 @@ use std::{
 
 use crate::{
     ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
-    core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     window_controls::{
         actions::{close_window, create_window, open_window, set_position},
         code_overlay::{hide_code_overlay, show_code_overlay},
@@ -21,6 +20,7 @@ use crate::{
 
 use super::{
     dimension_calculations::prevent_widget_position_off_screen,
+    listener_user_interaction::register_listener_user_interactions,
     listeners::{register_listener_app, register_listener_replit, register_listener_xcode},
     prevent_misalignement_of_content_and_widget,
 };
@@ -51,6 +51,9 @@ pub struct WidgetWindow {
 
     /// Identitfier of the currently focused app window. Is None until the first window was focused.
     pub currently_focused_app_window: Option<AppWindow>,
+
+    /// Boolean to indicate if the code_overlay_visible is visible or hidden.
+    pub code_overlay_visible: Option<bool>,
 }
 
 impl WidgetWindow {
@@ -82,6 +85,7 @@ impl WidgetWindow {
             currently_focused_editor_window: None,
             is_app_focused: false,
             currently_focused_app_window: None,
+            code_overlay_visible: None,
         }
     }
 
@@ -97,6 +101,8 @@ impl WidgetWindow {
 
         // Register listener for replit events relevant for displaying/hiding and positioning the widget
         register_listener_replit(app_handle, &widget_window);
+
+        register_listener_user_interactions(app_handle, &widget_window);
     }
 
     pub fn temporary_hide_check_routine(
@@ -130,27 +136,33 @@ impl WidgetWindow {
         let widget_props_move_copy = widget_props.clone();
         let app_handle_move_copy = app_handle.clone();
 
-        thread::spawn(move || loop {
-            // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
-            // ==================================================================
-            thread::sleep(std::time::Duration::from_millis(25));
-            // ==================================================================
+        tauri::async_runtime::spawn(async move {
+            loop {
+                // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
+                // ==================================================================
+                thread::sleep(std::time::Duration::from_millis(25));
+                // ==================================================================
 
-            let widget_window = &mut *(match widget_props_move_copy.lock() {
-                Ok(guard) => guard,
-                Err(poisoned) => poisoned.into_inner(),
-            });
-
-            if widget_window.temporary_hide_until_instant < Instant::now() {
-                let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+                let widget_window = &mut *(match widget_props_move_copy.lock() {
                     Ok(guard) => guard,
                     Err(poisoned) => poisoned.into_inner(),
                 });
-                Self::show_widget_routine(&app_handle_move_copy, &widget_window, &editor_windows);
 
-                // Indicate that the routine finished
-                widget_window.temporary_hide_check_active = false;
-                break;
+                if widget_window.temporary_hide_until_instant < Instant::now() {
+                    let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+                        Ok(guard) => guard,
+                        Err(poisoned) => poisoned.into_inner(),
+                    });
+                    Self::show_widget_routine(
+                        &app_handle_move_copy,
+                        &widget_window,
+                        &editor_windows,
+                    );
+
+                    // Indicate that the routine finished
+                    widget_window.temporary_hide_check_active = false;
+                    break;
+                }
             }
         });
     }
@@ -181,47 +193,47 @@ impl WidgetWindow {
             return;
         }
 
-        // Recover ContentWindowState for this editor window
+        // Recover ContentWindowState for this editor window and open CodeOverlay window
         if let Some(focused_window_id) = widget.currently_focused_editor_window {
             if let Some(editor_window) = editor_windows.get(&focused_window_id) {
                 match editor_window.content_window_state {
                     ContentWindowState::Active => {
                         let _ = content_window::open(&app_handle);
+                    }
+                    ContentWindowState::Inactive => {
+                        let _ = content_window::hide(&app_handle);
+                    }
+                }
 
-                        // Open the code overlay window
+                if let Some(code_overlay_visible) = widget.code_overlay_visible {
+                    if code_overlay_visible {
                         let _ = show_code_overlay(
                             app_handle,
                             editor_window.textarea_position,
                             editor_window.textarea_size,
                         );
-                    }
-                    ContentWindowState::Inactive => {
-                        let _ = content_window::hide(&app_handle);
-
-                        // Close the code overlay window
+                    } else {
                         let _ = hide_code_overlay(app_handle);
                     }
+                } else {
+                    let _ = show_code_overlay(
+                        app_handle,
+                        editor_window.textarea_position,
+                        editor_window.textarea_size,
+                    );
                 }
             }
         }
 
-        if open_window(&widget.app_handle, AppWindow::Widget) {
-            EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
-                engine_active: Some(true),
-                active_feature: None,
-            })
-            .publish_to_tauri(&app_handle);
-        }
+        open_window(&widget.app_handle, AppWindow::Widget);
     }
 
     pub fn hide_widget_routine(app_handle: &tauri::AppHandle) {
         close_window(app_handle, AppWindow::Widget);
         close_window(app_handle, AppWindow::CodeOverlay);
+    }
 
-        EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
-            engine_active: Some(false),
-            active_feature: None,
-        })
-        .publish_to_tauri(&app_handle);
+    pub fn update_code_overlay_visible(&mut self, code_overlay_visible: &Option<bool>) {
+        self.code_overlay_visible = *code_overlay_visible;
     }
 }

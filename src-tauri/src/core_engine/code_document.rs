@@ -11,6 +11,7 @@ use crate::{
 };
 
 use super::{
+    events::EventRuleExecutionState,
     formatter::format_swift_file,
     rules::{
         RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
@@ -208,6 +209,9 @@ impl CodeDocument {
                     if let Ok(true) = send_event_mouse_wheel(pid_move_copy, scroll_delta) {}
                 });
             }
+
+            // Notifiy the frontend that the file has been formatted successfully
+            EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&self.app_handle);
         }
     }
 

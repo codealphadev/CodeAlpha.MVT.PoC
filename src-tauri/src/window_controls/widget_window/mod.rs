@@ -6,5 +6,6 @@ pub use widget_window::WidgetWindow;
 mod dimension_calculations;
 mod handler_ax_events_app;
 mod handler_ax_events_xcode;
+mod listener_user_interaction;
 mod listeners;
 mod widget_window;
