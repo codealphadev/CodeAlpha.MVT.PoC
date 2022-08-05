@@ -95,6 +95,11 @@ impl CodeDocument {
             return;
         }
 
+        if !is_file_path_new && !is_file_text_new {
+            // Return early if the file path and text are the same.
+            return;
+        }
+
         // rerun syntax tree parser
         self.swift_syntax_tree.parse(&self.text);
         let new_content = self.text.clone();
@@ -138,7 +143,6 @@ impl CodeDocument {
                 _ => (),
             }
         }
-        self.compute_rule_visualizations();
     }
 
     pub fn compute_rule_visualizations(&mut self) {

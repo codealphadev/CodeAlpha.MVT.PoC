@@ -122,6 +122,7 @@ fn on_editor_textarea_selected_text_changed(
     if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
         code_doc.set_selected_text_range(msg.index, msg.length);
         code_doc.process_bracket_highlight();
+        code_doc.compute_rule_visualizations();
     }
 
     // Checking if the engine is active. If not, don't continue.
@@ -396,6 +397,7 @@ fn on_editor_focused_uielement_changed(
         }
 
         code_doc.process_rules();
+        code_doc.process_bracket_highlight();
         code_doc.compute_rule_visualizations();
     }
 }

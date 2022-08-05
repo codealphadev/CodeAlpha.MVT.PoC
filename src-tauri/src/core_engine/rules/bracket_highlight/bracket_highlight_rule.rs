@@ -112,8 +112,7 @@ impl BracketHighlightRule {
 
         let mut line_rule_matches =
             get_rule_matches_of_first_and_last_char_in_node(&code_block_node, CategoryGroup::Line);
-        let mut touch_rule_matches: Vec<RuleMatch> = vec![];
-        touch_rule_matches =
+        let touch_rule_matches =
             get_rule_matches_of_first_and_last_char_in_node(&code_block_node, CategoryGroup::Touch);
         // Get line bounds of parent
         if is_touching_left_first_char {

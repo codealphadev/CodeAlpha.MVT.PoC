@@ -26,7 +26,6 @@ pub fn show_code_overlay(
     textarea_position: Option<tauri::LogicalPosition<f64>>,
     textarea_size: Option<tauri::LogicalSize<f64>>,
 ) -> Result<(), Error> {
-    println!("show_code_overlay");
     if let (Some(origin), Some(size)) = (textarea_position, textarea_size) {
         resize_window(app_handle, AppWindow::CodeOverlay, &size)?;
         set_position(app_handle, AppWindow::CodeOverlay, &origin)?;
