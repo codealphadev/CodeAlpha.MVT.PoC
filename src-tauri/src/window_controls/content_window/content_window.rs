@@ -42,7 +42,11 @@ pub fn _cmd_toggle_content_window(app_handle: tauri::AppHandle) {
             })
             .publish_to_tauri(&app_handle);
         } else {
-            let _ = open(&app_handle);
+            // let _ = open(&app_handle);
+            println!(
+                "Needs to be refactored: open requires the Monitor of the editor, which is not 
+            available here. Delegate opening the MainWindow to the receiver of this message."
+            );
             AXEventApp::AppContentActivationChange(AppContentActivationMessage {
                 activation_state: ContentWindowState::Active,
             })
@@ -62,7 +66,7 @@ fn resize(
     }
 }
 
-fn reposition(app_handle: &tauri::AppHandle) -> Result<(), Error> {
+fn reposition(app_handle: &tauri::AppHandle, monitor: &tauri::Monitor) -> Result<(), Error> {
     let widget_position = get_position(&app_handle, AppWindow::Widget)?;
     let widget_size = get_size(&app_handle, AppWindow::Widget)?;
     let content_position = get_position(&app_handle, AppWindow::Content)?;
@@ -74,11 +78,10 @@ fn reposition(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     };
 
     // Check if content window orientation should be flipped in case it would go out of the left side of the screen
-    let screen = current_monitor_of_window(&app_handle, AppWindow::Widget).unwrap();
-    let screen_position = screen.position().to_logical::<f64>(screen.scale_factor());
+    let monitor_position = monitor.position().to_logical::<f64>(monitor.scale_factor());
 
     let mut bubble_orientation_right = true;
-    if screen_position.x > new_content_pos.x {
+    if monitor_position.x > new_content_pos.x {
         new_content_pos.x = widget_position.x - POSITIONING_OFFSET_X;
         bubble_orientation_right = false;
     }
@@ -138,12 +141,12 @@ fn reposition_with_known_content_size(
     }
 }
 
-pub fn open(app_handle: &tauri::AppHandle) -> Result<(), Error> {
+pub fn open(app_handle: &tauri::AppHandle, monitor: &tauri::Monitor) -> Result<(), Error> {
     // 1. Reposition widget in case it is moved too far up on the screen
-    correct_widget_position(&app_handle);
+    correct_widget_position(app_handle, monitor);
 
     // 2. Position content window relative to widget position
-    reposition(&app_handle)?;
+    reposition(app_handle, monitor)?;
 
     // 3. Set parent window
     // Here we need to go past the tauri APIs and use native macOS APIs to set the parent window at runtime.
@@ -196,10 +199,14 @@ pub fn _is_open(app_handle: &tauri::AppHandle) -> Result<bool, Error> {
     }
 }
 
-fn correct_widget_position(app_handle: &tauri::AppHandle) {
+fn correct_widget_position(app_handle: &tauri::AppHandle, monitor: &tauri::Monitor) {
     if let Ok(widget_position) = get_position(app_handle, AppWindow::Widget) {
         let mut widget_position_updated = widget_position.clone();
-        prevent_misalignement_of_content_and_widget(app_handle, &mut widget_position_updated);
+        prevent_misalignement_of_content_and_widget(
+            app_handle,
+            monitor,
+            &mut widget_position_updated,
+        );
 
         if widget_position != widget_position_updated {
             let _ = set_position(app_handle, AppWindow::Widget, &widget_position_updated);

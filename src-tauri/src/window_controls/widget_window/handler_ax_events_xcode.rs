@@ -26,6 +26,7 @@ pub fn on_resize_editor_window(
             Err(poisoned) => poisoned.into_inner(),
         };
 
+        println!("on_resize_editor_window: {:?}", resize_msg);
         if let Some(editor_window) = editor_list_locked.get_mut(&resize_msg.id) {
             editor_window.update_window_dimensions(
                 resize_msg.window_position,

@@ -98,6 +98,6 @@ fn configure_code_overlay_properties(app_handle: &tauri::AppHandle) {
     }
 }
 
-fn is_main_thread() -> Option<bool> {
+fn _is_main_thread() -> Option<bool> {
     unsafe { Some(msg_send![class!(NSThread), isMainThread]) }
 }

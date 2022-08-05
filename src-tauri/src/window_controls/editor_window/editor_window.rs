@@ -1,8 +1,11 @@
-use tauri::{LogicalPosition, LogicalSize};
+use tauri::{LogicalPosition, LogicalSize, Manager};
 
-use crate::ax_interaction::models::{
-    app::ContentWindowState,
-    editor::{EditorWindowCreatedMessage, FocusedUIElement},
+use crate::{
+    ax_interaction::models::{
+        app::ContentWindowState,
+        editor::{EditorWindowCreatedMessage, FocusedUIElement},
+    },
+    window_controls::config::AppWindow,
 };
 
 #[derive(Debug)]
@@ -41,11 +44,12 @@ pub struct EditorWindow {
     /// The Text Area is the ui element within xcode that is used for editing code
     /// When initially focusing an editor window the text area might not be visible,
     /// wherefore it's dimension might not be known.
-    pub textarea_position: Option<tauri::LogicalPosition<f64>>,
-    pub textarea_size: Option<tauri::LogicalSize<f64>>,
+    /// The coordinates of the textarea's origin are relative to the editor window.
+    textarea_position: Option<tauri::LogicalPosition<f64>>,
+    textarea_size: Option<tauri::LogicalSize<f64>>,
 
     /// Widget position to the editor's text area.
-    pub widget_position: Option<tauri::LogicalPosition<f64>>,
+    widget_position: Option<tauri::LogicalPosition<f64>>,
 
     /// Enum to indicate if the content window is currently active or inactive.
     /// Because of the parent-child relationship between widget and content window the
@@ -80,13 +84,54 @@ impl EditorWindow {
         }
     }
 
+    pub fn textarea_position(
+        &self,
+        as_global_position: bool,
+    ) -> Option<tauri::LogicalPosition<f64>> {
+        if let Some(textarea_position) = self.textarea_position {
+            if as_global_position {
+                Some(self.transform_local_position_to_global_position(textarea_position))
+            } else {
+                Some(textarea_position)
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn textarea_size(&self) -> Option<tauri::LogicalSize<f64>> {
+        self.textarea_size
+    }
+
+    pub fn widget_position(&self, as_global_position: bool) -> Option<tauri::LogicalPosition<f64>> {
+        if let Some(widget_position) = self.widget_position {
+            if as_global_position {
+                Some(self.transform_local_position_to_global_position(widget_position))
+            } else {
+                Some(widget_position)
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn update_window_dimensions(
         &mut self,
         window_position: tauri::LogicalPosition<f64>,
         window_size: tauri::LogicalSize<f64>,
-        textarea_position: Option<tauri::LogicalPosition<f64>>,
+        textarea_position_global: Option<tauri::LogicalPosition<f64>>,
         textarea_size: Option<tauri::LogicalSize<f64>>,
     ) {
+        // Transforming the global position of the textarea to a local position.
+        let textarea_position = if let Some(textarea_position) = textarea_position_global {
+            Some(self.transform_global_position_to_local_position(
+                textarea_position,
+                Some(window_position),
+            ))
+        } else {
+            None
+        };
+
         // Calculate the change of the window dimensions
         let (diff_pos, diff_size) = self.calculate_dimension_change(
             window_position,
@@ -96,10 +141,12 @@ impl EditorWindow {
         );
 
         // Update textarea dimension
-        self.update_textarea_dimensions(diff_pos, diff_size, textarea_position, textarea_size);
+        self.update_textarea_dimensions(diff_size, textarea_position, textarea_size);
 
         // Update widget position
-        self.calc_widget_pos_by_respecting_boundaries(diff_pos, diff_size);
+        if textarea_position.is_some() {
+            self.calc_widget_pos_by_respecting_boundaries(diff_pos, diff_size);
+        }
 
         self.window_position = window_position;
         self.window_size = window_size;
@@ -108,9 +155,16 @@ impl EditorWindow {
     pub fn update_focused_ui_element(
         &mut self,
         focused_ui_element: &FocusedUIElement,
-        textarea_position: Option<tauri::LogicalPosition<f64>>,
+        textarea_position_global: Option<tauri::LogicalPosition<f64>>,
         textarea_size: Option<tauri::LogicalSize<f64>>,
     ) {
+        // Transforming the global position of the textarea to a local position.
+        let textarea_position = if let Some(textarea_position) = textarea_position_global {
+            Some(self.transform_global_position_to_local_position(textarea_position, None))
+        } else {
+            None
+        };
+
         if let Some(position) = textarea_position {
             self.textarea_position = Some(position);
         }
@@ -129,7 +183,11 @@ impl EditorWindow {
         self.content_window_state = *content_window_state;
     }
 
-    pub fn update_widget_position(&mut self, widget_position: tauri::LogicalPosition<f64>) {
+    pub fn update_widget_position(&mut self, widget_position_global: tauri::LogicalPosition<f64>) {
+        // Transforming the global position of the widget to a local position.
+        let widget_position =
+            self.transform_global_position_to_local_position(widget_position_global, None);
+
         self.widget_position = Some(widget_position);
 
         // Recalculate boundaries
@@ -207,7 +265,6 @@ impl EditorWindow {
 
     fn update_textarea_dimensions(
         &mut self,
-        diff_pos: tauri::LogicalSize<f64>,
         diff_size: tauri::LogicalSize<f64>,
         textarea_position: Option<tauri::LogicalPosition<f64>>,
         textarea_size: Option<tauri::LogicalSize<f64>>,
@@ -224,8 +281,8 @@ impl EditorWindow {
                 (self.textarea_position, self.textarea_size)
             {
                 self.textarea_position = Some(LogicalPosition {
-                    x: textarea_pos.x + diff_pos.width,
-                    y: textarea_pos.y + diff_pos.height,
+                    x: textarea_pos.x,
+                    y: textarea_pos.y,
                 });
 
                 self.textarea_size = Some(LogicalSize {
@@ -283,5 +340,73 @@ impl EditorWindow {
                 });
             }
         }
+    }
+
+    fn transform_global_position_to_local_position(
+        &self,
+        global_position: tauri::LogicalPosition<f64>,
+        local_origin: Option<tauri::LogicalPosition<f64>>,
+    ) -> tauri::LogicalPosition<f64> {
+        let mut local_position = global_position;
+
+        if let Some(local_origin) = local_origin {
+            local_position.x -= local_origin.x;
+            local_position.y -= local_origin.y;
+        } else {
+            local_position.x -= &self.window_position.x;
+            local_position.y -= &self.window_position.y;
+        }
+
+        return local_position;
+    }
+
+    fn transform_local_position_to_global_position(
+        &self,
+        local_position: tauri::LogicalPosition<f64>,
+    ) -> tauri::LogicalPosition<f64> {
+        let mut global_position = local_position;
+
+        global_position.x += &self.window_position.x;
+        global_position.y += &self.window_position.y;
+
+        return global_position;
+    }
+
+    /// If the widget window is available, check if the textarea's origin is within the bounds of any of the
+    /// available monitors. If it is, return the monitor
+    ///
+    /// Arguments:
+    ///
+    /// * `app_handle`: The handle to the application.
+    ///
+    /// Returns:
+    ///
+    /// A `tauri::Monitor` object.
+    pub fn get_monitor_for_editor_window(
+        &self,
+        app_handle: &tauri::AppHandle,
+    ) -> Option<tauri::Monitor> {
+        if let Some(widget_window) = app_handle.get_window(&AppWindow::Widget.to_string()) {
+            if let Ok(available_monitors) = widget_window.available_monitors() {
+                for monitor in available_monitors {
+                    let scale_factor = monitor.scale_factor();
+                    let origin = monitor.position().to_logical::<f64>(scale_factor);
+                    let size = monitor.size().to_logical::<f64>(scale_factor);
+
+                    let textarea_position_global =
+                        self.transform_local_position_to_global_position(self.window_position);
+
+                    if origin.x <= textarea_position_global.x
+                        && origin.y <= textarea_position_global.y
+                        && origin.x + size.width >= textarea_position_global.x
+                        && origin.y + size.height >= textarea_position_global.y
+                    {
+                        return Some(monitor);
+                    }
+                }
+            }
+        }
+
+        None
     }
 }

@@ -25,7 +25,7 @@ use super::{
     prevent_misalignement_of_content_and_widget,
 };
 
-pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 100;
+pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
 pub static SUPPORTED_EDITORS: &[&str] = &["Xcode", "Replit"];
 
 #[derive(Clone, Debug)]
@@ -179,18 +179,35 @@ impl WidgetWindow {
         // Check if the widget position should be updated before showing it
         if let Some(focused_window_id) = widget.currently_focused_editor_window {
             if let Some(editor_window) = editor_windows.get(&focused_window_id) {
-                if let Some(mut widget_position) = editor_window.widget_position {
-                    prevent_widget_position_off_screen(&app_handle, &mut widget_position);
+                if let Some(mut widget_position) = editor_window.widget_position(true) {
+                    if let Some(editor_window_monitor) =
+                        editor_window.get_monitor_for_editor_window(app_handle)
+                    {
+                        // print!("Show Widget on Monitor: {:?}", editor_window_monitor.name());
+                        // println!("Monitor position: {:?}", editor_window_monitor.position());
+                        // println!("Monitor size: {:?}", editor_window_monitor.size());
+                        // println!(
+                        //     "Monitor scale factor: {:?}",
+                        //     editor_window_monitor.scale_factor()
+                        // );
 
-                    // If content window was open before, also check that it would not go offscreen
-                    if editor_window.content_window_state == ContentWindowState::Active {
-                        prevent_misalignement_of_content_and_widget(
-                            &app_handle,
+                        prevent_widget_position_off_screen(
+                            &editor_window_monitor,
                             &mut widget_position,
                         );
-                    }
 
-                    let _ = set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
+                        // If content window was open before, also check that it would not go offscreen
+                        if editor_window.content_window_state == ContentWindowState::Active {
+                            prevent_misalignement_of_content_and_widget(
+                                &app_handle,
+                                &editor_window_monitor,
+                                &mut widget_position,
+                            );
+                        }
+
+                        let _ =
+                            set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
+                    }
                 }
             }
         } else {
@@ -202,7 +219,11 @@ impl WidgetWindow {
             if let Some(editor_window) = editor_windows.get(&focused_window_id) {
                 match editor_window.content_window_state {
                     ContentWindowState::Active => {
-                        let _ = content_window::open(&app_handle);
+                        if let Some(editor_window_monitor) =
+                            editor_window.get_monitor_for_editor_window(app_handle)
+                        {
+                            let _ = content_window::open(&app_handle, &editor_window_monitor);
+                        }
                     }
                     ContentWindowState::Inactive => {
                         let _ = content_window::hide(&app_handle);
@@ -213,8 +234,8 @@ impl WidgetWindow {
                     if code_overlay_visible {
                         let _ = show_code_overlay(
                             app_handle,
-                            editor_window.textarea_position,
-                            editor_window.textarea_size,
+                            editor_window.textarea_position(true),
+                            editor_window.textarea_size(),
                         );
                     } else {
                         let _ = hide_code_overlay(app_handle);
@@ -222,8 +243,8 @@ impl WidgetWindow {
                 } else {
                     let _ = show_code_overlay(
                         app_handle,
-                        editor_window.textarea_position,
-                        editor_window.textarea_size,
+                        editor_window.textarea_position(true),
+                        editor_window.textarea_size(),
                     );
                 }
             }

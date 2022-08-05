@@ -50,8 +50,8 @@ fn on_core_activation_status_update(
                 if engine_active {
                     let _ = show_code_overlay(
                         &widget_props.app_handle,
-                        editor_window.textarea_position,
-                        editor_window.textarea_size,
+                        editor_window.textarea_position(true),
+                        editor_window.textarea_size(),
                     );
                 } else {
                     let _ = hide_code_overlay(&widget_props.app_handle);
