@@ -1,24 +1,22 @@
-use tauri::Manager;
-
+use super::{
+    events::EventRuleExecutionState,
+    formatter::format_swift_file,
+    rules::{
+        BracketHighlightProps, BracketHighlightRule, RuleBase, RuleResults, RuleType, SearchRule,
+        SearchRuleProps, SwiftLinterProps, TextPosition, TextRange,
+    },
+    syntax_tree::SwiftSyntaxTree,
+};
 use crate::{
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement, send_event_mouse_wheel,
-        set_selected_text_range, update_xcode_editor_content,
+        derive_xcode_textarea_dimensions, get_selected_text_range, get_textarea_uielement,
+        send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
     },
     core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
-
-use super::{
-    events::EventRuleExecutionState,
-    formatter::format_swift_file,
-    rules::{
-        RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
-        TextPosition, TextRange,
-    },
-    syntax_tree::SwiftSyntaxTree,
-};
+use tauri::Manager;
 
 pub struct EditorWindowProps {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
@@ -59,13 +57,19 @@ impl CodeDocument {
         app_handle: tauri::AppHandle,
         editor_window_props: EditorWindowProps,
     ) -> CodeDocument {
+        let swift_syntax_tree = SwiftSyntaxTree::new();
         CodeDocument {
             app_handle,
-            rules: vec![RuleType::SearchRule(SearchRule::new())],
+            rules: vec![
+                RuleType::SearchRule(SearchRule::new()),
+                RuleType::BracketHighlight(BracketHighlightRule::new(
+                    swift_syntax_tree.get_tree_copy().clone(),
+                )),
+            ],
             editor_window_props,
             text: "".to_string(),
             file_path: None,
-            swift_syntax_tree: SwiftSyntaxTree::new(),
+            swift_syntax_tree,
             selected_text_range: None,
         }
     }
@@ -75,22 +79,26 @@ impl CodeDocument {
     }
 
     pub fn update_doc_properties(&mut self, text: &String, file_path: &Option<String>) {
-        let text_updated = if text != &self.text { true } else { false };
-        let file_path_updated = self.file_path_updated(file_path);
-
-        if file_path_updated {
+        let is_file_path_updated = self.is_file_path_updated(file_path);
+        let is_file_text_updated = text != &self.text;
+        if is_file_path_updated {
             self.swift_syntax_tree.reset();
             self.file_path = file_path.clone();
         }
-
-        if text_updated {
+        if is_file_text_updated {
             self.text = text.clone();
+            self.swift_syntax_tree = SwiftSyntaxTree::new();
+        }
+
+        if !is_file_path_updated && !is_file_text_updated {
+            // Return early if the file path and text did not change
+            return;
         }
 
         // rerun syntax tree parser
         self.swift_syntax_tree.parse(&self.text);
-        let new_tree = self.swift_syntax_tree.get_tree();
         let new_content = self.text.clone();
+        let new_tree = self.swift_syntax_tree.get_tree_copy();
 
         for rule in self.rules_mut() {
             match rule {
@@ -101,16 +109,34 @@ impl CodeDocument {
                 RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
                     file_path_as_str: file_path.clone(),
                     linter_config: None,
-                    swift_syntax_tree: new_tree.clone(),
                     file_content: Some(new_content.clone()),
                 }),
+                RuleType::BracketHighlight(rule) => rule.update_properties(BracketHighlightProps {
+                    selected_text_range: None,
+                    swift_syntax_tree: new_tree.clone(),
+                    text_content: new_content.clone(),
+                }),
             }
+        }
+        if let Ok(Some(range)) = get_selected_text_range(self.editor_window_props.pid) {
+            self.set_selected_text_range(range.index, range.length)
         }
     }
 
     pub fn process_rules(&mut self) {
         for rule in &mut self.rules {
             rule.run();
+        }
+    }
+
+    pub fn process_bracket_highlight(&mut self) {
+        for rule in &mut self.rules {
+            match rule {
+                RuleType::BracketHighlight(rule) => {
+                    rule.run_results();
+                }
+                _ => (),
+            }
         }
     }
 
@@ -123,7 +149,6 @@ impl CodeDocument {
                 rule_results.push(rule_match_results);
             }
         }
-
         // Send to CodeOverlay window
         let _ = self.app_handle.emit_to(
             &AppWindow::CodeOverlay.to_string(),
@@ -141,6 +166,14 @@ impl CodeDocument {
 
     pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
         self.selected_text_range = Some(TextRange { length, index });
+        for rule in self.rules_mut() {
+            match rule {
+                RuleType::BracketHighlight(rule) => {
+                    rule.update_selected_text_range(TextRange { length, index });
+                }
+                _ => (),
+            }
+        }
     }
 
     pub fn on_save(&mut self) {
@@ -219,7 +252,7 @@ impl CodeDocument {
         &mut self.rules
     }
 
-    fn file_path_updated(&self, file_path_new: &Option<String>) -> bool {
+    fn is_file_path_updated(&self, file_path_new: &Option<String>) -> bool {
         if let Some(file_path_old) = &self.file_path {
             if let Some(file_path_new) = file_path_new {
                 if file_path_old != file_path_new {

@@ -12,6 +12,7 @@ use super::text_types::TextRange;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
 pub enum RuleName {
+    BracketHighlight,
     SearchAndReplace,
     SwiftLinter,
     None,
@@ -80,6 +81,10 @@ pub struct MatchRange {
 pub enum RuleMatchCategory {
     Error,
     Warning,
+    BracketHighlightLineFirst,
+    BracketHighlightLineLast,
+    BracketHighlightTouchFirst,
+    BracketHighlightTouchLast,
     None,
 }
 

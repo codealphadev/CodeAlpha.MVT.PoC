@@ -2,7 +2,6 @@ use std::{
     io::Write,
     process::{Command, Stdio},
 };
-
 use tree_sitter::{Parser, Tree};
 
 pub struct SwiftSyntaxTree {
@@ -27,6 +26,8 @@ impl SwiftSyntaxTree {
         self.tree_sitter_tree = None;
     }
 
+    // CAUTION: The old_tree needs to be updated manually to reparse it. See https://tree-sitter.github.io/tree-sitter/using-parsers#editing
+    #[allow(dead_code)]
     pub fn parse(&mut self, source: &String) {
         if let Some(old_tree) = &self.tree_sitter_tree {
             self.tree_sitter_tree = self.tree_sitter_parser.parse(source, Some(old_tree));
@@ -35,8 +36,7 @@ impl SwiftSyntaxTree {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_tree(&self) -> Option<Tree> {
+    pub fn get_tree_copy(&self) -> Option<Tree> {
         self.tree_sitter_tree.clone()
     }
 

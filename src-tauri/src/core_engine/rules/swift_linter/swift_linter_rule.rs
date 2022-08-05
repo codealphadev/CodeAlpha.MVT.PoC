@@ -1,7 +1,5 @@
 use std::process::Command;
 
-use tree_sitter::{Point, Tree};
-
 use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::rules::{
@@ -16,7 +14,6 @@ use super::types::{LintAlert, LintLevel, LintResults};
 pub struct SwiftLinterProps {
     pub file_path_as_str: Option<String>,
     pub linter_config: Option<String>,
-    pub swift_syntax_tree: Option<Tree>,
     pub file_content: Option<String>,
 }
 
@@ -28,7 +25,6 @@ pub struct SwiftLinterRule {
     file_content: Option<String>,
     file_content_updated: bool,
     linter_config: Option<String>,
-    swift_syntax_tree: Option<Tree>,
     linter_config_updated: bool,
     editor_app_pid: i32,
 }
@@ -59,19 +55,6 @@ impl RuleBase for SwiftLinterRule {
             return self.rule_results();
         }
 
-        // Don't continue if no valid syntax tree is there
-        let syntax_tree = if let Some(syntax_tree) = &self.swift_syntax_tree {
-            syntax_tree
-        } else {
-            return None;
-        };
-
-        let file_content = if let Some(file_content) = &self.file_content {
-            file_content
-        } else {
-            return None;
-        };
-
         let textarea_uielement =
             if let Some(textarea_uielement) = get_textarea_uielement(self.editor_app_pid) {
                 textarea_uielement
@@ -84,45 +67,6 @@ impl RuleBase for SwiftLinterRule {
             let mut rule_matches = Vec::new();
 
             for lint_alert in linter_results.lints.iter().enumerate() {
-                // Get node corresponding to found issue from syntax tree
-                let node = if let Some(node) =
-                    syntax_tree.root_node().named_descendant_for_point_range(
-                        Point {
-                            row: lint_alert.1.line,
-                            column: lint_alert.1.column,
-                        },
-                        Point {
-                            row: lint_alert.1.line,
-                            column: lint_alert.1.column,
-                        },
-                    ) {
-                    node
-                } else {
-                    continue;
-                };
-
-                // Get text range of node to compute rectangles from AX API.
-                let _text_range = if let Some(range) = TextRange::from_StartEndTSPoint(
-                    file_content,
-                    &node.start_position(),
-                    &node.end_position(),
-                ) {
-                    range
-                } else {
-                    continue;
-                };
-
-                // println!("Lint Result: {:?}", lint_alert.0);
-                // println!(
-                //     "   Alert row: {}, col: {}",
-                //     lint_alert.1.line, lint_alert.1.column
-                // );
-                // println!(
-                //     "   Range index: {}, length: {}",
-                //     text_range.index, text_range.length
-                // );
-                // println!("=================");
-
                 let char_range_for_line = if let Some(char_range_for_line) =
                     get_char_range_of_line(lint_alert.1.line as i64 - 1, &textarea_uielement)
                 {
@@ -184,7 +128,6 @@ impl SwiftLinterRule {
             file_path_as_str: None,
             linter_config: Some("--quiet".to_string()),
             linter_config_updated: false,
-            swift_syntax_tree: None,
             rule_type: RuleName::SwiftLinter,
             file_content: None,
             file_content_updated: false,
@@ -195,7 +138,7 @@ impl SwiftLinterRule {
     pub fn update_properties(&mut self, properties: SwiftLinterProps) {
         self.update_file_path(properties.file_path_as_str);
         self.update_linter_config(properties.linter_config);
-        self.update_file_content(properties.file_content, properties.swift_syntax_tree);
+        self.update_file_content(properties.file_content);
     }
 
     fn update_file_path(&mut self, file_path_as_str: Option<String>) {
@@ -224,16 +167,11 @@ impl SwiftLinterRule {
         }
     }
 
-    fn update_file_content(
-        &mut self,
-        file_content: Option<String>,
-        swift_syntax_tree: Option<Tree>,
-    ) {
-        if let (Some(file_content), Some(new_tree)) = (file_content, swift_syntax_tree) {
+    fn update_file_content(&mut self, file_content: Option<String>) {
+        if let Some(file_content) = file_content {
             // Update content if it has changed
             if self.file_content.is_none() || self.file_content.as_ref().unwrap() != &file_content {
                 self.file_content = Some(file_content);
-                self.swift_syntax_tree = Some(new_tree);
                 self.file_content_updated = true;
             } else {
                 self.file_content_updated = false;
@@ -301,7 +239,6 @@ mod tests {
         rule.update_properties(SwiftLinterProps {
             file_path_as_str: Some(file_path_as_str.to_string()),
             linter_config: None,
-            swift_syntax_tree: None,
             file_content: None,
         });
         rule.run();

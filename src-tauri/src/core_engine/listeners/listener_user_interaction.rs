@@ -102,6 +102,7 @@ fn on_search_query_by_user(
                     })
                 }
                 RuleType::_SwiftLinter(_) => {}
+                RuleType::BracketHighlight(_) => {}
             }
         }
 
