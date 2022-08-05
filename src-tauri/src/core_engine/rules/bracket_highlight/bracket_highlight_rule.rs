@@ -87,11 +87,6 @@ impl BracketHighlightRule {
             // Failed to get selected_node or selected_text_range
             return None;
         };
-        // println!(
-        //     "SELECTED_NODE: {:?} Range: {:?}",
-        //     selected_node,
-        //     selected_node.range()
-        // );
 
         let code_block_node = if let Some(code_block_node) = get_code_block_parent(selected_node) {
             code_block_node
@@ -99,13 +94,7 @@ impl BracketHighlightRule {
             self.rule_matches = None;
             return None;
         };
-        // println!(
-        //     "CODE_BLOCK_NODE: {:?} Range: {:?}",
-        //     code_block_node,
-        //     code_block_node.range()
-        // );
 
-        // If cursor is touchin first or last character of range: also return parents bounds
         let is_touching_left_first_char =
             selected_text_range.index == code_block_node.range().start_byte;
         // Need to figure out how to check last character touch
@@ -223,32 +212,34 @@ fn get_rule_matches_of_first_and_last_char_in_node(
     node: &Node,
     category_group: CategoryGroup,
 ) -> Vec<RuleMatch> {
-    let category_first = if category_group == CategoryGroup::Line {
-        RuleMatchCategory::BracketHighlightLineFirst
+    let (category_first, category_last) = if category_group == CategoryGroup::Line {
+        (
+            RuleMatchCategory::BracketHighlightLineFirst,
+            RuleMatchCategory::BracketHighlightLineLast,
+        )
     } else {
-        RuleMatchCategory::BracketHighlightTouchFirst
+        (
+            RuleMatchCategory::BracketHighlightTouchFirst,
+            RuleMatchCategory::BracketHighlightTouchLast,
+        )
     };
-    let category_last = if category_group == CategoryGroup::Line {
-        RuleMatchCategory::BracketHighlightLineLast
-    } else {
-        RuleMatchCategory::BracketHighlightTouchLast
-    };
-    let mut rule_matches: Vec<RuleMatch> = vec![];
-    rule_matches.push(rule_match_from_range(
-        TextRange {
-            index: node.range().start_byte,
-            length: 1,
-        },
-        category_first,
-    ));
-    rule_matches.push(rule_match_from_range(
-        TextRange {
-            index: node.range().end_byte - 1,
-            length: 1,
-        },
-        category_last,
-    ));
-    rule_matches
+
+    vec![
+        rule_match_from_range(
+            TextRange {
+                index: node.range().start_byte,
+                length: 1,
+            },
+            category_first,
+        ),
+        rule_match_from_range(
+            TextRange {
+                index: node.range().end_byte - 1,
+                length: 1,
+            },
+            category_last,
+        ),
+    ]
 }
 
 #[cfg(test)]
