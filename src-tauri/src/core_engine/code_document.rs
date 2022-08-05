@@ -129,6 +129,18 @@ impl CodeDocument {
         }
     }
 
+    pub fn process_bracket_highlight(&mut self) {
+        for rule in &mut self.rules {
+            match rule {
+                RuleType::BracketHighlight(rule) => {
+                    rule.run_results();
+                }
+                _ => (),
+            }
+        }
+        self.compute_rule_visualizations();
+    }
+
     pub fn compute_rule_visualizations(&mut self) {
         let mut rule_results = Vec::<RuleResults>::new();
         for rule in &mut self.rules {
@@ -138,7 +150,6 @@ impl CodeDocument {
                 rule_results.push(rule_match_results);
             }
         }
-
         // Send to CodeOverlay window
         let _ = self.app_handle.emit_to(
             &AppWindow::CodeOverlay.to_string(),
@@ -160,13 +171,10 @@ impl CodeDocument {
             match rule {
                 RuleType::BracketHighlight(rule) => {
                     rule.update_selected_text_range(TextRange { length, index });
-                    rule.run_results();
                 }
                 _ => (),
             }
         }
-
-        self.compute_rule_visualizations();
     }
 
     pub fn on_save(&mut self) {

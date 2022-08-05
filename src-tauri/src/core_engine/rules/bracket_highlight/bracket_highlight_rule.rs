@@ -88,11 +88,11 @@ impl BracketHighlightRule {
             println!("Failed to get selected_node or selected_text_range");
             return None;
         };
-        println!(
-            "SELECTED_NODE: {:?} Range: {:?}",
-            selected_node,
-            selected_node.range()
-        );
+        // println!(
+        //     "SELECTED_NODE: {:?} Range: {:?}",
+        //     selected_node,
+        //     selected_node.range()
+        // );
 
         let code_block_node = if let Some(code_block_node) = get_code_block_parent(selected_node) {
             code_block_node
@@ -101,45 +101,32 @@ impl BracketHighlightRule {
             self.rule_matches = None;
             return None;
         };
-        println!(
-            "CODE_BLOCK_NODE: {:?} Range: {:?}",
-            code_block_node,
-            code_block_node.range()
-        );
+        // println!(
+        //     "CODE_BLOCK_NODE: {:?} Range: {:?}",
+        //     code_block_node,
+        //     code_block_node.range()
+        // );
 
         // If cursor is touchin first or last character of range: also return parents bounds
-        println!("SELECTED_TEXT_RANGE: {:?}", selected_text_range);
-
         let is_touching_left_first_char =
             selected_text_range.index == code_block_node.range().start_byte;
-        let is_touching_right_first_char =
-            selected_text_range.index == code_block_node.range().start_byte + 1;
         // Need to figure out how to check last character touch
-
-        println!(
-            "IS_TOUCHING_LEFT_FIRST_CHAR: {:?}",
-            is_touching_left_first_char
-        );
 
         let mut line_rule_matches =
             get_rule_matches_of_first_and_last_char_in_node(&code_block_node, CategoryGroup::Line);
         let mut touch_rule_matches: Vec<RuleMatch> = vec![];
-        if is_touching_left_first_char || is_touching_right_first_char {
-            touch_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
-                &code_block_node,
-                CategoryGroup::Touch,
-            );
-            // Get line bounds of parent
-            if is_touching_left_first_char {
-                println!("Get line bounds of parent");
-                if let Some(parent_node) = code_block_node.clone().parent() {
-                    if let Some(code_block_parent_node) = get_code_block_parent(parent_node) {
-                        println!("code_block_parent_node {:?}", code_block_parent_node);
-                        line_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
-                            &code_block_parent_node,
-                            CategoryGroup::Line,
-                        );
-                    }
+        touch_rule_matches =
+            get_rule_matches_of_first_and_last_char_in_node(&code_block_node, CategoryGroup::Touch);
+        // Get line bounds of parent
+        if is_touching_left_first_char {
+            println!("Get line bounds of parent");
+            if let Some(parent_node) = code_block_node.clone().parent() {
+                if let Some(code_block_parent_node) = get_code_block_parent(parent_node) {
+                    println!("code_block_parent_node {:?}", code_block_parent_node);
+                    line_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
+                        &code_block_parent_node,
+                        CategoryGroup::Line,
+                    );
                 }
             }
         }
@@ -173,10 +160,6 @@ impl BracketHighlightRule {
 
                 return node;
             }
-        } else {
-            println!("{:?}", self.swift_syntax_tree);
-            println!("{:?}", self.selected_text_range);
-            println!("Failed to get selected_text_range syntax_tree");
         }
         None
     }
@@ -211,12 +194,14 @@ fn get_code_block_parent(node_input: Node) -> Option<Node> {
         "guard_statement",
         "else_statement",
         "lambda_literal",
+        "do_statement",
         "catch_block",
         "computed_property",
         "switch_statement",
         "switch_entry",
         "tuple_type",
         "while_statement",
+        "enum_class_body",
     ];
 
     let mut node = node_input.clone();

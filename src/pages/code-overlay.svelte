@@ -10,6 +10,8 @@
 	import type { RuleName } from '../../src-tauri/bindings/rules/RuleName';
 	import type { RuleMatch } from '../../src-tauri/bindings/rules/RuleMatch';
 
+	const ADJUST_BRACKET_HIGHLIGHT_Y = 3;
+
 	type MatchId = string;
 
 	let height = 0;
@@ -21,6 +23,7 @@
 	let bracket_highlight_line_rectangle: MatchRectangle = null;
 	let bracket_highlight_touch_rectangle_first: MatchRectangle = null;
 	let bracket_highlight_touch_rectangle_last: MatchRectangle = null;
+	let bracket_highlight_thickness = 17;
 
 	const listenTauriEvents = async () => {
 		await listen('event-compute-height', (event) => {
@@ -65,10 +68,10 @@
 			return;
 		}
 
-		bracket_highlight_line_rectangle = null;
 		let new_rectangles: Array<[RuleName, MatchId, MatchRectangle]> = [];
 		let bracket_highlight_line_rectangle_first = null;
 		let bracket_highlight_line_rectangle_last = null;
+		bracket_highlight_line_rectangle = null;
 		bracket_highlight_touch_rectangle_first = null;
 		bracket_highlight_touch_rectangle_last = null;
 
@@ -114,12 +117,21 @@
 				}
 			}
 		}
-		// Calculate rectangle from first and last bracket highlight line
-		// bracket_highlight_line_rectangle_first.origin.y -= 1; // Move the line up a bit
-		if (bracket_highlight_line_rectangle_first && bracket_highlight_line_rectangle_last) {
-			let is_on_same_line =
+		// Check if last and first bracket are visible
+		let is_last_bracket_visible = bracket_highlight_line_rectangle_last != null;
+		let is_on_same_line = false;
+		if (bracket_highlight_line_rectangle_first) {
+			bracket_highlight_thickness = Math.floor(
+				bracket_highlight_line_rectangle_first.size.height / 17
+			);
+
+			if (
+				bracket_highlight_line_rectangle_last &&
 				bracket_highlight_line_rectangle_first.origin.y ===
-				bracket_highlight_line_rectangle_last.origin.y;
+					bracket_highlight_line_rectangle_last.origin.y
+			) {
+				is_on_same_line = true;
+			}
 			if (is_on_same_line) {
 				bracket_highlight_line_rectangle = {
 					origin: {
@@ -128,7 +140,8 @@
 							bracket_highlight_line_rectangle_first.size.width,
 						y:
 							bracket_highlight_line_rectangle_first.origin.y +
-							bracket_highlight_line_rectangle_first.size.height
+							bracket_highlight_line_rectangle_first.size.height -
+							bracket_highlight_thickness
 					},
 					size: {
 						width:
@@ -139,12 +152,25 @@
 					}
 				};
 			} else {
+				if (!is_last_bracket_visible) {
+					bracket_highlight_line_rectangle_last = {
+						origin: {
+							x: 0,
+							y: bracket_highlight_line_rectangle_first.origin.y + ADJUST_BRACKET_HIGHLIGHT_Y
+						},
+						size: {
+							width: bracket_highlight_line_rectangle_first.size.width,
+							height: null
+						}
+					};
+				}
 				bracket_highlight_line_rectangle = {
 					origin: {
 						x: bracket_highlight_line_rectangle_last.origin.x,
 						y:
 							bracket_highlight_line_rectangle_first.origin.y +
-							bracket_highlight_line_rectangle_first.size.height
+							bracket_highlight_line_rectangle_first.size.height -
+							bracket_highlight_thickness
 					},
 					size: {
 						width:
@@ -154,9 +180,18 @@
 						height:
 							bracket_highlight_line_rectangle_last.origin.y -
 							bracket_highlight_line_rectangle_first.origin.y -
-							3
+							ADJUST_BRACKET_HIGHLIGHT_Y
 					}
 				};
+			}
+			// Remove line if last bracket is right of first bracket
+			if (
+				!is_on_same_line &&
+				bracket_highlight_line_rectangle_last &&
+				bracket_highlight_line_rectangle_first.origin.x <
+					bracket_highlight_line_rectangle_last.origin.x
+			) {
+				bracket_highlight_line_rectangle = null;
 			}
 		}
 
@@ -175,7 +210,11 @@
 	listenTauriEvents();
 </script>
 
-<div style="height: {height}px; background-color: rgba(125,125,125,0.2);" class=" h-full w-full">
+<div
+	style="height: {height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,0.5);"
+	class=" h-full w-full"
+	id="overlay"
+>
 	<!-- {#each rectangles as rect}
 		{#if rect[1] === highlightedRectangleMatchId}
 			<div
@@ -207,7 +246,7 @@
 				bracket_highlight_line_rectangle.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_line_rectangle.size.height
-			)}px; border-style: solid; border-top-width: 1px; border-color: rgba(122,122,122,0.5); border-left-width: 1px;"
+			)}px; border-style: solid; border-top-width: {bracket_highlight_thickness}px; border-color: rgba(122,122,122,0.5); border-left-width: {bracket_highlight_thickness}px;"
 		/>
 	{/if}
 	{#if bracket_highlight_touch_rectangle_first !== null}
@@ -220,7 +259,7 @@
 				bracket_highlight_touch_rectangle_first.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_touch_rectangle_first.size.height
-			)}px; border-style: solid; border-width: 1px; border-color: rgba(182,182,182,0.7);"
+			)}px; border-style: solid; border-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 	{#if bracket_highlight_touch_rectangle_last !== null}
@@ -233,7 +272,7 @@
 				bracket_highlight_touch_rectangle_last.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_touch_rectangle_last.size.height
-			)}px; border-style: solid; border-width: 1px; border-color: rgba(182,182,182,0.7);"
+			)}px; border-style: solid; border-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 </div>
