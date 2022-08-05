@@ -8,5 +8,6 @@ pub mod code_overlay;
 pub mod config;
 pub mod content_window;
 mod editor_window;
+pub mod events;
 mod widget_window;
 mod window_controls;

@@ -73,6 +73,7 @@ pub mod messaging {
     #[ts(export)]
     pub enum ChannelList {
         EventUserInteractions,
+        EventWindowControls,
         RuleResults,
         AXEventApp,
         AXEventReplit,
@@ -82,6 +83,7 @@ pub mod messaging {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
                 ChannelList::EventUserInteractions => write!(f, "EventUserInteractions"),
+                ChannelList::EventWindowControls => write!(f, "EventWindowControls"),
                 ChannelList::RuleResults => write!(f, "RuleResults"),
                 ChannelList::AXEventApp => write!(f, "AXEventApp"),
                 ChannelList::AXEventReplit => write!(f, "AXEventReplit"),

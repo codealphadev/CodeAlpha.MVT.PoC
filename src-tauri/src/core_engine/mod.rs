@@ -1,7 +1,6 @@
 pub use code_document::*;
 pub use core_engine::CoreEngine;
-pub use rules::utils::text_types;
-pub use rules::MatchRectangle;
+pub use rules::utils::*;
 
 mod code_document;
 mod core_engine;
