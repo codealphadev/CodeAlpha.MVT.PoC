@@ -18,6 +18,7 @@ pub fn notify_value_changed(
 
     match uielement_role.to_string().as_str() {
         "AXScrollBar" => {
+            notify_window_resized(&uielement, &mut (*xcode_observer_state))?;
             notifiy_textarea_scrolled(&uielement, &mut (*xcode_observer_state))?;
             Ok(())
         }
