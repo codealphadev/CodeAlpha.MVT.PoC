@@ -25,7 +25,7 @@ use super::{
     prevent_misalignement_of_content_and_widget,
 };
 
-pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
+pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 100;
 pub static SUPPORTED_EDITORS: &[&str] = &["Xcode", "Replit"];
 
 #[derive(Clone, Debug)]
@@ -108,6 +108,8 @@ impl WidgetWindow {
     pub fn temporary_hide_check_routine(
         app_handle: &tauri::AppHandle,
         widget_props: &Arc<Mutex<WidgetWindow>>,
+        hide_widget: bool,
+        hide_codeoverlay: bool,
     ) {
         {
             let widget = &mut *(match widget_props.lock() {
@@ -126,10 +128,12 @@ impl WidgetWindow {
                 widget.temporary_hide_check_active = true;
             }
 
-            // Call these here and not hide_widget_routine to not send a message to the core engine
-            // that would stop it from running its checks.
-            close_window(app_handle, AppWindow::Widget);
-            close_window(app_handle, AppWindow::CodeOverlay);
+            if hide_widget {
+                close_window(app_handle, AppWindow::Widget);
+            }
+            if hide_codeoverlay {
+                close_window(app_handle, AppWindow::CodeOverlay);
+            }
         }
 
         // Start temporary hide check routine

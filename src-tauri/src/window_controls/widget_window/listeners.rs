@@ -12,7 +12,8 @@ use super::{
     handler_ax_events_app::{on_deactivate_app, on_move_app_window, on_toggle_content_window},
     handler_ax_events_xcode::{
         on_activate_editor_app, on_close_editor_app, on_deactivate_editor_app,
-        on_editor_ui_element_focus_change, on_move_editor_window, on_resize_editor_window,
+        on_editor_textarea_scrolled, on_editor_ui_element_focus_change, on_move_editor_window,
+        on_resize_editor_window,
     },
     WidgetWindow,
 };
@@ -48,6 +49,9 @@ pub fn register_listener_xcode(
             }
             AXEventXcode::EditorAppClosed(msg) => {
                 on_close_editor_app(&widget_props_move_copy, &msg)
+            }
+            AXEventXcode::EditorTextareaScrolled(msg) => {
+                on_editor_textarea_scrolled(&app_handle_move_copy, &widget_props_move_copy, &msg);
             }
             _ => {}
         }

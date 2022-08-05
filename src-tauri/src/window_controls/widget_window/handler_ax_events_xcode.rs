@@ -4,8 +4,8 @@ use crate::ax_interaction::{
     is_currently_focused_app_our_app,
     models::editor::{
         EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
-        EditorUIElementFocusedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
-        FocusedUIElement,
+        EditorTextareaScrolledMessage, EditorUIElementFocusedMessage, EditorWindowMovedMessage,
+        EditorWindowResizedMessage, FocusedUIElement,
     },
 };
 
@@ -38,7 +38,7 @@ pub fn on_resize_editor_window(
         }
     }
 
-    WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc);
+    WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc, true, true);
 }
 
 pub fn on_move_editor_window(
@@ -68,7 +68,7 @@ pub fn on_move_editor_window(
         }
     }
 
-    WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc);
+    WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc, true, true);
 }
 
 /// Update EditorWindow to which of it's ui elements is currently in focus. Furthermore, also update
@@ -137,7 +137,7 @@ pub fn on_editor_ui_element_focus_change(
     }
 
     if need_temporary_hide {
-        WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc);
+        WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc, true, true);
     }
 }
 
@@ -198,4 +198,12 @@ pub fn on_activate_editor_app(
             }
         }
     }
+}
+
+pub fn on_editor_textarea_scrolled(
+    app_handle: &tauri::AppHandle,
+    widget_props: &Arc<Mutex<WidgetWindow>>,
+    _scrolled_msg: &EditorTextareaScrolledMessage,
+) {
+    WidgetWindow::temporary_hide_check_routine(&app_handle, widget_props, false, true);
 }
