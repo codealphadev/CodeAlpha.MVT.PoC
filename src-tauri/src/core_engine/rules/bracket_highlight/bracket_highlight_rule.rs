@@ -85,7 +85,6 @@ impl BracketHighlightRule {
             (node, selected_text_range)
         } else {
             // Failed to get selected_node or selected_text_range
-            println!("Failed to get selected_node or selected_text_range");
             return None;
         };
         // println!(
@@ -97,7 +96,6 @@ impl BracketHighlightRule {
         let code_block_node = if let Some(code_block_node) = get_code_block_parent(selected_node) {
             code_block_node
         } else {
-            println!("Failed to get code_block_node");
             self.rule_matches = None;
             return None;
         };
@@ -119,10 +117,8 @@ impl BracketHighlightRule {
             get_rule_matches_of_first_and_last_char_in_node(&code_block_node, CategoryGroup::Touch);
         // Get line bounds of parent
         if is_touching_left_first_char {
-            println!("Get line bounds of parent");
             if let Some(parent_node) = code_block_node.clone().parent() {
                 if let Some(code_block_parent_node) = get_code_block_parent(parent_node) {
-                    println!("code_block_parent_node {:?}", code_block_parent_node);
                     line_rule_matches = get_rule_matches_of_first_and_last_char_in_node(
                         &code_block_parent_node,
                         CategoryGroup::Line,
@@ -207,7 +203,6 @@ fn get_code_block_parent(node_input: Node) -> Option<Node> {
     let mut node = node_input.clone();
 
     loop {
-        println!("NODE IN LOOP: {:?}", node);
         if code_block_kinds.contains(&node.kind()) {
             return Some(node);
         }
