@@ -196,10 +196,10 @@ pub fn on_activate_editor_app(
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     });
-    let editor_list_locked = match widget_props.editor_windows.lock() {
+    let mut editor_list_locked = &mut *(match widget_props.editor_windows.lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
-    };
+    });
 
     widget_props.is_editor_focused = true;
 
@@ -211,7 +211,7 @@ pub fn on_activate_editor_app(
                     WidgetWindow::show_widget_routine(
                         &widget_props.app_handle,
                         widget_props,
-                        &editor_list_locked,
+                        &mut editor_list_locked,
                     )
                 }
             }

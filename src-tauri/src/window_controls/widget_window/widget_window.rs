@@ -8,7 +8,10 @@ use std::{
 };
 
 use crate::{
-    ax_interaction::{app::observer_app::register_observer_app, models::app::ContentWindowState},
+    ax_interaction::{
+        app::observer_app::register_observer_app, derive_xcode_textarea_dimensions,
+        get_textarea_uielement, models::app::ContentWindowState,
+    },
     window_controls::{
         actions::{close_window, create_window, open_window, set_position},
         code_overlay::{hide_code_overlay, show_code_overlay},
@@ -157,7 +160,7 @@ impl WidgetWindow {
                 });
 
                 if widget_window.temporary_hide_until_instant < Instant::now() {
-                    let editor_windows = &mut *(match widget_window.editor_windows.lock() {
+                    let mut editor_windows = &mut *(match widget_window.editor_windows.lock() {
                         Ok(guard) => guard,
                         Err(poisoned) => poisoned.into_inner(),
                     });
@@ -168,7 +171,7 @@ impl WidgetWindow {
                         Self::show_widget_routine(
                             &app_handle_move_copy,
                             &widget_window,
-                            &editor_windows,
+                            &mut editor_windows,
                         );
                     }
 
@@ -183,8 +186,26 @@ impl WidgetWindow {
     pub fn show_widget_routine(
         app_handle: &tauri::AppHandle,
         widget: &WidgetWindow,
-        editor_windows: &HashMap<uuid::Uuid, EditorWindow>,
+        editor_windows: &mut HashMap<uuid::Uuid, EditorWindow>,
     ) {
+        // Redundant check if we really have the correct textarea dimensions
+        // We should implement a periodic check for this in the future; the editor window
+        // should query AX api every second to update the textarea dimensions
+        if let Some(focused_window_id) = widget.currently_focused_editor_window {
+            if let Some(editor_window) = editor_windows.get_mut(&focused_window_id) {
+                if let Some(elem) = get_textarea_uielement(editor_window.pid) {
+                    if let Ok((position, size)) = derive_xcode_textarea_dimensions(&elem) {
+                        editor_window.update_window_dimensions(
+                            editor_window.window_position(),
+                            editor_window.window_size(),
+                            Some(position),
+                            Some(size),
+                        );
+                    }
+                }
+            }
+        }
+
         // Recover ContentWindowState for this editor window and open CodeOverlay window
         if let Some(focused_window_id) = widget.currently_focused_editor_window {
             if let Some(editor_window) = editor_windows.get(&focused_window_id) {

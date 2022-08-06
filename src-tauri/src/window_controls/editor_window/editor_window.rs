@@ -103,6 +103,14 @@ impl EditorWindow {
         self.textarea_size
     }
 
+    pub fn window_size(&self) -> tauri::LogicalSize<f64> {
+        self.window_size
+    }
+
+    pub fn window_position(&self) -> tauri::LogicalPosition<f64> {
+        self.window_position
+    }
+
     pub fn widget_position(&self, as_global_position: bool) -> Option<tauri::LogicalPosition<f64>> {
         if let Some(widget_position) = self.widget_position {
             if as_global_position {
