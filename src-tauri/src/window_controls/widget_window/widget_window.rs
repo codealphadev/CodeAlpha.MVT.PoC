@@ -49,6 +49,9 @@ pub struct WidgetWindow {
     /// Boolean saying if the currently focused application is our app.
     pub is_app_focused: bool,
 
+    /// Boolean saying if the currently focused application is an editor window.
+    pub is_editor_focused: bool,
+
     /// Identitfier of the currently focused app window. Is None until the first window was focused.
     pub currently_focused_app_window: Option<AppWindow>,
 
@@ -84,6 +87,7 @@ impl WidgetWindow {
             temporary_hide_check_active: false,
             currently_focused_editor_window: None,
             is_app_focused: false,
+            is_editor_focused: false,
             currently_focused_app_window: None,
             code_overlay_visible: None,
         }
@@ -157,11 +161,16 @@ impl WidgetWindow {
                         Ok(guard) => guard,
                         Err(poisoned) => poisoned.into_inner(),
                     });
-                    Self::show_widget_routine(
-                        &app_handle_move_copy,
-                        &widget_window,
-                        &editor_windows,
-                    );
+
+                    // Debounce in case scrolling was still happening while switching
+                    // between windows using e.g. CMD+Tab
+                    if widget_window.is_editor_focused {
+                        Self::show_widget_routine(
+                            &app_handle_move_copy,
+                            &widget_window,
+                            &editor_windows,
+                        );
+                    }
 
                     // Indicate that the routine finished
                     widget_window.temporary_hide_check_active = false;

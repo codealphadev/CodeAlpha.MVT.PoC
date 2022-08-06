@@ -26,7 +26,6 @@ pub fn on_resize_editor_window(
             Err(poisoned) => poisoned.into_inner(),
         };
 
-        println!("on_resize_editor_window: {:?}", resize_msg);
         if let Some(editor_window) = editor_list_locked.get_mut(&resize_msg.id) {
             editor_window.update_window_dimensions(
                 resize_msg.window_position,
@@ -79,7 +78,7 @@ pub fn on_editor_ui_element_focus_change(
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     focus_msg: &EditorUIElementFocusedMessage,
 ) {
-    // "Hack" - introduce this boolean to conveniently wrap subsequent logic in own block to have
+    // Introduce this boolean to conveniently wrap subsequent logic in own block to have
     // mutex drop at the end.
     let mut need_temporary_hide = false;
 
@@ -107,6 +106,8 @@ pub fn on_editor_ui_element_focus_change(
         if let Some(previously_focused_window_id) = widget_props.currently_focused_editor_window {
             if previously_focused_window_id != focus_msg.window_id {
                 if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
+                    // Need to temporarily hide our windows when the user switches between editor windows
+                    // This gives our windows time to gracefully update their positions and sizes.
                     need_temporary_hide = true;
                 } else {
                     WidgetWindow::hide_widget_routine(&widget_props.app_handle)
@@ -151,10 +152,14 @@ pub fn on_deactivate_editor_app(
         Err(poisoned) => poisoned.into_inner(),
     });
 
+    widget_window.is_editor_focused = false;
+
     if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {
             WidgetWindow::hide_widget_routine(&widget_window.app_handle);
         }
+    } else {
+        WidgetWindow::hide_widget_routine(&widget_window.app_handle);
     }
 }
 
@@ -184,6 +189,8 @@ pub fn on_activate_editor_app(
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     };
+
+    widget_props.is_editor_focused = true;
 
     // Check if focused ui element of the currently focused editor window is textarea.
     if let Some(currently_focused_editor_window_id) = widget_props.currently_focused_editor_window {
