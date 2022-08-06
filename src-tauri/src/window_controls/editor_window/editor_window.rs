@@ -372,8 +372,8 @@ impl EditorWindow {
         return global_position;
     }
 
-    /// If the widget window is available, check if the textarea's origin is within the bounds of any of the
-    /// available monitors. If it is, return the monitor
+    /// The most robust way to get the monitor the the editor window belongs to is to use the current_monitor()
+    /// of the Code Overlay window.
     ///
     /// Arguments:
     ///
@@ -381,32 +381,21 @@ impl EditorWindow {
     ///
     /// Returns:
     ///
-    /// A `tauri::Monitor` object.
+    /// A `tauri::Monitor`
     pub fn get_monitor_for_editor_window(
         &self,
         app_handle: &tauri::AppHandle,
     ) -> Option<tauri::Monitor> {
-        if let Some(widget_window) = app_handle.get_window(&AppWindow::Widget.to_string()) {
-            if let Ok(available_monitors) = widget_window.available_monitors() {
-                for monitor in available_monitors {
-                    let scale_factor = monitor.scale_factor();
-                    let origin = monitor.position().to_logical::<f64>(scale_factor);
-                    let size = monitor.size().to_logical::<f64>(scale_factor);
-
-                    let textarea_position_global =
-                        self.transform_local_position_to_global_position(self.window_position);
-
-                    if origin.x <= textarea_position_global.x
-                        && origin.y <= textarea_position_global.y
-                        && origin.x + size.width >= textarea_position_global.x
-                        && origin.y + size.height >= textarea_position_global.y
-                    {
-                        return Some(monitor);
-                    }
-                }
+        if let Some(code_overlay_window) =
+            app_handle.get_window(&AppWindow::CodeOverlay.to_string())
+        {
+            if let Ok(code_overlay_monitor) = code_overlay_window.current_monitor() {
+                code_overlay_monitor
+            } else {
+                None
             }
+        } else {
+            None
         }
-
-        None
     }
 }

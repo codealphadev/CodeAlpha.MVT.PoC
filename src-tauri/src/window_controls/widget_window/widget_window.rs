@@ -176,44 +176,6 @@ impl WidgetWindow {
         widget: &WidgetWindow,
         editor_windows: &HashMap<uuid::Uuid, EditorWindow>,
     ) {
-        // Check if the widget position should be updated before showing it
-        if let Some(focused_window_id) = widget.currently_focused_editor_window {
-            if let Some(editor_window) = editor_windows.get(&focused_window_id) {
-                if let Some(mut widget_position) = editor_window.widget_position(true) {
-                    if let Some(editor_window_monitor) =
-                        editor_window.get_monitor_for_editor_window(app_handle)
-                    {
-                        // print!("Show Widget on Monitor: {:?}", editor_window_monitor.name());
-                        // println!("Monitor position: {:?}", editor_window_monitor.position());
-                        // println!("Monitor size: {:?}", editor_window_monitor.size());
-                        // println!(
-                        //     "Monitor scale factor: {:?}",
-                        //     editor_window_monitor.scale_factor()
-                        // );
-
-                        prevent_widget_position_off_screen(
-                            &editor_window_monitor,
-                            &mut widget_position,
-                        );
-
-                        // If content window was open before, also check that it would not go offscreen
-                        if editor_window.content_window_state == ContentWindowState::Active {
-                            prevent_misalignement_of_content_and_widget(
-                                &app_handle,
-                                &editor_window_monitor,
-                                &mut widget_position,
-                            );
-                        }
-
-                        let _ =
-                            set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
-                    }
-                }
-            }
-        } else {
-            return;
-        }
-
         // Recover ContentWindowState for this editor window and open CodeOverlay window
         if let Some(focused_window_id) = widget.currently_focused_editor_window {
             if let Some(editor_window) = editor_windows.get(&focused_window_id) {
@@ -246,6 +208,36 @@ impl WidgetWindow {
                         editor_window.textarea_position(true),
                         editor_window.textarea_size(),
                     );
+                }
+            }
+        } else {
+            return;
+        }
+
+        // Check if the widget position should be updated before showing it
+        if let Some(focused_window_id) = widget.currently_focused_editor_window {
+            if let Some(editor_window) = editor_windows.get(&focused_window_id) {
+                if let Some(mut widget_position) = editor_window.widget_position(true) {
+                    if let Some(editor_window_monitor) =
+                        editor_window.get_monitor_for_editor_window(app_handle)
+                    {
+                        prevent_widget_position_off_screen(
+                            &editor_window_monitor,
+                            &mut widget_position,
+                        );
+
+                        // If content window was open before, also check that it would not go offscreen
+                        if editor_window.content_window_state == ContentWindowState::Active {
+                            prevent_misalignement_of_content_and_widget(
+                                &app_handle,
+                                &editor_window_monitor,
+                                &mut widget_position,
+                            );
+                        }
+
+                        let _ =
+                            set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
+                    }
                 }
             }
         }

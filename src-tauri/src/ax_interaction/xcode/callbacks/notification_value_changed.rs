@@ -18,7 +18,10 @@ pub fn notify_value_changed(
 
     match uielement_role.to_string().as_str() {
         "AXScrollBar" => {
+            // Because the textarea can also be resized without resizing the editor window, we need to detect this case
+            // using a different notification - this one.
             notify_window_resized(&uielement, &mut (*xcode_observer_state))?;
+
             notifiy_textarea_scrolled(&uielement, &mut (*xcode_observer_state))?;
             Ok(())
         }
