@@ -14,7 +14,17 @@ pub fn notify_window_resized(
     ui_element: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    let window_element = ui_element.window()?;
+    let window_element = if let Ok(window_elem) = ui_element.window() {
+        window_elem
+    } else {
+        let ui_elem_role = ui_element.role()?;
+
+        if ui_elem_role.to_string() != "AXWindow" {
+            return Ok(());
+        }
+
+        ui_element.clone()
+    };
 
     // Find window_element in xcode_observer_state.window_list to get id
     let mut known_window = xcode_observer_state
