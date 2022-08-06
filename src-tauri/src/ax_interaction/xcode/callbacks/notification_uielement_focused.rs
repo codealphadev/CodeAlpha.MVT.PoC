@@ -48,6 +48,16 @@ pub fn notify_uielement_focused(
             uielement_focused_msg.focused_ui_element = FocusedUIElement::Textarea;
             uielement_focused_msg.textarea_position = Some(position);
             uielement_focused_msg.textarea_size = Some(size);
+
+            // update the window's textarea size
+            let new_tuple = (window.0, window.1.clone(), Some(size), window.3);
+
+            // Remove item window_list
+            xcode_observer_state
+                .window_list
+                .retain(|vec_elem| vec_elem.0 != new_tuple.0);
+
+            xcode_observer_state.window_list.push(new_tuple);
         }
 
         AXEventXcode::EditorUIElementFocused(uielement_focused_msg)
