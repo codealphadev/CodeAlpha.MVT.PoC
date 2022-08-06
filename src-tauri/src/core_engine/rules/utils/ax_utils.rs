@@ -8,7 +8,95 @@ use crate::{
     utils::geometry::{LogicalPosition, LogicalSize},
 };
 
-use super::{text_types::TextRange, MatchRectangle};
+use super::{
+    text_types::TextRange,
+    types::{LineMatch, MatchRange},
+    MatchRectangle,
+};
+
+pub fn calc_rectangles_and_line_matches(
+    match_range: &MatchRange,
+    textarea_ui_element: &AXUIElement,
+) -> (Vec<MatchRectangle>, Vec<LineMatch>) {
+    let mut line_match_ranges: Vec<MatchRange> = Vec::new();
+
+    // 2. Break up match range into individual matches that only span one line in the editor
+    let mut current_match_index = match_range.range.index;
+    while let Some(line_number) =
+        get_line_number_for_range_index(current_match_index as i64, &textarea_ui_element)
+    {
+        if let Some(current_line_range) = get_char_range_of_line(line_number, &textarea_ui_element)
+        {
+            let matched_char_range = TextRange {
+                index: current_match_index,
+                length: std::cmp::min(
+                    current_line_range.length - (current_match_index - current_line_range.index),
+                    match_range.range.length - (current_match_index - match_range.range.index),
+                ),
+            };
+
+            let mut substr: String = String::new();
+            let mut matched_str_char_iter = match_range.string.char_indices();
+            for (i, c) in matched_str_char_iter.by_ref() {
+                if i >= matched_char_range.index - match_range.range.index
+                    && i < (matched_char_range.index - match_range.range.index)
+                        + matched_char_range.length
+                {
+                    substr.push(c);
+                }
+            }
+
+            let line_match_range = MatchRange {
+                string: substr,
+                range: matched_char_range,
+            };
+
+            // Add +1 because current_line_range got its last char removed because it is always a line break character '\n'.
+            // If we would not remove it, the calculated rectangles would stretch the the line to the end of the line.
+            current_match_index = current_match_index + line_match_range.range.length + 1;
+            line_match_ranges.push(line_match_range);
+
+            if current_match_index >= match_range.range.index + match_range.range.length {
+                break;
+            }
+        }
+    }
+
+    // 3. Calculate rectangles for each line match range; checking if they are wrapped, potentially adding multiple rectangles
+    let mut rule_match_rectangles: Vec<MatchRectangle> = Vec::new();
+    let mut line_matches: Vec<LineMatch> = Vec::new();
+    for line_match_range in line_match_ranges {
+        // Check if line_match_range actually wraps into multiple lines
+        // due to activated 'wrap lines' in XCode (default is on)
+        if let Some((range_is_wrapping, wrapped_line_number)) =
+            is_text_of_line_wrapped(&line_match_range.range, &textarea_ui_element)
+        {
+            if !range_is_wrapping {
+                if let Some(line_match_rect) =
+                    get_bounds_of_TextRange(&line_match_range.range, &textarea_ui_element)
+                {
+                    rule_match_rectangles.push(line_match_rect.clone());
+                    line_matches.push((line_match_range, vec![line_match_rect]));
+                }
+            } else {
+                let line_match_rectangles = calc_match_rects_for_wrapped_range(
+                    wrapped_line_number,
+                    &line_match_range.range,
+                    &textarea_ui_element,
+                );
+
+                rule_match_rectangles.extend(calc_match_rects_for_wrapped_range(
+                    wrapped_line_number,
+                    &line_match_range.range,
+                    &textarea_ui_element,
+                ));
+                line_matches.push((line_match_range, line_match_rectangles));
+            }
+        }
+    }
+
+    (rule_match_rectangles, line_matches)
+}
 
 pub fn calc_match_rects_for_wrapped_range(
     wrapped_lines_count: usize,

@@ -41,6 +41,8 @@ impl MatchRectangle {
     }
 }
 
+pub type LineMatch = (MatchRange, Vec<MatchRectangle>);
+
 #[cfg(test)]
 mod tests_MatchRectangle {
 

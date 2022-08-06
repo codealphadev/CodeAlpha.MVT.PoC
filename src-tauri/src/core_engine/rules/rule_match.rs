@@ -2,17 +2,11 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::ax_interaction::get_textarea_uielement;
+use crate::core_engine::ax_utils::calc_rectangles_and_line_matches;
 
-use super::utils::ax_utils::{
-    calc_match_rects_for_wrapped_range, get_bounds_of_TextRange, get_char_range_of_line,
-    get_line_number_for_range_index, is_text_of_line_wrapped,
-};
-use super::utils::text_types::TextRange;
-use super::{RuleMatchCategory, RuleName};
+use super::{LineMatch, RuleMatchCategory, RuleName};
 
 use super::utils::types::{MatchRange, MatchRectangle};
-
-type LineMatch = (MatchRange, Vec<MatchRectangle>);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
@@ -65,91 +59,9 @@ impl RuleMatch {
     }
 
     pub fn update_rectangles(&mut self, editor_app_pid: i32) {
-        // 1. Get Editor TextArea UI Element
-        if let Some(editor_textarea_ui_element) = get_textarea_uielement(editor_app_pid) {
-            let mut line_match_ranges: Vec<MatchRange> = Vec::new();
-
-            // 2. Break up match range into individual matches that only span one line in the editor
-            let mut current_match_index = self.match_range.range.index;
-            while let Some(line_number) = get_line_number_for_range_index(
-                current_match_index as i64,
-                &editor_textarea_ui_element,
-            ) {
-                if let Some(current_line_range) =
-                    get_char_range_of_line(line_number, &editor_textarea_ui_element)
-                {
-                    let matched_char_range = TextRange {
-                        index: current_match_index,
-                        length: std::cmp::min(
-                            current_line_range.length
-                                - (current_match_index - current_line_range.index),
-                            self.match_range.range.length
-                                - (current_match_index - self.match_range.range.index),
-                        ),
-                    };
-
-                    let mut substr: String = String::new();
-                    let mut matched_str_char_iter = self.match_range.string.char_indices();
-                    for (i, c) in matched_str_char_iter.by_ref() {
-                        if i >= matched_char_range.index - self.match_range.range.index
-                            && i < (matched_char_range.index - self.match_range.range.index)
-                                + matched_char_range.length
-                        {
-                            substr.push(c);
-                        }
-                    }
-
-                    let line_match_range = MatchRange {
-                        string: substr,
-                        range: matched_char_range,
-                    };
-
-                    // Add +1 because current_line_range got its last char removed because it is always a line break character '\n'.
-                    // If we would not remove it, the calculated rectangles would stretch the the line to the end of the line.
-                    current_match_index = current_match_index + line_match_range.range.length + 1;
-                    line_match_ranges.push(line_match_range);
-
-                    if current_match_index
-                        >= self.match_range.range.index + self.match_range.range.length
-                    {
-                        break;
-                    }
-                }
-            }
-
-            // 3. Calculate rectangles for each line match range; checking if they are wrapped, potentially adding multiple rectangles
-            let mut rule_match_rectangles: Vec<MatchRectangle> = Vec::new();
-            let mut line_matches: Vec<LineMatch> = Vec::new();
-            for line_match_range in line_match_ranges {
-                // Check if line_match_range actually wraps into multiple lines
-                // due to activated 'wrap lines' in XCode (default is on)
-                if let Some((range_is_wrapping, wrapped_line_number)) =
-                    is_text_of_line_wrapped(&line_match_range.range, &editor_textarea_ui_element)
-                {
-                    if !range_is_wrapping {
-                        if let Some(line_match_rect) = get_bounds_of_TextRange(
-                            &line_match_range.range,
-                            &editor_textarea_ui_element,
-                        ) {
-                            rule_match_rectangles.push(line_match_rect.clone());
-                            line_matches.push((line_match_range, vec![line_match_rect]));
-                        }
-                    } else {
-                        let line_match_rectangles = calc_match_rects_for_wrapped_range(
-                            wrapped_line_number,
-                            &line_match_range.range,
-                            &editor_textarea_ui_element,
-                        );
-
-                        rule_match_rectangles.extend(calc_match_rects_for_wrapped_range(
-                            wrapped_line_number,
-                            &line_match_range.range,
-                            &editor_textarea_ui_element,
-                        ));
-                        line_matches.push((line_match_range, line_match_rectangles));
-                    }
-                }
-            }
+        if let Some(textarea_ui_element) = get_textarea_uielement(editor_app_pid) {
+            let (rule_match_rectangles, line_matches) =
+                calc_rectangles_and_line_matches(&self.match_range, &textarea_ui_element);
 
             self.rectangles = rule_match_rectangles;
             self.line_matches = line_matches;
