@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::ax_interaction::{
-    is_currently_focused_app_our_app,
+    derive_xcode_textarea_dimensions, get_textarea_uielement, is_currently_focused_app_our_app,
     models::editor::{
         EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
         EditorTextareaScrolledMessage, EditorUIElementFocusedMessage, EditorWindowMovedMessage,
@@ -27,11 +27,22 @@ pub fn on_resize_editor_window(
         };
 
         if let Some(editor_window) = editor_list_locked.get_mut(&resize_msg.id) {
+            let mut textarea_position = resize_msg.textarea_position;
+            let mut textarea_size = resize_msg.textarea_size;
+
+            // If the textarea dimensions are not set, attempt to derive them from the textarea element.
+            if let Some(elem) = get_textarea_uielement(editor_window.pid) {
+                if let Ok((position, size)) = derive_xcode_textarea_dimensions(&elem) {
+                    textarea_position = Some(position);
+                    textarea_size = Some(size);
+                }
+            }
+
             editor_window.update_window_dimensions(
                 resize_msg.window_position,
                 resize_msg.window_size,
-                resize_msg.textarea_position,
-                resize_msg.textarea_size,
+                textarea_position,
+                textarea_size,
             );
         } else {
             return;
