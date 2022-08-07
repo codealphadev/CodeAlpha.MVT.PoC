@@ -26,6 +26,25 @@ mod core_engine;
 mod utils;
 mod window_controls;
 
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
+}
+
+fn set_static_app_handle(app_handle: &tauri::AppHandle) {
+    APP_HANDLE.lock().unwrap().replace(app_handle.clone());
+}
+
+pub fn app_handle() -> tauri::AppHandle {
+    let app_handle = &*(match APP_HANDLE.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
+
+    app_handle.as_ref().unwrap().clone()
+}
+
 fn main() {
     // Configure system tray
     // here `"quit".to_string()` defines the menu item id, and the second parameter is the menu item label.
