@@ -328,16 +328,6 @@ pub struct XCodeObserverState {
     )>,
 }
 
-pub struct ReplitObserverState {
-    pub app_handle: tauri::AppHandle,
-    pub window_list: Vec<(
-        uuid::Uuid,
-        AXUIElement,
-        Option<tauri::LogicalSize<f64>>,
-        usize,
-    )>,
-}
-
 #[derive(Debug, Clone)]
 pub struct AppObserverState {
     pub app_handle: tauri::AppHandle,

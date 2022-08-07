@@ -77,7 +77,6 @@ pub mod messaging {
         EventWindowControls,
         RuleResults,
         AXEventApp,
-        AXEventReplit,
         AXEventXcode,
     }
     impl fmt::Display for ChannelList {
@@ -88,7 +87,6 @@ pub mod messaging {
                 ChannelList::EventWindowControls => write!(f, "EventWindowControls"),
                 ChannelList::RuleResults => write!(f, "RuleResults"),
                 ChannelList::AXEventApp => write!(f, "AXEventApp"),
-                ChannelList::AXEventReplit => write!(f, "AXEventReplit"),
                 ChannelList::AXEventXcode => write!(f, "AXEventXcode"),
             }
         }

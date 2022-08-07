@@ -24,12 +24,12 @@ use crate::{
 use super::{
     dimension_calculations::prevent_widget_position_off_screen,
     listener_user_interaction::register_listener_user_interactions,
-    listeners::{register_listener_app, register_listener_replit, register_listener_xcode},
+    listeners::{register_listener_app, register_listener_xcode},
     prevent_misalignement_of_content_and_widget,
 };
 
 pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
-pub static SUPPORTED_EDITORS: &[&str] = &["Xcode", "Replit"];
+pub static SUPPORTED_EDITORS: &[&str] = &["Xcode"];
 
 #[derive(Clone, Debug)]
 pub struct WidgetWindow {
@@ -105,9 +105,6 @@ impl WidgetWindow {
 
         // Register listener for xcode events relevant for displaying/hiding and positioning the widget
         register_listener_xcode(app_handle, &widget_window);
-
-        // Register listener for replit events relevant for displaying/hiding and positioning the widget
-        register_listener_replit(app_handle, &widget_window);
 
         register_listener_user_interactions(app_handle, &widget_window);
     }

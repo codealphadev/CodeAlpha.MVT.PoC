@@ -14,16 +14,11 @@ pub fn setup_observers(app_handle: &tauri::AppHandle) {
     // This thread periodically checks if the app is running and registers the observers
     thread::spawn(move || {
         let mut xcode_app: Option<AXUIElement> = None;
-        let mut _known_replit_editors: Vec<(String, AXUIElement)> = Vec::new();
 
         loop {
             // Register XCode observer
             // =======================
             let _ = register_observer_xcode(&mut xcode_app, &app_handle_move_copy);
-
-            // Register Replit observer
-            // =======================
-            // let _ = register_observer_replit(&mut known_replit_editors, &app_handle_move_copy);
 
             thread::sleep(std::time::Duration::from_millis(LOOP_TIME_IN_MS));
         }

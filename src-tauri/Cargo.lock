@@ -13,6 +13,7 @@ dependencies = [
  "core-foundation 0.9.3",
  "core-graphics-types",
  "enigo",
+ "lazy_static",
  "objc",
  "pretty_assertions",
  "rand 0.8.5",

@@ -6,5 +6,4 @@ export type ChannelList =
   | "EventWindowControls"
   | "RuleResults"
   | "AXEventApp"
-  | "AXEventReplit"
   | "AXEventXcode";
