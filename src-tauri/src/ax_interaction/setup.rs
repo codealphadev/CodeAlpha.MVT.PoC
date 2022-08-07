@@ -2,7 +2,7 @@ use std::thread;
 
 use accessibility::AXUIElement;
 
-use super::{replit::register_observer_replit, xcode::register_observer_xcode};
+use super::xcode::register_observer_xcode;
 
 static LOOP_TIME_IN_MS: u64 = 150;
 
@@ -14,7 +14,7 @@ pub fn setup_observers(app_handle: &tauri::AppHandle) {
     // This thread periodically checks if the app is running and registers the observers
     thread::spawn(move || {
         let mut xcode_app: Option<AXUIElement> = None;
-        let mut known_replit_editors: Vec<(String, AXUIElement)> = Vec::new();
+        let mut _known_replit_editors: Vec<(String, AXUIElement)> = Vec::new();
 
         loop {
             // Register XCode observer
@@ -23,7 +23,7 @@ pub fn setup_observers(app_handle: &tauri::AppHandle) {
 
             // Register Replit observer
             // =======================
-            let _ = register_observer_replit(&mut known_replit_editors, &app_handle_move_copy);
+            // let _ = register_observer_replit(&mut known_replit_editors, &app_handle_move_copy);
 
             thread::sleep(std::time::Duration::from_millis(LOOP_TIME_IN_MS));
         }
