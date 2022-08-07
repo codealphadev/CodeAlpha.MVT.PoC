@@ -1,9 +1,10 @@
 use super::{
+    bracket_highlight::BracketHighlight,
     events::EventRuleExecutionState,
     formatter::format_swift_file,
     rules::{
-        BracketHighlightProps, BracketHighlightRule, RuleBase, RuleResults, RuleType, SearchRule,
-        SearchRuleProps, SwiftLinterProps, TextPosition, TextRange,
+        RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
+        TextPosition, TextRange,
     },
     syntax_tree::SwiftSyntaxTree,
 };
@@ -18,6 +19,7 @@ use crate::{
 };
 use tauri::Manager;
 
+#[derive(Clone, Debug)]
 pub struct EditorWindowProps {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
     pub id: uuid::Uuid,
@@ -50,6 +52,8 @@ pub struct CodeDocument {
     swift_syntax_tree: SwiftSyntaxTree,
 
     selected_text_range: Option<TextRange>,
+
+    bracket_highlight: BracketHighlight,
 }
 
 impl CodeDocument {
@@ -58,19 +62,21 @@ impl CodeDocument {
         editor_window_props: EditorWindowProps,
     ) -> CodeDocument {
         let swift_syntax_tree = SwiftSyntaxTree::new();
+        let editor_window_props_clone = editor_window_props.clone();
         CodeDocument {
             app_handle,
-            rules: vec![
-                RuleType::SearchRule(SearchRule::new()),
-                RuleType::BracketHighlight(BracketHighlightRule::new(
-                    swift_syntax_tree.get_tree_copy().clone(),
-                )),
-            ],
+            rules: vec![RuleType::SearchRule(SearchRule::new())],
             editor_window_props,
             text: "".to_string(),
             file_path: None,
             swift_syntax_tree,
             selected_text_range: None,
+            bracket_highlight: BracketHighlight::new(
+                None,
+                None,
+                None,
+                editor_window_props_clone.pid,
+            ),
         }
     }
 
@@ -111,16 +117,11 @@ impl CodeDocument {
                     linter_config: None,
                     file_content: Some(new_content.clone()),
                 }),
-                RuleType::BracketHighlight(rule) => rule.update_properties(BracketHighlightProps {
-                    selected_text_range: None,
-                    swift_syntax_tree: new_tree.clone(),
-                    text_content: new_content.clone(),
-                }),
             }
         }
-        if let Ok(Some(range)) = get_selected_text_range(self.editor_window_props.pid) {
-            self.set_selected_text_range(range.index, range.length)
-        }
+
+        self.bracket_highlight
+            .update_content(new_tree, Some(new_content.clone()));
     }
 
     pub fn process_rules(&mut self) {
@@ -130,14 +131,15 @@ impl CodeDocument {
     }
 
     pub fn process_bracket_highlight(&mut self) {
-        for rule in &mut self.rules {
-            match rule {
-                RuleType::BracketHighlight(rule) => {
-                    rule.run_results();
-                }
-                _ => (),
-            }
-        }
+        println!("process_bracket_highlight");
+        self.bracket_highlight.generate_results();
+
+        // Send to CodeOverlay window
+        let _ = self.app_handle.emit_to(
+            &AppWindow::CodeOverlay.to_string(),
+            &ChannelList::BracketHighlightResults.to_string(),
+            &self.bracket_highlight.get_results(),
+        );
     }
 
     pub fn compute_rule_visualizations(&mut self) {
@@ -165,15 +167,10 @@ impl CodeDocument {
     }
 
     pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
-        self.selected_text_range = Some(TextRange { length, index });
-        for rule in self.rules_mut() {
-            match rule {
-                RuleType::BracketHighlight(rule) => {
-                    rule.update_selected_text_range(TextRange { length, index });
-                }
-                _ => (),
-            }
-        }
+        let text_range = Some(TextRange { length, index });
+        self.selected_text_range = text_range.clone();
+        self.bracket_highlight
+            .update_selected_text_range(text_range);
     }
 
     pub fn on_save(&mut self) {

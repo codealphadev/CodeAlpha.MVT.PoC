@@ -5,6 +5,4 @@ export type RuleMatchCategory =
   | "Warning"
   | "BracketHighlightLineFirst"
   | "BracketHighlightLineLast"
-  | "BracketHighlightTouchFirst"
-  | "BracketHighlightTouchLast"
   | "None";

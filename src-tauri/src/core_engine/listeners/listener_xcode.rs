@@ -170,6 +170,7 @@ fn on_editor_textarea_content_changed(
             return;
         }
 
+        code_doc.process_bracket_highlight();
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();
     }
