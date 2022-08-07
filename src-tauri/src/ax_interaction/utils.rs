@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use accessibility::{AXAttribute, AXUIElement, AXUIElementAttributes, AXValue, Error};
 use accessibility_sys::{
     kAXErrorNoValue, kAXTrustedCheckOptionPrompt, pid_t, AXIsProcessTrusted,
@@ -79,7 +77,7 @@ pub fn focused_uielement_of_app(app_pid: pid_t) -> Result<AXUIElement, Error> {
     Ok(focused_ui_element)
 }
 
-pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
+pub fn _get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
     if is_focused_uielement_of_app_xcode_editor_field(pid)? {
         let editor_element = focused_uielement_of_app(pid)?;
 
@@ -94,7 +92,7 @@ pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
     Ok(None)
 }
 
-pub fn get_textarea_origin(pid: pid_t) -> Result<Option<tauri::LogicalPosition<f64>>, Error> {
+pub fn _get_textarea_origin(pid: pid_t) -> Result<Option<tauri::LogicalPosition<f64>>, Error> {
     if is_focused_uielement_of_app_xcode_editor_field(pid)? {
         let editor_element = focused_uielement_of_app(pid)?;
 
@@ -249,7 +247,7 @@ pub fn generate_axui_element_hash(ui_element: &AXUIElement) -> usize {
     unsafe { CFHash(ui_element.as_CFTypeRef()) }
 }
 
-pub fn window_ui_element_from_hash(pid: pid_t, hash: usize) -> Result<AXUIElement, Error> {
+pub fn _window_ui_element_from_hash(pid: pid_t, hash: usize) -> Result<AXUIElement, Error> {
     let application = AXUIElement::application(pid);
 
     let app_windows = application.windows()?;
@@ -347,8 +345,6 @@ pub struct AppObserverState {
 
 pub mod DebugUtils {
 
-    #![allow(dead_code)]
-
     use accessibility::{
         AXAttribute, AXUIElement, AXUIElementAttributes, TreeVisitor, TreeWalker, TreeWalkerFlow,
     };
@@ -356,11 +352,11 @@ pub mod DebugUtils {
     use core_foundation::{array::CFArray, string::CFString};
     use std::cell::Cell;
 
-    pub fn print_element_ax_properties(element: &AXUIElement) {
+    pub fn _print_element_ax_properties(element: &AXUIElement) {
         let walker = TreeWalker::new();
 
         println!("=============== Tree Print Run Start ===============\n");
-        walker.walk(element, &AXTreePrinter::new(0));
+        walker.walk(element, &AXTreePrinter::_new(0));
         println!("\n================ Tree Print Run End ================\n");
     }
 
@@ -368,7 +364,7 @@ pub mod DebugUtils {
         let walker = TreeWalker::new();
 
         println!("=============== Tree Print Run Start ===============\n");
-        walker.walk(element, &AXTreePrinter::new(max_tree_level));
+        walker.walk(element, &AXTreePrinter::_new(max_tree_level));
         println!("================ Tree Print Run End ================\n");
     }
 
@@ -385,7 +381,7 @@ pub mod DebugUtils {
     }
 
     impl AXTreePrinter {
-        pub fn new(max_tree_level: usize) -> Self {
+        pub fn _new(max_tree_level: usize) -> Self {
             Self {
                 tree_level: Cell::new(0),
                 indent: " ".repeat(4),

@@ -14,22 +14,14 @@ use crate::{
     utils::messaging::ChannelList,
 };
 
-use super::{actions::open_window, config::AppWindow, editor_window::EditorWindow, WidgetWindow};
+use super::{actions::open_window, config::AppWindow, editor_window::EditorWindow};
 
-#[allow(dead_code)]
-pub struct WindowControls {
-    tauri_app_handle: tauri::AppHandle,
-
-    // List of listeners; stored to be able to safely remove them
-    open_editor_windows: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
-    widget_window: Arc<Mutex<WidgetWindow>>,
-}
+pub struct WindowControls {}
 
 impl WindowControls {
     pub fn new(
         app_handle: &tauri::AppHandle,
         editor_windows: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>>,
-        widget_window: Arc<Mutex<WidgetWindow>>,
     ) -> Self {
         // Register listener for xcode events to create / remove editor
         let editor_windows_move_copy = editor_windows.clone();
@@ -84,11 +76,7 @@ impl WindowControls {
             }
         });
 
-        Self {
-            tauri_app_handle: app_handle.clone(),
-            open_editor_windows: editor_windows.clone(),
-            widget_window: widget_window.clone(),
-        }
+        Self {}
     }
 
     fn add_editor_window(

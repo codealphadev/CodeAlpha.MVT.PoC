@@ -56,11 +56,7 @@ fn main() {
                 Arc::new(Mutex::new(WidgetWindow::new(&handle, &editor_windows_arc)));
             WidgetWindow::setup_widget_listeners(&handle, &widget_window_arc);
 
-            let _window_controls = WindowControls::new(
-                &handle,
-                editor_windows_arc.clone(),
-                widget_window_arc.clone(),
-            );
+            let _window_controls = WindowControls::new(&handle, editor_windows_arc.clone());
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
             let handle_move_copy = app.handle().clone();

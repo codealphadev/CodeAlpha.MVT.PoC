@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use tauri::{Error, Manager};
 
 use crate::window_controls::config::AppWindow;
