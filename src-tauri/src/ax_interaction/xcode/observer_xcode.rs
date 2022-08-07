@@ -14,7 +14,8 @@ use core_foundation::runloop::CFRunLoop;
 
 use super::callback_xcode_notifications;
 use crate::ax_interaction::{
-    models::editor::EditorAppClosedMessage, AXEventXcode, XCodeObserverState,
+    models::editor::EditorAppClosedMessage, observer_device_events::subscribe_mouse_events,
+    AXEventXcode, XCodeObserverState,
 };
 
 static EDITOR_XCODE_BUNDLE_ID: &str = "com.apple.dt.Xcode";
@@ -124,6 +125,9 @@ fn create_observer_and_add_notifications(
                     },
                 );
             }
+
+            // Register subscribers for mouse events
+            subscribe_mouse_events();
 
             // 4. Kick of RunLoop on this thread
             CFRunLoop::run_current();

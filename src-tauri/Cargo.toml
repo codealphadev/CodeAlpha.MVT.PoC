@@ -23,6 +23,7 @@ lazy_static = "1.4.0"
 
 # macOS dependencies (crucial for Accessibility features to work)
 core-foundation = "0.9.3"
+core-graphics="0.22.3"
 core-graphics-types = "0.1.1"
 cocoa = "0.24.0"
 objc = "0.2.7"
