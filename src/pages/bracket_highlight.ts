@@ -1,6 +1,5 @@
 import { component_subscribe } from 'svelte/internal';
 import type { BracketHighlightBracketPair } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightBracketPair';
-import type { BracketHighlightResults } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 
 const ADJUST_Y = 3;
@@ -29,14 +28,14 @@ export const compute_bracket_highlight_line_rect = (
 		line_rectangle = {
 			origin: {
 				x: lines_pair.first.rectangle.origin.x + lines_pair.first.rectangle.size.width,
-				y: lines_pair.first.rectangle.origin.y + lines_pair.first.rectangle.size.height - thickness
+				y: lines_pair.first.rectangle.origin.y + lines_pair.first.rectangle.size.height + thickness
 			},
 			size: {
 				width:
 					lines_pair.last.rectangle.origin.x -
 					lines_pair.first.rectangle.origin.x -
 					lines_pair.first.rectangle.size.width,
-				height: 3
+				height: 0
 			}
 		};
 	} else {
@@ -55,14 +54,14 @@ export const compute_bracket_highlight_line_rect = (
 		line_rectangle = {
 			origin: {
 				x: lines_pair.last.rectangle.origin.x,
-				y: lines_pair.last.rectangle.origin.y + lines_pair.last.rectangle.size.height - thickness
+				y: lines_pair.first.rectangle.origin.y + lines_pair.first.rectangle.size.height + thickness
 			},
 			size: {
 				width:
-					lines_pair.last.rectangle.origin.x -
+					lines_pair.first.rectangle.origin.x -
 					lines_pair.last.rectangle.origin.x +
 					lines_pair.last.rectangle.size.width,
-				height: lines_pair.last.rectangle.origin.y - lines_pair.last.rectangle.origin.y - ADJUST_Y
+				height: lines_pair.last.rectangle.origin.y - lines_pair.first.rectangle.origin.y - ADJUST_Y
 			}
 		};
 	}

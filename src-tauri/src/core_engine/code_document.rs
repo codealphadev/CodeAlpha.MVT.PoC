@@ -10,8 +10,8 @@ use super::{
 };
 use crate::{
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_selected_text_range, get_textarea_uielement,
-        send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
+        derive_xcode_textarea_dimensions, get_textarea_uielement, send_event_mouse_wheel,
+        set_selected_text_range, update_xcode_editor_content,
     },
     core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
@@ -131,7 +131,6 @@ impl CodeDocument {
     }
 
     pub fn process_bracket_highlight(&mut self) {
-        println!("process_bracket_highlight");
         self.bracket_highlight.generate_results();
 
         // Send to CodeOverlay window

@@ -94,13 +94,11 @@ impl BracketHighlight {
         swift_syntax_tree: Option<Tree>,
         text_content: Option<String>,
     ) {
-        println!("update_content");
         self.swift_syntax_tree = swift_syntax_tree;
         self.text_content = text_content;
     }
 
     pub fn update_selected_text_range(&mut self, selected_text_range: Option<TextRange>) {
-        println!("update_selected_text_range");
         self.selected_text_range = selected_text_range;
     }
 
@@ -109,7 +107,6 @@ impl BracketHighlight {
     }
 
     pub fn generate_results(&mut self) {
-        println!("generate_results");
         let (selected_node, selected_text_range, text_content, textarea_ui_element) = if let (
             Some(node),
             Some(selected_text_range),
@@ -154,8 +151,7 @@ impl BracketHighlight {
                 }
             }
         }
-        println!("line_brackets_match_range: {:?}", line_brackets_match_range);
-        println!("box_brackets_match_range: {:?}", box_brackets_match_range);
+
         let (line_brackets_match_range, box_brackets_match_range) =
             if let (Some(line_brackets), Some(box_brackets)) =
                 (line_brackets_match_range, box_brackets_match_range)
@@ -165,9 +161,6 @@ impl BracketHighlight {
                 self.results = None;
                 return;
             };
-
-        // println!("line_brackets_match_range: {:?}", line_brackets_match_range);
-        // println!("box_brackets_match_range: {:?}", box_brackets_match_range);
 
         // Get rectangles from the brackets
         let (first_line_rectangle, last_line_rectangle, first_box_rectangle, last_box_rectangle) =
@@ -192,11 +185,6 @@ impl BracketHighlight {
                 self.results = None;
                 return;
             };
-
-        // println!("first_line_rectangle {:?}", first_line_rectangle);
-        // println!("last_line_rectangle {:?}", last_line_rectangle);
-        // println!("first_box_rectangle {:?}", first_box_rectangle);
-        // println!("last_box_rectangle {:?}", last_box_rectangle);
 
         if let (Some(first_pair), Some(last_pair)) = (
             BracketHighlightBracketPair::new(
