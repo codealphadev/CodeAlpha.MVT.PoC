@@ -33,13 +33,10 @@ pub struct MatchRectangle {
 }
 
 impl MatchRectangle {
-    pub fn contains_point(&self, mouse_x: i32, mouse_y: i32) -> bool {
-        let x_f64 = mouse_x as f64;
-        let y_f64 = mouse_y as f64;
-
-        // Check if x_f64 and y_f64 are within the bounds of the rectangle.
-        let x_in_bounds = x_f64 >= self.origin.x && x_f64 <= self.origin.x + self.size.width;
-        let y_in_bounds = y_f64 >= self.origin.y && y_f64 <= self.origin.y + self.size.height;
+    pub fn contains_point(&self, mouse_x: f64, mouse_y: f64) -> bool {
+        // Check if mouse_x and mouse_y are within the bounds of the rectangle.
+        let x_in_bounds = mouse_x >= self.origin.x && mouse_x <= self.origin.x + self.size.width;
+        let y_in_bounds = mouse_y >= self.origin.y && mouse_y <= self.origin.y + self.size.height;
         x_in_bounds && y_in_bounds
     }
 }
@@ -60,12 +57,12 @@ mod tests_MatchRectangle {
             },
         };
 
-        assert!(rectangle.contains_point(50, 50));
-        assert!(rectangle.contains_point(0, 0));
-        assert!(rectangle.contains_point(100, 100));
-        assert!(!rectangle.contains_point(101, 100));
-        assert!(!rectangle.contains_point(100, 101));
-        assert!(!rectangle.contains_point(150, 150));
+        assert!(rectangle.contains_point(50., 50.));
+        assert!(rectangle.contains_point(0., 0.));
+        assert!(rectangle.contains_point(100., 100.));
+        assert!(!rectangle.contains_point(101., 100.));
+        assert!(!rectangle.contains_point(100., 101.));
+        assert!(!rectangle.contains_point(150., 150.));
     }
 }
 
