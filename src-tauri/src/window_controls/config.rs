@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
-// This file contains the list of all the app windows and their initial sizes and features
-#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(EnumIter, Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum AppWindow {
     Settings,
     Analytics,
