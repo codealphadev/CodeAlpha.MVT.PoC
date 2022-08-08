@@ -9,9 +9,10 @@ use super::TrackingArea;
 #[serde(tag = "event", content = "payload")]
 pub enum EventTrackingArea {
     Add(Vec<TrackingArea>), // Appends the already present list of TrackingAreas with the new ones.
-    Update(Vec<TrackingArea>), // Replaces the already present list of TrackingAreas with the new ones.
-    Remove(Vec<uuid::Uuid>),   // Removes the TrackingAreas with the given IDs from the list.
-    Reset(),                   // Resets the list of TrackingAreas to an empty list.
+    Update(Vec<TrackingArea>), // Updates existing TrackingAreas with the new ones.
+    Replace(Vec<TrackingArea>), // Replaces the already present list of TrackingAreas with the new ones.
+    Remove(Vec<uuid::Uuid>),    // Removes the TrackingAreas with the given IDs from the list.
+    Reset(),                    // Resets the list of TrackingAreas to an empty list.
 }
 
 impl EventTrackingArea {

@@ -37,4 +37,12 @@ impl TrackingArea {
             event_subscriptions,
         }
     }
+
+    pub fn update(&mut self, updated_tracking_area: &TrackingArea) {
+        if updated_tracking_area.id != self.id {
+            return;
+        }
+        self.rectangles = updated_tracking_area.rectangles.clone();
+        self.event_subscriptions = updated_tracking_area.event_subscriptions.clone();
+    }
 }

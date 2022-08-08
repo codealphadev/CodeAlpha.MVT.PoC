@@ -55,13 +55,22 @@ impl TrackingAreasManager {
     }
 
     pub fn update_tracking_areas(&mut self, tracking_areas: Vec<TrackingArea>) {
-        let mut updated_tracking_areas: Vec<(TrackingArea, Option<std::time::Instant>)> =
-            Vec::new();
+        for updated_tracking_area in tracking_areas.iter() {
+            for tracking_area in self.tracking_areas.iter_mut() {
+                if tracking_area.0.id == updated_tracking_area.id {
+                    tracking_area.0.update(updated_tracking_area);
+                }
+            }
+        }
+    }
+
+    pub fn replace_tracking_areas(&mut self, tracking_areas: Vec<TrackingArea>) {
+        let mut new_tracking_areas: Vec<(TrackingArea, Option<std::time::Instant>)> = Vec::new();
         for tracking_area in tracking_areas {
-            updated_tracking_areas.push((tracking_area, None));
+            new_tracking_areas.push((tracking_area, None));
         }
 
-        self.tracking_areas = updated_tracking_areas;
+        self.tracking_areas = new_tracking_areas;
     }
 
     pub fn track_mouse_position(&mut self, mouse_x: f64, mouse_y: f64) {
@@ -275,6 +284,9 @@ impl TrackingAreasManager {
                 }
                 EventTrackingArea::Update(msg) => {
                     tracking_area_manager.update_tracking_areas(msg);
+                }
+                EventTrackingArea::Replace(msg) => {
+                    tracking_area_manager.replace_tracking_areas(msg);
                 }
             }
         });
