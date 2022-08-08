@@ -8,3 +8,4 @@ pub mod utils;
 pub mod xcode;
 
 mod events;
+mod observer_device_events;

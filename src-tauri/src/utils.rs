@@ -78,6 +78,8 @@ pub mod messaging {
         RuleResults,
         AXEventApp,
         AXEventXcode,
+        EventInputDevice,
+        EventTrackingAreas,
     }
     impl fmt::Display for ChannelList {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -88,6 +90,8 @@ pub mod messaging {
                 ChannelList::RuleResults => write!(f, "RuleResults"),
                 ChannelList::AXEventApp => write!(f, "AXEventApp"),
                 ChannelList::AXEventXcode => write!(f, "AXEventXcode"),
+                ChannelList::EventInputDevice => write!(f, "EventInputDevice"),
+                ChannelList::EventTrackingAreas => write!(f, "EventTrackingAreas"),
             }
         }
     }
