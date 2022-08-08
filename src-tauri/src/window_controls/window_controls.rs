@@ -8,7 +8,7 @@ use tauri::Manager;
 use crate::{
     ax_interaction::{
         models::editor::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
-        AXEventReplit, AXEventXcode,
+        AXEventXcode,
     },
     core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     utils::messaging::ChannelList,
@@ -47,30 +47,6 @@ impl WindowControls {
                 AXEventXcode::EditorAppCodeSelected(msg) => {
                     handle_move_copy.emit_all("evt-repair-opened", msg).unwrap();
                     open_window(&handle_move_copy, AppWindow::Repair);
-                }
-                _ => {}
-            }
-        });
-
-        // Register listener for Replit events to create / remove editor
-        let editor_windows_move_copy = editor_windows.clone();
-        app_handle.listen_global(ChannelList::AXEventReplit.to_string(), move |msg| {
-            let axevent_replit: AXEventReplit =
-                serde_json::from_str(&msg.payload().unwrap()).unwrap();
-
-            match axevent_replit {
-                AXEventReplit::EditorWindowCreated(msg) => {
-                    Self::add_editor_window(&editor_windows_move_copy, &msg);
-                }
-                AXEventReplit::EditorWindowDestroyed(msg) => {
-                    Self::remove_editor_window(&editor_windows_move_copy, &msg);
-                }
-                AXEventReplit::EditorAppClosed(_) => {
-                    let mut editors_locked = match editor_windows_move_copy.lock() {
-                        Ok(guard) => guard,
-                        Err(poisoned) => poisoned.into_inner(),
-                    };
-                    *editors_locked = HashMap::new();
                 }
                 _ => {}
             }

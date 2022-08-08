@@ -58,43 +58,6 @@ pub fn register_listener_xcode(
     });
 }
 
-pub fn register_listener_replit(
-    app_handle: &tauri::AppHandle,
-    widget_props: &Arc<Mutex<WidgetWindow>>,
-) {
-    let widget_props_move_copy = (widget_props).clone();
-    let app_handle_move_copy = app_handle.clone();
-    app_handle.listen_global(ChannelList::AXEventReplit.to_string(), move |msg| {
-        let axevent_replit: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
-
-        match axevent_replit {
-            AXEventXcode::EditorWindowResized(msg) => {
-                on_resize_editor_window(&app_handle_move_copy, &widget_props_move_copy, &msg);
-            }
-            AXEventXcode::EditorWindowMoved(msg) => {
-                on_move_editor_window(&app_handle_move_copy, &widget_props_move_copy, &msg);
-            }
-            AXEventXcode::EditorUIElementFocused(msg) => {
-                on_editor_ui_element_focus_change(
-                    &app_handle_move_copy,
-                    &widget_props_move_copy,
-                    &msg,
-                );
-            }
-            AXEventXcode::EditorAppActivated(msg) => {
-                on_activate_editor_app(&widget_props_move_copy, &msg)
-            }
-            AXEventXcode::EditorAppDeactivated(msg) => {
-                on_deactivate_editor_app(&widget_props_move_copy, &msg)
-            }
-            AXEventXcode::EditorAppClosed(msg) => {
-                on_close_editor_app(&widget_props_move_copy, &msg)
-            }
-            _ => {}
-        }
-    });
-}
-
 pub fn register_listener_app(
     app_handle: &tauri::AppHandle,
     widget_props: &Arc<Mutex<WidgetWindow>>,

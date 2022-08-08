@@ -11,6 +11,7 @@
 	import type { EventRuleExecutionState } from '../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import WidgetProcessing from '../components/widget/widget-processing.svelte';
 	import WidgetBackgroundGreyscale from '../components/widget/widget-background-greyscale.svelte';
+	import { fade } from 'svelte/transition';
 
 	let app_active = true;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
@@ -41,13 +42,13 @@
 					console.log('SwiftFormatFinished');
 					setTimeout(async () => {
 						ruleExecutionState = null;
-					}, 500);
+					}, 1000);
 					break;
 				case 'DocsGenerationFinished':
 					console.log('DocsGenerationFinished');
 					setTimeout(async () => {
 						ruleExecutionState = null;
-					}, 500);
+					}, 1000);
 					break;
 				default:
 					console.log('Default');
@@ -74,15 +75,25 @@
 		>
 			<div class="w-[36px]">
 				{#if app_active === false}
-					<IconLogoGreyscale />
+					<div in:fade={{ duration: 200 }}>
+						<IconLogoGreyscale />
+					</div>
 				{:else if ruleExecutionState != null && ruleExecutionState.event === 'SwiftFormatFinished'}
-					<IconSwiftFormat />
+					<div in:fade={{ duration: 200 }}>
+						<IconSwiftFormat />
+					</div>
 				{:else if ruleExecutionState != null && ruleExecutionState.event === 'DocsGenerationFinished'}
-					<IconDocsGen />
+					<div in:fade={{ duration: 200 }}>
+						<IconDocsGen />
+					</div>
 				{:else if ruleExecutionState != null && ruleExecutionState.event === 'DocsGenerationStarted'}
-					<WidgetProcessing />
+					<div in:fade={{ duration: 200 }}>
+						<WidgetProcessing />
+					</div>
 				{:else}
-					<IconLogo />
+					<div in:fade={{ duration: 200 }}>
+						<IconLogo />
+					</div>
 				{/if}
 			</div>
 		</div>
