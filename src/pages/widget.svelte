@@ -16,6 +16,7 @@
 	let app_active = true;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
 	let ghostClickAlreadyHappened = true;
+	let processing_timeout = 15000; // ms
 
 	const clickAction = async () => {
 		if (ghostClickAlreadyHappened) {
@@ -43,6 +44,12 @@
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, 1000);
+					break;
+				case 'DocsGenerationStarted':
+					console.log('DocsGenerationStarted');
+					setTimeout(async () => {
+						ruleExecutionState = null;
+					}, processing_timeout);
 					break;
 				case 'DocsGenerationFinished':
 					console.log('DocsGenerationFinished');
