@@ -130,6 +130,10 @@ impl TrackingAreasManager {
                     }
                     TrackingEvent::MouseMoved => {
                         // do nothing
+                        println!(
+                            "MouseMoved in tracking area: {:#?}",
+                            tracking_area.rectangles
+                        );
                     }
                     TrackingEvent::MouseClicked => {
                         EventWindowControls::TrackingAreaClicked(TrackingAreaClickedMessage {

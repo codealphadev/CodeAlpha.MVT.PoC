@@ -88,6 +88,8 @@ impl BracketHighlightRule {
             return None;
         };
 
+        println!("selected_node: {:?}", selected_node);
+
         let code_block_node = if let Some(code_block_node) = get_code_block_parent(selected_node) {
             code_block_node
         } else {

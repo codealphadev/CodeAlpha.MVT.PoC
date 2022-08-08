@@ -227,7 +227,7 @@ impl TextRange {
     pub fn from_StartEndIndex(start_index: usize, end_index: usize) -> TextRange {
         TextRange {
             index: start_index,
-            length: end_index - start_index + 1,
+            length: end_index - start_index,
         }
     }
 
@@ -268,7 +268,7 @@ impl TextRange {
         if self.length == 0 {
             return (self.index, self.index);
         } else {
-            return (self.index, self.index + self.length - 1);
+            return (self.index, self.index + self.length);
         }
     }
 
@@ -316,7 +316,7 @@ mod tests_TextRange {
         let range = TextRange::from_StartEndIndex(start_index, end_index);
 
         assert_eq!(range.index, 5);
-        assert_eq!(range.length, 5);
+        assert_eq!(range.length, 4);
 
         assert_eq!(range.as_StartEndIndex(), (start_index, end_index));
     }
@@ -335,7 +335,7 @@ mod tests_TextRange {
         let range = range_option.unwrap();
 
         assert_eq!(range.index, 5);
-        assert_eq!(range.length, 6);
+        assert_eq!(range.length, 5);
     }
 
     #[test]
@@ -352,7 +352,7 @@ mod tests_TextRange {
         let range = range_option.unwrap();
 
         assert_eq!(range.index, 3);
-        assert_eq!(range.length, 12);
+        assert_eq!(range.length, 11);
     }
 
     #[test]
@@ -380,10 +380,10 @@ mod tests_TextRange {
     #[test]
     fn test_TextRange_as_StartEndIndex_one_line() {
         // "Hello, World!";
-        //  |--->| <- Length is 6 characters, start is 0, end is 5
+        //  |---->| <- Length is 6 characters, start is 0, end is 6
         let range = TextRange::new(0, 6);
 
-        assert_eq!(range.as_StartEndIndex(), (0, 5));
+        assert_eq!(range.as_StartEndIndex(), (0, 6));
     }
 
     #[test]
@@ -408,7 +408,7 @@ mod tests_TextRange {
     #[test]
     fn test_TextRange_as_StartEndTextPosition_one_line() {
         let text = "Hello, World!";
-        //                |--->| <- Length is 6 characters, start is [0,0], end is [0,5]
+        //                |---->| <- Length is 6 characters, start is [0,0], end is [0,6]
         let range = TextRange::new(0, 6);
 
         let range_option = range.as_StartEndTextPosition(&text.to_string());
@@ -423,13 +423,13 @@ mod tests_TextRange {
 
         // End Position
         assert_eq!(end_pos.row, 0);
-        assert_eq!(end_pos.column, 5);
+        assert_eq!(end_pos.column, 6);
     }
 
     #[test]
     fn test_TextRange_as_StartEndTextPosition_multi_line() {
         let text = "He\nll\no, Wo\nrld!";
-        //                    |-- ------ ->| <- Length 12 ('\n' is one character)
+        //                    |-- ------ -->| <- Length 12 ('\n' is one character)
         let range = TextRange::new(3, 12);
 
         let range_option = range.as_StartEndTextPosition(&text.to_string());
@@ -444,7 +444,7 @@ mod tests_TextRange {
 
         // End Position
         assert_eq!(end_pos.row, 3);
-        assert_eq!(end_pos.column, 2);
+        assert_eq!(end_pos.column, 3);
     }
 }
 

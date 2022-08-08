@@ -1,3 +1,5 @@
+use core::panic;
+
 use super::{
     events::EventRuleExecutionState,
     formatter::format_swift_file,
@@ -5,7 +7,7 @@ use super::{
         BracketHighlightProps, BracketHighlightRule, RuleBase, RuleResults, RuleType, SearchRule,
         SearchRuleProps, SwiftLinterProps, TextPosition, TextRange,
     },
-    syntax_tree::SwiftSyntaxTree,
+    syntax_tree::{detect_input_edits, SwiftSyntaxTree},
 };
 use crate::{
     ax_interaction::{
@@ -39,7 +41,7 @@ pub struct CodeDocument {
     rules: Vec<RuleType>,
 
     /// The content of the loaded code document.
-    text: String,
+    text: Option<String>,
 
     /// The file path of the loaded code document. If it is none, then the code document
     /// loaded its contents purely through the AX API from a textarea that is not linked
@@ -67,7 +69,7 @@ impl CodeDocument {
                 )),
             ],
             editor_window_props,
-            text: "".to_string(),
+            text: None,
             file_path: None,
             swift_syntax_tree,
             selected_text_range: None,
@@ -78,33 +80,35 @@ impl CodeDocument {
         &self.editor_window_props
     }
 
-    pub fn update_doc_properties(&mut self, text: &String, file_path: &Option<String>) {
+    pub fn update_doc_properties(&mut self, new_content: &String, file_path: &Option<String>) {
         let is_file_path_updated = self.is_file_path_updated(file_path);
-        let is_file_text_updated = text != &self.text;
+        let is_file_text_updated = self.is_file_text_updated(new_content);
         if is_file_path_updated {
             self.swift_syntax_tree.reset();
             self.file_path = file_path.clone();
         }
-        if is_file_text_updated {
-            self.text = text.clone();
-            self.swift_syntax_tree = SwiftSyntaxTree::new();
-        }
-
         if !is_file_path_updated && !is_file_text_updated {
             // Return early if the file path and text did not change
             return;
         }
 
-        // rerun syntax tree parser
-        self.swift_syntax_tree.parse(&self.text);
-        let new_content = self.text.clone();
+        if let Some(text) = &self.text {
+            let input_edits = detect_input_edits(text, &new_content);
+            println!("input edits: {:?}", input_edits);
+            self.swift_syntax_tree.parse(text, input_edits);
+        } else {
+            self.swift_syntax_tree.parse(new_content, vec![]);
+        }
+
+        self.text = Some(new_content.clone());
+
         let new_tree = self.swift_syntax_tree.get_tree_copy();
 
         for rule in self.rules_mut() {
             match rule {
                 RuleType::SearchRule(rule) => rule.update_properties(SearchRuleProps {
                     search_str: None,
-                    content: Some(text.clone()),
+                    content: Some(new_content.clone()),
                 }),
                 RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
                     file_path_as_str: file_path.clone(),
@@ -177,6 +181,12 @@ impl CodeDocument {
     }
 
     pub fn on_save(&mut self) {
+        let old_text = if let Some(text) = &self.text {
+            text
+        } else {
+            return;
+        };
+
         if let (Some(file_path), Some(selected_text_range)) =
             (self.file_path.clone(), self.selected_text_range.clone())
         {
@@ -188,7 +198,7 @@ impl CodeDocument {
                 return;
             };
 
-            if formatted_content.content == self.text.clone() {
+            if formatted_content.content == *old_text {
                 return;
             }
 
@@ -227,7 +237,7 @@ impl CodeDocument {
             if let Ok(_) = set_selected_text_range(
                 self.editor_window_props.pid,
                 get_new_cursor_index(
-                    &self.text,
+                    &old_text,
                     &formatted_content.content,
                     selected_text_range.index,
                 ),
@@ -271,6 +281,18 @@ impl CodeDocument {
             }
         }
     }
+
+    fn is_file_text_updated(&self, file_text_new: &String) -> bool {
+        if let Some(file_text_old) = &self.text {
+            if file_text_old != file_text_new {
+                true
+            } else {
+                false
+            }
+        } else {
+            true
+        }
+    }
 }
 
 fn get_new_cursor_index(old_content: &String, formatted_content: &String, index: usize) -> usize {
@@ -282,4 +304,23 @@ fn get_new_cursor_index(old_content: &String, formatted_content: &String, index:
     }
 
     new_index
+}
+
+#[cfg(test)]
+mod Check {
+    extern crate diff;
+
+    #[test]
+    fn checka() {
+        let left = "foobar\nbaz\nquux";
+        let right = "foo\nbaz\nbar\nquux";
+
+        for diff in diff::lines(left, right) {
+            match diff {
+                diff::Result::Left(l) => println!("-{}", l),
+                diff::Result::Both(l, _) => println!(" {}", l),
+                diff::Result::Right(r) => println!("+{}", r),
+            }
+        }
+    }
 }

@@ -2,7 +2,7 @@ use std::{
     io::Write,
     process::{Command, Stdio},
 };
-use tree_sitter::{Parser, Tree};
+use tree_sitter::{InputEdit, Parser, Tree};
 
 pub struct SwiftSyntaxTree {
     tree_sitter_parser: Parser,
@@ -27,10 +27,21 @@ impl SwiftSyntaxTree {
     }
 
     // CAUTION: The old_tree needs to be updated manually to reparse it. See https://tree-sitter.github.io/tree-sitter/using-parsers#editing
-    pub fn parse(&mut self, source: &String) {
-        if let Some(old_tree) = &self.tree_sitter_tree {
-            self.tree_sitter_tree = self.tree_sitter_parser.parse(source, Some(old_tree));
+    #[allow(dead_code)]
+    pub fn parse(&mut self, source: &String, input_edits: Vec<InputEdit>) {
+        if input_edits.len() > 0 {
+            println!("ADVANCED");
+            if let Some(old_tree) = &mut self.tree_sitter_tree {
+                println!("{:?}", input_edits);
+                for edit in input_edits {
+                    old_tree.edit(&edit);
+                }
+                self.tree_sitter_tree = self.tree_sitter_parser.parse(source, Some(old_tree));
+            } else {
+                self.tree_sitter_tree = self.tree_sitter_parser.parse(source, None);
+            }
         } else {
+            println!("CLASSIC");
             self.tree_sitter_tree = self.tree_sitter_parser.parse(source, None);
         }
     }

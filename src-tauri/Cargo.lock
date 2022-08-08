@@ -12,6 +12,7 @@ dependencies = [
  "colored",
  "core-foundation 0.9.3",
  "core-graphics-types",
+ "diff",
  "enigo",
  "objc",
  "pretty_assertions",

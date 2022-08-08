@@ -19,7 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
 tokio = { version=  "1.17.0",features = ["full"] }
-
+diff = "0.1.13"
 # macOS dependencies (crucial for Accessibility features to work)
 core-foundation = "0.9.3"
 core-graphics-types = "0.1.1"
