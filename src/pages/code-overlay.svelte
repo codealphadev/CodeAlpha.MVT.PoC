@@ -28,7 +28,8 @@
 	let bracket_highlight_line_rectangle: MatchRectangle = null;
 	let bracket_highlight_box_rectangle_first: MatchRectangle = null;
 	let bracket_highlight_box_rectangle_last: MatchRectangle = null;
-	let bracket_highlight_thickness = 17;
+	let bottom_elbow_rectangle: MatchRectangle = null;
+	let bracket_highlight_thickness = 0;
 
 	const listenTauriEvents = async () => {
 		await listen('event-compute-height', (event) => {
@@ -52,22 +53,21 @@
 		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
 		await listen(BracketHighlightChannel, (event) => {
 			const bracket_highlight_results = (event as Event<BracketHighlightResults>).payload;
-			console.log('bracket_highlight_results', bracket_highlight_results);
 
 			bracket_highlight_line_rectangle = null;
 			bracket_highlight_box_rectangle_first = null;
 			bracket_highlight_box_rectangle_last = null;
+			bottom_elbow_rectangle = null;
 
 			if (bracket_highlight_results) {
-				bracket_highlight_thickness = compute_bracket_highlight_thickness(
-					bracket_highlight_results.lines
-				);
+				bracket_highlight_thickness =
+					compute_bracket_highlight_thickness(bracket_highlight_results);
+
 				[bracket_highlight_box_rectangle_first, bracket_highlight_box_rectangle_last] =
-					compute_bracket_highlight_box_rects(bracket_highlight_results.boxes);
-				bracket_highlight_line_rectangle = compute_bracket_highlight_line_rect(
-					bracket_highlight_results.lines
-				);
-				console.log('bracket_highlight_box_rectangle_first', bracket_highlight_box_rectangle_first);
+					compute_bracket_highlight_box_rects(bracket_highlight_results.boxes, outerPosition);
+
+				[bracket_highlight_line_rectangle, bottom_elbow_rectangle] =
+					compute_bracket_highlight_line_rect(bracket_highlight_results, outerPosition, outerSize);
 			}
 		});
 
@@ -201,6 +201,17 @@
 			)}px;height: {Math.round(
 				bracket_highlight_box_rectangle_last.size.height
 			)}px; border-style: solid; border-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
+		/>
+	{/if}
+	{#if bottom_elbow_rectangle !== null}
+		<div
+			style="position: absolute; top: {Math.round(
+				bottom_elbow_rectangle.origin.y
+			)}px; left: {Math.round(bottom_elbow_rectangle.origin.x)}px; width: {Math.round(
+				bottom_elbow_rectangle.size.width
+			)}px;height: {Math.round(
+				bottom_elbow_rectangle.size.height
+			)}px; border-style: solid; border-bottom-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 </div>

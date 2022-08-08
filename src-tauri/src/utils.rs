@@ -7,7 +7,7 @@ pub mod geometry {
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+    #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
     #[ts(export, export_to = "bindings/geometry/")]
     pub struct LogicalPosition {
         /// Vertical axis value.
@@ -33,7 +33,7 @@ pub mod geometry {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+    #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
     #[ts(export, export_to = "bindings/geometry/")]
     pub struct LogicalSize {
         /// Width.

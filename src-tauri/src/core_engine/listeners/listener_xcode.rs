@@ -197,6 +197,7 @@ fn on_editor_textarea_scrolled(
 
     if let Some(code_doc) = code_documents.get_mut(&scrolled_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
+        code_doc.process_bracket_highlight();
     }
 }
 
@@ -221,6 +222,7 @@ fn on_editor_textarea_zoomed(
 
     if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
+        code_doc.process_bracket_highlight();
     }
 }
 
@@ -245,6 +247,7 @@ fn on_editor_window_resized(
 
     if let Some(code_doc) = code_documents.get_mut(&resized_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
+        code_doc.process_bracket_highlight();
     }
 }
 
@@ -269,6 +272,7 @@ fn on_editor_window_moved(
 
     if let Some(code_doc) = code_documents.get_mut(&moved_msg.uielement_hash) {
         code_doc.compute_rule_visualizations();
+        code_doc.process_bracket_highlight();
     }
 }
 

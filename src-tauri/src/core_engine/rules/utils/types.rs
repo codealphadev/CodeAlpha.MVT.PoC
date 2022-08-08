@@ -25,7 +25,7 @@ pub struct RuleResults {
     pub results: Vec<RuleMatch>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct MatchRectangle {
     pub origin: LogicalPosition,
