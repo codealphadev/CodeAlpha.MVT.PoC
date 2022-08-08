@@ -69,6 +69,11 @@ impl SwiftSyntaxTree {
         } else {
             return false;
         }
+        } else {
+            println!("CLASSIC");
+            self.tree_sitter_tree = self.tree_sitter_parser.parse(source, None);
+>>>>>>> 25923ef (testing treesitter input edit)
+        }
     }
 
     pub fn get_tree_copy(&self) -> Option<Tree> {
