@@ -10,8 +10,8 @@ use super::{
 };
 use crate::{
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement, send_event_mouse_wheel,
-        set_selected_text_range, update_xcode_editor_content,
+        derive_xcode_textarea_dimensions, get_textarea_uielement, get_xcode_editor_content,
+        send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
     },
     core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
@@ -119,9 +119,6 @@ impl CodeDocument {
                 }),
             }
         }
-
-        self.bracket_highlight
-            .update_content(new_tree, Some(new_content.clone()));
     }
 
     pub fn process_rules(&mut self) {
@@ -170,6 +167,17 @@ impl CodeDocument {
         self.selected_text_range = text_range.clone();
         self.bracket_highlight
             .update_selected_text_range(text_range);
+
+        // Check if content changed, if so, process bracket highlight
+        if let Ok(Some(content_text)) = get_xcode_editor_content(self.editor_window_props.pid) {
+            if content_text != self.text {
+                self.swift_syntax_tree = SwiftSyntaxTree::new();
+                self.swift_syntax_tree.parse(&content_text);
+                self.bracket_highlight
+                    .update_content(self.swift_syntax_tree.get_tree_copy(), Some(content_text));
+                self.process_bracket_highlight();
+            }
+        }
     }
 
     pub fn on_save(&mut self) {
