@@ -228,7 +228,7 @@ impl BracketHighlight {
                 if let Some(left_most_column) = get_left_most_column_in_rows(
                     TextRange {
                         index: next_row_index,
-                        length: line_brackets_match_range.1.range.index - next_row_index,
+                        length: line_brackets_match_range.1.range.index - next_row_index + 1,
                     },
                     &text_content,
                 ) {
@@ -402,7 +402,7 @@ fn get_left_most_column_in_rows(range: TextRange, text_content: &String) -> Opti
             column += 1;
         }
 
-        if line.chars().count() > 0 {
+        if line.trim().chars().count() > 0 {
             if let Some(left_most_column) = left_most_column_option {
                 if column < left_most_column {
                     left_most_column_option = Some(column);
@@ -440,17 +440,17 @@ mod tests_bracket_highlight {
     fn test_get_left_most_column() {
         let text = "if (test) {
           print(x)
-        }"
+         }"
         .to_string();
         assert_eq!(
             get_left_most_column_in_rows(
                 TextRange {
                     index: 12,
-                    length: 27
+                    length: 29
                 },
                 &text
             ),
-            Some(LeftMostColumn { index: 39, row: 1 })
+            Some(LeftMostColumn { index: 40, row: 1 })
         );
 
         let text_left_of_closing = "if (test) {
@@ -463,7 +463,7 @@ mod tests_bracket_highlight {
             get_left_most_column_in_rows(
                 TextRange {
                     index: 12,
-                    length: 58
+                    length: 60
                 },
                 &text_left_of_closing
             ),
@@ -478,7 +478,7 @@ mod tests_bracket_highlight {
             get_left_most_column_in_rows(
                 TextRange {
                     index: 12,
-                    length: 35
+                    length: 36
                 },
                 &text_on_last_row
             ),
@@ -495,6 +495,22 @@ mod tests_bracket_highlight {
                 &text_out_of_range
             ),
             None
+        );
+
+        let text_out_of_range = "self.init(
+        
+                
+              forKnownProcessID: app.processIdentifier)"
+            .to_string();
+        assert_eq!(
+            get_left_most_column_in_rows(
+                TextRange {
+                    index: 11,
+                    length: 81
+                },
+                &text_out_of_range
+            ),
+            Some(LeftMostColumn { index: 51, row: 2 })
         );
     }
 }
