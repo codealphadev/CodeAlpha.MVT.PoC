@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{
@@ -8,7 +7,6 @@ use crate::{
         models::input_device::{ClickType, MouseButton, MouseClickMessage, MouseMovedMessage},
         EventInputDevice,
     },
-    core_engine::types::MatchRectangle,
     utils::messaging::ChannelList,
     window_controls::{
         actions::{get_position, get_size},
@@ -22,42 +20,7 @@ use crate::{
     },
 };
 
-/// A TrackingArea can subscribe to any number of TrackingEvents.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum TrackingEventSubscription {
-    TrackingEvent(Vec<TrackingEvent>),
-    All,
-    None,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum TrackingEvent {
-    MouseEntered,
-    MouseExited,
-    MouseMoved,
-    MouseClicked,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TrackingArea {
-    id: uuid::Uuid,
-    rectangles: Vec<MatchRectangle>,
-    event_subscriptions: TrackingEventSubscription,
-}
-
-impl TrackingArea {
-    pub fn new(
-        id: uuid::Uuid,
-        rectangles: Vec<MatchRectangle>,
-        event_subscriptions: TrackingEventSubscription,
-    ) -> Self {
-        Self {
-            id,
-            rectangles,
-            event_subscriptions,
-        }
-    }
-}
+use super::{EventTrackingArea, TrackingArea, TrackingEvent, TrackingEventSubscription};
 
 pub struct TrackingAreasManager {
     pub app_handle: tauri::AppHandle,
@@ -72,6 +35,23 @@ impl TrackingAreasManager {
             tracking_areas: Vec::new(),
             previous_mouse_position: None,
         }
+    }
+
+    pub fn add_tracking_areas(&mut self, tracking_areas: Vec<TrackingArea>) {
+        let mut new_tracking_areas = Vec::new();
+        for tracking_area in tracking_areas {
+            new_tracking_areas.push((tracking_area, None));
+        }
+        self.tracking_areas.append(&mut new_tracking_areas);
+    }
+
+    pub fn remove_tracking_areas(&mut self, tracking_areas: Vec<uuid::Uuid>) {
+        self.tracking_areas
+            .retain(|(tracking_area, _)| !tracking_areas.contains(&tracking_area.id));
+    }
+
+    pub fn reset_tracking_areas(&mut self) {
+        self.tracking_areas.clear();
     }
 
     pub fn update_tracking_areas(&mut self, tracking_areas: Vec<TrackingArea>) {
@@ -275,7 +255,7 @@ impl TrackingAreasManager {
     ) {
         let tracking_area_manager_move_copy = (tracking_area_manager).clone();
         app_handle.listen_global(ChannelList::EventTrackingAreas.to_string(), move |msg| {
-            let event_tracking_areas: Vec<TrackingArea> =
+            let event_tracking_areas: EventTrackingArea =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
             let tracking_area_manager = &mut *(match tracking_area_manager_move_copy.lock() {
@@ -283,7 +263,20 @@ impl TrackingAreasManager {
                 Err(poisoned) => poisoned.into_inner(),
             });
 
-            tracking_area_manager.update_tracking_areas(event_tracking_areas);
+            match event_tracking_areas {
+                EventTrackingArea::Add(msg) => {
+                    tracking_area_manager.add_tracking_areas(msg);
+                }
+                EventTrackingArea::Remove(msg) => {
+                    tracking_area_manager.remove_tracking_areas(msg);
+                }
+                EventTrackingArea::Reset() => {
+                    tracking_area_manager.reset_tracking_areas();
+                }
+                EventTrackingArea::Update(msg) => {
+                    tracking_area_manager.update_tracking_areas(msg);
+                }
+            }
         });
     }
 
