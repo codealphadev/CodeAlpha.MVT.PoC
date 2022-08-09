@@ -92,12 +92,7 @@ impl CodeDocument {
             return;
         }
 
-        // print text and file path updated
-        println!("is_file_path_updated: {}", is_file_path_updated);
-        println!("is_file_text_updated: {}", is_file_text_updated);
-
         self.swift_syntax_tree.parse(new_content);
-
         self.text = Some(new_content.clone());
 
         let new_tree = self.swift_syntax_tree.get_tree_copy();
