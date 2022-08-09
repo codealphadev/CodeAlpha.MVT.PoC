@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 /// A position in a multi-line text document, in terms of rows and columns.
 /// Rows and columns are zero-based.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct TextPosition {
     pub row: usize,
@@ -261,7 +261,7 @@ mod tests_TextPosition {
 
 /// A position in a multi-line text document, in terms of index and length.
 /// Index is zero-based.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct TextRange {
     pub index: usize,
@@ -671,5 +671,39 @@ mod tests_TextConversions {
         let mut text = "".to_string();
         assert_eq!(ensure_last_char_is_newline_char(&mut text), false);
         assert_eq!(text, "\n");
+    }
+}
+
+pub fn get_index_of_next_row(index: usize, text: &String) -> Option<usize> {
+    let mut i = 0;
+    for c in text.chars().skip(index) {
+        if c == '\n' {
+            return Some(index + i + 1);
+        }
+        i += 1;
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests_Text {
+    use crate::core_engine::rules::get_index_of_next_row;
+
+    #[test]
+    fn test_index_of_next_row() {
+        // No new row in text
+        assert_eq!(get_index_of_next_row(5, &"Hello, World!".to_string()), None);
+
+        // return index at new row and keep end index
+        let text = "Hello,
+      World!"
+            .to_string();
+        assert_eq!(get_index_of_next_row(5, &text), Some(7));
+
+        // return index at new row and keep end index
+        assert_eq!(
+            get_index_of_next_row(5, &"Hello test,\n Wor!ld!\n".to_string()),
+            Some(12)
+        );
     }
 }

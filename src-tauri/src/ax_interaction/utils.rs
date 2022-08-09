@@ -77,7 +77,7 @@ pub fn focused_uielement_of_app(app_pid: pid_t) -> Result<AXUIElement, Error> {
     Ok(focused_ui_element)
 }
 
-pub fn _get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
+pub fn get_xcode_editor_content(pid: pid_t) -> Result<Option<String>, Error> {
     if is_focused_uielement_of_app_xcode_editor_field(pid)? {
         let editor_element = focused_uielement_of_app(pid)?;
 

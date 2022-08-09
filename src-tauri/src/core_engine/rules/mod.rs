@@ -1,5 +1,3 @@
-pub use bracket_highlight::BracketHighlightProps;
-pub use bracket_highlight::BracketHighlightRule;
 pub use rule_base::RuleBase;
 pub use rule_base::RuleType;
 pub use rule_match::RuleMatch;
@@ -12,7 +10,6 @@ pub use utils::fs_utils::*;
 pub use utils::text_types::*;
 pub use utils::types::*;
 
-pub mod bracket_highlight;
 pub mod rule_base;
 pub mod rule_match;
 pub mod search_and_replace;

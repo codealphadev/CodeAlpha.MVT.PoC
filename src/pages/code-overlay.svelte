@@ -3,14 +3,17 @@
 
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { RuleResults } from '../../src-tauri/bindings/rules/RuleResults';
+	import type { BracketHighlightResults } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 	import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 
 	import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize';
 	import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
 	import type { RuleName } from '../../src-tauri/bindings/rules/RuleName';
-	import type { RuleMatch } from '../../src-tauri/bindings/rules/RuleMatch';
-
-	const ADJUST_BRACKET_HIGHLIGHT_Y = 3;
+	import {
+		compute_bracket_highlight_box_rects,
+		compute_bracket_highlight_line_rect,
+		BORDER_WIDTH
+  } from './bracket_highlight';
 
 	type MatchId = string;
 
@@ -21,9 +24,9 @@
 	let rule_results_arr: Array<RuleResults> | null = null;
 	let highlightedRectangleMatchId = null;
 	let bracket_highlight_line_rectangle: MatchRectangle = null;
-	let bracket_highlight_touch_rectangle_first: MatchRectangle = null;
-	let bracket_highlight_touch_rectangle_last: MatchRectangle = null;
-	let bracket_highlight_thickness = 17;
+	let bracket_highlight_box_rectangle_first: MatchRectangle = null;
+	let bracket_highlight_box_rectangle_last: MatchRectangle = null;
+	let bottom_elbow_rectangle: MatchRectangle = null;
 
 	const listenTauriEvents = async () => {
 		await listen('event-compute-height', (event) => {
@@ -34,33 +37,51 @@
 			outerPosition = payload.origin;
 			height = payload.size.height;
 
-			compute_rects();
+			compute_rule_rects();
 		});
 
 		let ResultsChannel: ChannelList = 'RuleResults';
 		await listen(ResultsChannel, (event) => {
 			const tauriEvent = event as Event<Array<RuleResults>>;
 			rule_results_arr = tauriEvent.payload;
-			compute_rects();
+			compute_rule_rects();
+		});
+
+		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
+		await listen(BracketHighlightChannel, (event) => {
+			const bracket_highlight_results = (event as Event<BracketHighlightResults>).payload;
+
+			bracket_highlight_line_rectangle = null;
+			bracket_highlight_box_rectangle_first = null;
+			bracket_highlight_box_rectangle_last = null;
+			bottom_elbow_rectangle = null;
+
+			if (bracket_highlight_results) {
+				[bracket_highlight_box_rectangle_first, bracket_highlight_box_rectangle_last] =
+					compute_bracket_highlight_box_rects(bracket_highlight_results.boxes, outerPosition);
+
+				[bracket_highlight_line_rectangle, bottom_elbow_rectangle] =
+					compute_bracket_highlight_line_rect(bracket_highlight_results, outerPosition, outerSize);
+			}
 		});
 
 		await listen('alert-selected', (event) => {
 			const tauriEvent = event as Event<any>;
 			highlightedRectangleMatchId = tauriEvent.payload;
 
-			compute_rects();
+			compute_rule_rects();
 		});
 
 		await listen('alert-deselected', (_) => {
 			highlightedRectangleMatchId = null;
 
-			compute_rects();
+			compute_rule_rects();
 		});
 	};
 
 	let rectangles: Array<[RuleName, MatchId, MatchRectangle]> = [];
 
-	const compute_rects = () => {
+	const compute_rule_rects = () => {
 		if (rule_results_arr === null) {
 			return;
 		}
@@ -69,11 +90,6 @@
 		}
 
 		let new_rectangles: Array<[RuleName, MatchId, MatchRectangle]> = [];
-		let bracket_highlight_line_rectangle_first = null;
-		let bracket_highlight_line_rectangle_last = null;
-		bracket_highlight_line_rectangle = null;
-		bracket_highlight_touch_rectangle_first = null;
-		bracket_highlight_touch_rectangle_last = null;
 
 		for (const rule_results of rule_results_arr) {
 			for (const rule_match of rule_results.results) {
@@ -90,21 +106,6 @@
 						}
 					};
 
-					switch (rule_match.match_properties.category) {
-						case 'BracketHighlightLineFirst':
-							bracket_highlight_line_rectangle_first = rect_adjusted;
-							break;
-						case 'BracketHighlightLineLast':
-							bracket_highlight_line_rectangle_last = rect_adjusted;
-							break;
-						case 'BracketHighlightTouchFirst':
-							bracket_highlight_touch_rectangle_first = rect_adjusted;
-							break;
-						case 'BracketHighlightTouchLast':
-							bracket_highlight_touch_rectangle_last = rect_adjusted;
-							break;
-					}
-
 					// only add rectangles that are inside the window
 					if (
 						rects_overlap(rect_adjusted, {
@@ -115,83 +116,6 @@
 						new_rectangles.push([rule_results.rule, rule_match.id, rect_adjusted]);
 					}
 				}
-			}
-		}
-		// Check if last and first bracket are visible
-		let is_last_bracket_visible = bracket_highlight_line_rectangle_last != null;
-		let is_on_same_line = false;
-		if (bracket_highlight_line_rectangle_first) {
-			bracket_highlight_thickness = Math.floor(
-				bracket_highlight_line_rectangle_first.size.height / 17
-			);
-
-			if (
-				bracket_highlight_line_rectangle_last &&
-				bracket_highlight_line_rectangle_first.origin.y ===
-					bracket_highlight_line_rectangle_last.origin.y
-			) {
-				is_on_same_line = true;
-			}
-			if (is_on_same_line) {
-				bracket_highlight_line_rectangle = {
-					origin: {
-						x:
-							bracket_highlight_line_rectangle_first.origin.x +
-							bracket_highlight_line_rectangle_first.size.width,
-						y:
-							bracket_highlight_line_rectangle_first.origin.y +
-							bracket_highlight_line_rectangle_first.size.height -
-							bracket_highlight_thickness
-					},
-					size: {
-						width:
-							bracket_highlight_line_rectangle_last.origin.x -
-							bracket_highlight_line_rectangle_first.origin.x -
-							bracket_highlight_line_rectangle_first.size.width,
-						height: 3
-					}
-				};
-			} else {
-				if (!is_last_bracket_visible) {
-					bracket_highlight_line_rectangle_last = {
-						origin: {
-							x: 0,
-							y: bracket_highlight_line_rectangle_first.origin.y + ADJUST_BRACKET_HIGHLIGHT_Y
-						},
-						size: {
-							width: bracket_highlight_line_rectangle_first.size.width,
-							height: null
-						}
-					};
-				}
-				bracket_highlight_line_rectangle = {
-					origin: {
-						x: bracket_highlight_line_rectangle_last.origin.x,
-						y:
-							bracket_highlight_line_rectangle_first.origin.y +
-							bracket_highlight_line_rectangle_first.size.height -
-							bracket_highlight_thickness
-					},
-					size: {
-						width:
-							bracket_highlight_line_rectangle_first.origin.x -
-							bracket_highlight_line_rectangle_last.origin.x +
-							bracket_highlight_line_rectangle_first.size.width,
-						height:
-							bracket_highlight_line_rectangle_last.origin.y -
-							bracket_highlight_line_rectangle_first.origin.y -
-							ADJUST_BRACKET_HIGHLIGHT_Y
-					}
-				};
-			}
-			// Remove line if last bracket is right of first bracket
-			if (
-				!is_on_same_line &&
-				bracket_highlight_line_rectangle_last &&
-				bracket_highlight_line_rectangle_first.origin.x <
-					bracket_highlight_line_rectangle_last.origin.x
-			) {
-				bracket_highlight_line_rectangle = null;
 			}
 		}
 
@@ -246,33 +170,42 @@
 				bracket_highlight_line_rectangle.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_line_rectangle.size.height
-			)}px; border-style: solid; border-top-width: {bracket_highlight_thickness}px; border-color: rgba(122,122,122,0.5); border-left-width: {bracket_highlight_thickness}px;"
+			)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: rgba(122,122,122,0.5); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
 		/>
 	{/if}
-	{#if bracket_highlight_touch_rectangle_first !== null}
+	{#if bracket_highlight_box_rectangle_first !== null}
 		<div
 			style="position: absolute; top: {Math.round(
-				bracket_highlight_touch_rectangle_first.origin.y
+				bracket_highlight_box_rectangle_first.origin.y
 			)}px; left: {Math.round(
-				bracket_highlight_touch_rectangle_first.origin.x
+				bracket_highlight_box_rectangle_first.origin.x
 			)}px; width: {Math.round(
-				bracket_highlight_touch_rectangle_first.size.width
+				bracket_highlight_box_rectangle_first.size.width
 			)}px;height: {Math.round(
-				bracket_highlight_touch_rectangle_first.size.height
-			)}px; border-style: solid; border-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
+				bracket_highlight_box_rectangle_first.size.height
+			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
-	{#if bracket_highlight_touch_rectangle_last !== null}
+	{#if bracket_highlight_box_rectangle_last !== null}
 		<div
 			style="position: absolute; top: {Math.round(
-				bracket_highlight_touch_rectangle_last.origin.y
-			)}px; left: {Math.round(
-				bracket_highlight_touch_rectangle_last.origin.x
-			)}px; width: {Math.round(
-				bracket_highlight_touch_rectangle_last.size.width
+				bracket_highlight_box_rectangle_last.origin.y
+			)}px; left: {Math.round(bracket_highlight_box_rectangle_last.origin.x)}px; width: {Math.round(
+				bracket_highlight_box_rectangle_last.size.width
 			)}px;height: {Math.round(
-				bracket_highlight_touch_rectangle_last.size.height
-			)}px; border-style: solid; border-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
+				bracket_highlight_box_rectangle_last.size.height
+			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
+		/>
+	{/if}
+	{#if bottom_elbow_rectangle !== null}
+		<div
+			style="position: absolute; top: {Math.round(
+				bottom_elbow_rectangle.origin.y
+			)}px; left: {Math.round(bottom_elbow_rectangle.origin.x)}px; width: {Math.round(
+				bottom_elbow_rectangle.size.width
+			)}px;height: {Math.round(
+				bottom_elbow_rectangle.size.height
+			)}px; border-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 </div>

@@ -4,7 +4,7 @@ use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::rules::{
         rule_match::RuleMatchProps,
-        utils::{ax_utils::get_char_range_of_line, text_types::TextRange, types::MatchRange},
+        utils::{ax_utils::get_text_range_of_line, text_types::TextRange, types::MatchRange},
         RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
     },
 };
@@ -68,7 +68,7 @@ impl RuleBase for SwiftLinterRule {
 
             for lint_alert in linter_results.lints.iter().enumerate() {
                 let char_range_for_line = if let Some(char_range_for_line) =
-                    get_char_range_of_line(lint_alert.1.line as i64 - 1, &textarea_uielement)
+                    get_text_range_of_line(lint_alert.1.line - 1, &textarea_uielement)
                 {
                     char_range_for_line
                 } else {
