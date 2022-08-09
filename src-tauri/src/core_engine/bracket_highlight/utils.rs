@@ -7,6 +7,19 @@ use crate::core_engine::{
     types::{MatchRange, MatchRectangle},
 };
 
+fn bad_code_block_kinds() -> Vec<&'static str> {
+    vec![
+        "do_statement",
+        "else_statement",
+        "for_statement",
+        "guard_statement",
+        "if_statement",
+        // "switch_entry", // case uses : instead of {
+        "switch_statement",
+        "while_statement",
+    ]
+}
+
 pub fn rectangles_from_match_range(
     range: &MatchRange,
     textarea_ui_element: &AXUIElement,
@@ -19,7 +32,31 @@ pub fn rectangles_from_match_range(
     }
 }
 
-pub fn get_code_block_parent(node_input: Node) -> Option<Node> {
+pub fn length_to_bad_code_block_start(
+    node: &Node,
+    text_content: &String,
+    selected_text_index: usize,
+) -> Option<(usize, bool)> {
+    let mut is_selected_text_in_bad_declaration = false;
+    if bad_code_block_kinds().contains(&node.kind()) {
+        let text_from_index = &text_content[node.range().start_byte..node.range().end_byte];
+        let mut additional_index: usize = 0;
+        for c in text_from_index.chars() {
+            if c == '{' {
+                if selected_text_index < node.range().start_byte + additional_index
+                    && selected_text_index >= node.range().start_byte
+                {
+                    is_selected_text_in_bad_declaration = true;
+                }
+                return Some((additional_index, is_selected_text_in_bad_declaration));
+            }
+            additional_index += 1;
+        }
+    }
+    None
+}
+
+pub fn get_code_block_parent(node_input: Node, ignore_current_bad_node: bool) -> Option<Node> {
     let code_block_kinds = vec![
         "array_literal",
         "array_type",
@@ -47,6 +84,12 @@ pub fn get_code_block_parent(node_input: Node) -> Option<Node> {
     let mut node = node_input.clone();
     let mut parent_node = None;
 
+    if ignore_current_bad_node && bad_code_block_kinds().contains(&node.kind()) {
+        if let Some(parent) = node.parent() {
+            node = parent;
+        }
+    }
+
     loop {
         if code_block_kinds.contains(&node.kind()) {
             parent_node = Some(node);
@@ -65,23 +108,34 @@ pub fn get_code_block_parent(node_input: Node) -> Option<Node> {
 pub fn get_match_range_of_first_and_last_char_in_node(
     node: &Node,
     text: &String,
+    selected_text_index: usize,
 ) -> Option<(MatchRange, MatchRange)> {
-    let first = MatchRange::from_text_and_range(
+    let mut first_option = MatchRange::from_text_and_range(
         text,
         TextRange {
             index: node.range().start_byte,
             length: 1,
         },
     );
-    let last = MatchRange::from_text_and_range(
+    let last_option = MatchRange::from_text_and_range(
         text,
         TextRange {
             index: node.range().end_byte - 1,
             length: 1,
         },
     );
+    if let Some(additional_length) = length_to_bad_code_block_start(node, text, selected_text_index)
+    {
+        first_option = MatchRange::from_text_and_range(
+            text,
+            TextRange {
+                index: node.range().start_byte + additional_length.0,
+                length: 1,
+            },
+        );
+    }
 
-    if let (Some(first), Some(last)) = (first, last) {
+    if let (Some(first), Some(last)) = (first_option, last_option) {
         Some((first, last))
     } else {
         None
