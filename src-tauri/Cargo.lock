@@ -14,6 +14,7 @@ dependencies = [
  "core-graphics-types",
  "diff",
  "enigo",
+ "lazy_static",
  "objc",
  "pretty_assertions",
  "rand 0.8.5",
