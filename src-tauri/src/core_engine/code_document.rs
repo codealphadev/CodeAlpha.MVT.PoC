@@ -172,7 +172,7 @@ impl CodeDocument {
             self.text.as_ref(),
         ) {
             if content_text != *text {
-                self.swift_syntax_tree = SwiftSyntaxTree::new();
+                // self.swift_syntax_tree = SwiftSyntaxTree::new();
                 self.swift_syntax_tree.parse(&content_text);
                 self.bracket_highlight
                     .update_content(self.swift_syntax_tree.get_tree_copy(), Some(content_text));

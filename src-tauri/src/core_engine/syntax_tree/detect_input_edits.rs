@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use tree_sitter::InputEdit;
 
 use crate::core_engine::rules::TextRange;

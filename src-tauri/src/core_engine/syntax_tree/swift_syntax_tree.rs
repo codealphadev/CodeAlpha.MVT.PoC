@@ -4,9 +4,7 @@ use std::{
     path::PathBuf,
     process::{Command, Stdio},
 };
-use tree_sitter::{InputEdit, Parser, Tree};
-
-use super::detect_input_edits;
+use tree_sitter::{Parser, Tree};
 
 pub struct SwiftSyntaxTree {
     tree_sitter_parser: Parser,
@@ -40,26 +38,30 @@ impl SwiftSyntaxTree {
         // We assume the content is an updated version of the content parsed before.
 
         let updated_tree: Option<Tree>;
-        if let (Some(old_tree), Some(old_content)) = (&mut self.tree_sitter_tree, &self.content) {
-            // Skip if the content is the same as before.
-            if old_content == content {
-                return true;
-            }
+        if let (Some(_), Some(_)) = (&mut self.tree_sitter_tree, &self.content) {
+            // // Skip if the content is the same as before.
+            // if old_content == content {
+            //     return true;
+            // }
 
-            // Determine the edits made to the code document.
-            let mut input_edits: Vec<InputEdit> = detect_input_edits(old_content, content);
+            // // Determine the edits made to the code document.
+            // let mut input_edits: Vec<InputEdit> = detect_input_edits(old_content, content);
+            // println!("{:?}", input_edits);
 
-            // Sort input_edits by start_byte in descending order before applying them to the tree.
-            input_edits.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
+            // // Sort input_edits by start_byte in descending order before applying them to the tree.
+            // input_edits.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
 
-            // Apply the sorted edits to the old tree.
-            for edit in input_edits.iter() {
-                old_tree.edit(edit);
-            }
+            // // Apply the sorted edits to the old tree.
+            // for edit in input_edits.iter() {
+            //     old_tree.edit(edit);
+            // }
 
-            updated_tree = self.tree_sitter_parser.parse(content, Some(old_tree));
+            // updated_tree = self.tree_sitter_parser.parse(content, Some(old_tree));
+            println!("Parsing old tree");
+            updated_tree = self.tree_sitter_parser.parse(content, None);
         } else {
             updated_tree = self.tree_sitter_parser.parse(content, None);
+            println!("Parsing new tree");
         }
 
         if updated_tree.is_some() {
@@ -75,6 +77,7 @@ impl SwiftSyntaxTree {
         self.tree_sitter_tree.clone()
     }
 
+    #[allow(dead_code)]
     pub fn tree(&self) -> Option<&Tree> {
         self.tree_sitter_tree.as_ref()
     }
