@@ -25,7 +25,7 @@ pub struct RuleResults {
     pub results: Vec<RuleMatch>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct MatchRectangle {
     pub origin: LogicalPosition,
@@ -40,6 +40,8 @@ impl MatchRectangle {
         x_in_bounds && y_in_bounds
     }
 }
+
+pub type LineMatch = (MatchRange, Vec<MatchRectangle>);
 
 #[cfg(test)]
 mod tests_MatchRectangle {
@@ -73,6 +75,59 @@ pub struct MatchRange {
     pub range: TextRange,
 }
 
+impl MatchRange {
+    pub fn from_text_and_range(text: &String, range: TextRange) -> Option<Self> {
+        if text.len() < range.index + range.length {
+            return None;
+        }
+        Some(Self {
+            string: (text[(range.index)..(range.index + range.length)]).to_string(),
+            range,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests_MatchRange {
+
+    use crate::core_engine::rules::TextRange;
+
+    use super::MatchRange;
+
+    #[test]
+    fn test_from_text_and_range() {
+        let s = &"0123456789".to_string();
+
+        let match_range = MatchRange::from_text_and_range(
+            s,
+            TextRange {
+                index: 2,
+                length: 5,
+            },
+        );
+
+        assert_eq!(
+            match_range,
+            Some(MatchRange {
+                string: "23456".to_string(),
+                range: TextRange {
+                    index: 2,
+                    length: 5,
+                },
+            })
+        );
+
+        let match_range_out_of_range = MatchRange::from_text_and_range(
+            s,
+            TextRange {
+                index: 10,
+                length: 5,
+            },
+        );
+        assert_eq!(match_range_out_of_range, None);
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub enum RuleMatchCategory {
@@ -80,8 +135,6 @@ pub enum RuleMatchCategory {
     Warning,
     BracketHighlightLineFirst,
     BracketHighlightLineLast,
-    BracketHighlightTouchFirst,
-    BracketHighlightTouchLast,
     None,
 }
 
