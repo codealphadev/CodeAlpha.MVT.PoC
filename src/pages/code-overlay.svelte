@@ -12,10 +12,8 @@
 	import {
 		compute_bracket_highlight_box_rects,
 		compute_bracket_highlight_line_rect,
-		compute_bracket_highlight_thickness
+		BORDER_WIDTH
 	} from './bracket_highlight';
-
-	const ADJUST_BRACKET_HIGHLIGHT_Y = 3;
 
 	type MatchId = string;
 
@@ -29,7 +27,6 @@
 	let bracket_highlight_box_rectangle_first: MatchRectangle = null;
 	let bracket_highlight_box_rectangle_last: MatchRectangle = null;
 	let bottom_elbow_rectangle: MatchRectangle = null;
-	let bracket_highlight_thickness = 0;
 
 	const listenTauriEvents = async () => {
 		await listen('event-compute-height', (event) => {
@@ -60,9 +57,6 @@
 			bottom_elbow_rectangle = null;
 
 			if (bracket_highlight_results) {
-				bracket_highlight_thickness =
-					compute_bracket_highlight_thickness(bracket_highlight_results);
-
 				[bracket_highlight_box_rectangle_first, bracket_highlight_box_rectangle_last] =
 					compute_bracket_highlight_box_rects(bracket_highlight_results.boxes, outerPosition);
 
@@ -176,7 +170,7 @@
 				bracket_highlight_line_rectangle.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_line_rectangle.size.height
-			)}px; border-style: solid; border-top-width: {bracket_highlight_thickness}px; border-color: rgba(122,122,122,0.5); border-left-width: {bracket_highlight_thickness}px; border-right-width: 0; border-bottom-width: 0;"
+			)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: rgba(122,122,122,0.5); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
 		/>
 	{/if}
 	{#if bracket_highlight_box_rectangle_first !== null}
@@ -189,7 +183,7 @@
 				bracket_highlight_box_rectangle_first.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_box_rectangle_first.size.height
-			)}px; border-style: solid; border-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
+			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 	{#if bracket_highlight_box_rectangle_last !== null}
@@ -200,7 +194,7 @@
 				bracket_highlight_box_rectangle_last.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_box_rectangle_last.size.height
-			)}px; border-style: solid; border-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
+			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 	{#if bottom_elbow_rectangle !== null}
@@ -211,7 +205,7 @@
 				bottom_elbow_rectangle.size.width
 			)}px;height: {Math.round(
 				bottom_elbow_rectangle.size.height
-			)}px; border-style: solid; border-bottom-width: {bracket_highlight_thickness}px; border-color: rgba(182,182,182,0.7);"
+			)}px; border-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 </div>
