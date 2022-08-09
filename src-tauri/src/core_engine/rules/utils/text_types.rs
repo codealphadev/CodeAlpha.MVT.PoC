@@ -38,15 +38,19 @@ impl TextPosition {
     ///
     /// A TextPosition struct
     pub fn from_TextIndex(text: &String, index: usize) -> Option<TextPosition> {
+        let mut text_with_newline_ending = text.clone();
+        ensure_last_char_is_newline_char(&mut text_with_newline_ending);
+
         let mut row = 0;
         let mut col = 0;
-        let mut text_iter = text.char_indices();
+        let mut text_iter = text_with_newline_ending.char_indices();
+        let mut additional_bytes_from_none_utf8_chars = 0;
         while let Some((text_index, char)) = text_iter.next() {
-            if text_index == index {
-                return Some(TextPosition {
-                    row: row,
-                    column: col,
-                });
+            additional_bytes_from_none_utf8_chars += char.len_utf8();
+            additional_bytes_from_none_utf8_chars -= 1;
+
+            if text_index == index + additional_bytes_from_none_utf8_chars {
+                return Some(TextPosition { row, column: col });
             }
 
             if char == '\n' {
@@ -73,18 +77,25 @@ impl TextPosition {
     }
 
     pub fn as_TextIndex_stay_on_line(&self, text: &String, stay_on_line: bool) -> Option<usize> {
+        let mut text_with_newline_ending = text.clone();
+        ensure_last_char_is_newline_char(&mut text_with_newline_ending);
+
         let mut row = 0;
         let mut col = 0;
-        let mut text_iter = text.char_indices();
+        let mut text_iter = text_with_newline_ending.char_indices();
+        let mut additional_bytes_from_none_utf8_chars = 0;
         while let Some((text_index, char)) = text_iter.next() {
+            additional_bytes_from_none_utf8_chars += char.len_utf8();
+            additional_bytes_from_none_utf8_chars -= 1;
+
             if self.row == row && self.column == col {
-                return Some(text_index);
+                return Some(text_index - additional_bytes_from_none_utf8_chars);
             }
 
             if char == '\n' {
                 // if stay_on_line is true, we want to return the index of the last character of the line self.row
                 if stay_on_line && self.row == row {
-                    return Some(text_index.clone());
+                    return Some((text_index - additional_bytes_from_none_utf8_chars).clone());
                 }
                 row += 1;
                 col = 0;
@@ -148,6 +159,21 @@ mod tests_TextPosition {
     }
 
     #[test]
+    fn test_TextPosition_from_TextIndex_none_with_emojis() {
+        let text = "Hell😊, W😊rld!";
+        //       is 4 bytes ->|   |<- is 4 bytes
+        let index = 5;
+        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+
+        assert_eq!(position_option.is_some(), true);
+
+        let position = position_option.unwrap();
+
+        assert_eq!(position.row, 0);
+        assert_eq!(position.column, 5);
+    }
+
+    #[test]
     fn test_TextPosition_from_TextIndex_too_far() {
         let text = "Hello, World!";
         let index = 100;
@@ -159,6 +185,20 @@ mod tests_TextPosition {
     #[test]
     fn test_convert_TextPosition_as_TextIndex() {
         let text = "Hello, World!";
+        let position = TextPosition::new(0, 5);
+        let index_option = position.as_TextIndex(&text.to_string());
+
+        assert_eq!(index_option.is_some(), true);
+
+        let index = index_option.unwrap();
+
+        assert_eq!(index, 5);
+    }
+
+    #[test]
+    fn test_convert_TextPosition_as_TextIndex_with_emojis() {
+        let text = "Hell😊, W😊rld!";
+        //       is 4 bytes ->|   |<- is 4 bytes
         let position = TextPosition::new(0, 5);
         let index_option = position.as_TextIndex(&text.to_string());
 
@@ -194,6 +234,15 @@ mod tests_TextPosition {
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line() {
         let text = "Hello,\nWorld!\n";
+        let position = TextPosition::new(0, 100);
+        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), true);
+
+        assert_eq!(index_option.unwrap(), 6);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_with_emojis() {
+        let text = "Hell😊,\nW😊rld!\n";
         let position = TextPosition::new(0, 100);
         let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), true);
 
@@ -500,7 +549,7 @@ pub fn StartEndTSPoint_from_StartEndIndex(
     end_index: usize,
 ) -> Option<(tree_sitter::Point, tree_sitter::Point)> {
     if let Some((start_pos, end_pos)) =
-        StartEndTextPosition_from_StartEndIndex(text, start_index, end_index)
+        StartEndTextPosition_from_StartEndIndex(&text, start_index, end_index)
     {
         Some((start_pos.as_TSPoint(), end_pos.as_TSPoint()))
     } else {
@@ -518,10 +567,30 @@ pub fn StartEndTSPoint_from_StartEndTextPosition(
     )
 }
 
+fn ensure_last_char_is_newline_char(text: &mut String) -> bool {
+    if let Some(last_char) = text.pop() {
+        if last_char == '\n' {
+            text.push(last_char);
+            true
+        } else {
+            text.push(last_char);
+            text.push('\n');
+            false
+        }
+    } else {
+        text.push('\n');
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests_TextConversions {
-    use crate::core_engine::rules::utils::text_types::{
-        StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition, TextPosition,
+    use crate::core_engine::{
+        rules::utils::text_types::{
+            StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition,
+            TextPosition,
+        },
+        text_types::ensure_last_char_is_newline_char,
     };
 
     use pretty_assertions::assert_eq;
@@ -581,5 +650,26 @@ mod tests_TextConversions {
 
         assert_eq!(start_index, 0);
         assert_eq!(end_index, 5);
+    }
+
+    #[test]
+    fn test_ensure_last_char_is_newline_char_false() {
+        let mut text = "Hello, World!".to_string();
+        assert_eq!(ensure_last_char_is_newline_char(&mut text), false);
+        assert_eq!(text, "Hello, World!\n");
+    }
+
+    #[test]
+    fn test_ensure_last_char_is_newline_char_true() {
+        let mut text = "Hello, World!\n".to_string();
+        assert_eq!(ensure_last_char_is_newline_char(&mut text), true);
+        assert_eq!(text, "Hello, World!\n");
+    }
+
+    #[test]
+    fn test_ensure_last_char_is_newline_char_empty_text() {
+        let mut text = "".to_string();
+        assert_eq!(ensure_last_char_is_newline_char(&mut text), false);
+        assert_eq!(text, "\n");
     }
 }
