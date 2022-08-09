@@ -243,7 +243,7 @@ impl TextRange {
             return Some(TextRange::from_StartEndIndex(start_index, end_index));
         } else {
             return None;
-        }
+          }
     }
 
     pub fn from_StartEndTSPoint(
@@ -584,7 +584,7 @@ mod tests_TextConversions {
     }
 }
 
-pub fn get_index_of_next_row(index: usize, text: &String) -> Option<(usize)> {
+pub fn get_index_of_next_row(index: usize, text: &String) -> Option<usize> {
     let mut i = 0;
     for c in text.chars().skip(index) {
         if c == '\n' {

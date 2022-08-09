@@ -220,7 +220,7 @@ impl BracketHighlight {
 
         // Check if elbow is needed
         let mut lines_elbow_x = None;
-        if (line_positions.0.row != line_positions.1.row) {
+        if line_positions.0.row != line_positions.1.row {
             let first_line_bracket_range = line_brackets_match_range.0.range.clone();
             if let Some(next_row_index) =
                 get_index_of_next_row(first_line_bracket_range.index, &text_content)

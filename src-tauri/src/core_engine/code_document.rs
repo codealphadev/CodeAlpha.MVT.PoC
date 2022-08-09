@@ -104,7 +104,6 @@ impl CodeDocument {
         // rerun syntax tree parser
         self.swift_syntax_tree.parse(&self.text);
         let new_content = self.text.clone();
-        let new_tree = self.swift_syntax_tree.get_tree_copy();
 
         for rule in self.rules_mut() {
             match rule {
@@ -119,6 +118,9 @@ impl CodeDocument {
                 }),
             }
         }
+
+        self.bracket_highlight
+            .update_content(self.swift_syntax_tree.get_tree_copy(), Some(new_content))
     }
 
     pub fn process_rules(&mut self) {

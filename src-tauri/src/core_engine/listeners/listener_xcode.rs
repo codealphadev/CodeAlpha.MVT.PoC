@@ -9,7 +9,7 @@ use tauri::Manager;
 
 use crate::{
     ax_interaction::{
-        get_file_path_from_window, get_textarea_uielement,
+        get_file_path_from_window, get_selected_text_range, get_textarea_uielement,
         models::editor::{
             EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
             EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
@@ -383,6 +383,13 @@ fn on_editor_focused_uielement_changed(
         None
     };
 
+    let selected_text_range =
+        if let Ok(selected_text_range) = get_selected_text_range(uielement_focus_changed_msg.pid) {
+            selected_text_range
+        } else {
+            None
+        };
+
     _ = check_if_code_doc_needs_to_be_created(
         &app_handle,
         code_documents,
@@ -395,12 +402,14 @@ fn on_editor_focused_uielement_changed(
 
     if let Some(code_doc) = code_documents.get_mut(&uielement_focus_changed_msg.ui_elem_hash) {
         code_doc.update_doc_properties(&content_str, &file_path);
+        if let Some(selected_text_range) = selected_text_range {
+            code_doc.set_selected_text_range(selected_text_range.index, selected_text_range.length);
+        }
 
         // Checking if the engine is active. If not, it returns.
         if !core_engine_active_status {
             return;
         }
-
         code_doc.process_rules();
         code_doc.process_bracket_highlight();
         code_doc.compute_rule_visualizations();
