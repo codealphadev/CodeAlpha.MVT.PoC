@@ -92,13 +92,11 @@ impl CodeDocument {
             return;
         }
 
-        if let Some(text) = &self.text {
-            let input_edits = detect_input_edits(text, &new_content);
-            println!("input edits: {:?}", input_edits);
-            self.swift_syntax_tree.parse(text, input_edits);
-        } else {
-            self.swift_syntax_tree.parse(new_content, vec![]);
-        }
+        // print text and file path updated
+        println!("is_file_path_updated: {}", is_file_path_updated);
+        println!("is_file_text_updated: {}", is_file_text_updated);
+
+        self.swift_syntax_tree.parse(new_content);
 
         self.text = Some(new_content.clone());
 

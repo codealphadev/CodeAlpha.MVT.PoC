@@ -1,6 +1,7 @@
 use tree_sitter::InputEdit;
 
 use crate::core_engine::rules::TextRange;
+use diff;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum DiffType {
@@ -18,14 +19,15 @@ pub struct TextDiff {
     pub start_bytes: usize,
 }
 
-pub fn detect_input_edits(old_str: &String, new_str: &String) -> Vec<InputEdit> {
-    extern crate diff;
+pub fn detect_input_edits(old_string: &String, new_string: &String) -> Vec<InputEdit> {
+    // println!("old_string: {}", old_string);
+    // println!("new_string: {}", new_string);
 
     let mut edits: Vec<TextDiff> = Vec::new();
     let mut detected_edit_option: Option<TextDiff> = None;
     let mut walk_index = 0;
     let mut bytes_counter = 0;
-    for diff in diff::chars(&old_str, &new_str) {
+    for diff in diff::chars(&old_string, &new_string) {
         match diff {
             diff::Result::Left(l) => {
                 // detect edit
@@ -116,12 +118,12 @@ pub fn detect_input_edits(old_str: &String, new_str: &String) -> Vec<InputEdit> 
         edits.push(detected_edit.clone());
     }
 
-    construct_InputEdits_from_detected_edits(old_str, new_str, &edits)
+    construct_InputEdits_from_detected_edits(old_string, new_string, &edits)
 }
 
 fn construct_InputEdits_from_detected_edits(
-    old_str: &String,
-    new_str: &String,
+    old_string: &String,
+    new_string: &String,
     detected_edits: &Vec<TextDiff>,
 ) -> Vec<InputEdit> {
     let mut input_edits: Vec<InputEdit> = Vec::new();
@@ -148,8 +150,8 @@ fn construct_InputEdits_from_detected_edits(
 
         let edit_range_after = TextRange::new(edit.start_index, added_char_count);
         if let (Some(old_pts), Some(new_pts)) = (
-            edit_range_before.as_StartEndTSPoint(old_str),
-            edit_range_after.as_StartEndTSPoint(new_str),
+            edit_range_before.as_StartEndTSPoint(old_string),
+            edit_range_after.as_StartEndTSPoint(new_string),
         ) {
             input_edits.push(InputEdit {
                 start_byte: edit.start_bytes,
@@ -162,9 +164,9 @@ fn construct_InputEdits_from_detected_edits(
         }
     }
 
-    println!("{:#?}", detected_edits);
-    println!("===");
-    println!("");
+    // println!("{:#?}", detected_edits);
+    // println!("===");
+    // println!("");
     input_edits
 }
 
@@ -188,9 +190,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_remove_at_end_of_line() {
-        let old_str = "abcdef";
-        let new_str = "abcd";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "abcdef";
+        let new_string = "abcd";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
         assert_eq!(input_edits.len(), 1);
         assert_eq!(input_edits[0].start_byte, 4);
         assert_eq!(input_edits[0].old_end_byte, 6);
@@ -205,9 +207,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_remove_with_emoji() {
-        let old_str = "abcdef😊a";
-        let new_str = "abcd";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "abcdef😊a";
+        let new_string = "abcd";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
         assert_eq!(input_edits.len(), 1);
         assert_eq!(input_edits[0].start_byte, 4);
         assert_eq!(input_edits[0].old_end_byte, 8 + 3); // 3 additional bytes for the emoji
@@ -222,9 +224,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_remove_with_emoji_end() {
-        let old_str = "abcdef😊";
-        let new_str = "abcd";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "abcdef😊";
+        let new_string = "abcd";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
         assert_eq!(input_edits.len(), 1);
         assert_eq!(input_edits[0].start_byte, 4);
         assert_eq!(input_edits[0].old_end_byte, 7 + 3); // 3 additional bytes for the emoji
@@ -239,9 +241,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_add_with_emoji() {
-        let old_str = "abcdef😊a";
-        let new_str = "abcdef😊aBC";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "abcdef😊a";
+        let new_string = "abcdef😊aBC";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
         assert_eq!(input_edits.len(), 1);
         assert_eq!(input_edits[0].start_byte, 8 + 3); // 3 additional bytes for the emoji
         assert_eq!(input_edits[0].old_end_byte, 8 + 3); // 3 additional bytes for the emoji
@@ -256,9 +258,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_replace_with_emoji() {
-        let old_str = "abc😊aBCd";
-        let new_str = "abc😊aXXYYYd";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "abc😊aBCd";
+        let new_string = "abc😊aXXYYYd";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
         assert_eq!(input_edits.len(), 1);
         assert_eq!(input_edits[0].start_byte, 5 + 3); // 3 additional bytes for the emoji
         assert_eq!(input_edits[0].old_end_byte, 7 + 3); // 3 additional bytes for the emoji
@@ -273,9 +275,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_replace_beginning_of_file() {
-        let old_str = "let x = 1; console.log(x);";
-        let new_str = "const x = 1; console.log(x);";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "let x = 1; console.log(x);";
+        let new_string = "const x = 1; console.log(x);";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
 
         println!("{:#?}", &input_edits);
         assert_eq!(input_edits.len(), 1);
@@ -292,9 +294,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_replace_in_middle_of_line() {
-        let old_str = "fn test(XXX) {}";
-        let new_str = "fn test(a: u32) {}";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "fn test(XXX) {}";
+        let new_string = "fn test(a: u32) {}";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
 
         println!("{:#?}", &input_edits);
         assert_eq!(input_edits.len(), 1);
@@ -311,9 +313,9 @@ mod tests {
 
     #[test]
     fn test_detect_input_edits_replace_whole_line() {
-        let old_str = "fn test0(a: u32) {}\n//row\nfn test2(a: u32) {}";
-        let new_str = "fn test0(a: u32) {}\nfn test1(a: u32) {}\nfn test2(a: u32) {}";
-        let input_edits = detect_input_edits(&old_str.to_string(), &new_str.to_string());
+        let old_string = "fn test0(a: u32) {}\n//row\nfn test2(a: u32) {}";
+        let new_string = "fn test0(a: u32) {}\nfn test1(a: u32) {}\nfn test2(a: u32) {}";
+        let input_edits = detect_input_edits(&old_string.to_string(), &new_string.to_string());
 
         println!("{:#?}", &input_edits);
         assert_eq!(input_edits.len(), 1);
@@ -335,6 +337,8 @@ mod test_tree_sitter_logic {
     use pretty_assertions::assert_eq;
     use tree_sitter::{Parser, Point};
 
+    use crate::core_engine::syntax_tree::SwiftSyntaxTree;
+
     fn setup_swift_parser() -> Parser {
         let mut parser = Parser::new();
         parser
@@ -349,10 +353,10 @@ mod test_tree_sitter_logic {
         let text = "let x = 1; console.log(x);\n";
         //                |------------------------>| <- end column is zero on row 1
         //                                            <- end byte is one past the last byte (27), as they are also zero-based
-        let mut swift_parser = setup_swift_parser();
-        let tree = swift_parser.parse(text, None).unwrap();
+        let mut swift_parser = SwiftSyntaxTree::new();
+        swift_parser.parse(&text.to_string());
 
-        let root_node = tree.root_node();
+        let root_node = swift_parser.tree().unwrap().root_node();
 
         // println!("{:#?}", root_node.start_position());
         // println!("{:#?}", root_node.end_position());
