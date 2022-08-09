@@ -13,7 +13,7 @@
 		compute_bracket_highlight_box_rects,
 		compute_bracket_highlight_line_rect,
 		BORDER_WIDTH
-	} from './bracket_highlight';
+  } from './bracket_highlight';
 
 	type MatchId = string;
 
