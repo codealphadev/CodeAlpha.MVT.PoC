@@ -3,6 +3,7 @@ import type { BracketHighlightBracketPair } from '../../src-tauri/bindings/brack
 import type { BracketHighlightResults } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
 import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
+import type { BracketHighlightElbow } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightElbow';
 
 const THICKNESS_BASE = 20;
 const LEFT_MOST_LINE_X = 5;
@@ -43,6 +44,8 @@ export const compute_bracket_highlight_line_rect = (
 ): [MatchRectangle, MatchRectangle] => {
 	let lines_pair = bracket_results.lines;
 	const thickness = compute_bracket_highlight_thickness(bracket_results);
+
+	// Adjust positions to overlay
 	let first_line_rect = adjust_rectangle(
 		lines_pair.first ? lines_pair.first.rectangle : null,
 		outerPosition
@@ -51,6 +54,13 @@ export const compute_bracket_highlight_line_rect = (
 		lines_pair.last ? lines_pair.last.rectangle : null,
 		outerPosition
 	);
+	let elbow: BracketHighlightElbow = bracket_results.elbow
+		? {
+				origin_x: bracket_results.elbow.origin_x - outerPosition.x,
+				origin_x_left_most: bracket_results.elbow.origin_x_left_most,
+				bottom_line_top: bracket_results.elbow.bottom_line_top
+		  }
+		: null;
 
 	// Check if last and first bracket are visible
 	let is_last_bracket_visible = !!lines_pair.last;
@@ -125,10 +135,8 @@ export const compute_bracket_highlight_line_rect = (
 
 	let bottom_line_rectangle = null;
 
-	if (bracket_results.elbow) {
-		let elbow_x = bracket_results.elbow.origin_x_left_most
-			? LEFT_MOST_LINE_X
-			: bracket_results.elbow.origin_x - outerPosition.x;
+	if (elbow) {
+		let elbow_x = elbow.origin_x_left_most ? LEFT_MOST_LINE_X : elbow.origin_x;
 		line_rectangle.origin.x = elbow_x;
 		line_rectangle.size.width = first_line_rect.origin.x - elbow_x;
 		if (last_line_rect) {
@@ -138,12 +146,18 @@ export const compute_bracket_highlight_line_rect = (
 					y: last_line_rect.origin.y + last_line_rect.size.height - thickness
 				},
 				size: {
-					width: last_line_rect.origin.x - elbow_x,
+					width: last_line_rect.origin.x + thickness - elbow_x,
 					height: 0
 				}
 			};
 		}
 	}
+
+	if (elbow && elbow.bottom_line_top && last_line_rect) {
+		bottom_line_rectangle.origin.y = last_line_rect.origin.y;
+		line_rectangle.size.height -= last_line_rect.size.height - thickness;
+	}
+
 	return [line_rectangle, bottom_line_rectangle];
 };
 

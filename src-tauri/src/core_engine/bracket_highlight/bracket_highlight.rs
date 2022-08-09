@@ -20,7 +20,7 @@ use crate::{
 pub struct BracketHighlightElbow {
     origin_x: Option<f64>,
     origin_x_left_most: bool,
-    bottom_line_bottom: bool,
+    bottom_line_top: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -230,7 +230,6 @@ impl BracketHighlight {
 
         // Check if elbow is needed
         let mut elbow_origin_x = None;
-        let mut elbow_bottom_line_bottom = false;
         let mut elbow_origin_x_left_most = false;
         let mut elbow = None;
 
@@ -274,7 +273,7 @@ impl BracketHighlight {
         }
 
         let first_line_wrapped_rectangles =
-            rectanges_of_wrapped_line(line_positions.0.row, text_content, textarea_ui_element);
+            rectanges_of_wrapped_line(line_positions.0.row, &text_content, textarea_ui_element);
         if first_line_wrapped_rectangles.len() > 1 {
             if let (
                 Some(last_wrapped_line_rectangle),
@@ -294,16 +293,29 @@ impl BracketHighlight {
             }
         }
 
+        // Check if bottom line should be to the top or bottom of last line rectangle
+        let elbow_bottom_line_top = only_whitespace_on_line_until_position(
+            TextPosition {
+                row: line_positions.1.row,
+                column: if line_positions.1.column == 0 {
+                    0
+                } else {
+                    line_positions.1.column - 1
+                },
+            },
+            &text_content,
+        );
+
         if elbow_origin_x_left_most {
             elbow = Some(BracketHighlightElbow {
                 origin_x: None,
-                bottom_line_bottom: elbow_bottom_line_bottom,
+                bottom_line_top: elbow_bottom_line_top,
                 origin_x_left_most: true,
             });
         } else if let Some(elbow_origin_x) = elbow_origin_x {
             elbow = Some(BracketHighlightElbow {
                 origin_x: Some(elbow_origin_x),
-                bottom_line_bottom: elbow_bottom_line_bottom,
+                bottom_line_top: elbow_bottom_line_top,
                 origin_x_left_most: false,
             });
         }
@@ -422,7 +434,7 @@ fn get_match_range_of_first_and_last_char_in_node(
 
 fn rectanges_of_wrapped_line(
     row: usize,
-    content: String,
+    content: &String,
     textarea_ui_element: AXUIElement,
 ) -> Vec<MatchRectangle> {
     if let Some(is_wrapped) = is_text_of_line_wrapped(row, &textarea_ui_element) {
@@ -439,6 +451,17 @@ fn rectanges_of_wrapped_line(
     }
 
     vec![]
+}
+
+fn only_whitespace_on_line_until_position(position: TextPosition, text: &String) -> bool {
+    let text_clone = text.clone();
+    let row = &text_clone.lines().collect::<Vec<&str>>()[position.row][0..position.column];
+    for c in row.chars() {
+        if c != ' ' {
+            return false;
+        }
+    }
+    true
 }
 
 #[derive(Debug, PartialEq)]
@@ -508,7 +531,42 @@ fn get_left_most_column_in_rows(range: TextRange, text_content: &String) -> Opti
 
 #[cfg(test)]
 mod tests_bracket_highlight {
-    use crate::core_engine::rules::TextRange;
+    use crate::core_engine::rules::{TextPosition, TextRange};
+
+    use super::only_whitespace_on_line_until_position;
+
+    #[test]
+    fn test_only_whitespace_on_line_until_position() {
+        let text = "if (test) {
+          print(x)
+         }"
+        .to_string();
+        assert_eq!(
+            only_whitespace_on_line_until_position(TextPosition { row: 2, column: 9 }, &text),
+            true
+        );
+
+        let text_false = "if (test) {
+          print(x)
+         ss}"
+        .to_string();
+        assert_eq!(
+            only_whitespace_on_line_until_position(
+                TextPosition { row: 2, column: 11 },
+                &text_false
+            ),
+            false
+        );
+
+        let text_false = "if (test) { }".to_string();
+        assert_eq!(
+            only_whitespace_on_line_until_position(
+                TextPosition { row: 0, column: 12 },
+                &text_false
+            ),
+            false
+        );
+    }
 
     use super::{get_left_most_column_in_rows, LeftMostColumn};
 

@@ -3,5 +3,5 @@
 export interface BracketHighlightElbow {
   origin_x: number | null;
   origin_x_left_most: boolean;
-  bottom_line_bottom: boolean;
+  bottom_line_top: boolean;
 }
