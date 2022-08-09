@@ -330,5 +330,3 @@ mod tests {
         assert_eq!(input_edits[0].new_end_position.column, 19);
     }
 }
-}
->>>>>>> 92723af (Adding tests to 'detected_edits' function.)
