@@ -2,6 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, AXValue};
 use cocoa::appkit::CGPoint;
 use core_foundation::{base::CFRange, number::CFNumber};
 use core_graphics_types::geometry::{CGRect, CGSize};
+use std::convert::TryFrom;
 
 use crate::{
     ax_interaction::derive_xcode_textarea_dimensions,
@@ -23,9 +24,9 @@ pub fn calc_rectangles_and_line_matches(
     // 2. Break up match range into individual matches that only span one line in the editor
     let mut current_match_index = match_range.range.index;
     while let Some(line_number) =
-        get_line_number_for_range_index(current_match_index as i64, &textarea_ui_element)
+        get_line_number_for_range_index(current_match_index, &textarea_ui_element)
     {
-        if let Some(current_line_range) = get_char_range_of_line(line_number, &textarea_ui_element)
+        if let Some(current_line_range) = get_text_range_of_line(line_number, &textarea_ui_element)
         {
             let matched_char_range = TextRange {
                 index: current_match_index,
@@ -69,7 +70,7 @@ pub fn calc_rectangles_and_line_matches(
         // Check if line_match_range actually wraps into multiple lines
         // due to activated 'wrap lines' in XCode (default is on)
         if let Some((range_is_wrapping, wrapped_line_number)) =
-            is_text_of_line_wrapped(&line_match_range.range, &textarea_ui_element)
+            is_text_of_range_wrapped(&line_match_range.range, &textarea_ui_element)
         {
             if !range_is_wrapping {
                 if let Some(line_match_rect) =
@@ -212,7 +213,7 @@ pub fn calc_match_rects_for_wrapped_range(
 /// Returns:
 ///
 /// A tuple of bool and usize
-pub fn is_text_of_line_wrapped(
+pub fn is_text_of_range_wrapped(
     range: &TextRange,
     textarea_ui_element: &AXUIElement,
 ) -> Option<(bool, usize)> {
@@ -228,6 +229,17 @@ pub fn is_text_of_line_wrapped(
         } else {
             None
         }
+    } else {
+        None
+    }
+}
+
+pub fn is_text_of_line_wrapped(
+    line: usize,
+    textarea_ui_element: &AXUIElement,
+) -> Option<(bool, usize)> {
+    if let Some(line_text_range) = get_text_range_of_line(line, &textarea_ui_element) {
+        is_text_of_range_wrapped(&line_text_range, &textarea_ui_element)
     } else {
         None
     }
@@ -274,14 +286,19 @@ pub fn calc_line_count_of_char_range(
 ///
 /// The line number for the given range index.
 pub fn get_line_number_for_range_index(
-    range_index: i64,
+    range_index: usize,
     textarea_ui_element: &AXUIElement,
-) -> Option<i64> {
+) -> Option<usize> {
     if let Ok(line_number) = textarea_ui_element.parameterized_attribute(
         &AXAttribute::line_for_index(),
         &CFNumber::from(range_index as i64),
     ) {
-        line_number.to_i64()
+        if let Some(line_number) = line_number.to_i64() {
+            if let Ok(line_number) = usize::try_from(line_number) {
+                return Some(line_number);
+            }
+        }
+        None
     } else {
         None
     }
@@ -299,8 +316,8 @@ pub fn get_line_number_for_range_index(
 /// Returns:
 ///
 /// A TextRange representing the character range of that line.
-pub fn get_char_range_of_line(
-    line_number: i64,
+pub fn get_text_range_of_line(
+    line_number: usize,
     textarea_ui_element: &AXUIElement,
 ) -> Option<TextRange> {
     if let Ok(line_char_range_as_axval) = textarea_ui_element.parameterized_attribute(

@@ -5,6 +5,7 @@ import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalP
 import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 
 const THICKNESS_BASE = 20;
+const LEFT_MOST_LINE_X = 5;
 
 export const compute_bracket_highlight_thickness = (bracket_results: BracketHighlightResults) => {
 	let height = THICKNESS_BASE;
@@ -18,7 +19,7 @@ export const compute_bracket_highlight_thickness = (bracket_results: BracketHigh
 		height += bracket_results.boxes.last.rectangle.size.height;
 	}
 
-	return Math.floor(height / THICKNESS_BASE);
+	return 1; //Math.floor(height / THICKNESS_BASE);
 };
 
 export const compute_bracket_highlight_box_rects = (
@@ -50,13 +51,11 @@ export const compute_bracket_highlight_line_rect = (
 		lines_pair.last ? lines_pair.last.rectangle : null,
 		outerPosition
 	);
-	let elbow_x = bracket_results.lines_elbow_x
-		? bracket_results.lines_elbow_x - outerPosition.x
-		: null;
+
 	// Check if last and first bracket are visible
-	let is_last_bracket_visible = !!lines_pair.last; // TODO: check if last bracket is visible
+	let is_last_bracket_visible = !!lines_pair.last;
 	let is_on_same_line =
-		lines_pair.first && lines_pair.last && first_line_rect.origin.y === last_line_rect.origin.y;
+		first_line_rect && last_line_rect && first_line_rect.origin.y === last_line_rect.origin.y;
 
 	let line_rectangle = null;
 	if (is_on_same_line) {
@@ -76,11 +75,11 @@ export const compute_bracket_highlight_line_rect = (
 				// Only first bracket is visible
 				line_rectangle = {
 					origin: {
-						x: 5,
+						x: LEFT_MOST_LINE_X,
 						y: first_line_rect.origin.y + first_line_rect.size.height - thickness
 					},
 					size: {
-						width: first_line_rect.origin.x - 5 + first_line_rect.size.width,
+						width: first_line_rect.origin.x - LEFT_MOST_LINE_X + first_line_rect.size.width,
 						height: outerSize.height - first_line_rect.origin.y + first_line_rect.size.height
 					}
 				};
@@ -88,7 +87,7 @@ export const compute_bracket_highlight_line_rect = (
 				// no brackets visible
 				line_rectangle = {
 					origin: {
-						x: 5,
+						x: LEFT_MOST_LINE_X,
 						y: 0
 					},
 					size: {
@@ -109,7 +108,7 @@ export const compute_bracket_highlight_line_rect = (
 					height: outerSize.height - last_line_rect.origin.y
 				}
 			};
-		} else {
+		} else if (first_line_rect && last_line_rect) {
 			// Both brackets visible
 			line_rectangle = {
 				origin: {
@@ -125,7 +124,11 @@ export const compute_bracket_highlight_line_rect = (
 	}
 
 	let bottom_line_rectangle = null;
-	if (elbow_x) {
+
+	if (bracket_results.elbow) {
+		let elbow_x = bracket_results.elbow.origin_x_left_most
+			? LEFT_MOST_LINE_X
+			: bracket_results.elbow.origin_x - outerPosition.x;
 		line_rectangle.origin.x = elbow_x;
 		line_rectangle.size.width = first_line_rect.origin.x - elbow_x;
 		if (last_line_rect) {
@@ -145,9 +148,10 @@ export const compute_bracket_highlight_line_rect = (
 };
 
 const adjust_rectangle = (rectangle: MatchRectangle, position: LogicalPosition) => {
-	if (!rectangle) {
+	if (!rectangle || !position) {
 		return null;
 	}
+
 	return {
 		origin: {
 			x: rectangle.origin.x - position.x,

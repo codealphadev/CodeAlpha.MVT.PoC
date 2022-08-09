@@ -2,6 +2,6 @@
 import type { BracketHighlightBracket } from "./BracketHighlightBracket";
 
 export interface BracketHighlightBracketPair {
-  first: BracketHighlightBracket;
-  last: BracketHighlightBracket;
+  first: BracketHighlightBracket | null;
+  last: BracketHighlightBracket | null;
 }

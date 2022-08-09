@@ -6,13 +6,24 @@ use ts_rs::TS;
 use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::{
-        ax_utils::{calc_rectangles_and_line_matches, get_bounds_of_TextRange},
+        ax_utils::{
+            calc_rectangles_and_line_matches, get_bounds_of_TextRange, get_text_range_of_line,
+            is_text_of_line_wrapped,
+        },
         rules::{get_index_of_next_row, MatchRange, TextPosition, TextRange},
         types::MatchRectangle,
     },
 };
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/bracket_highlight/")]
+pub struct BracketHighlightElbow {
+    origin_x: Option<f64>,
+    origin_x_left_most: bool,
+    bottom_line_bottom: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/bracket_highlight/")]
 pub struct BracketHighlightBracket {
     text_range: TextRange,
@@ -20,7 +31,7 @@ pub struct BracketHighlightBracket {
     rectangle: MatchRectangle,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/bracket_highlight/")]
 pub struct BracketHighlightBracketPair {
     first: Option<BracketHighlightBracket>,
@@ -58,11 +69,11 @@ impl BracketHighlightBracketPair {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/bracket_highlight/")]
 pub struct BracketHighlightResults {
     lines: BracketHighlightBracketPair,
-    lines_elbow_x: Option<f64>,
+    elbow: Option<BracketHighlightElbow>,
     boxes: BracketHighlightBracketPair,
 }
 
@@ -174,8 +185,8 @@ impl BracketHighlight {
                         &text_content,
                     );
                     line_positions = (
-                        TextPosition::from_TSPoint(&code_block_node.start_position()),
-                        TextPosition::from_TSPoint(&code_block_node.end_position()),
+                        TextPosition::from_TSPoint(&code_block_parent_node.start_position()),
+                        TextPosition::from_TSPoint(&code_block_parent_node.end_position()),
                     );
                 }
             }
@@ -192,7 +203,6 @@ impl BracketHighlight {
             };
 
         // Get rectangles from the match ranges
-
         let (first_line_rectangle, last_line_rectangle, first_box_rectangle, last_box_rectangle) = (
             rectangles_from_match_range(&line_brackets_match_range.0, &textarea_ui_element),
             rectangles_from_match_range(&line_brackets_match_range.1, &textarea_ui_element),
@@ -203,10 +213,10 @@ impl BracketHighlight {
         let line_pair = BracketHighlightBracketPair::new(
             line_brackets_match_range.0.range,
             first_line_rectangle,
-            line_positions.clone().0,
+            line_positions.0,
             line_brackets_match_range.1.range,
             last_line_rectangle,
-            line_positions.clone().1,
+            line_positions.1,
         );
 
         let box_pair = BracketHighlightBracketPair::new(
@@ -219,8 +229,14 @@ impl BracketHighlight {
         );
 
         // Check if elbow is needed
-        let mut lines_elbow_x = None;
-        if line_positions.0.row != line_positions.1.row {
+        let mut elbow_origin_x = None;
+        let mut elbow_bottom_line_bottom = false;
+        let mut elbow_origin_x_left_most = false;
+        let mut elbow = None;
+
+        // Elbow needed because the open and closing bracket are on different lines
+        let is_line_on_same_row = line_positions.0.row == line_positions.1.row;
+        if !is_line_on_same_row {
             let first_line_bracket_range = line_brackets_match_range.0.range.clone();
             if let Some(next_row_index) =
                 get_index_of_next_row(first_line_bracket_range.index, &text_content)
@@ -240,23 +256,61 @@ impl BracketHighlight {
                             },
                             &textarea_ui_element,
                         ),
-                        line_pair.clone().last,
+                        line_pair.last,
                     ) {
                         if line_pair_last.rectangle.origin.x > elbow_match_rectangle.origin.x {
-                            lines_elbow_x = Some(elbow_match_rectangle.origin.x);
+                            // Closing bracket is further to the right than the elbow point
+                            elbow_origin_x = Some(elbow_match_rectangle.origin.x);
                         }
                         if let Some(first_line_rectangle) = first_line_rectangle {
                             if first_line_rectangle.origin.x < elbow_match_rectangle.origin.x {
-                                lines_elbow_x = Some(first_line_rectangle.origin.x);
+                                // Opening bracket is further to the left than the elbow point
+                                elbow_origin_x = Some(first_line_rectangle.origin.x);
                             }
                         }
                     }
                 }
             }
         }
+
+        let first_line_wrapped_rectangles =
+            rectanges_of_wrapped_line(line_positions.0.row, text_content, textarea_ui_element);
+        if first_line_wrapped_rectangles.len() > 1 {
+            if let (
+                Some(last_wrapped_line_rectangle),
+                Some(first_line_rectangle),
+                Some(last_line_rectangle),
+            ) = (
+                first_line_wrapped_rectangles.last(),
+                first_line_rectangle,
+                last_line_rectangle,
+            ) {
+                if last_wrapped_line_rectangle.origin.y != first_line_rectangle.origin.y
+                    && last_line_rectangle.origin.y != first_line_rectangle.origin.y
+                {
+                    // Elbow most to the right because open bracket is not at the end of a wrapped line
+                    elbow_origin_x_left_most = true;
+                }
+            }
+        }
+
+        if elbow_origin_x_left_most {
+            elbow = Some(BracketHighlightElbow {
+                origin_x: None,
+                bottom_line_bottom: elbow_bottom_line_bottom,
+                origin_x_left_most: true,
+            });
+        } else if let Some(elbow_origin_x) = elbow_origin_x {
+            elbow = Some(BracketHighlightElbow {
+                origin_x: Some(elbow_origin_x),
+                bottom_line_bottom: elbow_bottom_line_bottom,
+                origin_x_left_most: false,
+            });
+        }
+
         self.results = Some(BracketHighlightResults {
             lines: line_pair,
-            lines_elbow_x,
+            elbow,
             boxes: box_pair,
         });
     }
@@ -364,6 +418,27 @@ fn get_match_range_of_first_and_last_char_in_node(
     } else {
         None
     }
+}
+
+fn rectanges_of_wrapped_line(
+    row: usize,
+    content: String,
+    textarea_ui_element: AXUIElement,
+) -> Vec<MatchRectangle> {
+    if let Some(is_wrapped) = is_text_of_line_wrapped(row, &textarea_ui_element) {
+        if is_wrapped.0 {
+            // line is wrapped
+            if let Some(text_range) = get_text_range_of_line(row, &textarea_ui_element) {
+                if let Some(match_range) = MatchRange::from_text_and_range(&content, text_range) {
+                    let (rectangles, _) =
+                        calc_rectangles_and_line_matches(&match_range, &textarea_ui_element);
+                    return rectangles;
+                }
+            }
+        }
+    }
+
+    vec![]
 }
 
 #[derive(Debug, PartialEq)]

@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 /// A position in a multi-line text document, in terms of rows and columns.
 /// Rows and columns are zero-based.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct TextPosition {
     pub row: usize,
@@ -243,7 +243,7 @@ impl TextRange {
             return Some(TextRange::from_StartEndIndex(start_index, end_index));
         } else {
             return None;
-          }
+        }
     }
 
     pub fn from_StartEndTSPoint(
