@@ -14,7 +14,7 @@ fn bad_code_block_kinds() -> Vec<&'static str> {
         "for_statement",
         "guard_statement",
         "if_statement",
-        // "switch_entry", // case uses : instead of {
+        // "switch_entry", // 'case' uses : instead of {
         "switch_statement",
         "while_statement",
     ]
