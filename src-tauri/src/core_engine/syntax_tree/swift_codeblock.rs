@@ -2,17 +2,9 @@ use std::str::FromStr;
 
 use tree_sitter::Node;
 
-use crate::{
-    ax_interaction::{derive_xcode_textarea_dimensions, get_textarea_uielement},
-    core_engine::{
-        ax_utils::get_bounds_of_TextRange,
-        rules::{TextPosition, TextRange},
-        types::MatchRectangle,
-    },
-    utils::geometry::{LogicalPosition, LogicalSize},
-};
+use crate::core_engine::rules::TextPosition;
 
-type Err = ();
+pub type Err = ();
 
 pub enum SwiftCodeBlockType {
     For,
@@ -48,7 +40,7 @@ impl FromStr for SwiftCodeBlockType {
 pub struct SwiftCodeBlock<'a> {
     pub text: String,
     pub codeblock_type: SwiftCodeBlockType,
-    pub node: Node<'a>,
+    node: Node<'a>,
 }
 
 impl<'a> SwiftCodeBlock<'a> {
@@ -62,84 +54,19 @@ impl<'a> SwiftCodeBlock<'a> {
         })
     }
 
-    pub fn get_codeblock_node_bounds(&self, pid: i32) -> Option<MatchRectangle> {
-        // 1. Get textarea dimensions
-        let textarea_ui_element = if let Some(elem) = get_textarea_uielement(pid) {
-            elem
-        } else {
-            return None;
-        };
-
-        let (textarea_origin, textarea_size) =
-            if let Ok((origin, size)) = derive_xcode_textarea_dimensions(&textarea_ui_element) {
-                (origin, size)
-            } else {
-                return None;
-            };
-
-        // 2. Get codeblock dimensions
-        let codeblock_first_char_pos =
-            TextPosition::from_TSPoint(&self.node.start_position()).as_TextIndex(&self.text);
-        let codeblock_last_char_pos =
-            TextPosition::from_TSPoint(&self.node.end_position()).as_TextIndex(&self.text);
-
-        if let (Some(first_char_pos), Some(last_char_pos)) =
-            (codeblock_first_char_pos, codeblock_last_char_pos)
-        {
-            let first_char_bounds = get_bounds_of_TextRange(
-                &TextRange {
-                    index: first_char_pos,
-                    length: 0,
-                },
-                &textarea_ui_element,
-            );
-            let last_char_bounds = get_bounds_of_TextRange(
-                &TextRange {
-                    index: last_char_pos,
-                    length: 0,
-                },
-                &textarea_ui_element,
-            );
-
-            if let (Some(first_char_bounds), Some(last_char_bounds)) =
-                (first_char_bounds, last_char_bounds)
-            {
-                let codeblock_bounds = MatchRectangle {
-                    origin: LogicalPosition {
-                        x: textarea_origin.x,
-                        y: first_char_bounds.origin.y,
-                    },
-                    size: LogicalSize {
-                        width: textarea_size.width,
-                        height: last_char_bounds.origin.y - first_char_bounds.origin.y,
-                    },
-                };
-                return Some(codeblock_bounds);
-            }
-        }
-
-        None
+    pub fn get_first_char_position(&self) -> TextPosition {
+        TextPosition::from_TSPoint(&self.node.start_position())
     }
 
-    pub fn get_height_of_single_char(&self, pid: i32) -> Option<MatchRectangle> {
-        let textarea_ui_element = if let Some(elem) = get_textarea_uielement(pid) {
-            elem
+    pub fn get_last_char_position(&self) -> TextPosition {
+        TextPosition::from_TSPoint(&self.node.end_position())
+    }
+
+    pub fn get_codeblock_text(&self) -> Option<String> {
+        if let Ok(codeblock_text) = self.node.utf8_text(self.text.as_bytes()) {
+            Some(codeblock_text.to_string())
         } else {
-            return None;
-        };
-
-        if let Some(first_char_text_pos) =
-            TextPosition::from_TSPoint(&self.node.start_position()).as_TextIndex(&self.text)
-        {
-            return get_bounds_of_TextRange(
-                &TextRange {
-                    index: first_char_text_pos,
-                    length: 0,
-                },
-                &textarea_ui_element,
-            );
+            None
         }
-
-        None
     }
 }

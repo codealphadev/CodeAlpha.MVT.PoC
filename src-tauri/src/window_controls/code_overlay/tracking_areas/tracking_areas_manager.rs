@@ -86,6 +86,7 @@ impl TrackingAreasManager {
                 .iter()
                 .any(|rectangle| rectangle.contains_point(mouse_x, mouse_y))
             {
+                println!("Mouse is in tracking area: {:?}", tracking_area.0.id);
                 if let Some(tracking_start) = tracking_area.1 {
                     // Case: TrackingArea was already entered before.
                     if check_overlap_with_other_app_windows(mouse_x, mouse_y) {
@@ -153,6 +154,8 @@ impl TrackingAreasManager {
                 .iter()
                 .any(|rectangle| rectangle.contains_point(mouse_x, mouse_y))
             {
+                println!("Mouse clicking tracking area: {:?}", tracking_area.0.id);
+
                 if let Some(tracking_start) = tracking_area.1 {
                     tracking_results.push((
                         tracking_area.0.clone(),
@@ -201,7 +204,9 @@ impl TrackingAreasManager {
                         })
                         .publish_to_tauri(&self.app_handle);
                     }
-                    TrackingEvent::MouseMoved => {}
+                    TrackingEvent::MouseMoved => {
+                        // We don't see a use case for this at the moment. Hovering is detecting by the entering message.
+                    }
                     TrackingEvent::MouseClicked => {
                         let duration_ms = if let Some(duration_ms) = tracking_area.2 {
                             duration_ms
@@ -311,7 +316,7 @@ impl TrackingAreasManager {
             Err(poisoned) => poisoned.into_inner(),
         });
 
-        if click_msg.button == MouseButton::Left && click_msg.click_type == ClickType::Up {
+        if click_msg.button == MouseButton::Left && click_msg.click_type == ClickType::Down {
             tracking_area_manager
                 .track_mouse_click(click_msg.cursor_position.x, click_msg.cursor_position.y);
         }

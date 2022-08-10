@@ -1,6 +1,9 @@
+use std::sync::{Arc, Mutex};
+
 use super::{
     bracket_highlight::BracketHighlight,
     events::EventRuleExecutionState,
+    features::DocsGenerator,
     formatter::format_swift_file,
     rules::{
         RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
@@ -54,6 +57,9 @@ pub struct CodeDocument {
     selected_text_range: Option<TextRange>,
 
     bracket_highlight: BracketHighlight,
+
+    /// The module that manages the generation of documentation for this code document.
+    docs_generator: Arc<Mutex<DocsGenerator>>,
 }
 
 impl CodeDocument {
@@ -63,6 +69,12 @@ impl CodeDocument {
     ) -> CodeDocument {
         let swift_syntax_tree = SwiftSyntaxTree::new();
         let editor_window_props_clone = editor_window_props.clone();
+
+        let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(
+            editor_window_props_clone.pid,
+        )));
+        DocsGenerator::start_listener_window_control_events(&app_handle, &docs_generator_arc);
+
         CodeDocument {
             app_handle,
             rules: vec![RuleType::SearchRule(SearchRule::new())],
@@ -71,12 +83,8 @@ impl CodeDocument {
             file_path: None,
             swift_syntax_tree,
             selected_text_range: None,
-            bracket_highlight: BracketHighlight::new(
-                None,
-                None,
-                None,
-                editor_window_props_clone.pid,
-            ),
+            bracket_highlight: BracketHighlight::new(editor_window_props_clone.pid),
+            docs_generator: docs_generator_arc,
         }
     }
 
@@ -87,18 +95,18 @@ impl CodeDocument {
     pub fn update_doc_properties(&mut self, new_content: &String, file_path: &Option<String>) {
         let is_file_path_updated = self.is_file_path_updated(file_path);
         let is_file_text_updated = self.is_file_text_updated(new_content);
-        if is_file_path_updated {
-            self.swift_syntax_tree.reset();
-            self.file_path = file_path.clone();
-        }
+
         if !is_file_path_updated && !is_file_text_updated {
             // Return early if the file path and text did not change
             return;
         }
 
         self.swift_syntax_tree.parse(new_content);
-        self.text = Some(new_content.clone());
 
+        self.text = Some(new_content.clone());
+        self.file_path = file_path.clone();
+
+        // Update Rule Properties
         for rule in self.rules_mut() {
             match rule {
                 RuleType::SearchRule(rule) => rule.update_properties(SearchRuleProps {
@@ -113,10 +121,13 @@ impl CodeDocument {
             }
         }
 
+        // Update text content in features
         self.bracket_highlight.update_content(
             self.swift_syntax_tree.get_tree_copy(),
             Some(new_content.to_string()),
-        )
+        );
+
+        (*self.docs_generator.lock().unwrap()).update_content(new_content);
     }
 
     pub fn process_rules(&mut self) {
@@ -134,6 +145,18 @@ impl CodeDocument {
             &ChannelList::BracketHighlightResults.to_string(),
             &self.bracket_highlight.get_results(),
         );
+    }
+
+    pub fn update_docs_gen_annotation_visualization(&mut self) {
+        (*self.docs_generator.lock().unwrap()).update_visualization();
+    }
+
+    pub fn deactivate_features(&mut self) {
+        (*self.docs_generator.lock().unwrap()).clear_docs_generation_tasks();
+    }
+
+    pub fn activate_features(&mut self) {
+        // Nothing yet
     }
 
     pub fn compute_rule_visualizations(&mut self) {
@@ -162,7 +185,11 @@ impl CodeDocument {
 
     pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
         let text_range = Some(TextRange { length, index });
-        self.selected_text_range = text_range.clone();
+        self.selected_text_range = text_range;
+
+        (*self.docs_generator.lock().unwrap())
+            .update_selected_text_range(&TextRange { length, index });
+
         self.bracket_highlight
             .update_selected_text_range(text_range);
 
@@ -172,7 +199,6 @@ impl CodeDocument {
             self.text.as_ref(),
         ) {
             if content_text != *text {
-                // self.swift_syntax_tree = SwiftSyntaxTree::new();
                 self.swift_syntax_tree.parse(&content_text);
                 self.bracket_highlight
                     .update_content(self.swift_syntax_tree.get_tree_copy(), Some(content_text));

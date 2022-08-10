@@ -19,8 +19,8 @@ pub fn rectangles_from_match_range(
     }
 }
 
-pub fn get_code_block_parent(node_input: Node) -> Option<Node> {
-    let code_block_kinds = vec![
+pub fn get_codeblock_parent(node_input: Node) -> Option<Node> {
+    let codeblock_kinds = vec![
         "array_literal",
         "array_type",
         "catch_block",
@@ -48,7 +48,7 @@ pub fn get_code_block_parent(node_input: Node) -> Option<Node> {
     let mut parent_node = None;
 
     loop {
-        if code_block_kinds.contains(&node.kind()) {
+        if codeblock_kinds.contains(&node.kind()) {
             parent_node = Some(node);
             break;
         }

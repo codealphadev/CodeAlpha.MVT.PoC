@@ -3,13 +3,12 @@ use std::{
     io::Write,
     path::PathBuf,
     process::{Command, Stdio},
-    str::FromStr,
 };
-use tree_sitter::{Node, Parser, Point, Tree};
+use tree_sitter::{Parser, Point, Tree};
 
 use crate::core_engine::rules::TextRange;
 
-use super::{swift_codeblock::SwiftCodeBlock, SwiftCodeBlockType};
+use super::swift_codeblock::SwiftCodeBlock;
 
 pub struct SwiftSyntaxTree {
     tree_sitter_parser: Parser,
@@ -33,7 +32,7 @@ impl SwiftSyntaxTree {
         }
     }
 
-    pub fn reset(&mut self) {
+    pub fn _reset(&mut self) {
         self.tree_sitter_tree = None;
         self.content = None;
     }
@@ -62,11 +61,9 @@ impl SwiftSyntaxTree {
             // }
 
             // updated_tree = self.tree_sitter_parser.parse(content, Some(old_tree));
-            println!("Parsing old tree");
             updated_tree = self.tree_sitter_parser.parse(content, None);
         } else {
             updated_tree = self.tree_sitter_parser.parse(content, None);
-            println!("Parsing new tree");
         }
 
         if updated_tree.is_some() {

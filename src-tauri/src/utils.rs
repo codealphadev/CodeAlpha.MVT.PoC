@@ -80,6 +80,7 @@ pub mod messaging {
         EventTrackingAreas,
         EventUserInteractions,
         EventWindowControls,
+        EventDocsGeneration,
         RuleResults,
     }
     impl fmt::Display for ChannelList {
@@ -93,6 +94,7 @@ pub mod messaging {
                 ChannelList::EventTrackingAreas => write!(f, "EventTrackingAreas"),
                 ChannelList::EventUserInteractions => write!(f, "EventUserInteractions"),
                 ChannelList::EventWindowControls => write!(f, "EventWindowControls"),
+                ChannelList::EventDocsGeneration => write!(f, "EventDocsGeneration"),
                 ChannelList::RuleResults => write!(f, "RuleResults"),
             }
         }

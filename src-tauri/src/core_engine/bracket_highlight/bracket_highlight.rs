@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::utils::{
-    get_code_block_parent, get_left_most_column_in_rows,
+    get_codeblock_parent, get_left_most_column_in_rows,
     get_match_range_of_first_and_last_char_in_node, only_whitespace_on_line_until_position,
     rectanges_of_wrapped_line, rectangles_from_match_range,
 };
@@ -88,17 +88,12 @@ pub struct BracketHighlight {
 }
 
 impl BracketHighlight {
-    pub fn new(
-        selected_text_range: Option<TextRange>,
-        swift_syntax_tree: Option<Tree>,
-        text_content: Option<String>,
-        window_pid: i32,
-    ) -> Self {
+    pub fn new(window_pid: i32) -> Self {
         Self {
             results: None,
-            selected_text_range,
-            swift_syntax_tree,
-            text_content,
+            selected_text_range: None,
+            swift_syntax_tree: None,
+            text_content: None,
             window_pid,
         }
     }
@@ -158,37 +153,37 @@ impl BracketHighlight {
         // );
         // println!("unnamed_node: {:?}", unnamed_node.unwrap());
 
-        let code_block_node = if let Some(code_block_node) = get_code_block_parent(selected_node) {
-            code_block_node
+        let codeblock_node = if let Some(codeblock_node) = get_codeblock_parent(selected_node) {
+            codeblock_node
         } else {
             self.results = None;
             return;
         };
-        // println!("code_block_node: {:?}", code_block_node);
+        // println!("codeblock_node: {:?}", codeblock_node);
 
         let mut line_brackets_match_range =
-            get_match_range_of_first_and_last_char_in_node(&code_block_node, &text_content);
+            get_match_range_of_first_and_last_char_in_node(&codeblock_node, &text_content);
         let mut line_positions = (
-            TextPosition::from_TSPoint(&code_block_node.start_position()),
-            TextPosition::from_TSPoint(&code_block_node.end_position()),
+            TextPosition::from_TSPoint(&codeblock_node.start_position()),
+            TextPosition::from_TSPoint(&codeblock_node.end_position()),
         );
         let box_brackets_match_range = line_brackets_match_range.clone();
         let box_positions = line_positions.clone();
 
         // Get line bounds of parent
         let is_touching_left_first_char =
-            selected_text_range.index == code_block_node.range().start_byte;
+            selected_text_range.index == codeblock_node.range().start_byte;
 
         if is_touching_left_first_char {
-            if let Some(parent_node) = code_block_node.clone().parent() {
-                if let Some(code_block_parent_node) = get_code_block_parent(parent_node) {
+            if let Some(parent_node) = codeblock_node.clone().parent() {
+                if let Some(codeblock_parent_node) = get_codeblock_parent(parent_node) {
                     line_brackets_match_range = get_match_range_of_first_and_last_char_in_node(
-                        &code_block_parent_node,
+                        &codeblock_parent_node,
                         &text_content,
                     );
                     line_positions = (
-                        TextPosition::from_TSPoint(&code_block_parent_node.start_position()),
-                        TextPosition::from_TSPoint(&code_block_parent_node.end_position()),
+                        TextPosition::from_TSPoint(&codeblock_parent_node.start_position()),
+                        TextPosition::from_TSPoint(&codeblock_parent_node.end_position()),
                     );
                 }
             }
