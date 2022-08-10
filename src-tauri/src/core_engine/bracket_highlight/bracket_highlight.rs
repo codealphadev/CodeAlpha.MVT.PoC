@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::utils::{
-    get_code_block_parent, get_left_most_column_in_rows,
+    get_codeblock_parent, get_left_most_column_in_rows,
     get_match_range_of_first_and_last_char_in_node, only_whitespace_on_line_until_position,
     rectanges_of_wrapped_line, rectangles_from_match_range,
 };
