@@ -1,11 +1,18 @@
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use ts_rs::TS;
 
 use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+use super::models::{CodeAnnotationMessage, DocsGeneratedMessage};
+
+#[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[serde(tag = "event", content = "payload")]
-pub enum EventDocsGeneration {}
+#[ts(export, export_to = "bindings/features/docs_generation/")]
+pub enum EventDocsGeneration {
+    CodeAnnotations(CodeAnnotationMessage),
+    DocsGenerated(DocsGeneratedMessage),
+}
 
 impl EventDocsGeneration {
     pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {

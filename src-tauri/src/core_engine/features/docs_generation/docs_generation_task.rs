@@ -3,6 +3,10 @@ use crate::{
     ax_interaction::{derive_xcode_textarea_dimensions, get_textarea_uielement},
     core_engine::{
         ax_utils::get_bounds_of_TextRange,
+        events::{
+            models::{CodeAnnotationMessage, DocsGeneratedMessage},
+            EventDocsGeneration, EventRuleExecutionState,
+        },
         rules::{TextPosition, TextRange},
         types::MatchRectangle,
     },
@@ -73,11 +77,29 @@ impl DocsGenerationTask {
 
     pub fn generate_documentation(&mut self) {
         self.task_state = DocsGenerationTaskState::Processing;
+        EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
+
+        let task_id = if let Some(id) = self.id() {
+            id
+        } else {
+            return;
+        };
 
         println!(
             "Generating documentation for codeblock: {:?}",
             self.codeblock_text
         );
+
+        // Publish annotation_rect and codeblock_rect to frontend
+        EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
+            id: task_id,
+            text: self.codeblock_text.clone(),
+        })
+        .publish_to_tauri(&app_handle());
+
+        // Notifiy the frontend that the file has been formatted successfully
+        EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
+        self.task_state = DocsGenerationTaskState::Finished;
     }
 
     pub fn create_code_annotation(&mut self, text: &String) -> bool {
@@ -102,7 +124,12 @@ impl DocsGenerationTask {
                 EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
 
                 // Publish annotation_rect and codeblock_rect to frontend
-                // todo!("Publish annotation_rect and codeblock_rect to frontend");
+                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+                    id: tracking_area.id,
+                    annotation_icon: Some(annotation_rect),
+                    annotation_codeblock: Some(codeblock_rect),
+                })
+                .publish_to_tauri(&app_handle());
 
                 self.tracking_area = Some(tracking_area);
                 self.task_state = DocsGenerationTaskState::Prepared;
@@ -119,6 +146,14 @@ impl DocsGenerationTask {
                     event_subscriptions: TrackingEventSubscription::None,
                 };
                 EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
+
+                // Publish this empty message ensures no ghost annotations are shown from previous tasks
+                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+                    id: tracking_area.id,
+                    annotation_icon: None,
+                    annotation_codeblock: None,
+                })
+                .publish_to_tauri(&app_handle());
 
                 self.tracking_area = Some(tracking_area);
                 self.task_state = DocsGenerationTaskState::Prepared;
@@ -156,7 +191,13 @@ impl DocsGenerationTask {
                     .publish_to_tauri(&app_handle());
 
                 // Publish annotation_rect and codeblock_rect to frontend
-                // todo!("Publish annotation_rect and codeblock_rect to frontend");
+                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+                    id: tracking_area.id,
+                    annotation_icon: Some(annotation_rect),
+                    annotation_codeblock: Some(codeblock_rect),
+                })
+                .publish_to_tauri(&app_handle());
+
                 true
             } else {
                 // Update the tracking area
@@ -165,6 +206,14 @@ impl DocsGenerationTask {
 
                 EventTrackingArea::Update(vec![tracking_area.clone()])
                     .publish_to_tauri(&app_handle());
+
+                // Hide the annotation_icon and annotation_codeblock from the frontend
+                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+                    id: tracking_area.id,
+                    annotation_icon: None,
+                    annotation_codeblock: None,
+                })
+                .publish_to_tauri(&app_handle());
 
                 true
             }
@@ -176,7 +225,12 @@ impl DocsGenerationTask {
             self.task_state = DocsGenerationTaskState::Canceled;
 
             // Remove the annotation from the frontend
-            // todo!("Remove the annotation from the frontend");
+            EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+                id: self.tracking_area.as_ref().unwrap().id,
+                annotation_icon: None,
+                annotation_codeblock: None,
+            })
+            .publish_to_tauri(&app_handle());
 
             false
         }
@@ -278,9 +332,6 @@ impl Drop for DocsGenerationTask {
     fn drop(&mut self) {
         if let Some(tracking_area) = self.tracking_area.as_ref() {
             EventTrackingArea::Remove(vec![tracking_area.id]).publish_to_tauri(&app_handle());
-
-            // Remove the annotation from the frontend
-            // todo!("Drop DocsGenerationTask: Remove the annotation from the frontend");
         }
     }
 }
