@@ -6,7 +6,7 @@ use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::{
         ax_utils::get_bounds_of_TextRange,
-        bracket_highlight::utils::length_to_bad_code_block_start,
+        bracket_highlight::utils::length_to_code_block_body_start,
         rules::{get_index_of_next_row, TextPosition, TextRange},
         types::MatchRectangle,
     },
@@ -160,7 +160,7 @@ impl BracketHighlight {
             return;
         };
 
-        let length_to_bad_code_block_start = length_to_bad_code_block_start(
+        let length_to_bad_code_block_start = length_to_code_block_body_start(
             &code_block_node,
             &text_content,
             selected_text_range.index,
@@ -195,8 +195,7 @@ impl BracketHighlight {
         let box_brackets_match_range = line_brackets_match_range.clone();
         let box_positions = line_positions.clone();
 
-        // Get line bounds of parent
-        let mut is_touching_left_first_char =
+        let is_touching_left_first_char =
             selected_text_range.index == line_brackets_match_range.0.range.index;
 
         if is_touching_left_first_char {

@@ -7,7 +7,7 @@ use crate::core_engine::{
     types::{MatchRange, MatchRectangle},
 };
 
-fn bad_code_block_kinds() -> Vec<&'static str> {
+fn code_block_kinds_with_declaration() -> Vec<&'static str> {
     vec![
         "do_statement",
         "else_statement",
@@ -32,13 +32,13 @@ pub fn rectangles_from_match_range(
     }
 }
 
-pub fn length_to_bad_code_block_start(
+pub fn length_to_code_block_body_start(
     node: &Node,
     text_content: &String,
     selected_text_index: usize,
 ) -> Option<(usize, bool)> {
-    let mut is_selected_text_in_bad_declaration = false;
-    if bad_code_block_kinds().contains(&node.kind()) {
+    let mut is_selected_text_in_declaration = false;
+    if code_block_kinds_with_declaration().contains(&node.kind()) {
         let text_from_index = &text_content[node.range().start_byte..node.range().end_byte];
         let mut additional_index: usize = 0;
         for c in text_from_index.chars() {
@@ -46,9 +46,9 @@ pub fn length_to_bad_code_block_start(
                 if selected_text_index < node.range().start_byte + additional_index
                     && selected_text_index >= node.range().start_byte
                 {
-                    is_selected_text_in_bad_declaration = true;
+                    is_selected_text_in_declaration = true;
                 }
-                return Some((additional_index, is_selected_text_in_bad_declaration));
+                return Some((additional_index, is_selected_text_in_declaration));
             }
             additional_index += 1;
         }
@@ -56,7 +56,7 @@ pub fn length_to_bad_code_block_start(
     None
 }
 
-pub fn get_code_block_parent(node_input: Node, ignore_current_bad_node: bool) -> Option<Node> {
+pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Option<Node> {
     let code_block_kinds = vec![
         "array_literal",
         "array_type",
@@ -71,7 +71,7 @@ pub fn get_code_block_parent(node_input: Node, ignore_current_bad_node: bool) ->
         "guard_statement",
         "if_statement",
         "lambda_literal",
-        "switch_entry",
+        // "switch_entry", // 'case' should not be highlighted
         "switch_statement",
         "tuple_type",
         "value_arguments",
@@ -84,7 +84,7 @@ pub fn get_code_block_parent(node_input: Node, ignore_current_bad_node: bool) ->
     let mut node = node_input.clone();
     let mut parent_node = None;
 
-    if ignore_current_bad_node && bad_code_block_kinds().contains(&node.kind()) {
+    if ignore_declaration && code_block_kinds_with_declaration().contains(&node.kind()) {
         if let Some(parent) = node.parent() {
             node = parent;
         }
@@ -124,7 +124,8 @@ pub fn get_match_range_of_first_and_last_char_in_node(
             length: 1,
         },
     );
-    if let Some(additional_length) = length_to_bad_code_block_start(node, text, selected_text_index)
+    if let Some(additional_length) =
+        length_to_code_block_body_start(node, text, selected_text_index)
     {
         first_option = MatchRange::from_text_and_range(
             text,
