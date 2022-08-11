@@ -22,6 +22,7 @@ tokio = { version=  "1.17.0",features = ["full"] }
 lazy_static = "1.4.0"
 strum = { version = "0.24.1", features = ["derive"] }
 diff = "0.1.13"
+reqwest = { version = "0.11", features = ["json"] }
 
 # macOS dependencies (crucial for Accessibility features to work)
 core-foundation = "0.9.3"
