@@ -13,7 +13,7 @@
 		compute_bracket_highlight_box_rects,
 		compute_bracket_highlight_line_rect,
 		BORDER_WIDTH
-  } from './bracket_highlight';
+	} from './bracket_highlight';
 
 	type MatchId = string;
 
@@ -170,7 +170,7 @@
 				bracket_highlight_line_rectangle.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_line_rectangle.size.height
-			)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: rgba(122,122,122,0.5); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
+			)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
 		/>
 	{/if}
 	{#if bracket_highlight_box_rectangle_first !== null}
