@@ -99,7 +99,7 @@ export const compute_bracket_highlight_line_rect = (
 				},
 				size: {
 					width: 0,
-					height: outerSize.height - last_line_rect.origin.y
+					height: last_line_rect.origin.y
 				}
 			};
 		} else if (first_line_rect && last_line_rect) {
