@@ -18,7 +18,7 @@
 	import type { RuleName } from '../../src-tauri/bindings/rules/RuleName';
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
 	import type { DocsGeneratedMessage } from '../../src-tauri/bindings/features/docs_generation/DocsGeneratedMessage';
-	import IconLogo from '../components/widget/icons/icon-logo.svelte';
+	import DocsAnnotations from '../components/code-ovelay/docs-generation/docs-annotations.svelte';
 
 	type MatchId = string;
 
@@ -108,12 +108,6 @@
 			}
 		});
 
-		let WindowControlsChannel: ChannelList = 'EventWindowControls';
-		await listen(WindowControlsChannel, (event) => {
-			const tracking_area_event = JSON.parse(event.payload as string) as EventWindowControls;
-			console.log(tracking_area_event);
-		});
-
 		await listen('alert-selected', (event) => {
 			const tauriEvent = event as Event<any>;
 			highlightedRectangleMatchId = tauriEvent.payload;
@@ -184,7 +178,7 @@
 </script>
 
 <div
-	style="height: {height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,0.5);"
+	style="height: {height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,0.0);"
 	class=" h-full w-full"
 	id="overlay"
 >
@@ -234,19 +228,5 @@
 			)}px; border-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
-	{#if docs_gen_annotations !== null}
-		{#if docs_gen_annotations.annotation_icon !== null}
-			<div
-				style="position: absolute; top: {Math.round(
-					docs_gen_annotations.annotation_icon.origin.y
-				)}px; left: {Math.round(
-					docs_gen_annotations.annotation_icon.origin.x
-				)}px; width: {Math.round(
-					docs_gen_annotations.annotation_icon.size.width
-				)}px;height: {Math.round(
-					docs_gen_annotations.annotation_icon.size.height
-				)}px; border-style: solid; background-color: rgba(0, 255,0, 0.7);;"
-			/>
-		{/if}
-	{/if}
+	<DocsAnnotations annotation_msg={docs_gen_annotations} />
 </div>

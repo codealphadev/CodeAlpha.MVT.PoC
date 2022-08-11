@@ -17,6 +17,7 @@
 	let ruleExecutionState: EventRuleExecutionState | null = null;
 	let ghostClickAlreadyHappened = true;
 	let processing_timeout = 15000; // ms
+	let show_alternate_icon_duration = 2000; // ms
 
 	const clickAction = async () => {
 		if (ghostClickAlreadyHappened) {
@@ -43,7 +44,7 @@
 					console.log('SwiftFormatFinished');
 					setTimeout(async () => {
 						ruleExecutionState = null;
-					}, 1000);
+					}, show_alternate_icon_duration);
 					break;
 				case 'DocsGenerationStarted':
 					console.log('DocsGenerationStarted');
@@ -55,7 +56,7 @@
 					console.log('DocsGenerationFinished');
 					setTimeout(async () => {
 						ruleExecutionState = null;
-					}, 1000);
+					}, show_alternate_icon_duration);
 					break;
 				default:
 					console.log('Default');

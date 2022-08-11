@@ -3,7 +3,10 @@ use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 use crate::{
-    core_engine::{rules::TextRange, syntax_tree::SwiftSyntaxTree},
+    core_engine::{
+        rules::{TextPosition, TextRange},
+        syntax_tree::SwiftSyntaxTree,
+    },
     utils::messaging::ChannelList,
     window_controls::events::EventWindowControls,
 };
@@ -17,6 +20,9 @@ pub struct DocsGenerator {
     docs_generation_task: Option<DocsGenerationTask>,
     window_pid: i32,
 }
+
+type DocsIndetation = usize;
+type DocsInsertionIndex = usize;
 
 impl DocsGenerator {
     pub fn new(window_pid: i32) -> Self {
@@ -46,11 +52,25 @@ impl DocsGenerator {
                         .swift_syntax_tree
                         .get_selected_codeblock_node(&selected_text_range)
                     {
-                        if let Some(codeblock_text) = codeblock.get_codeblock_text() {
+                        let first_char_position = codeblock.get_first_char_position();
+                        if let (
+                            Some(codeblock_text),
+                            Some((docs_insertion_index, docs_indentation)),
+                        ) = (
+                            codeblock.get_codeblock_text(),
+                            self.compute_docs_insertion_point_and_indetation(
+                                first_char_position.row,
+                            ),
+                        ) {
                             let mut new_task = DocsGenerationTask::new(
                                 self.window_pid,
                                 codeblock.get_first_char_position(),
                                 codeblock.get_last_char_position(),
+                                TextRange {
+                                    index: docs_insertion_index,
+                                    length: 0,
+                                },
+                                docs_indentation,
                                 codeblock_text,
                             );
 
@@ -79,11 +99,20 @@ impl DocsGenerator {
                     .swift_syntax_tree
                     .get_selected_codeblock_node(&selected_text_range)
                 {
-                    if let Some(codeblock_text) = codeblock.get_codeblock_text() {
+                    let first_char_position = codeblock.get_first_char_position();
+                    if let (Some(codeblock_text), Some((docs_insertion_index, docs_indentation))) = (
+                        codeblock.get_codeblock_text(),
+                        self.compute_docs_insertion_point_and_indetation(first_char_position.row),
+                    ) {
                         let mut new_task = DocsGenerationTask::new(
                             self.window_pid,
-                            codeblock.get_first_char_position(),
+                            first_char_position,
                             codeblock.get_last_char_position(),
+                            TextRange {
+                                index: docs_insertion_index,
+                                length: 0,
+                            },
+                            docs_indentation,
                             codeblock_text,
                         );
 
@@ -96,6 +125,37 @@ impl DocsGenerator {
 
             self.docs_generation_task = newly_created_docs_task;
         }
+    }
+
+    fn compute_docs_insertion_point_and_indetation(
+        &self,
+        insertion_line: usize,
+    ) -> Option<(DocsInsertionIndex, DocsIndetation)> {
+        // split the text into lines
+        if let Some(text) = self.text_content.as_ref() {
+            if let Some(line) = text.lines().nth(insertion_line) {
+                // count whitespaces in insertion_line until first character
+                let mut whitespaces = 0;
+                for c in line.chars() {
+                    if c == ' ' {
+                        whitespaces += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if let Some(docs_insertion_index) = (TextPosition {
+                    row: insertion_line,
+                    column: whitespaces,
+                })
+                .as_TextIndex(text)
+                {
+                    return Some((docs_insertion_index, whitespaces));
+                }
+            }
+        }
+
+        None
     }
 
     pub fn update_visualization(&mut self) {

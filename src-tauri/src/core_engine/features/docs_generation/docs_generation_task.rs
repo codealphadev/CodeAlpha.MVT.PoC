@@ -1,12 +1,16 @@
 use crate::{
     app_handle,
-    ax_interaction::{derive_xcode_textarea_dimensions, get_textarea_uielement},
+    ax_interaction::{
+        derive_xcode_textarea_dimensions, get_textarea_uielement,
+        xcode::actions::replace_range_with_clipboard_text,
+    },
     core_engine::{
         ax_utils::get_bounds_of_TextRange,
         events::{
             models::{CodeAnnotationMessage, DocsGeneratedMessage},
             EventDocsGeneration, EventRuleExecutionState,
         },
+        features::docs_generation::mintlify_documentation,
         rules::{TextPosition, TextRange},
         types::MatchRectangle,
     },
@@ -28,7 +32,8 @@ pub enum DocsGenerationTaskState {
 pub struct DocsGenerationTask {
     // The tracking area attached to the task. Is set to none, if it can not
     tracking_area: Option<TrackingArea>,
-    docs_insertion_point: TextPosition,
+    docs_insertion_point: TextRange,
+    docs_indentation: usize,
     codeblock_first_char: TextPosition,
     codeblock_last_char: TextPosition,
     codeblock_text: String,
@@ -44,6 +49,8 @@ impl DocsGenerationTask {
         pid: i32,
         codeblock_first_char_position: TextPosition,
         codeblock_last_char_position: TextPosition,
+        docs_insertion_point: TextRange,
+        docs_indentation: usize,
         codeblock_text: String,
     ) -> Self {
         Self {
@@ -53,7 +60,8 @@ impl DocsGenerationTask {
             codeblock_text,
             pid,
             task_state: DocsGenerationTaskState::Uninitialized,
-            docs_insertion_point: codeblock_first_char_position,
+            docs_insertion_point,
+            docs_indentation,
         }
     }
 
@@ -85,20 +93,45 @@ impl DocsGenerationTask {
             return;
         };
 
-        println!(
-            "Generating documentation for codeblock: {:?}",
-            self.codeblock_text
-        );
+        let codeblock_text_move_copy = self.codeblock_text.to_owned();
+        let pid_move_copy = self.pid;
+        let docs_insertion_point_move_copy = self.docs_insertion_point.clone();
+        tauri::async_runtime::spawn(async move {
+            let mut mintlify_response =
+                mintlify_documentation(&codeblock_text_move_copy, None).await;
 
-        // Publish annotation_rect and codeblock_rect to frontend
-        EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
-            id: task_id,
-            text: self.codeblock_text.clone(),
-        })
-        .publish_to_tauri(&app_handle());
+            println!("{:?}", mintlify_response);
 
-        // Notifiy the frontend that the file has been formatted successfully
-        EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
+            if let Ok(mintlify_response) = &mut mintlify_response {
+                // add newline character at the end of mintlify_response.docstring
+                // mintlify_response.docstring.push('\n');
+                // mintlify_response.docstring.push('\t');
+
+                // add spaces at the end of the docstring equal to the column of the codeblock_first_char to have a correct indentation after the paste operation
+                // for _ in 0..self.docs_indentation {
+                //     mintlify_response.docstring.push(' ');
+                // }
+
+                // Paste it at the docs insertion point
+                replace_range_with_clipboard_text(
+                    &app_handle(),
+                    pid_move_copy,
+                    &docs_insertion_point_move_copy,
+                    Some(&mintlify_response.docstring),
+                    true,
+                );
+
+                // Publish annotation_rect and codeblock_rect to frontend
+                EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
+                    id: task_id,
+                    text: mintlify_response.preview.to_owned(),
+                })
+                .publish_to_tauri(&app_handle());
+
+                // Notifiy the frontend that the file has been formatted successfully
+                EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
+            }
+        });
         self.task_state = DocsGenerationTaskState::Finished;
     }
 
@@ -285,7 +318,7 @@ impl DocsGenerationTask {
                 // Height: the height of the codeblock minus the first line height
                 // Width: the width of the first character
                 // Position: left of the codeblock
-                let codeblock_bounds = MatchRectangle {
+                let codeblock_bounds = CodeblockRectangle {
                     origin: LogicalPosition {
                         x: textarea_origin.x,
                         y: first_char_bounds.origin.y + first_char_bounds.size.height,
@@ -298,13 +331,13 @@ impl DocsGenerationTask {
                 };
 
                 // 2.2 Annotation rectangle of the docs generation icon
-                let annotation_bounds = MatchRectangle {
+                let annotation_bounds = AnnotationIconRectangle {
                     origin: LogicalPosition {
                         x: textarea_origin.x,
                         y: first_char_bounds.origin.y,
                     },
                     size: LogicalSize {
-                        width: first_char_bounds.size.width,
+                        width: first_char_bounds.size.height / 1.5, // This factor brings it 12px width on 100% zoom level.
                         height: first_char_bounds.size.height,
                     },
                 };
