@@ -277,7 +277,7 @@ impl WidgetWindow {
         close_window(app_handle, AppWindow::CodeOverlay);
     }
 
-    pub fn update_code_overlay_visible(&mut self, code_overlay_visible: &Option<bool>) {
-        self.code_overlay_visible = *code_overlay_visible;
+    pub fn update_code_overlay_visible(&mut self, code_overlay_visible: bool) {
+        self.code_overlay_visible = Some(code_overlay_visible);
     }
 }

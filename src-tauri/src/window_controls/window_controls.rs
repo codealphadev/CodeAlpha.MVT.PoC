@@ -86,7 +86,7 @@ impl WindowControls {
 #[tauri::command]
 pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool) {
     EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
-        engine_active: Some(app_active),
+        engine_active: app_active,
         active_feature: None,
     })
     .publish_to_tauri(&app_handle);

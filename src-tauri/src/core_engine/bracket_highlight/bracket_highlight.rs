@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::utils::{
-    get_code_block_parent, get_left_most_column_in_rows,
+    get_codeblock_parent, get_left_most_column_in_rows,
     get_match_range_of_first_and_last_char_in_node, only_whitespace_on_line_until_position,
     rectanges_of_wrapped_line, rectangles_from_match_range,
 };
@@ -89,17 +89,12 @@ pub struct BracketHighlight {
 }
 
 impl BracketHighlight {
-    pub fn new(
-        selected_text_range: Option<TextRange>,
-        swift_syntax_tree: Option<Tree>,
-        text_content: Option<String>,
-        window_pid: i32,
-    ) -> Self {
+    pub fn new(window_pid: i32) -> Self {
         Self {
             results: None,
-            selected_text_range,
-            swift_syntax_tree,
-            text_content,
+            selected_text_range: None,
+            swift_syntax_tree: None,
+            text_content: None,
             window_pid,
         }
     }

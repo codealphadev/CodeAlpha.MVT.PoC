@@ -39,9 +39,24 @@ impl CoreEngine {
         &mut self.code_documents
     }
 
-    pub fn set_engine_active(&mut self, engine_active: Option<bool>) {
-        if let Some(engine_active) = engine_active {
-            self.engine_active = engine_active;
+    pub fn set_engine_active(&mut self, engine_active_status: bool) {
+        self.engine_active = engine_active_status;
+
+        let code_documents = &mut *(match self.code_documents().lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        });
+
+        if engine_active_status {
+            // Activate features
+            for code_document in code_documents.values_mut() {
+                code_document.activate_features();
+            }
+        } else {
+            // Deactivate features
+            for code_document in code_documents.values_mut() {
+                code_document.deactivate_features();
+            }
         }
     }
 

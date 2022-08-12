@@ -26,18 +26,6 @@ pub struct TrackingArea {
 }
 
 impl TrackingArea {
-    pub fn new(
-        id: uuid::Uuid,
-        rectangles: Vec<MatchRectangle>,
-        event_subscriptions: TrackingEventSubscription,
-    ) -> Self {
-        Self {
-            id,
-            rectangles,
-            event_subscriptions,
-        }
-    }
-
     pub fn update(&mut self, updated_tracking_area: &TrackingArea) {
         if updated_tracking_area.id != self.id {
             return;

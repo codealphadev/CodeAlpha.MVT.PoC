@@ -20,6 +20,8 @@ enum VerticalBoundary {
     Bottom,
 }
 
+static WIDGET_OFFSET: f64 = 75.;
+
 #[derive(Debug)]
 pub struct EditorWindow {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
@@ -343,8 +345,8 @@ impl EditorWindow {
                 (self.textarea_position, self.textarea_size)
             {
                 self.widget_position = Some(LogicalPosition {
-                    x: textarea_pos.x + textarea_size.width - 100.,
-                    y: textarea_pos.y + textarea_size.height - 100.,
+                    x: textarea_pos.x + textarea_size.width - WIDGET_OFFSET,
+                    y: textarea_pos.y + textarea_size.height - WIDGET_OFFSET,
                 });
             }
         }

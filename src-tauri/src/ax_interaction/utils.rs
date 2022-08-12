@@ -279,6 +279,7 @@ pub fn derive_xcode_textarea_dimensions(
     let mut updated_origin_x = scrollarea_origin.x;
     let children_elements = scrollarea_element.attribute(&AXAttribute::children())?;
 
+    let mut source_editor_gutter_size = None;
     for child in &children_elements {
         if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
             let identifier_list: [&str; 3] = [
@@ -299,20 +300,36 @@ pub fn derive_xcode_textarea_dimensions(
                         .get_value::<CGSize>()?
                         .width;
                 }
+
+                if identifier.to_string() == "Source Editor Gutter" {
+                    source_editor_gutter_size = Some(
+                        child
+                            .attribute(&AXAttribute::size())?
+                            .get_value::<CGSize>()?
+                            .width,
+                    )
+                }
             }
         }
     }
 
     // Update EditorWindowResizedMessage
-    let position = tauri::LogicalPosition {
+    let mut position = tauri::LogicalPosition {
         x: updated_origin_x,
         y: scrollarea_origin.y,
     };
 
-    let size = tauri::LogicalSize {
+    let mut size = tauri::LogicalSize {
         width: updated_width,
         height: scrollarea_size.height,
     };
+
+    // We make the textarea a little bit bigger so our annotations have more space to draw on
+    let correction_width_factor = 0.105;
+    if let Some(gutter_size) = source_editor_gutter_size {
+        position.x -= gutter_size * correction_width_factor;
+        size.width += gutter_size * correction_width_factor;
+    }
 
     return Ok((position, size));
 }

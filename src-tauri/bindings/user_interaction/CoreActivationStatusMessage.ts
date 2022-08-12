@@ -2,6 +2,6 @@
 import type { RuleName } from "../rules/RuleName";
 
 export interface CoreActivationStatusMessage {
-  engine_active: boolean | null;
+  engine_active: boolean;
   active_feature: RuleName | null;
 }

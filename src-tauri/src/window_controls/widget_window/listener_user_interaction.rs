@@ -37,7 +37,7 @@ fn on_core_activation_status_update(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    widget_props.update_code_overlay_visible(&activation_msg.engine_active);
+    widget_props.update_code_overlay_visible(activation_msg.engine_active);
 
     let editor_windows = &mut *(match widget_props.editor_windows.lock() {
         Ok(guard) => guard,
@@ -46,16 +46,14 @@ fn on_core_activation_status_update(
 
     if let Some(focused_editor_window_id) = widget_props.currently_focused_editor_window {
         if let Some(editor_window) = editor_windows.get_mut(&focused_editor_window_id) {
-            if let Some(engine_active) = activation_msg.engine_active {
-                if engine_active {
-                    let _ = show_code_overlay(
-                        &widget_props.app_handle,
-                        editor_window.textarea_position(true),
-                        editor_window.textarea_size(),
-                    );
-                } else {
-                    let _ = hide_code_overlay(&widget_props.app_handle);
-                }
+            if activation_msg.engine_active {
+                let _ = show_code_overlay(
+                    &widget_props.app_handle,
+                    editor_window.textarea_position(true),
+                    editor_window.textarea_size(),
+                );
+            } else {
+                let _ = hide_code_overlay(&widget_props.app_handle);
             }
         }
     }

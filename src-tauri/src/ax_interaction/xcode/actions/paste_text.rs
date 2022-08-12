@@ -1,6 +1,7 @@
 use accessibility::{AXUIElement, AXUIElementAttributes};
 use accessibility_sys::pid_t;
 use core_foundation::string::CFString;
+use enigo::{Enigo, Key, KeyboardControllable};
 use tauri::{ClipboardManager, Error};
 
 use crate::{
@@ -23,9 +24,10 @@ use crate::{
 ///
 /// Might returns a Tauri Error.
 pub fn paste_clipboard_text(
-    app_handle: tauri::AppHandle,
+    app_handle: &tauri::AppHandle,
     pid: pid_t,
-    text: Option<String>,
+    text: Option<&String>,
+    add_linebreak_with_enter: bool,
 ) -> Result<(), Error> {
     let mut clipboard = app_handle.clipboard_manager();
     let preserve_old_clipboard = clipboard.read_text()?;
@@ -47,6 +49,12 @@ pub fn paste_clipboard_text(
         });
     }
 
+    // Press the ENTER key
+    if add_linebreak_with_enter {
+        let mut enigo = Enigo::new();
+        enigo.key_down(Key::Return);
+    }
+
     Ok(())
 }
 
@@ -66,10 +74,10 @@ pub fn paste_clipboard_text(
 /// used.
 /// * `restore_cursor`: if true, the cursor position will be restored after the text is replaced
 pub fn replace_range_with_clipboard_text(
-    app_handle: tauri::AppHandle,
+    app_handle: &tauri::AppHandle,
     pid: pid_t,
-    range: TextRange,
-    text: Option<String>,
+    range: &TextRange,
+    text: Option<&String>,
     restore_cursor: bool,
 ) {
     let mut preserved_cursor_position: Option<TextRange> = None;
@@ -90,7 +98,7 @@ pub fn replace_range_with_clipboard_text(
 
     if let Ok(success) = set_selected_text_range(pid, range.index, range.length) {
         if success {
-            let _ = paste_clipboard_text(app_handle, pid, text);
+            let _ = paste_clipboard_text(&app_handle, pid, text, true);
         }
     }
 
