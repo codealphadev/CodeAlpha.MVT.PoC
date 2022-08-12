@@ -7,7 +7,8 @@
     "dev": "rollup -c -w",
     "start": "sirv public -p 8081 --single",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@rgossiaux/svelte-headlessui": "^1.0.0-beta.12",
@@ -19,6 +20,7 @@
     "@tauri-apps/tauricon": "github:tauri-apps/tauricon",
     "@tsconfig/svelte": "^2.0.0",
     "autoprefixer": "^10.4.2",
+    "husky": "^8.0.1",
     "postcss": "^8.4.5",
     "postcss-load-config": "^3.1.1",
     "rollup": "^2.3.4",
