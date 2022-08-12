@@ -91,7 +91,7 @@ pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Opti
     }
 
     loop {
-        if codeblock_kinds.contains(&node.kind()) {
+        if code_block_kinds.contains(&node.kind()) {
             parent_node = Some(node);
             break;
         }
