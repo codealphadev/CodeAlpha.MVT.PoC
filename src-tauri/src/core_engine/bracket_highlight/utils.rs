@@ -34,23 +34,28 @@ pub fn rectangles_from_match_range(
 
 pub fn length_to_code_block_body_start(
     node: &Node,
-    text_content: &String,
+    text: &String,
     selected_text_index: usize,
 ) -> Option<(usize, bool)> {
     let mut is_selected_text_in_declaration = false;
     if code_block_kinds_with_declaration().contains(&node.kind()) {
-        let text_from_index = &text_content[node.range().start_byte..node.range().end_byte];
-        let mut additional_index: usize = 0;
-        for c in text_from_index.chars() {
-            if c == '{' {
-                if selected_text_index < node.range().start_byte + additional_index
-                    && selected_text_index >= node.range().start_byte
-                {
-                    is_selected_text_in_declaration = true;
+        if let (Some(first_index), Some(last_index)) = (
+            get_node_start_index(&node, &text),
+            get_node_end_index(&node, &text),
+        ) {
+            let text_from_index = &text[first_index..last_index];
+            let mut additional_index: usize = 0;
+            for c in text_from_index.chars() {
+                if c == '{' {
+                    if selected_text_index < first_index + additional_index
+                        && selected_text_index >= first_index
+                    {
+                        is_selected_text_in_declaration = true;
+                    }
+                    return Some((additional_index, is_selected_text_in_declaration));
                 }
-                return Some((additional_index, is_selected_text_in_declaration));
+                additional_index += 1;
             }
-            additional_index += 1;
         }
     }
     None
@@ -110,37 +115,41 @@ pub fn get_match_range_of_first_and_last_char_in_node(
     text: &String,
     selected_text_index: usize,
 ) -> Option<(MatchRange, MatchRange)> {
-    let mut first_option = MatchRange::from_text_and_range(
-        text,
-        TextRange {
-            index: node.range().start_byte,
-            length: 1,
-        },
-    );
-    let last_option = MatchRange::from_text_and_range(
-        text,
-        TextRange {
-            index: node.range().end_byte - 1,
-            length: 1,
-        },
-    );
-    if let Some(additional_length) =
-        length_to_code_block_body_start(node, text, selected_text_index)
-    {
-        first_option = MatchRange::from_text_and_range(
+    if let (Some(first_index), Some(last_index)) = (
+        get_node_start_index(&node, &text),
+        get_node_end_index(&node, &text),
+    ) {
+        let mut first_option = MatchRange::from_text_and_range(
             text,
             TextRange {
-                index: node.range().start_byte + additional_length.0,
+                index: first_index,
                 length: 1,
             },
         );
-    }
+        let last_option = MatchRange::from_text_and_range(
+            text,
+            TextRange {
+                index: last_index - 1,
+                length: 1,
+            },
+        );
+        if let Some(additional_length) =
+            length_to_code_block_body_start(node, text, selected_text_index)
+        {
+            first_option = MatchRange::from_text_and_range(
+                text,
+                TextRange {
+                    index: first_index + additional_length.0,
+                    length: 1,
+                },
+            );
+        }
 
-    if let (Some(first), Some(last)) = (first_option, last_option) {
-        Some((first, last))
-    } else {
-        None
+        if let (Some(first), Some(last)) = (first_option, last_option) {
+            return Some((first, last));
+        }
     }
+    None
 }
 
 pub fn rectanges_of_wrapped_line(
@@ -241,6 +250,14 @@ pub fn get_left_most_column_in_rows(
     } else {
         None
     }
+}
+
+fn get_node_start_index(node: &Node, text: &String) -> Option<usize> {
+    TextPosition::from_TSPoint(&node.start_position()).as_TextIndex(&text)
+}
+
+fn get_node_end_index(node: &Node, text: &String) -> Option<usize> {
+    TextPosition::from_TSPoint(&node.end_position()).as_TextIndex(&text)
 }
 
 #[cfg(test)]
