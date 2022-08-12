@@ -4,49 +4,33 @@ In preparation to build a _Minimum Viable Test (MVT)_ later this year, this proj
 
 ## Technical Details
 
-- Build with **Tauri**, an alternative to Electron. Tauri allows a much cleaner separation of _frontend_ and _backend_ in a desktop application, where the frontend is written in TypeScript and the backend is written in Rust.
-- Frontend: TypeScript with Svelte and TailwindCSS
-- Backend: Rust
+### Building and running the application
+- Before building for the first time, run 
+  ```
+  softwareupdate --install-rosetta
+  ``` 
+  to install Rosetta (if on Darwin architecture)
 
-## UX Rule Log
+1. `npm install` installs all JS dependencies
+2. `npm run tauri dev` builds both frontend and backend, and starts the application. It also opens the native Developer Tools window for debugging.
 
-**Rules to be implemented for MVT:**
+### Architecture
+The application is built on [Tauri](https://tauri.app/), a framework for multi-platform development.
 
-- [x] The widget should only appear when the user's cursor is in an _editor textarea_.
-- [x] The widget should appear in **the bottom right corner** of the focused _editor textarea_.
-- [ ] If the _editor textarea_ is off-screen the moment it is being focused, the widget should **stay hidden**.
-- [x] While receiving `AXMoved` notifications for the _editor window_ ...
-  - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXMoved` notification
-  - [x] calculate the distance it moved from the last received notification and update the widget's position accordingly.
-  - [x] If the widget would move off-screen, move it only so far that it still stays on-screen **AND** on a remaining piece of the _editor textarea_
-- [x] At all times, the widget should be _tied_ to one of the _editor textarea's_ horizontal and vertical boundaries `left|right` `bottom|top`.
-  - [x] Ties to _editor text_area boundaries_ are being determined by the minimum distance.
-  - [x] Ties to _editor text_area boundaries_ are defined as the distance in pixels to a boundary.
-  - [x] Ties to _editor text_area boundaries_ are only recalculated when the widget is being **moved by the user**.
-- [x] While receiving `AXResized` notifications for the _editor window_ ...
-  - [x] the widget should be hidden until `200ms` have elapsed after the last received `AXResized` notification
-  - [x] Using the updated _position_ and _size_ of the _editor textarea_ and the boundaries, recalculate & update the widget's position.
-- [x] Hide the widget if `AXApplicationDeactivated` notification is received
-- [x] Evaluate if widget should be shown when `AXApplicationActivated` is received
-  - [x] Lookup currently focused UI element, if it has role `AXTextArea`, then show the widget
+- Tauri allows a clean separation of _frontend_ and _backend_ in a desktop application; the frontend is written in TypeScript and the backend is written in Rust.
+-  Tauri has a much smaller memory footprint than Electron, the largest competitor in this space.
 
-**XCode Behavior**
 
-- If `AXResized` is triggered, it is only the editor text area which gets resized.
-- If the editor text area is resized by changing ui elements within the editor window, the event `AXValueChanged` is triggered for a ui element with role `AXScrollBar`.
-- If XCode obtains focus, the `AXApplicationActivated` notification is triggered.
-- If XCode loses focus, the `AXApplicationDeactivated` notification is triggered.
+#### Frontend
+The frontend is built in TypeScript, with [Svelte](https://svelte.dev/) and [TailwindCSS](https://tailwindcss.com).
 
-## Known Issues
+#### Backend
 
-- [ ] "Many Clicks" on widget can lead to widget disappearing -> more gracefully handle invokation of "Content Open" routine - can be jammed if many clicks are done on widget
-- [ ] Show / hide content window requires waaay too many clicks ("Ghostclicks")
+`src-tauri/src` contains the Rust backend, organized into the following modules:
+  - `ax_interaction`: The interface of the application with the native accessibility UIs.
+  - `core_engine`: Core business logic, completely agnostic about enviroment and operating system.
+  - `window_controls`: Funtionality for rendering, including the `code_overlay`.
 
-## Bugs
+Communication between these modules is event-driven, as is communication between the backend and frontend, by serializing and de-serializing structs to JSON.
 
-- [ ] Prevent-off-screen-widget
-  - [ ] Only respecting the current screen - no multiscreen support
-
-## Open TODOS
-
-- Improve click and drag behavior of widget to feel more like the Grammarly app
+The shared interfaces between the frontend and backend are generated from Rust structs with the `TS` annotation, and exported to TypeScript interfaces in `src-tauri/bindings/`, where they can be imported by the frontend. This is provided by [ts-rs](https://github.com/Aleph-Alpha/ts-rs)
