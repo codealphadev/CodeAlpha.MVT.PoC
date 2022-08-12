@@ -52,8 +52,6 @@
 	listenTauriEvents();
 
 	$: show_highlighted = was_clicked ? false : is_hovered;
-
-	$: console.log('show_highlighted', was_clicked);
 </script>
 
 {#if annotation_msg !== null}
