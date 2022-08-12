@@ -119,8 +119,6 @@ fn on_editor_textarea_selected_text_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    println!("on_editor_textarea_selected_text_changed");
-
     if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
         code_doc.set_selected_text_range(msg.index, msg.length);
         code_doc.process_bracket_highlight();
@@ -411,8 +409,6 @@ fn on_editor_focused_uielement_changed(
         if let Some(selected_text_range) = selected_text_range {
             code_doc.set_selected_text_range(selected_text_range.index, selected_text_range.length);
         }
-
-        println!("on_editor_focused_uielement_changed");
 
         // Checking if the engine is active. If not, it returns.
         if !core_engine_active_status {

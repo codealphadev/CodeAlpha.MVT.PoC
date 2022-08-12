@@ -19,8 +19,6 @@ impl EventTrackingArea {
     pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
         let event_name = ChannelList::EventTrackingAreas.to_string();
 
-        println!("Publishing event: {:?}", self);
-
         // Emit to rust listeners
         app_handle.trigger_global(
             event_name.as_str(),
