@@ -6,7 +6,6 @@ use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::{
         ax_utils::get_bounds_of_TextRange,
-        bracket_highlight::utils::length_to_code_block_body_start,
         rules::{get_index_of_next_row, TextPosition, TextRange},
         types::MatchRectangle,
     },
@@ -14,8 +13,8 @@ use crate::{
 
 use super::utils::{
     get_code_block_parent, get_left_most_column_in_rows,
-    get_match_range_of_first_and_last_char_in_node, only_whitespace_on_line_until_position,
-    rectanges_of_wrapped_line, rectangles_from_match_range,
+    get_match_range_of_first_and_last_char_in_node, length_to_code_block_body_start,
+    only_whitespace_on_line_until_position, rectanges_of_wrapped_line, rectangles_from_match_range,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]

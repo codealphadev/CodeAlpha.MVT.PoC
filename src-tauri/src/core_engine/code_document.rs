@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    bracket_highlight::BracketHighlight,
     events::EventRuleExecutionState,
+    features::BracketHighlight,
     features::DocsGenerator,
     formatter::format_swift_file,
     rules::{
