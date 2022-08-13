@@ -41,9 +41,9 @@ pub fn paste_clipboard_text(
 
     if let Some(text) = preserve_old_clipboard {
         tauri::async_runtime::spawn(async move {
-            use std::{thread, time};
+            use std::{time};
             let delay = time::Duration::from_millis(150);
-            thread::sleep(delay);
+            tokio::time::sleep(delay).await;
 
             let _ = clipboard.write_text(text);
         });

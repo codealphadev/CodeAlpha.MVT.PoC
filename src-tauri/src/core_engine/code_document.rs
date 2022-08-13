@@ -269,7 +269,7 @@ impl CodeDocument {
             let pid_move_copy = self.editor_window_props.pid;
             if let Some(scroll_delta) = scroll_delta {
                 tauri::async_runtime::spawn(async move {
-                    std::thread::sleep(std::time::Duration::from_millis(20));
+                    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
                     if let Ok(true) = send_event_mouse_wheel(pid_move_copy, scroll_delta) {}
                 });
             }
