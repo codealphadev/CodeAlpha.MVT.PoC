@@ -190,16 +190,14 @@ impl WidgetWindow {
         // Redundant check if we really have the correct textarea dimensions
         // We should implement a periodic check for this in the future; the editor window
         // should query AX api every second to update the textarea dimensions
-        if let Ok((position, size)) =
-            derive_xcode_textarea_dimensions(&get_textarea_uielement(editor_window.pid)?)
-        {
-            editor_window.update_window_dimensions(
-                editor_window.window_position(),
-                editor_window.window_size(),
-                Some(position),
-                Some(size),
-            );
-        }
+        let (position, size) =
+            derive_xcode_textarea_dimensions(&get_textarea_uielement(editor_window.pid)?).ok()?;
+        editor_window.update_window_dimensions(
+            editor_window.window_position(),
+            editor_window.window_size(),
+            Some(position),
+            Some(size),
+        );
 
         // Recover ContentWindowState for this editor window and open CodeOverlay window
         match editor_window.content_window_state {
