@@ -2,7 +2,7 @@
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { CodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
-	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
+	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
 	import type { TrackingAreaEnteredMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaEnteredMessage';
@@ -10,6 +10,7 @@
 	import AnnotationIcon from './annotation-icon.svelte';
 
 	export let annotation_msg: CodeAnnotationMessage | null;
+	export let code_overlay_position: LogicalPosition | null;
 
 	let is_hovered = false;
 	let was_clicked = false;
@@ -54,16 +55,16 @@
 	$: show_highlighted = was_clicked ? false : is_hovered;
 </script>
 
-{#if annotation_msg !== null}
-	{#if annotation_msg.annotation_icon !== null}
-		<div
-			style="position: absolute; top: {Math.round(
-				annotation_msg.annotation_icon.origin.y
-			)}px; left: {Math.round(annotation_msg.annotation_icon.origin.x)}px; width: {Math.round(
-				annotation_msg.annotation_icon.size.width
-			)}px;height: {Math.round(annotation_msg.annotation_icon.size.height)}px;"
-		>
-			<AnnotationIcon {show_highlighted} />
-		</div>
-	{/if}
+{#if annotation_msg !== null && code_overlay_position !== null && annotation_msg.annotation_icon !== null}
+	<div
+		style="position: absolute; top: {Math.round(
+			annotation_msg.annotation_icon.origin.y - code_overlay_position.y
+		)}px; left: {Math.round(
+			annotation_msg.annotation_icon.origin.x - code_overlay_position.x
+		)}px; width: {Math.round(annotation_msg.annotation_icon.size.width)}px;height: {Math.round(
+			annotation_msg.annotation_icon.size.height
+		)}px;"
+	>
+		<AnnotationIcon {show_highlighted} />
+	</div>
 {/if}
