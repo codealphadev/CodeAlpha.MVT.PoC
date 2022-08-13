@@ -148,7 +148,7 @@ impl WidgetWindow {
             loop {
                 // !!!!! Sleep first to not block the locked Mutexes afterwards !!!!!
                 // ==================================================================
-                thread::sleep(std::time::Duration::from_millis(25));
+                tokio::time::sleep(std::time::Duration::from_millis(25)).await;
                 // ==================================================================
 
                 let widget_window = &mut *(match widget_props_move_copy.lock() {
