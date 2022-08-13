@@ -159,9 +159,6 @@
 	};
 
 	listenTauriEvents();
-
-	$: console.log(bottom_elbow_rectangle);
-	$: console.log(outerPosition);
 </script>
 
 <div
