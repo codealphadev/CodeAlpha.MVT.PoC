@@ -129,7 +129,7 @@ pub fn on_editor_ui_element_focus_change(
                         &widget_props.app_handle,
                         widget_props,
                         &mut editor_list_locked,
-                    )
+                    );
                 } else {
                     WidgetWindow::hide_widget_routine(&widget_props.app_handle)
                 }
@@ -141,7 +141,7 @@ pub fn on_editor_ui_element_focus_change(
                     &widget_props.app_handle,
                     widget_props,
                     &mut editor_list_locked,
-                )
+                );
             }
         }
 
@@ -212,7 +212,7 @@ pub fn on_activate_editor_app(
                         &widget_props.app_handle,
                         widget_props,
                         &mut editor_list_locked,
-                    )
+                    );
                 }
             }
         }

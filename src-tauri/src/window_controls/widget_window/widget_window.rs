@@ -184,92 +184,74 @@ impl WidgetWindow {
         app_handle: &tauri::AppHandle,
         widget: &WidgetWindow,
         editor_windows: &mut HashMap<uuid::Uuid, EditorWindow>,
-    ) {
+    ) -> Option<bool> {
+        let editor_window = editor_windows.get_mut(&widget.currently_focused_editor_window?)?;
+
         // Redundant check if we really have the correct textarea dimensions
         // We should implement a periodic check for this in the future; the editor window
         // should query AX api every second to update the textarea dimensions
-        if let Some(focused_window_id) = widget.currently_focused_editor_window {
-            if let Some(editor_window) = editor_windows.get_mut(&focused_window_id) {
-                if let Some(elem) = get_textarea_uielement(editor_window.pid) {
-                    if let Ok((position, size)) = derive_xcode_textarea_dimensions(&elem) {
-                        editor_window.update_window_dimensions(
-                            editor_window.window_position(),
-                            editor_window.window_size(),
-                            Some(position),
-                            Some(size),
-                        );
-                    }
-                }
-            }
+        if let Ok((position, size)) =
+            derive_xcode_textarea_dimensions(&get_textarea_uielement(editor_window.pid)?)
+        {
+            editor_window.update_window_dimensions(
+                editor_window.window_position(),
+                editor_window.window_size(),
+                Some(position),
+                Some(size),
+            );
         }
 
         // Recover ContentWindowState for this editor window and open CodeOverlay window
-        if let Some(focused_window_id) = widget.currently_focused_editor_window {
-            if let Some(editor_window) = editor_windows.get(&focused_window_id) {
-                match editor_window.content_window_state {
-                    ContentWindowState::Active => {
-                        if let Some(editor_window_monitor) =
-                            editor_window.get_monitor_for_editor_window(app_handle)
-                        {
-                            let _ = content_window::open(&app_handle, &editor_window_monitor);
-                        }
-                    }
-                    ContentWindowState::Inactive => {
-                        let _ = content_window::hide(&app_handle);
-                    }
-                }
+        match editor_window.content_window_state {
+            ContentWindowState::Active => {
+                let _ = content_window::open(
+                    &app_handle,
+                    &editor_window.get_monitor_for_editor_window(app_handle)?,
+                );
+            }
+            ContentWindowState::Inactive => {
+                let _ = content_window::hide(&app_handle);
+            }
+        }
 
-                if let Some(code_overlay_visible) = widget.code_overlay_visible {
-                    if code_overlay_visible {
-                        let _ = show_code_overlay(
-                            app_handle,
-                            editor_window.textarea_position(true),
-                            editor_window.textarea_size(),
-                        );
-                    } else {
-                        let _ = hide_code_overlay(app_handle);
-                    }
-                } else {
-                    let _ = show_code_overlay(
-                        app_handle,
-                        editor_window.textarea_position(true),
-                        editor_window.textarea_size(),
-                    );
-                }
+        if let Some(code_overlay_visible) = widget.code_overlay_visible {
+            if code_overlay_visible {
+                let _ = show_code_overlay(
+                    app_handle,
+                    editor_window.textarea_position(true),
+                    editor_window.textarea_size(),
+                );
+            } else {
+                let _ = hide_code_overlay(app_handle);
             }
         } else {
-            return;
+            let _ = show_code_overlay(
+                app_handle,
+                editor_window.textarea_position(true),
+                editor_window.textarea_size(),
+            );
         }
 
         // Check if the widget position should be updated before showing it
-        if let Some(focused_window_id) = widget.currently_focused_editor_window {
-            if let Some(editor_window) = editor_windows.get(&focused_window_id) {
-                if let Some(mut widget_position) = editor_window.widget_position(true) {
-                    if let Some(editor_window_monitor) =
-                        editor_window.get_monitor_for_editor_window(app_handle)
-                    {
-                        prevent_widget_position_off_screen(
-                            &editor_window_monitor,
-                            &mut widget_position,
-                        );
+        let mut widget_position = editor_window.widget_position(true)?;
 
-                        // If content window was open before, also check that it would not go offscreen
-                        if editor_window.content_window_state == ContentWindowState::Active {
-                            prevent_misalignement_of_content_and_widget(
-                                &app_handle,
-                                &editor_window_monitor,
-                                &mut widget_position,
-                            );
-                        }
+        let editor_window_monitor = editor_window.get_monitor_for_editor_window(app_handle)?;
+        prevent_widget_position_off_screen(&editor_window_monitor, &mut widget_position);
 
-                        let _ =
-                            set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
-                    }
-                }
-            }
+        // If content window was open before, also check that it would not go offscreen
+        if editor_window.content_window_state == ContentWindowState::Active {
+            prevent_misalignement_of_content_and_widget(
+                &app_handle,
+                &editor_window_monitor,
+                &mut widget_position,
+            );
         }
 
+        let _ = set_position(&widget.app_handle, AppWindow::Widget, &widget_position);
+
         open_window(&widget.app_handle, AppWindow::Widget);
+
+        Some(true)
     }
 
     pub fn hide_widget_routine(app_handle: &tauri::AppHandle) {
