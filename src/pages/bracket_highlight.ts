@@ -1,7 +1,6 @@
 import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize';
 import type { BracketHighlightBracketPair } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightBracketPair';
 import type { BracketHighlightResults } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
-import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
 import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 import type { BracketHighlightElbow } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightElbow';
 
@@ -9,38 +8,27 @@ export const BORDER_WIDTH = 1;
 const LEFT_MOST_LINE_X = 5;
 
 export const compute_bracket_highlight_box_rects = (
-	bracket_highlight_boxes: BracketHighlightBracketPair,
-	outerPosition: LogicalPosition
+	bracket_highlight_boxes: BracketHighlightBracketPair
 ): [MatchRectangle, MatchRectangle] => {
 	let first_box_rect = bracket_highlight_boxes.first
 		? bracket_highlight_boxes.first.rectangle
 		: null;
 	let last_box_rect = bracket_highlight_boxes.last ? bracket_highlight_boxes.last.rectangle : null;
-	return [
-		adjust_rectangle(first_box_rect, outerPosition),
-		adjust_rectangle(last_box_rect, outerPosition)
-	];
+	return [adjust_rectangle(first_box_rect), adjust_rectangle(last_box_rect)];
 };
 
 export const compute_bracket_highlight_line_rect = (
 	bracket_results: BracketHighlightResults,
-	outerPosition: LogicalPosition,
 	outerSize: LogicalSize
 ): [MatchRectangle, MatchRectangle] => {
 	let lines_pair = bracket_results.lines;
 
 	// Adjust positions to overlay
-	let first_line_rect = adjust_rectangle(
-		lines_pair.first ? lines_pair.first.rectangle : null,
-		outerPosition
-	);
-	let last_line_rect = adjust_rectangle(
-		lines_pair.last ? lines_pair.last.rectangle : null,
-		outerPosition
-	);
+	let first_line_rect = adjust_rectangle(lines_pair.first ? lines_pair.first.rectangle : null);
+	let last_line_rect = adjust_rectangle(lines_pair.last ? lines_pair.last.rectangle : null);
 	let elbow: BracketHighlightElbow = bracket_results.elbow
 		? {
-				origin_x: bracket_results.elbow.origin_x - outerPosition.x,
+				origin_x: bracket_results.elbow.origin_x,
 				origin_x_left_most: bracket_results.elbow.origin_x_left_most,
 				bottom_line_top: bracket_results.elbow.bottom_line_top
 		  }
@@ -145,15 +133,15 @@ export const compute_bracket_highlight_line_rect = (
 	return [line_rectangle, bottom_line_rectangle];
 };
 
-const adjust_rectangle = (rectangle: MatchRectangle, position: LogicalPosition) => {
-	if (!rectangle || !position) {
+const adjust_rectangle = (rectangle: MatchRectangle) => {
+	if (!rectangle) {
 		return null;
 	}
 
 	return {
 		origin: {
-			x: rectangle.origin.x - position.x,
-			y: rectangle.origin.y - position.y
+			x: rectangle.origin.x,
+			y: rectangle.origin.y
 		},
 		size: rectangle.size
 	};
