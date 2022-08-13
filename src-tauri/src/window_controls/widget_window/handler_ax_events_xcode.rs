@@ -15,7 +15,7 @@ pub fn on_resize_editor_window(
     app_handle: &tauri::AppHandle,
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     resize_msg: &EditorWindowResizedMessage,
-) {
+) -> Option<bool> {
     {
         let widget_props = &mut *(match widget_arc.lock() {
             Ok(guard) => guard,
@@ -26,37 +26,36 @@ pub fn on_resize_editor_window(
             Err(poisoned) => poisoned.into_inner(),
         };
 
-        if let Some(editor_window) = editor_list_locked.get_mut(&resize_msg.id) {
-            let mut textarea_position = resize_msg.textarea_position;
-            let mut textarea_size = resize_msg.textarea_size;
+        let editor_window = editor_list_locked.get_mut(&resize_msg.id)?;
+        let mut textarea_position = resize_msg.textarea_position;
+        let mut textarea_size = resize_msg.textarea_size;
 
-            // If the textarea dimensions are not set, attempt to derive them from the textarea element.
-            if let Some(elem) = get_textarea_uielement(editor_window.pid) {
-                if let Ok((position, size)) = derive_xcode_textarea_dimensions(&elem) {
-                    textarea_position = Some(position);
-                    textarea_size = Some(size);
-                }
+        // If the textarea dimensions are not set, attempt to derive them from the textarea element.
+        if let Some(elem) = get_textarea_uielement(editor_window.pid) {
+            if let Ok((position, size)) = derive_xcode_textarea_dimensions(&elem) {
+                textarea_position = Some(position);
+                textarea_size = Some(size);
             }
-
-            editor_window.update_window_dimensions(
-                resize_msg.window_position,
-                resize_msg.window_size,
-                textarea_position,
-                textarea_size,
-            );
-        } else {
-            return;
         }
+
+        editor_window.update_window_dimensions(
+            resize_msg.window_position,
+            resize_msg.window_size,
+            textarea_position,
+            textarea_size,
+        );
     }
 
     WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc, true, true);
+
+    Some(true)
 }
 
 pub fn on_move_editor_window(
     app_handle: &tauri::AppHandle,
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     moved_msg: &EditorWindowMovedMessage,
-) {
+) -> Option<bool> {
     {
         let widget_props = &mut *(match widget_arc.lock() {
             Ok(guard) => guard,
@@ -67,19 +66,14 @@ pub fn on_move_editor_window(
             Err(poisoned) => poisoned.into_inner(),
         };
 
-        if let Some(editor_window) = editor_list_locked.get_mut(&moved_msg.id) {
-            editor_window.update_window_dimensions(
-                moved_msg.window_position,
-                moved_msg.window_size,
-                None,
-                None,
-            );
-        } else {
-            return;
-        }
+        editor_list_locked
+            .get_mut(&moved_msg.id)?
+            .update_window_dimensions(moved_msg.window_position, moved_msg.window_size, None, None);
     }
 
     WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc, true, true);
+
+    Some(true)
 }
 
 /// Update EditorWindow to which of it's ui elements is currently in focus. Furthermore, also update
@@ -88,7 +82,7 @@ pub fn on_editor_ui_element_focus_change(
     app_handle: &tauri::AppHandle,
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     focus_msg: &EditorUIElementFocusedMessage,
-) {
+) -> Option<bool> {
     // Introduce this boolean to conveniently wrap subsequent logic in own block to have
     // mutex drop at the end.
     let mut need_temporary_hide = false;
@@ -104,15 +98,13 @@ pub fn on_editor_ui_element_focus_change(
         };
 
         // Update the focused ui element on the corresponding editor window instance.
-        if let Some(editor_window) = editor_list_locked.get_mut(&focus_msg.window_id) {
-            editor_window.update_focused_ui_element(
+        editor_list_locked
+            .get_mut(&focus_msg.window_id)?
+            .update_focused_ui_element(
                 &focus_msg.focused_ui_element,
                 focus_msg.textarea_position,
                 focus_msg.textarea_size,
             );
-        } else {
-            return;
-        }
 
         if let Some(previously_focused_window_id) = widget_props.currently_focused_editor_window {
             if previously_focused_window_id != focus_msg.window_id {
@@ -152,6 +144,8 @@ pub fn on_editor_ui_element_focus_change(
     if need_temporary_hide {
         WidgetWindow::temporary_hide_check_routine(&app_handle, widget_arc, true, true);
     }
+
+    Some(true)
 }
 
 pub fn on_deactivate_editor_app(
@@ -191,7 +185,7 @@ pub fn on_close_editor_app(
 pub fn on_activate_editor_app(
     widget_arc: &Arc<Mutex<WidgetWindow>>,
     _activated_msg: &EditorAppActivatedMessage,
-) {
+) -> Option<bool> {
     let widget_props = &mut *(match widget_arc.lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
@@ -204,19 +198,17 @@ pub fn on_activate_editor_app(
     widget_props.is_editor_focused = true;
 
     // Check if focused ui element of the currently focused editor window is textarea.
-    if let Some(currently_focused_editor_window_id) = widget_props.currently_focused_editor_window {
-        if let Some(editor_window) = editor_list_locked.get(&currently_focused_editor_window_id) {
-            if let Some(focused_ui_element) = &editor_window.focused_ui_element {
-                if *focused_ui_element == FocusedUIElement::Textarea {
-                    WidgetWindow::show_widget_routine(
-                        &widget_props.app_handle,
-                        widget_props,
-                        &mut editor_list_locked,
-                    );
-                }
-            }
-        }
+    let editor_window = editor_list_locked.get(&widget_props.currently_focused_editor_window?)?;
+
+    if *editor_window.focused_ui_element.as_ref()? == FocusedUIElement::Textarea {
+        WidgetWindow::show_widget_routine(
+            &widget_props.app_handle,
+            widget_props,
+            &mut editor_list_locked,
+        );
     }
+
+    Some(true)
 }
 
 pub fn on_editor_textarea_scrolled(

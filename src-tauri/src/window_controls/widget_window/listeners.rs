@@ -42,7 +42,7 @@ pub fn register_listener_xcode(
                 );
             }
             AXEventXcode::EditorAppActivated(msg) => {
-                on_activate_editor_app(&widget_props_move_copy, &msg)
+                on_activate_editor_app(&widget_props_move_copy, &msg);
             }
             AXEventXcode::EditorAppDeactivated(msg) => {
                 on_deactivate_editor_app(&widget_props_move_copy, &msg)

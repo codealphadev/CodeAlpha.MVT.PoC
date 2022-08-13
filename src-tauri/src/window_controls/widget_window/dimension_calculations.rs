@@ -10,16 +10,17 @@ pub static HEIGHT_MENU_BAR: f64 = 37.;
 pub fn prevent_widget_position_off_screen(
     monitor: &tauri::Monitor,
     widget_position: &mut LogicalPosition<f64>,
-) {
+) -> Option<bool> {
     let widget_size = LogicalSize {
         width: default_properties::size(&AppWindow::Widget).0,
         height: default_properties::size(&AppWindow::Widget).1,
     };
 
-    if let Some(move_distance) = calc_off_screen_distance(monitor, widget_position, &widget_size) {
-        widget_position.x += move_distance.width;
-        widget_position.y += move_distance.height;
-    }
+    let move_distance = calc_off_screen_distance(monitor, widget_position, &widget_size)?;
+    widget_position.x += move_distance.width;
+    widget_position.y += move_distance.height;
+
+    Some(true)
 }
 
 /// Updates the provided position to prevent the window from being off screen.
@@ -64,17 +65,18 @@ pub fn prevent_misalignement_of_content_and_widget(
     app_handle: &tauri::AppHandle,
     monitor: &tauri::Monitor,
     widget_position: &mut LogicalPosition<f64>,
-) {
-    if let Ok(content_size) = get_size(&app_handle, AppWindow::Content) {
-        let monitor_position = monitor.position().to_logical::<f64>(monitor.scale_factor());
+) -> Option<bool> {
+    let content_size = get_size(&app_handle, AppWindow::Content).ok()?;
+    let monitor_position = monitor.position().to_logical::<f64>(monitor.scale_factor());
 
-        // only reposition, if widget is too close to upper end of screen
-        if (monitor_position.y) < (widget_position.y - content_size.height - HEIGHT_MENU_BAR) {
-            return;
-        }
-
-        // Update widget position to respect content window dimensions
-        widget_position.y =
-            monitor_position.y + content_size.height + HEIGHT_MENU_BAR + POSITIONING_OFFSET_Y;
+    // only reposition, if widget is too close to upper end of screen
+    if (monitor_position.y) < (widget_position.y - content_size.height - HEIGHT_MENU_BAR) {
+        return Some(false);
     }
+
+    // Update widget position to respect content window dimensions
+    widget_position.y =
+        monitor_position.y + content_size.height + HEIGHT_MENU_BAR + POSITIONING_OFFSET_Y;
+
+    Some(true)
 }

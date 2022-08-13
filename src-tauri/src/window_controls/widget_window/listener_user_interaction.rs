@@ -31,7 +31,7 @@ pub fn register_listener_user_interactions(
 fn on_core_activation_status_update(
     widget_props: &Arc<Mutex<WidgetWindow>>,
     activation_msg: &CoreActivationStatusMessage,
-) {
+) -> Option<bool> {
     let widget_props = &mut *(match widget_props.lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
@@ -44,17 +44,16 @@ fn on_core_activation_status_update(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    if let Some(focused_editor_window_id) = widget_props.currently_focused_editor_window {
-        if let Some(editor_window) = editor_windows.get_mut(&focused_editor_window_id) {
-            if activation_msg.engine_active {
-                let _ = show_code_overlay(
-                    &widget_props.app_handle,
-                    editor_window.textarea_position(true),
-                    editor_window.textarea_size(),
-                );
-            } else {
-                let _ = hide_code_overlay(&widget_props.app_handle);
-            }
-        }
+    let editor_window = editor_windows.get_mut(&widget_props.currently_focused_editor_window?)?;
+    if activation_msg.engine_active {
+        let _ = show_code_overlay(
+            &widget_props.app_handle,
+            editor_window.textarea_position(true),
+            editor_window.textarea_size(),
+        );
+    } else {
+        let _ = hide_code_overlay(&widget_props.app_handle);
     }
+
+    Some(true)
 }
