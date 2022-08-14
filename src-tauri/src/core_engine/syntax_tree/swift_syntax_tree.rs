@@ -4,7 +4,7 @@ use std::{
     path::PathBuf,
     process::{Command, Stdio},
 };
-use tree_sitter::{Parser, Point, Tree};
+use tree_sitter::{Node, Parser, Point, Tree};
 
 use crate::core_engine::rules::TextRange;
 
@@ -75,39 +75,38 @@ impl SwiftSyntaxTree {
         }
     }
 
-    pub fn get_tree_copy(&self) -> Option<Tree> {
-        self.tree_sitter_tree.clone()
+    pub fn get_selected_code_node(&self, selected_text_range: &TextRange) -> Option<Node> {
+        if let (Some(syntax_tree), Some(text_content)) =
+            (self.tree_sitter_tree.as_ref(), self.content.as_ref())
+        {
+            if let Some((start_position, _)) =
+                selected_text_range.as_StartEndTextPosition(text_content)
+            {
+                let node = syntax_tree.root_node().named_descendant_for_point_range(
+                    Point {
+                        row: start_position.row,
+                        column: start_position.column,
+                    },
+                    Point {
+                        row: start_position.row,
+                        column: start_position.column,
+                    },
+                );
+
+                return node;
+            }
+        }
+        None
     }
 
     pub fn get_selected_codeblock_node(
         &self,
         selected_text_range: &TextRange,
     ) -> Option<SwiftCodeBlock> {
-        // 1. Determine the node that the curser currently is on
-        let mut currently_selected_node = None;
-        if let (Some(syntax_tree), Some(text_content)) =
-            (self.tree_sitter_tree.as_ref(), self.content.as_ref())
-        {
-            if let Some((selected_text_range_start_pos, _)) =
-                selected_text_range.as_StartEndTextPosition(&text_content)
-            {
-                currently_selected_node = syntax_tree.root_node().named_descendant_for_point_range(
-                    Point {
-                        row: selected_text_range_start_pos.row,
-                        column: selected_text_range_start_pos.column,
-                    },
-                    Point {
-                        row: selected_text_range_start_pos.row,
-                        column: selected_text_range_start_pos.column,
-                    },
-                );
-            }
-        }
-
-        // 2. Find the nearest codeblock node
-        if let (Some(mut node), Some(content)) =
-            (currently_selected_node.clone(), self.content.as_ref())
-        {
+        if let (Some(mut node), Some(content)) = (
+            self.get_selected_code_node(selected_text_range),
+            self.content.as_ref(),
+        ) {
             loop {
                 if let Ok(codeblock_node) = SwiftCodeBlock::new(node, content) {
                     return Some(codeblock_node);

@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tree_sitter::{Node, Point, Tree};
 use ts_rs::TS;
 
 use crate::{
@@ -7,6 +6,7 @@ use crate::{
     core_engine::{
         ax_utils::get_bounds_of_TextRange,
         rules::{get_index_of_next_row, TextPosition, TextRange},
+        syntax_tree::SwiftSyntaxTree,
         types::MatchRectangle,
     },
 };
@@ -82,7 +82,7 @@ pub struct BracketHighlightResults {
 pub struct BracketHighlight {
     results: Option<BracketHighlightResults>,
     selected_text_range: Option<TextRange>,
-    swift_syntax_tree: Option<Tree>,
+    swift_syntax_tree: SwiftSyntaxTree,
     text_content: Option<String>,
     window_pid: i32,
 }
@@ -92,23 +92,20 @@ impl BracketHighlight {
         Self {
             results: None,
             selected_text_range: None,
-            swift_syntax_tree: None,
+            swift_syntax_tree: SwiftSyntaxTree::new(),
             text_content: None,
             window_pid,
         }
     }
 
-    pub fn update_content(
-        &mut self,
-        swift_syntax_tree: Option<Tree>,
-        text_content: Option<String>,
-    ) {
-        self.swift_syntax_tree = swift_syntax_tree;
-        self.text_content = text_content;
+    pub fn update_content(&mut self, text_content: &String) {
+        if self.swift_syntax_tree.parse(text_content) {
+            self.text_content = Some(text_content.to_owned());
+        }
     }
 
-    pub fn update_selected_text_range(&mut self, selected_text_range: Option<TextRange>) {
-        self.selected_text_range = selected_text_range;
+    pub fn update_selected_text_range(&mut self, selected_text_range: &TextRange) {
+        self.selected_text_range = Some(selected_text_range.to_owned());
     }
 
     pub fn get_results(&self) -> Option<BracketHighlightResults> {
@@ -116,20 +113,25 @@ impl BracketHighlight {
     }
 
     pub fn generate_results(&mut self) {
-        let (selected_node, selected_text_range, text_content, textarea_ui_element) = if let (
-            Some(node),
-            Some(selected_text_range),
-            Some(text_content),
-            Some(textarea_ui_element),
-        ) = (
-            self.get_selected_code_node(),
-            self.selected_text_range.clone(),
-            self.text_content.clone(),
-            get_textarea_uielement(self.window_pid),
-        ) {
-            (node, selected_text_range, text_content, textarea_ui_element)
+        let (selected_text_range, text_content, textarea_ui_element) =
+            if let (Some(selected_text_range), Some(text_content), Some(textarea_ui_element)) = (
+                self.selected_text_range.clone(),
+                self.text_content.clone(),
+                get_textarea_uielement(self.window_pid),
+            ) {
+                (selected_text_range, text_content, textarea_ui_element)
+            } else {
+                // Failed to get selected_text_range, text_content, or ui_element
+                self.results = None;
+                return;
+            };
+
+        let selected_node = if let Some(node) = self
+            .swift_syntax_tree
+            .get_selected_code_node(&selected_text_range)
+        {
+            node
         } else {
-            // Failed to get selected_node, selected_text_range, text_content, or ui_element
             self.results = None;
             return;
         };
@@ -335,31 +337,5 @@ impl BracketHighlight {
             elbow,
             boxes: box_pair,
         });
-    }
-
-    fn get_selected_code_node(&self) -> Option<Node> {
-        if let (Some(selected_text_range), Some(syntax_tree), Some(text_content)) = (
-            self.selected_text_range.clone(),
-            &self.swift_syntax_tree,
-            &self.text_content,
-        ) {
-            if let Some((start_position, _)) =
-                selected_text_range.as_StartEndTextPosition(text_content)
-            {
-                let node = syntax_tree.root_node().named_descendant_for_point_range(
-                    Point {
-                        row: start_position.row,
-                        column: start_position.column,
-                    },
-                    Point {
-                        row: start_position.row,
-                        column: start_position.column,
-                    },
-                );
-
-                return node;
-            }
-        }
-        None
     }
 }
