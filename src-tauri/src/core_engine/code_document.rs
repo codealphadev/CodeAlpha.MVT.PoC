@@ -122,10 +122,7 @@ impl CodeDocument {
         }
 
         // Update text content in features
-        self.bracket_highlight.update_content(
-            self.swift_syntax_tree.get_tree_copy(),
-            Some(new_content.to_string()),
-        );
+        self.bracket_highlight.update_content(&new_content);
 
         (*self.docs_generator.lock().unwrap()).update_content(new_content);
     }
@@ -184,14 +181,13 @@ impl CodeDocument {
     }
 
     pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
-        let text_range = Some(TextRange { length, index });
-        self.selected_text_range = text_range;
+        let text_range = TextRange { length, index };
+        self.selected_text_range = Some(text_range);
 
-        (*self.docs_generator.lock().unwrap())
-            .update_selected_text_range(&TextRange { length, index });
+        (*self.docs_generator.lock().unwrap()).update_selected_text_range(&text_range);
 
         self.bracket_highlight
-            .update_selected_text_range(text_range);
+            .update_selected_text_range(&text_range);
 
         // Check if content changed, if so, process bracket highlight
         if let (Ok(Some(content_text)), Some(text)) = (
@@ -199,9 +195,7 @@ impl CodeDocument {
             self.text.as_ref(),
         ) {
             if content_text != *text {
-                self.swift_syntax_tree.parse(&content_text);
-                self.bracket_highlight
-                    .update_content(self.swift_syntax_tree.get_tree_copy(), Some(content_text));
+                self.bracket_highlight.update_content(&content_text);
                 self.process_bracket_highlight();
             }
         }
