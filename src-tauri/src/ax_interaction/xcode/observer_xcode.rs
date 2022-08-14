@@ -125,7 +125,6 @@ fn create_observer_and_add_notifications(
                     },
                 );
             }
-
             // Register subscribers for mouse events
             subscribe_mouse_events();
 

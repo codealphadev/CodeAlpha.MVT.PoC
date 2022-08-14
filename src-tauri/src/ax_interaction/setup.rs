@@ -1,10 +1,8 @@
-use std::thread;
-
 use accessibility::AXUIElement;
 
 use super::xcode::register_observer_xcode;
 
-static LOOP_TIME_IN_MS: u64 = 150;
+static LOOP_TIME_IN_MS: u64 = 500;
 
 // This is the entry point for the Observer registrations. We register observers
 // for the following notifications:
@@ -15,7 +13,7 @@ pub fn setup_observers(app_handle: &tauri::AppHandle) {
     let app_handle_move_copy = app_handle.clone();
     // Other apps than our own might only be restarted at a later point
     // This thread periodically checks if the app is running and registers the observers
-    thread::spawn(move || {
+    tauri::async_runtime::spawn(async move {
         let mut xcode_app: Option<AXUIElement> = None;
 
         loop {
@@ -23,7 +21,7 @@ pub fn setup_observers(app_handle: &tauri::AppHandle) {
             // =======================
             let _ = register_observer_xcode(&mut xcode_app, &app_handle_move_copy);
 
-            thread::sleep(std::time::Duration::from_millis(LOOP_TIME_IN_MS));
+            tokio::time::sleep(std::time::Duration::from_millis(LOOP_TIME_IN_MS)).await;
         }
     });
 }

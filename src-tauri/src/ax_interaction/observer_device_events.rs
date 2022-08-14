@@ -52,8 +52,8 @@ pub fn subscribe_mouse_events() {
                 .mach_port
                 .create_runloop_source(0)
                 .expect("Registering mouse event subscriber failed");
-            let foo = CFRunLoop::get_current();
-            foo.add_source(&loop_source, kCFRunLoopDefaultMode);
+            let runloop = CFRunLoop::get_current();
+            runloop.add_source(&loop_source, kCFRunLoopDefaultMode);
             tap.enable();
             CFRunLoop::run_current();
         },
