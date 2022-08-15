@@ -1,52 +1,28 @@
 <script lang="ts">
 	import { listen, Event } from '@tauri-apps/api/event';
-
-	import {
-		compute_bracket_highlight_box_rects,
-		compute_bracket_highlight_line_rect,
-		BORDER_WIDTH,
-		adjust_bracket_results_for_overlay
-	} from './bracket_highlight';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { RuleResults } from '../../src-tauri/bindings/rules/RuleResults';
-	import type { BracketHighlightResults } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 	import type { EventDocsGeneration } from '../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
-	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
-
-	import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize';
-	import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
 	import type { RuleName } from '../../src-tauri/bindings/rules/RuleName';
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
-	import type { DocsGeneratedMessage } from '../../src-tauri/bindings/features/docs_generation/DocsGeneratedMessage';
 	import DocsAnnotations from '../components/code-ovelay/docs-generation/docs-annotations.svelte';
+	import BracketHighlight from '../components/code-ovelay/bracket-highlight/bracket-highlight.svelte';
 
 	type MatchId = string;
 
-	let height = 0;
-	let outerSize: LogicalSize | null = null;
-	let outerPosition: LogicalPosition | null = null;
+	let code_overlay_rectangle: MatchRectangle | null = null;
 
 	let rule_results_arr: Array<RuleResults> | null = null;
 	let highlightedRectangleMatchId = null;
-	let bracket_highlight_line_rectangle: MatchRectangle = null;
-	let bracket_highlight_box_rectangle_first: MatchRectangle = null;
-	let bracket_highlight_box_rectangle_last: MatchRectangle = null;
-	let bottom_elbow_rectangle: MatchRectangle = null;
 
 	let docs_gen_annotations: CodeAnnotationMessage | null = null;
-	let docs_gen_message: DocsGeneratedMessage | null = null;
 
 	const listenTauriEvents = async () => {
 		await listen('event-compute-height', (event) => {
 			const tauriEvent = event as Event<MatchRectangle>;
 			const payload: MatchRectangle = tauriEvent.payload;
-
-			outerSize = payload.size;
-			outerPosition = payload.origin;
-			height = payload.size.height;
-
-			console.log('event-compute-height', payload);
+			code_overlay_rectangle = payload;
 
 			compute_rule_rects();
 		});
@@ -58,27 +34,6 @@
 			compute_rule_rects();
 		});
 
-		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
-		await listen(BracketHighlightChannel, (event) => {
-			const adjusted_bracket_highlight_results = adjust_bracket_results_for_overlay(
-				(event as Event<BracketHighlightResults>).payload,
-				outerPosition
-			);
-
-			bracket_highlight_line_rectangle = null;
-			bracket_highlight_box_rectangle_first = null;
-			bracket_highlight_box_rectangle_last = null;
-			bottom_elbow_rectangle = null;
-
-			if (adjusted_bracket_highlight_results) {
-				[bracket_highlight_box_rectangle_first, bracket_highlight_box_rectangle_last] =
-					compute_bracket_highlight_box_rects(adjusted_bracket_highlight_results.boxes);
-
-				[bracket_highlight_line_rectangle, bottom_elbow_rectangle] =
-					compute_bracket_highlight_line_rect(adjusted_bracket_highlight_results, outerSize);
-			}
-		});
-
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
@@ -87,9 +42,6 @@
 			switch (docs_gen_event.event) {
 				case 'CodeAnnotations':
 					docs_gen_annotations = docs_gen_event.payload as unknown as CodeAnnotationMessage;
-					break;
-				case 'DocsGenerated':
-					docs_gen_message = docs_gen_event.payload as unknown as DocsGeneratedMessage;
 					break;
 				default:
 					break;
@@ -116,7 +68,7 @@
 		if (rule_results_arr === null) {
 			return;
 		}
-		if (outerPosition === null) {
+		if (code_overlay_rectangle.origin === null) {
 			return;
 		}
 
@@ -128,8 +80,8 @@
 				for (const rect of rule_match.rectangles) {
 					let rect_adjusted: MatchRectangle = {
 						origin: {
-							x: rect.origin.x - outerPosition!.x,
-							y: rect.origin.y - outerPosition!.y
+							x: rect.origin.x - code_overlay_rectangle.origin!.x,
+							y: rect.origin.y - code_overlay_rectangle.origin!.y
 						},
 						size: {
 							width: rect.size.width,
@@ -141,7 +93,10 @@
 					if (
 						rects_overlap(rect_adjusted, {
 							origin: { x: 0, y: 0 },
-							size: { width: outerSize!.width, height: outerSize!.height }
+							size: {
+								width: code_overlay_rectangle.size!.width,
+								height: code_overlay_rectangle.size!.height
+							}
 						})
 					) {
 						new_rectangles.push([rule_results.rule, rule_match.id, rect_adjusted]);
@@ -165,56 +120,17 @@
 	listenTauriEvents();
 </script>
 
-<div
-	style="height: {height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,0.0);"
-	class=" h-full w-full"
-	id="overlay"
->
-	{#if bracket_highlight_line_rectangle !== null}
-		<div
-			style="position: absolute; top: {Math.round(
-				bracket_highlight_line_rectangle.origin.y
-			)}px; left: {Math.round(bracket_highlight_line_rectangle.origin.x)}px; width: {Math.round(
-				bracket_highlight_line_rectangle.size.width
-			)}px;height: {Math.round(
-				bracket_highlight_line_rectangle.size.height
-			)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
+{#if code_overlay_rectangle}
+	<div
+		style="height: {code_overlay_rectangle.size
+			.height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,0.0);"
+		class=" h-full w-full"
+		id="overlay"
+	>
+		<BracketHighlight {code_overlay_rectangle} />
+		<DocsAnnotations
+			annotation_msg={docs_gen_annotations}
+			code_overlay_position={code_overlay_rectangle.origin}
 		/>
-	{/if}
-	{#if bracket_highlight_box_rectangle_first !== null}
-		<div
-			style="position: absolute; top: {Math.round(
-				bracket_highlight_box_rectangle_first.origin.y
-			)}px; left: {Math.round(
-				bracket_highlight_box_rectangle_first.origin.x
-			)}px; width: {Math.round(
-				bracket_highlight_box_rectangle_first.size.width
-			)}px;height: {Math.round(
-				bracket_highlight_box_rectangle_first.size.height
-			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
-		/>
-	{/if}
-	{#if bracket_highlight_box_rectangle_last !== null}
-		<div
-			style="position: absolute; top: {Math.round(
-				bracket_highlight_box_rectangle_last.origin.y
-			)}px; left: {Math.round(bracket_highlight_box_rectangle_last.origin.x)}px; width: {Math.round(
-				bracket_highlight_box_rectangle_last.size.width
-			)}px;height: {Math.round(
-				bracket_highlight_box_rectangle_last.size.height
-			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
-		/>
-	{/if}
-	{#if bottom_elbow_rectangle !== null}
-		<div
-			style="position: absolute; top: {Math.round(
-				bottom_elbow_rectangle.origin.y
-			)}px; left: {Math.round(bottom_elbow_rectangle.origin.x)}px; width: {Math.round(
-				bottom_elbow_rectangle.size.width
-			)}px;height: {Math.round(
-				bottom_elbow_rectangle.size.height
-			)}px; border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
-		/>
-	{/if}
-	<DocsAnnotations annotation_msg={docs_gen_annotations} code_overlay_position={outerPosition} />
-</div>
+	</div>
+{/if}
