@@ -61,29 +61,10 @@ fn main() {
             cmd_toggle_app_activation
         ])
         .setup(|app| {
-            setup_observers();
+            // Set the app handle for the static APP_HANDLE variable
+            set_static_app_handle(&app.handle());
 
             let handle = app.handle();
-
-            set_static_app_handle(&handle);
-
-            // Create vector of editor windows
-            let editor_windows_arc: Arc<Mutex<HashMap<uuid::Uuid, EditorWindow>>> =
-                Arc::new(Mutex::new(HashMap::new()));
-
-            let core_engine_arc = Arc::new(Mutex::new(CoreEngine::new(&handle)));
-            CoreEngine::start_core_engine_listeners(&handle, &core_engine_arc);
-
-            let tracking_area_manager_arc =
-                Arc::new(Mutex::new(TrackingAreasManager::new(&handle)));
-            TrackingAreasManager::start_listener_events_input_devices(
-                &handle,
-                &tracking_area_manager_arc,
-            );
-            TrackingAreasManager::start_listener_tracking_areas(
-                &handle,
-                &tracking_area_manager_arc,
-            );
 
             // Create instance of widget window; panics if creation fails
             let widget_window_arc =
