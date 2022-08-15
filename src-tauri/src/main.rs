@@ -61,7 +61,8 @@ fn main() {
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
 
-            let handle = app.handle();
+            // Setup the observers for AX interactions and mouse events
+            setup_observers();
 
             let core_engine_arc = Arc::new(Mutex::new(CoreEngine::new()));
             CoreEngine::start_core_engine_listeners(&core_engine_arc);
