@@ -30,6 +30,7 @@ dependencies = [
  "tree-sitter",
  "tree-sitter-swift",
  "ts-rs",
+ "unicode-segmentation",
  "uuid 0.8.2",
  "window-shadows",
 ]
