@@ -19,7 +19,6 @@ pub enum AXEventApp {
     AppContentActivationChange(AppContentActivationMessage),
     AppActivated(AppActivatedMessage),
     AppDeactivated(AppDeactivatedMessage),
-    None,
 }
 
 impl fmt::Display for AXEventApp {
@@ -31,7 +30,6 @@ impl fmt::Display for AXEventApp {
             AXEventApp::AppContentActivationChange(_) => write!(f, "AppContentActivationChange"),
             AXEventApp::AppActivated(_) => write!(f, "AppActivated"),
             AXEventApp::AppDeactivated(_) => write!(f, "AppDeactivated"),
-            AXEventApp::None => write!(f, "None"),
         }
     }
 }

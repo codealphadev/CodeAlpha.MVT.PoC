@@ -27,22 +27,21 @@ mod commands;
 mod core_engine;
 mod utils;
 mod window_controls;
+mod window_controls_two;
 
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
+    static ref APP_HANDLE: parking_lot::Mutex<Option<tauri::AppHandle>> =
+        parking_lot::Mutex::new(None);
 }
 
 fn set_static_app_handle(app_handle: &tauri::AppHandle) {
-    APP_HANDLE.lock().unwrap().replace(app_handle.clone());
+    APP_HANDLE.lock().replace(app_handle.clone());
 }
 
 pub fn app_handle() -> tauri::AppHandle {
-    let app_handle = &*(match APP_HANDLE.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    });
+    let app_handle = APP_HANDLE.lock().clone();
 
     app_handle.as_ref().unwrap().clone()
 }
