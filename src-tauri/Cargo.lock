@@ -17,6 +17,7 @@ dependencies = [
  "enigo",
  "lazy_static",
  "objc",
+ "parking_lot",
  "pretty_assertions",
  "rand 0.8.5",
  "rdev",
