@@ -4,7 +4,8 @@
 	import {
 		compute_bracket_highlight_box_rects,
 		compute_bracket_highlight_line_rect,
-		BORDER_WIDTH
+		BORDER_WIDTH,
+		adjust_bracket_results_for_overlay
 	} from './bracket_highlight';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { RuleResults } from '../../src-tauri/bindings/rules/RuleResults';
@@ -59,19 +60,22 @@
 
 		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
 		await listen(BracketHighlightChannel, (event) => {
-			const bracket_highlight_results = (event as Event<BracketHighlightResults>).payload;
+			const adjusted_bracket_highlight_results = adjust_bracket_results_for_overlay(
+				(event as Event<BracketHighlightResults>).payload,
+				outerPosition
+			);
 
 			bracket_highlight_line_rectangle = null;
 			bracket_highlight_box_rectangle_first = null;
 			bracket_highlight_box_rectangle_last = null;
 			bottom_elbow_rectangle = null;
 
-			if (bracket_highlight_results) {
+			if (adjusted_bracket_highlight_results) {
 				[bracket_highlight_box_rectangle_first, bracket_highlight_box_rectangle_last] =
-					compute_bracket_highlight_box_rects(bracket_highlight_results.boxes);
+					compute_bracket_highlight_box_rects(adjusted_bracket_highlight_results.boxes);
 
 				[bracket_highlight_line_rectangle, bottom_elbow_rectangle] =
-					compute_bracket_highlight_line_rect(bracket_highlight_results, outerSize);
+					compute_bracket_highlight_line_rect(adjusted_bracket_highlight_results, outerSize);
 			}
 		});
 
@@ -166,23 +170,23 @@
 	class=" h-full w-full"
 	id="overlay"
 >
-	{#if bracket_highlight_line_rectangle !== null && outerPosition !== null}
+	{#if bracket_highlight_line_rectangle !== null}
 		<div
 			style="position: absolute; top: {Math.round(
-				bracket_highlight_line_rectangle.origin.y - outerPosition.y
-			)}px; left: {Math.round(
-				bracket_highlight_line_rectangle.origin.x - outerPosition.x
-			)}px; width: {Math.round(bracket_highlight_line_rectangle.size.width)}px;height: {Math.round(
+				bracket_highlight_line_rectangle.origin.y
+			)}px; left: {Math.round(bracket_highlight_line_rectangle.origin.x)}px; width: {Math.round(
+				bracket_highlight_line_rectangle.size.width
+			)}px;height: {Math.round(
 				bracket_highlight_line_rectangle.size.height
 			)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
 		/>
 	{/if}
-	{#if bracket_highlight_box_rectangle_first !== null && outerPosition !== null}
+	{#if bracket_highlight_box_rectangle_first !== null}
 		<div
 			style="position: absolute; top: {Math.round(
-				bracket_highlight_box_rectangle_first.origin.y - outerPosition.y
+				bracket_highlight_box_rectangle_first.origin.y
 			)}px; left: {Math.round(
-				bracket_highlight_box_rectangle_first.origin.x - outerPosition.x
+				bracket_highlight_box_rectangle_first.origin.x
 			)}px; width: {Math.round(
 				bracket_highlight_box_rectangle_first.size.width
 			)}px;height: {Math.round(
@@ -190,28 +194,26 @@
 			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
-	{#if bracket_highlight_box_rectangle_last !== null && outerPosition !== null}
+	{#if bracket_highlight_box_rectangle_last !== null}
 		<div
 			style="position: absolute; top: {Math.round(
-				bracket_highlight_box_rectangle_last.origin.y - outerPosition.y
-			)}px; left: {Math.round(
-				bracket_highlight_box_rectangle_last.origin.x - outerPosition.x
-			)}px; width: {Math.round(
+				bracket_highlight_box_rectangle_last.origin.y
+			)}px; left: {Math.round(bracket_highlight_box_rectangle_last.origin.x)}px; width: {Math.round(
 				bracket_highlight_box_rectangle_last.size.width
 			)}px;height: {Math.round(
 				bracket_highlight_box_rectangle_last.size.height
 			)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
-	{#if bottom_elbow_rectangle !== null && outerPosition !== null}
+	{#if bottom_elbow_rectangle !== null}
 		<div
 			style="position: absolute; top: {Math.round(
-				bottom_elbow_rectangle.origin.y - outerPosition.y
-			)}px; left: {Math.round(
-				bottom_elbow_rectangle.origin.x - outerPosition.x
-			)}px; width: {Math.round(bottom_elbow_rectangle.size.width)}px;height: {Math.round(
+				bottom_elbow_rectangle.origin.y
+			)}px; left: {Math.round(bottom_elbow_rectangle.origin.x)}px; width: {Math.round(
+				bottom_elbow_rectangle.size.width
+			)}px;height: {Math.round(
 				bottom_elbow_rectangle.size.height
-			)}px; border-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
+			)}px; border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
 		/>
 	{/if}
 	<DocsAnnotations annotation_msg={docs_gen_annotations} code_overlay_position={outerPosition} />

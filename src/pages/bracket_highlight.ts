@@ -2,7 +2,7 @@ import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize'
 import type { BracketHighlightBracketPair } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightBracketPair';
 import type { BracketHighlightResults } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
-import type { BracketHighlightElbow } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightElbow';
+import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
 
 export const BORDER_WIDTH = 1;
 const LEFT_MOST_LINE_X = 5;
@@ -10,11 +10,37 @@ const LEFT_MOST_LINE_X = 5;
 export const compute_bracket_highlight_box_rects = (
 	bracket_highlight_boxes: BracketHighlightBracketPair
 ): [MatchRectangle, MatchRectangle] => {
-	let first_box_rect = bracket_highlight_boxes.first
-		? bracket_highlight_boxes.first.rectangle
-		: null;
-	let last_box_rect = bracket_highlight_boxes.last ? bracket_highlight_boxes.last.rectangle : null;
-	return [adjust_rectangle(first_box_rect), adjust_rectangle(last_box_rect)];
+	let first_box_rect = null;
+	if (bracket_highlight_boxes.first) {
+		const first_rect = bracket_highlight_boxes.first.rectangle;
+		first_box_rect = {
+			origin: {
+				x: first_rect.origin.x,
+				y: first_rect.origin.y
+			},
+			size: {
+				width: first_rect.size.width - BORDER_WIDTH * 2,
+				height: first_rect.size.height - BORDER_WIDTH * 2
+			}
+		};
+	}
+
+	let last_box_rect = null;
+	if (bracket_highlight_boxes.last) {
+		const last_rect = bracket_highlight_boxes.last.rectangle;
+		last_box_rect = {
+			origin: {
+				x: last_rect.origin.x,
+				y: last_rect.origin.y
+			},
+			size: {
+				width: last_rect.size.width - BORDER_WIDTH * 2,
+				height: last_rect.size.height - BORDER_WIDTH * 2
+			}
+		};
+	}
+
+	return [first_box_rect, last_box_rect];
 };
 
 export const compute_bracket_highlight_line_rect = (
@@ -23,16 +49,9 @@ export const compute_bracket_highlight_line_rect = (
 ): [MatchRectangle, MatchRectangle] => {
 	let lines_pair = bracket_results.lines;
 
-	// Adjust positions to overlay
-	let first_line_rect = adjust_rectangle(lines_pair.first ? lines_pair.first.rectangle : null);
-	let last_line_rect = adjust_rectangle(lines_pair.last ? lines_pair.last.rectangle : null);
-	let elbow: BracketHighlightElbow = bracket_results.elbow
-		? {
-				origin_x: bracket_results.elbow.origin_x,
-				origin_x_left_most: bracket_results.elbow.origin_x_left_most,
-				bottom_line_top: bracket_results.elbow.bottom_line_top
-		  }
-		: null;
+	let first_line_rect = lines_pair.first ? lines_pair.first.rectangle : null;
+	let last_line_rect = lines_pair.last ? lines_pair.last.rectangle : null;
+	let elbow = bracket_results.elbow;
 
 	// Check if last and first bracket are visible
 	let is_last_bracket_visible = !!lines_pair.last;
@@ -133,15 +152,51 @@ export const compute_bracket_highlight_line_rect = (
 	return [line_rectangle, bottom_line_rectangle];
 };
 
-const adjust_rectangle = (rectangle: MatchRectangle) => {
+export const adjust_bracket_results_for_overlay = (
+	bracket_results: BracketHighlightResults,
+	outerPosition: LogicalPosition
+): BracketHighlightResults => {
+	if (bracket_results.lines.first) {
+		bracket_results.lines.first.rectangle = adjust_rectangle(
+			bracket_results.lines.first.rectangle,
+			outerPosition
+		);
+	}
+	if (bracket_results.lines.last) {
+		bracket_results.lines.last.rectangle = adjust_rectangle(
+			bracket_results.lines.last.rectangle,
+			outerPosition
+		);
+	}
+	if (bracket_results.boxes.first) {
+		bracket_results.boxes.first.rectangle = adjust_rectangle(
+			bracket_results.boxes.first.rectangle,
+			outerPosition
+		);
+	}
+	if (bracket_results.boxes.last) {
+		bracket_results.boxes.last.rectangle = adjust_rectangle(
+			bracket_results.boxes.last.rectangle,
+			outerPosition
+		);
+	}
+
+	if (bracket_results.elbow && bracket_results.elbow.origin_x) {
+		bracket_results.elbow.origin_x = bracket_results.elbow.origin_x - outerPosition.x;
+	}
+
+	return bracket_results;
+};
+
+const adjust_rectangle = (rectangle: MatchRectangle, outerPosition: LogicalPosition) => {
 	if (!rectangle) {
 		return null;
 	}
 
 	return {
 		origin: {
-			x: rectangle.origin.x,
-			y: rectangle.origin.y
+			x: rectangle.origin.x - outerPosition.x,
+			y: rectangle.origin.y - outerPosition.y
 		},
 		size: rectangle.size
 	};
