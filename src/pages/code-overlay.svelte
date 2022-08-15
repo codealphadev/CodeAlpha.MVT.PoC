@@ -6,6 +6,7 @@
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
 	import type { DocsGeneratedMessage } from '../../src-tauri/bindings/features/docs_generation/DocsGeneratedMessage';
 	import DocsAnnotations from '../components/code-ovelay/docs-generation/docs-annotations.svelte';
+import BracketHighlight from '../components/code-ovelay/bracket-highlight/bracket-highlight.svelte';
 
 	let code_overlay_rectangle: MatchRectangle | null = null;
 	let docs_gen_annotations: CodeAnnotationMessage | null = null;
@@ -18,7 +19,7 @@
 		});
 
 		// Listener for docs generation feature
-		let DocsGenerationChannel: ChannelList = 'EventDocGeneration';
+		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
 			const docs_gen_event = JSON.parse(event.payload as string) as EventDocsGeneration;
 

@@ -13,7 +13,7 @@ pub fn setup_observers(app_handle: &tauri::AppHandle) {
     let app_handle_move_copy = app_handle.clone();
     // Other apps than our own might only be restarted at a later point
     // This thread periodically checks if the app is running and registers the observers
-    thread::spawn(move || {
+    tauri::async_runtime::spawn(async move {
         let mut xcode_app: Option<AXUIElement> = None;
 
         loop {
