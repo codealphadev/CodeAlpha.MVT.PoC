@@ -89,7 +89,6 @@ pub fn register_listener_app(
             AXEventApp::AppContentActivationChange(msg) => {
                 on_toggle_content_window(widget_props, msg);
             }
-            AXEventApp::None => {}
         }
 
         // Checking if the widget window is focused and if it is, it starts dragging it.

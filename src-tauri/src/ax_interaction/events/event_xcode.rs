@@ -30,7 +30,6 @@ pub enum AXEventXcode {
     EditorTextareaContentChanged(EditorTextareaContentChangedMessage),
     EditorTextareaSelectedTextChanged(EditorTextareaSelectedTextChangedMessage),
     EditorShortcutPressed(EditorShortcutPressedMessage),
-    None,
 }
 
 impl fmt::Display for AXEventXcode {
@@ -54,7 +53,6 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorTextareaContentChanged(_) => {
                 write!(f, "EditorTextareaContentChanged")
             }
-            AXEventXcode::None => write!(f, "None"),
         }
     }
 }

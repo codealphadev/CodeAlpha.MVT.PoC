@@ -25,6 +25,7 @@ diff = "0.1.13"
 reqwest = { version = "0.11", features = ["json"] }
 parking_lot = "0.12.1"
 unicode-segmentation = "1.9.0"
+parking_lot = "0.12.1"
 
 # macOS dependencies (crucial for Accessibility features to work)
 core-foundation = "0.9.3"
