@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use tree_sitter::Node;
 
-use crate::core_engine::rules::{TextPosition, TextRange};
+use crate::core_engine::rules::{TextPosition};
 
 pub type Err = ();
 
