@@ -4,9 +4,8 @@
 	import type { EventDocsGeneration } from '../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
 	import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
-	import type { DocsGeneratedMessage } from '../../src-tauri/bindings/features/docs_generation/DocsGeneratedMessage';
-	import DocsAnnotations from '../components/code-ovelay/docs-generation/docs-annotations.svelte';
-import BracketHighlight from '../components/code-ovelay/bracket-highlight/bracket-highlight.svelte';
+	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
+	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
 
 	let code_overlay_rectangle: MatchRectangle | null = null;
 	let docs_gen_annotations: CodeAnnotationMessage | null = null;
