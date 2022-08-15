@@ -1,8 +1,8 @@
-import type { LogicalSize } from '../../src-tauri/bindings/geometry/LogicalSize';
-import type { BracketHighlightBracketPair } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightBracketPair';
-import type { BracketHighlightResults } from '../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
-import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
-import type { LogicalPosition } from '../../src-tauri/bindings/geometry/LogicalPosition';
+import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
+import type { LogicalSize } from '../../../../src-tauri/bindings/geometry/LogicalSize';
+import type { MatchRectangle } from '../../../../src-tauri/bindings/rules/utils/MatchRectangle';
+import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
+import type { BracketHighlightBracketPair } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightBracketPair';
 
 export const BORDER_WIDTH = 1;
 const LEFT_MOST_LINE_X = 5;
