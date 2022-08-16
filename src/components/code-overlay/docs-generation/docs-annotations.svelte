@@ -3,30 +3,60 @@
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { CodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
 	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
+	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
 	import type { TrackingAreaEnteredMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaEnteredMessage';
 	import type { TrackingAreaExitedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaExitedMessage';
+	import { CodeAlphaOrange } from '../../../theme';
 	import AnnotationIcon from './annotation-icon.svelte';
 
 	export let annotation_msg: CodeAnnotationMessage | null;
 	export let code_overlay_position: LogicalPosition | null;
 
 	let is_hovered = false;
-	let was_clicked = false;
+	let is_processing = false;
 
-	const listenTauriEvents = async () => {
+	const ANNOTATION_LINE_WIDTH_PCT = 10;
+
+
+	let processing_timeout = 15000; // ms
+
+	const listenToDocsGenerationEvents = async () => {
+		// Listen for rule execution events to determine if the processing icon should be displayed
+		await listen('EventRuleExecutionState' as ChannelList, (event) => {
+			const ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
+			
+			switch (ruleExecutionState.event) {
+				case 'DocsGenerationStarted':
+					is_processing = true;
+					setTimeout(async () => {
+						is_processing = false;
+					}, processing_timeout);
+					break;
+				case 'DocsGenerationFinished': 
+					is_processing = false;
+					break;
+				default:
+					break;
+			}
+		});
+	};
+
+
+	const listenToTrackingAreaEvents = async () => {
 		// Listen for click & hover events on the tracking area
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
 		await listen(WindowControlsChannel, (event) => {
 			const tracking_area_event = JSON.parse(event.payload as string) as EventWindowControls;
-
+			console.log(tracking_area_event);
 			if (annotation_msg !== null) {
 				switch (tracking_area_event.event) {
 					case 'TrackingAreaClicked':
+						console.log('TrackingAreaClicked');
 						let clicked_msg = tracking_area_event.payload as unknown as TrackingAreaClickedMessage;
 						if (clicked_msg.id === annotation_msg.id) {
-							was_clicked = false;
+							is_hovered = false;
 						}
 						break;
 					case 'TrackingAreaEntered':
@@ -50,9 +80,9 @@
 		});
 	};
 
-	listenTauriEvents();
+	listenToTrackingAreaEvents();
+	listenToDocsGenerationEvents();
 
-	$: show_highlighted = was_clicked ? false : is_hovered;
 </script>
 
 {#if annotation_msg !== null && code_overlay_position !== null && annotation_msg.annotation_icon !== null}
@@ -65,6 +95,22 @@
 			annotation_msg.annotation_icon.size.height
 		)}px;"
 	>
-		<AnnotationIcon {show_highlighted} />
+		<AnnotationIcon {is_hovered} {is_processing} />
+		{#if is_hovered}
+			<div class="annotation-line" style="width: {ANNOTATION_LINE_WIDTH_PCT}%; top: 100%; left: {50-ANNOTATION_LINE_WIDTH_PCT/2}%; height: {annotation_msg.annotation_codeblock.size.height - annotation_msg.annotation_icon.size.height}px; position: absolute; background-color: {CodeAlphaOrange};"/>
+		{/if}
+		
 	</div>
 {/if}
+
+<style>
+	@keyframes reveal {
+		from { clip-path: inset(0% 0% 100% 0%); }
+		to { clip-path: inset(0% 0% 0% 0%)}
+	}
+
+	.annotation-line {
+		animation: reveal 0.13s ease-out forwards;
+
+	}
+</style>

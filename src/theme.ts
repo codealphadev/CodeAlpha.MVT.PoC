@@ -1,0 +1,1 @@
+export const CodeAlphaOrange = "#fc7456";
