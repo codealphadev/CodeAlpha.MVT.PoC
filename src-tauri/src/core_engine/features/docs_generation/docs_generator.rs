@@ -17,7 +17,7 @@ pub struct DocsGenerator {
     swift_syntax_tree: SwiftSyntaxTree,
     text_content: Option<String>,
     selected_text_range: Option<TextRange>,
-    docs_generation_task: Option<DocsGenerationTask>,
+    docs_generation_task: Option<Arc<Mutex<DocsGenerationTask>>>,
     window_pid: i32,
 }
 
@@ -40,10 +40,11 @@ impl DocsGenerator {
     }
 
     fn create_docs_gen_task(&self, text_content: &String) -> Option<DocsGenerationTask> {
+        println!("create_docs_gen_task");
         let codeblock: SwiftCodeBlock = self.swift_syntax_tree.get_selected_codeblock_node(&self.selected_text_range?)?;
         let first_char_position = codeblock.get_first_char_position();
         let codeblock_text = codeblock.get_codeblock_text()?;
-        let (docs_insertion_index, docs_indentation) = self.compute_docs_insertion_point_and_indetation(first_char_position.row)?;
+        let (docs_insertion_index, docs_indentation) = self.compute_docs_insertion_point_and_indentation(first_char_position.row)?;
 
         let mut new_task = DocsGenerationTask::new(
             self.window_pid,
@@ -69,7 +70,8 @@ impl DocsGenerator {
             // Create a new DocsGenerationTask if there is no task running.
             // We create a new one because the text has changed and code annotation might need to be recomputed
             if !self.is_docs_gen_task_running() {
-                self.docs_generation_task = self.create_docs_gen_task( text_content)
+                println!("create_docs_gen_task triggered from update content");
+                self.docs_generation_task = self.create_docs_gen_task( text_content).and_then(|task| Some(Arc::new(Mutex::new(task))))
             } else {
                 println!("DocsGenerator: update_content: docs generation task is running");
             }
@@ -83,12 +85,13 @@ impl DocsGenerator {
         // We create a new one because the cursor might have moved into a new codeblock. In this case we need to create a new code annotation.
         if !self.is_docs_gen_task_running()  {
             if let Some(text_content) = self.text_content.as_ref() {
-                self.docs_generation_task = self.create_docs_gen_task(&text_content);
+                println!("create_docs_gen_task triggered from update selected text range");
+                self.docs_generation_task = self.create_docs_gen_task(&text_content).and_then(|task| Some(Arc::new(Mutex::new(task))))
             }
         }
     }
 
-    fn compute_docs_insertion_point_and_indetation(
+    fn compute_docs_insertion_point_and_indentation(
         &self,
         insertion_line: usize,
     ) -> Option<(DocsInsertionIndex, DocsIndetation)> {
@@ -120,6 +123,7 @@ impl DocsGenerator {
     }
 
     pub fn update_visualization(&mut self) {
+        dbg!(&self.docs_generation_task.is_some());
         if let Some(text_content) = self.text_content.as_ref() {
             if let Some(docs_gen_task) = &mut self.docs_generation_task {
                 docs_gen_task.update_code_annotation_position(text_content);
@@ -146,6 +150,7 @@ impl DocsGenerator {
                     if let Some(docs_generation_task) = &mut docs_manager.docs_generation_task {
                         if let Some(task_id) = docs_generation_task.id() {
                             if msg.id == task_id {
+                                println!("DocsGenerator: start_listener_window_control_events: task id matches");
                                 docs_generation_task.generate_documentation();
                             }
                         }
@@ -157,6 +162,7 @@ impl DocsGenerator {
     }
 
     fn is_docs_gen_task_running(&self) -> bool {
+        dbg!(&self.docs_generation_task);
         if let Some(current_task) = &self.docs_generation_task {
             match current_task.task_state() {
                 super::docs_generation_task::DocsGenerationTaskState::Processing => true,

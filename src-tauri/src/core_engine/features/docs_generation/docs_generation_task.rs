@@ -28,7 +28,7 @@ pub enum DocsGenerationTaskState {
     Finished,
     Canceled,
 }
-
+#[derive(Debug)]
 pub struct DocsGenerationTask {
     // The tracking area attached to the task. Is set to none, if it can not
     tracking_area: Option<TrackingArea>,
@@ -84,6 +84,7 @@ impl DocsGenerationTask {
     }
 
     pub fn generate_documentation(&mut self) {
+        println!("Write task state to processing");
         self.task_state = DocsGenerationTaskState::Processing;
         EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
 
@@ -128,11 +129,12 @@ impl DocsGenerationTask {
                 })
                 .publish_to_tauri(&app_handle());
 
-                // Notifiy the frontend that the file has been formatted successfully
+                // Notify the frontend that the file has been formatted successfully
                 EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
             }
+            //self.task_state = DocsGenerationTaskState::Finished;
         });
-        self.task_state = DocsGenerationTaskState::Finished;
+
     }
 
     pub fn create_code_annotation(&mut self, text: &String) -> Result<(), &str> {

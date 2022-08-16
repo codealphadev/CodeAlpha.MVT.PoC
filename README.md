@@ -31,6 +31,12 @@ The frontend is built in TypeScript, with [Svelte](https://svelte.dev/) and [Tai
   - `core_engine`: Core business logic, completely agnostic about enviroment and operating system.
   - `window_controls`: Funtionality for rendering, including the `code_overlay`.
 
+
+#### Core Engine
+The core engine handles a set of code documents, each of which has its own DocsGenerator instance.
+The DocsGenerator listens for the EventWindowControls::TrackingAreaClicked event
+
+
 Communication between these modules is event-driven, as is communication between the backend and frontend, by serializing and de-serializing structs to JSON.
 
 The shared interfaces between the frontend and backend are generated from Rust structs with the `TS` annotation, and exported to TypeScript interfaces in `src-tauri/bindings/`, where they can be imported by the frontend. This is provided by [ts-rs](https://github.com/Aleph-Alpha/ts-rs)

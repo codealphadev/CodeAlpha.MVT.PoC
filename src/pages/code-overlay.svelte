@@ -20,6 +20,7 @@
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
+			console.log(event.payload)
 			const docs_gen_event = JSON.parse(event.payload as string) as EventDocsGeneration;
 
 			switch (docs_gen_event.event) {
