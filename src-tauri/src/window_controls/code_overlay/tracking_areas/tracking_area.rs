@@ -2,16 +2,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::core_engine::types::MatchRectangle;
 
-/// A TrackingArea can subscribe to any number of TrackingEvents.
+/// A TrackingArea can subscribe to any number of TrackingEventTypes.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum TrackingEventSubscription {
-    TrackingEvent(Vec<TrackingEvent>),
+    TrackingEventTypes(Vec<TrackingEventType>),
     All,
     None,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum TrackingEvent {
+pub enum TrackingEventType {
     MouseEntered,
     MouseExited,
     MouseMoved,

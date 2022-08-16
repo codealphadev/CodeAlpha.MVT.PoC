@@ -16,7 +16,7 @@ use crate::{
     },
     utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::code_overlay::{
-        EventTrackingArea, TrackingArea, TrackingEvent, TrackingEventSubscription,
+        EventTrackingArea, TrackingArea, TrackingEventType, TrackingEventSubscription,
     },
 };
 
@@ -150,8 +150,8 @@ impl DocsGenerationTask {
                 let tracking_area = TrackingArea {
                     id: uuid::Uuid::new_v4(),
                     rectangles: vec![annotation_rect],
-                    event_subscriptions: TrackingEventSubscription::TrackingEvent(vec![
-                        TrackingEvent::MouseClicked,
+                    event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
+                        TrackingEventType::MouseClicked,
                     ]),
                 };
                 EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
