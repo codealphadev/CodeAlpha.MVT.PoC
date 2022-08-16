@@ -156,6 +156,9 @@ export const adjust_bracket_results_for_overlay = (
 	bracket_results: BracketHighlightResults,
 	outerPosition: LogicalPosition
 ): BracketHighlightResults => {
+	if (!bracket_results) {
+		return null;
+	}
 	if (bracket_results.lines.first) {
 		bracket_results.lines.first.rectangle = adjust_rectangle(
 			bracket_results.lines.first.rectangle,
