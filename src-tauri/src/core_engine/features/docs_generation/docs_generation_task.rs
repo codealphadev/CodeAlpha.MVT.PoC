@@ -152,6 +152,8 @@ impl DocsGenerationTask {
                     rectangles: vec![annotation_rect],
                     event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                         TrackingEventType::MouseClicked,
+                        TrackingEventType::MouseEntered,
+                        TrackingEventType::MouseExited
                     ]),
                 };
                 EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());

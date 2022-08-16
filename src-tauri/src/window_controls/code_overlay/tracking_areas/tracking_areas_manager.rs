@@ -92,7 +92,6 @@ impl TrackingAreasManager {
                 .iter()
                 .any(|rectangle| rectangle.contains_point(mouse_x, mouse_y))
             {
-                println!("Mouse is in tracking area: {:?}", tracking_area.0.id);
                 if let Some(tracking_start) = tracking_area.1 {
                     // Case: TrackingArea was already entered before.
                     if check_overlap_with_other_app_windows(mouse_x, mouse_y) {
@@ -102,7 +101,7 @@ impl TrackingAreasManager {
                             area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseExited,
                             duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
-                    });
+                        });
                         tracking_area.1 = None;
                         continue;
                     } else {
@@ -110,7 +109,7 @@ impl TrackingAreasManager {
                             area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseMoved,
                             duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
-                    });
+                        });
                     }
                 } else {
                     // Case: TrackingArea was not entered before, start tracking the time spent in the area.
@@ -122,7 +121,7 @@ impl TrackingAreasManager {
                             area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseEntered,
                             duration_in_area_ms: None,
-                    });
+                        });
                     }
                 }
             } else {
