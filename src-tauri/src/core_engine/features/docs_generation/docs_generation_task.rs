@@ -144,8 +144,9 @@ impl DocsGenerationTask {
 
     pub fn create_code_annotation(&mut self, text: &String) -> Result<(), &str> {
         if self.tracking_area.is_some() || self.is_frozen() {
-            return false;
+            return Err("Task is frozen or tracking");
         }
+        let (annotation_rect_opt, codeblock_rect_opt) = self.calculate_annotation_bounds(text)?;
 
         let tracking_area = if annotation_rect_opt.is_some() && codeblock_rect_opt.is_some() {
             TrackingArea {
