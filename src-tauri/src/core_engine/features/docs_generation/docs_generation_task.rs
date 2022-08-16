@@ -34,8 +34,8 @@ pub struct DocsGenerationTask {
     tracking_area: Option<TrackingArea>,
     docs_insertion_point: TextRange,
     docs_indentation: usize,
-    codeblock_first_char: TextPosition,
-    codeblock_last_char: TextPosition,
+    codeblock_first_char_pos: TextPosition,
+    codeblock_last_char_pos: TextPosition,
     codeblock_text: String,
     pid: i32,
     task_state: DocsGenerationTaskState,
@@ -55,8 +55,8 @@ impl DocsGenerationTask {
     ) -> Self {
         Self {
             tracking_area: None,
-            codeblock_first_char: codeblock_first_char_position,
-            codeblock_last_char: codeblock_last_char_position,
+            codeblock_first_char_pos: codeblock_first_char_position,
+            codeblock_last_char_pos: codeblock_last_char_position,
             codeblock_text,
             pid,
             task_state: DocsGenerationTaskState::Uninitialized,
@@ -135,69 +135,45 @@ impl DocsGenerationTask {
         self.task_state = DocsGenerationTaskState::Finished;
     }
 
-    pub fn create_code_annotation(&mut self, text: &String) -> bool {
+    pub fn create_code_annotation(&mut self, text: &String) -> Result<(), &str> {
         if self.tracking_area.is_some() || self.is_frozen() {
-            return false;
+            return Err("Task is frozen or tracking");
         }
+        let (annotation_rect_opt, codeblock_rect_opt) = self.calculate_annotation_bounds(text)?;
 
-        if let Some((annotation_rect_opt, codeblock_rect_opt)) =
-            self.calculate_annotation_bounds(text)
-        {
-            if let (Some(annotation_rect), Some(codeblock_rect)) =
-                (annotation_rect_opt, codeblock_rect_opt)
-            {
-                // Register the tracking area
-                let tracking_area = TrackingArea {
-                    id: uuid::Uuid::new_v4(),
-                    rectangles: vec![annotation_rect],
-                    event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
-                        TrackingEventType::MouseClicked,
-                        TrackingEventType::MouseEntered,
-                        TrackingEventType::MouseExited
-                    ]),
-                };
-                EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-
-                // Publish annotation_rect and codeblock_rect to frontend
-                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
-                    id: tracking_area.id,
-                    annotation_icon: Some(annotation_rect),
-                    annotation_codeblock: Some(codeblock_rect),
-                })
-                .publish_to_tauri(&app_handle());
-
-                self.tracking_area = Some(tracking_area);
-                self.task_state = DocsGenerationTaskState::Prepared;
-
-                true
-            } else {
-                // If we receive NONE for the annotation and codeblock rectangles, the reason is that the codeblock has been scrolled out of view.
-                // In this case, we still need to create the TrackingArea but unsubscribe from the TrackingEvents for now.
-                //
-                // Register the tracking area without any TrackingEvents and TrackingRectangles
-                let tracking_area = TrackingArea {
-                    id: uuid::Uuid::new_v4(),
-                    rectangles: vec![],
-                    event_subscriptions: TrackingEventSubscription::None,
-                };
-                EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-
-                // Publish this empty message ensures no ghost annotations are shown from previous tasks
-                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
-                    id: tracking_area.id,
-                    annotation_icon: None,
-                    annotation_codeblock: None,
-                })
-                .publish_to_tauri(&app_handle());
-
-                self.tracking_area = Some(tracking_area);
-                self.task_state = DocsGenerationTaskState::Prepared;
-
-                true
+        let tracking_area = if annotation_rect_opt.is_some() && codeblock_rect_opt.is_some() {
+            TrackingArea {
+                id: uuid::Uuid::new_v4(),
+                rectangles: vec![annotation_rect_opt.expect("Previously checked for Some")],
+                event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
+                    TrackingEventType::MouseClicked,
+                    TrackingEventType::MouseEntered,
+                    TrackingEventType::MouseExited
+                ]),
             }
         } else {
-            false
-        }
+            // The codeblock has been scrolled out of view. Still create TrackingArea but don't subscribe to Tracking Events.
+            TrackingArea {
+                id: uuid::Uuid::new_v4(),
+                rectangles: vec![],
+                event_subscriptions: TrackingEventSubscription::None,
+            }
+        };
+        
+        EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
+
+        // Publish annotation_rect and codeblock_rect to frontend. Even if empty, publish to remove ghosts from previous messages.
+        EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+            id: tracking_area.id,
+            annotation_icon: annotation_rect_opt,
+            annotation_codeblock: codeblock_rect_opt,
+        })
+        .publish_to_tauri(&app_handle());
+
+        self.tracking_area = Some(tracking_area);
+        self.task_state = DocsGenerationTaskState::Prepared;
+
+        Ok(())
     }
 
     pub fn update_code_annotation_position(&mut self, text: &String) -> bool {
@@ -205,7 +181,7 @@ impl DocsGenerationTask {
             return false;
         };
 
-        if let Some((annotation_rect_opt, codeblock_rect_opt)) =
+        if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
             self.calculate_annotation_bounds(text)
         {
             let tracking_area = if let Some(tracking_area) = &mut self.tracking_area {
@@ -277,25 +253,25 @@ impl DocsGenerationTask {
     fn calculate_annotation_bounds(
         &self,
         text: &String,
-    ) -> Option<(Option<AnnotationIconRectangle>, Option<CodeblockRectangle>)> {
+    ) -> Result<(Option<AnnotationIconRectangle>, Option<CodeblockRectangle>), &'static str> {
         // 1. Get textarea dimensions
         let textarea_ui_element = if let Some(elem) = get_textarea_uielement(self.pid) {
             elem
         } else {
-            return Some((None, None));
+            return Ok((None, None));
         };
 
         let (textarea_origin, textarea_size) =
             if let Ok((origin, size)) = derive_xcode_textarea_dimensions(&textarea_ui_element) {
                 (origin, size)
             } else {
-                return Some((None, None));
+                return Ok((None, None));
             };
 
         // 2. Calculate the annotation rectangles
         if let (Some(first_char_text_pos), Some(last_char_text_pos)) = (
-            self.codeblock_first_char.as_TextIndex(&text),
-            self.codeblock_last_char.as_TextIndex(&text),
+            self.codeblock_first_char_pos.as_TextIndex(&text),
+            self.codeblock_last_char_pos.as_TextIndex(&text),
         ) {
             let first_char_bounds = get_bounds_of_TextRange(
                 &TextRange {
@@ -348,18 +324,16 @@ impl DocsGenerationTask {
                 if annotation_bounds.origin.y < textarea_origin.y
                     || annotation_bounds.origin.y > textarea_origin.y + textarea_size.height
                 {
-                    return Some((None, None));
+                    return Ok((None, None));
                 }
 
-                return Some((Some(annotation_bounds), Some(codeblock_bounds)));
+                return Ok((Some(annotation_bounds), Some(codeblock_bounds)));
             } else {
-                return Some((None, None));
+                return Ok((None, None));
             }
+        } else {
+            return Err("Could not get text range of the codeblock");
         }
-
-        // 3. calculate the codeblock rectangle
-
-        None
     }
 }
 
