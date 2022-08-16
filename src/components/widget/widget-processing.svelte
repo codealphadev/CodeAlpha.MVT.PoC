@@ -1,17 +1,14 @@
-<div class=" flex items-center justify-center">
-	<div class="w-4/5 h-4/5">
-		<svg
-			class="animate-spin text-white"
-			xmlns="http://www.w3.org/2000/svg"
-			fill="none"
-			viewBox="0 0 24 24"
-		>
-			<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-			<path
-				class="opacity-75"
-				fill="currentColor"
-				d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-			/>
-		</svg>
-	</div>
-</div>
+<svg
+	style="width: 100%"
+	class="animate-spin text-white"
+	xmlns="http://www.w3.org/2000/svg"
+	fill="none"
+	viewBox="0 0 24 24"
+>
+	<circle class="opacity-25" cx="12" cy="12" r="8" stroke="currentColor" stroke-width="3.2" />
+	<path
+		class="opacity-75"
+		fill="currentColor"
+		d="M 5.6 12 a 6.4 6.4 90 0 1 6.4 -6.4 V 2.4 C 6.6984 2.4 2.4 6.6984 2.4 12 h 3.2 z m 1.6 4.2328 A 6.3696 6.3696 90 0 1 5.6 12 H 2.4 c 0 2.4336 0.908 4.6592 2.4 6.3504 l 2.4 -2.1176 z"
+	/>
+</svg>
