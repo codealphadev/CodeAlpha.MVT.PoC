@@ -5,7 +5,7 @@ use tauri::Manager;
 use crate::{
     core_engine::{
         rules::{TextPosition, TextRange},
-        syntax_tree::SwiftSyntaxTree,
+        syntax_tree::{SwiftSyntaxTree, SwiftCodeBlock},
     },
     utils::messaging::ChannelList,
     window_controls::events::EventWindowControls,
@@ -39,6 +39,29 @@ impl DocsGenerator {
         self.docs_generation_task = None;
     }
 
+    fn create_docs_gen_task(&self, text_content: &String) -> Option<DocsGenerationTask> {
+        let codeblock: SwiftCodeBlock = self.swift_syntax_tree.get_selected_codeblock_node(&self.selected_text_range?)?;
+        let first_char_position = codeblock.get_first_char_position();
+        let codeblock_text = codeblock.get_codeblock_text()?;
+        let (docs_insertion_index, docs_indentation) = self.compute_docs_insertion_point_and_indetation(first_char_position.row)?;
+
+        let mut new_task = DocsGenerationTask::new(
+            self.window_pid,
+            codeblock.get_first_char_position(),
+            codeblock.get_last_char_position(),
+            TextRange {
+                index: docs_insertion_index,
+                length: 0,
+            },
+            docs_indentation,
+            codeblock_text,
+        );
+        if new_task.create_code_annotation(text_content).is_ok() {
+            return Some(new_task);
+        }
+        None
+    }
+
     pub fn update_content(&mut self, text_content: &String) {
         if self.swift_syntax_tree.parse(text_content) {
             self.text_content = Some(text_content.to_owned());
@@ -46,41 +69,7 @@ impl DocsGenerator {
             // Create a new DocsGenerationTask if there is no task running.
             // We create a new one because the text has changed and code annotation might need to be recomputed
             if !self.is_docs_gen_task_running() {
-                let mut newly_created_docs_task = None;
-                if let Some(selected_text_range) = self.selected_text_range {
-                    if let Some(codeblock) = self
-                        .swift_syntax_tree
-                        .get_selected_codeblock_node(&selected_text_range)
-                    {
-                        let first_char_position = codeblock.get_first_char_position();
-                        if let (
-                            Some(codeblock_text),
-                            Some((docs_insertion_index, docs_indentation)),
-                        ) = (
-                            codeblock.get_codeblock_text(),
-                            self.compute_docs_insertion_point_and_indetation(
-                                first_char_position.row,
-                            ),
-                        ) {
-                            let mut new_task = DocsGenerationTask::new(
-                                self.window_pid,
-                                codeblock.get_first_char_position(),
-                                codeblock.get_last_char_position(),
-                                TextRange {
-                                    index: docs_insertion_index,
-                                    length: 0,
-                                },
-                                docs_indentation,
-                                codeblock_text,
-                            );
-
-                            if new_task.create_code_annotation(text_content) {
-                                newly_created_docs_task = Some(new_task);
-                            }
-                        }
-                    }
-                }
-                self.docs_generation_task = newly_created_docs_task;
+                self.docs_generation_task = self.create_docs_gen_task( text_content)
             } else {
                 println!("DocsGenerator: update_content: docs generation task is running");
             }
@@ -92,38 +81,10 @@ impl DocsGenerator {
 
         // Create a new DocsGenerationTask if there is no task running.
         // We create a new one because the cursor might have moved into a new codeblock. In this case we need to create a new code annotation.
-        if !self.is_docs_gen_task_running() {
-            let mut newly_created_docs_task = None;
+        if !self.is_docs_gen_task_running()  {
             if let Some(text_content) = self.text_content.as_ref() {
-                if let Some(codeblock) = self
-                    .swift_syntax_tree
-                    .get_selected_codeblock_node(&selected_text_range)
-                {
-                    let first_char_position = codeblock.get_first_char_position();
-                    if let (Some(codeblock_text), Some((docs_insertion_index, docs_indentation))) = (
-                        codeblock.get_codeblock_text(),
-                        self.compute_docs_insertion_point_and_indetation(first_char_position.row),
-                    ) {
-                        let mut new_task = DocsGenerationTask::new(
-                            self.window_pid,
-                            first_char_position,
-                            codeblock.get_last_char_position(),
-                            TextRange {
-                                index: docs_insertion_index,
-                                length: 0,
-                            },
-                            docs_indentation,
-                            codeblock_text,
-                        );
-
-                        if new_task.create_code_annotation(text_content) {
-                            newly_created_docs_task = Some(new_task);
-                        }
-                    }
-                }
+                self.docs_generation_task = self.create_docs_gen_task(&text_content);
             }
-
-            self.docs_generation_task = newly_created_docs_task;
         }
     }
 
