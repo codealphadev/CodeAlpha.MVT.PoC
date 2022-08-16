@@ -4,7 +4,10 @@ use ts_rs::TS;
 use crate::{
     core_engine::rules::swift_linter::LintLevel,
     core_engine::rules::RuleMatch,
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::{
+        geometry::{LogicalPosition, LogicalSize},
+        grapheme::grapheme_slice_string,
+    },
 };
 
 use super::text_types::TextRange;
@@ -77,11 +80,8 @@ pub struct MatchRange {
 
 impl MatchRange {
     pub fn from_text_and_range(text: &String, range: TextRange) -> Option<Self> {
-        if text.len() < range.index + range.length {
-            return None;
-        }
         Some(Self {
-            string: (text[(range.index)..(range.index + range.length)]).to_string(),
+            string: grapheme_slice_string(text, range.index, range.length)?,
             range,
         })
     }
@@ -89,42 +89,54 @@ impl MatchRange {
 
 #[cfg(test)]
 mod tests_MatchRange {
-
-    use crate::core_engine::rules::TextRange;
-
     use super::MatchRange;
+    use crate::core_engine::rules::TextRange;
+    use pretty_assertions::assert_eq;
+
+    fn test_from_text_and_range(input_text: &str, range: TextRange, expected_string: Option<&str>) {
+        let match_range = MatchRange::from_text_and_range(&input_text.to_string(), range);
+        if let Some(match_range) = match_range {
+            assert_eq!(match_range.string, expected_string.unwrap());
+            assert_eq!(match_range.range, range);
+        } else {
+            assert!(expected_string.is_none());
+        }
+    }
 
     #[test]
-    fn test_from_text_and_range() {
-        let s = &"0123456789".to_string();
-
-        let match_range = MatchRange::from_text_and_range(
-            s,
+    fn from_text_and_range() {
+        test_from_text_and_range(
+            "0123456789",
             TextRange {
                 index: 2,
                 length: 5,
             },
-        );
+            Some("23456"),
+        )
+    }
 
-        assert_eq!(
-            match_range,
-            Some(MatchRange {
-                string: "23456".to_string(),
-                range: TextRange {
-                    index: 2,
-                    length: 5,
-                },
-            })
-        );
-
-        let match_range_out_of_range = MatchRange::from_text_and_range(
-            s,
+    #[test]
+    fn from_text_and_range_out_of_range() {
+        test_from_text_and_range(
+            "0123456789",
             TextRange {
                 index: 10,
                 length: 5,
             },
-        );
-        assert_eq!(match_range_out_of_range, None);
+            None,
+        )
+    }
+
+    #[test]
+    fn from_text_and_range_unicode() {
+        test_from_text_and_range(
+            "Hey © unicode chars",
+            TextRange {
+                index: 2,
+                length: 5,
+            },
+            Some("y © u"),
+        )
     }
 }
 

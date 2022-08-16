@@ -2,6 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+use unicode_segmentation::UnicodeSegmentation;
+
+use crate::utils::grapheme::grapheme_vec;
 
 /// A position in a multi-line text document, in terms of rows and columns.
 /// Rows and columns are zero-based.
@@ -38,28 +41,30 @@ impl TextPosition {
     ///
     /// A TextPosition struct
     pub fn from_TextIndex(text: &String, index: usize) -> Option<TextPosition> {
-        let mut text_with_newline_ending = text.clone();
-        ensure_last_char_is_newline_char(&mut text_with_newline_ending);
-
         let mut row = 0;
         let mut col = 0;
-        let mut text_iter = text_with_newline_ending.char_indices();
-        let mut additional_bytes_from_none_utf8_chars = 0;
-        while let Some((text_index, char)) = text_iter.next() {
-            additional_bytes_from_none_utf8_chars += char.len_utf8();
-            additional_bytes_from_none_utf8_chars -= 1;
+        let mut i = 0;
 
-            if text_index == index + additional_bytes_from_none_utf8_chars {
+        let text_graphemes = grapheme_vec(text);
+
+        for g in &text_graphemes {
+            if i == index {
                 return Some(TextPosition { row, column: col });
             }
 
-            if char == '\n' {
+            if g == &"\n" {
                 row += 1;
                 col = 0;
+                i += 1;
                 continue;
             }
 
             col += 1;
+            i += 1;
+        }
+        // return last if index is last position in text
+        if text_graphemes.len() == index {
+            return Some(TextPosition { row, column: col });
         }
 
         None
@@ -77,32 +82,28 @@ impl TextPosition {
     }
 
     pub fn as_TextIndex_stay_on_line(&self, text: &String, stay_on_line: bool) -> Option<usize> {
-        let mut text_with_newline_ending = text.clone();
-        ensure_last_char_is_newline_char(&mut text_with_newline_ending);
-
         let mut row = 0;
         let mut col = 0;
-        let mut text_iter = text_with_newline_ending.char_indices();
-        let mut additional_bytes_from_none_utf8_chars = 0;
-        while let Some((text_index, char)) = text_iter.next() {
-            additional_bytes_from_none_utf8_chars += char.len_utf8();
-            additional_bytes_from_none_utf8_chars -= 1;
+        let mut index = 0;
 
+        for g in text.graphemes(true) {
             if self.row == row && self.column == col {
-                return Some(text_index - additional_bytes_from_none_utf8_chars);
+                return Some(index);
             }
 
-            if char == '\n' {
+            if g == "\n" {
                 // if stay_on_line is true, we want to return the index of the last character of the line self.row
                 if stay_on_line && self.row == row {
-                    return Some((text_index - additional_bytes_from_none_utf8_chars).clone());
+                    return Some(index);
                 }
                 row += 1;
                 col = 0;
+                index += 1;
                 continue;
             }
 
             col += 1;
+            index += 1;
         }
 
         None
@@ -160,9 +161,9 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_none_with_emojis() {
-        let text = "Hell😊, W😊rld!";
+        let text = "स्Hell😊, W😊rld!";
         //       is 4 bytes ->|   |<- is 4 bytes
-        let index = 5;
+        let index = 7;
         let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
 
         assert_eq!(position_option.is_some(), true);
@@ -170,7 +171,7 @@ mod tests_TextPosition {
         let position = position_option.unwrap();
 
         assert_eq!(position.row, 0);
-        assert_eq!(position.column, 5);
+        assert_eq!(position.column, 7);
     }
 
     #[test]
@@ -180,6 +181,20 @@ mod tests_TextPosition {
         let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
 
         assert_eq!(position_option.is_none(), true);
+    }
+
+    #[test]
+    fn test_TextPosition_from_TextIndex_last_index() {
+        let text = "Hello,\n World!";
+        let index = 14;
+        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+
+        assert_eq!(position_option.is_some(), true);
+
+        let position = position_option.unwrap();
+
+        assert_eq!(position.row, 1);
+        assert_eq!(position.column, 7);
     }
 
     #[test]
@@ -197,7 +212,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_convert_TextPosition_as_TextIndex_with_emojis() {
-        let text = "Hell😊, W😊rld!";
+        let text = "Hell👮🏻‍♀️, W😊rld!";
         //       is 4 bytes ->|   |<- is 4 bytes
         let position = TextPosition::new(0, 5);
         let index_option = position.as_TextIndex(&text.to_string());
@@ -567,30 +582,10 @@ pub fn StartEndTSPoint_from_StartEndTextPosition(
     )
 }
 
-fn ensure_last_char_is_newline_char(text: &mut String) -> bool {
-    if let Some(last_char) = text.pop() {
-        if last_char == '\n' {
-            text.push(last_char);
-            true
-        } else {
-            text.push(last_char);
-            text.push('\n');
-            false
-        }
-    } else {
-        text.push('\n');
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests_TextConversions {
-    use crate::core_engine::{
-        rules::utils::text_types::{
-            StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition,
-            TextPosition,
-        },
-        text_types::ensure_last_char_is_newline_char,
+    use crate::core_engine::rules::utils::text_types::{
+        StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition, TextPosition,
     };
 
     use pretty_assertions::assert_eq;
@@ -651,33 +646,12 @@ mod tests_TextConversions {
         assert_eq!(start_index, 0);
         assert_eq!(end_index, 5);
     }
-
-    #[test]
-    fn test_ensure_last_char_is_newline_char_false() {
-        let mut text = "Hello, World!".to_string();
-        assert_eq!(ensure_last_char_is_newline_char(&mut text), false);
-        assert_eq!(text, "Hello, World!\n");
-    }
-
-    #[test]
-    fn test_ensure_last_char_is_newline_char_true() {
-        let mut text = "Hello, World!\n".to_string();
-        assert_eq!(ensure_last_char_is_newline_char(&mut text), true);
-        assert_eq!(text, "Hello, World!\n");
-    }
-
-    #[test]
-    fn test_ensure_last_char_is_newline_char_empty_text() {
-        let mut text = "".to_string();
-        assert_eq!(ensure_last_char_is_newline_char(&mut text), false);
-        assert_eq!(text, "\n");
-    }
 }
 
 pub fn get_index_of_next_row(index: usize, text: &String) -> Option<usize> {
     let mut i = 0;
-    for c in text.chars().skip(index) {
-        if c == '\n' {
+    for g in &grapheme_vec(text)[index..] {
+        if g == &"\n" {
             return Some(index + i + 1);
         }
         i += 1;
@@ -702,7 +676,7 @@ mod tests_Text {
 
         // return index at new row and keep end index
         assert_eq!(
-            get_index_of_next_row(5, &"Hello test,\n Wor!ld!\n".to_string()),
+            get_index_of_next_row(5, &"Hell© test,\n Wor!ld!\n".to_string()),
             Some(12)
         );
     }

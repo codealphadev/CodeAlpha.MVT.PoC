@@ -1,48 +1,75 @@
-use unicode_segmentation::UnicodeSegmentation;
-
 /// A file containing utilities that are used/shared across all modules of the project
 
-pub fn slice_string(string: &str, start: usize, length: usize) -> Option<String> {
-    let graphemes = string.graphemes(true).collect::<Vec<&str>>();
-    if graphemes.len() < start + length {
-        return None;
+pub mod grapheme {
+    use unicode_segmentation::UnicodeSegmentation;
+
+    pub fn grapheme_slice_string(string: &str, start: usize, length: usize) -> Option<String> {
+        let mut i = 0;
+        let mut sliced_string = String::new();
+        let mut added_graphemes = 0;
+        for g in string.graphemes(true) {
+            if i >= start {
+                sliced_string.push_str(g);
+                added_graphemes += 1;
+            }
+            i += 1;
+            if i >= start + length {
+                break;
+            }
+        }
+
+        if added_graphemes != length {
+            return None;
+        }
+        return Some(sliced_string);
     }
-    Some(graphemes[start..(start + length)].join("").to_string())
+
+    pub fn grapheme_vec(string: &str) -> Vec<&str> {
+        string.graphemes(true).collect::<Vec<&str>>()
+    }
+
+    pub fn grapheme_count(string: &str) -> usize {
+        string.graphemes(true).count()
+    }
 }
 
 #[cfg(test)]
-mod tests_string_slice {
-    use super::slice_string;
+mod tests_grapheme {
+    #[cfg(test)]
+    mod slice_string {
+        use super::super::grapheme::grapheme_slice_string;
+        use pretty_assertions::assert_eq;
 
-    fn test_slice_string(string: &str, start: usize, length: usize, expected: Option<&str>) {
-        assert_eq!(
-            slice_string(string, start, length),
-            if expected.is_some() {
-                Some(expected.unwrap().to_string())
-            } else {
-                None
-            }
-        );
-    }
+        fn test_fn(string: &str, start: usize, length: usize, expected: Option<&str>) {
+            assert_eq!(
+                grapheme_slice_string(string, start, length),
+                if expected.is_some() {
+                    Some(expected.unwrap().to_string())
+                } else {
+                    None
+                }
+            );
+        }
 
-    #[test]
-    fn utf8() {
-        test_slice_string("Hello, World!", 3, 4, Some("lo, "));
-    }
+        #[test]
+        fn utf8() {
+            test_fn("Hello, World!", 3, 4, Some("lo, "));
+        }
 
-    #[test]
-    fn unicode() {
-        test_slice_string("H©स्lo ,👮🏻‍♀️ дorld!", 2, 9, Some("स्lo ,👮🏻‍♀️ дo"));
-    }
+        #[test]
+        fn unicode() {
+            test_fn("H©स्lo ,👮🏻‍♀️ дorld!", 2, 9, Some("स्lo ,👮🏻‍♀️ дo"));
+        }
 
-    #[test]
-    fn unicode_out_of_range() {
-        test_slice_string("H©llo , дorld!", 3, 20, None);
-    }
+        #[test]
+        fn unicode_out_of_range() {
+            test_fn("H©llo , дorld!", 3, 12, None);
+        }
 
-    #[test]
-    fn zero_range() {
-        test_slice_string("H©llo , дorld!", 3, 0, Some(""));
+        #[test]
+        fn zero_range() {
+            test_fn("H©llo , дorld!", 3, 0, Some(""));
+        }
     }
 }
 
@@ -62,10 +89,6 @@ pub mod geometry {
     }
 
     impl LogicalPosition {
-        pub fn new(x: f64, y: f64) -> Self {
-            Self { x, y }
-        }
-
         pub fn from_tauri_LogicalPosition(pos: &tauri::LogicalPosition<f64>) -> Self {
             Self { x: pos.x, y: pos.y }
         }
@@ -88,10 +111,6 @@ pub mod geometry {
     }
 
     impl LogicalSize {
-        pub fn new(width: f64, height: f64) -> Self {
-            Self { width, height }
-        }
-
         pub fn from_tauri_LogicalSize(size: &tauri::LogicalSize<f64>) -> Self {
             Self {
                 width: size.width,
