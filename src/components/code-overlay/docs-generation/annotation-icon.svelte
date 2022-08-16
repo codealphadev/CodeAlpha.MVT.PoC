@@ -6,7 +6,7 @@
 
 	export let show_highlighted = false;
 
-	let is_processing = false;
+	let is_processing = false; 
 
 	let processing_timeout = 15000; // ms
 
@@ -34,10 +34,11 @@
 	listenTauriEvents();
 </script>
 
+<div style="display: flex; align-items: center; height: 100%; width: 100%">
 {#if !is_processing}
 	{#if show_highlighted}
 		<svg
-			style="top: 50%; left: 50%; transform: translate(-50%, -50%); position: absolute;"
+			style="width: 100%"
 			xmlns="http://www.w3.org/2000/svg"
 			fill="none"
 			viewBox="0 0 12 12"
@@ -64,7 +65,7 @@
 		</svg>
 	{:else}
 		<svg
-			style="top: 50%; left: 50%; transform: translate(-50%, -50%); position: absolute;"
+			style="width: 100%"
 			xmlns="http://www.w3.org/2000/svg"
 			fill="none"
 			viewBox="0 0 12 12"
@@ -78,5 +79,6 @@
 		</svg>
 	{/if}
 {:else}
-	<WidgetProcessing />
+		<WidgetProcessing />
 {/if}
+</div>
