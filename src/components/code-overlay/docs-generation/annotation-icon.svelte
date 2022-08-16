@@ -1,42 +1,14 @@
 <script lang="ts">
-	import { listen } from '@tauri-apps/api/event';
-	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
-	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import WidgetProcessing from '../../widget/widget-processing.svelte';
 
-	export let show_highlighted = false;
+	export let is_hovered = false;
+	export let is_processing = false;
 
-	let is_processing = false; 
-
-	let processing_timeout = 15000; // ms
-
-	const listenTauriEvents = async () => {
-		// Listen for rule execution events to determine if the processing icon should be displayed
-		await listen('EventRuleExecutionState' as ChannelList, (event) => {
-			const ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
-			
-			switch (ruleExecutionState.event) {
-				case 'DocsGenerationStarted':
-					is_processing = true;
-					setTimeout(async () => {
-						is_processing = false;
-					}, processing_timeout);
-					break;
-				case 'DocsGenerationFinished':
-					is_processing = false;
-					break;
-				default:
-					break;
-			}
-		});
-	};
-
-	listenTauriEvents();
 </script>
 
 <div style="display: flex; align-items: center; height: 100%; width: 100%">
 {#if !is_processing}
-	{#if show_highlighted}
+	{#if is_hovered}
 		<svg
 			style="width: 100%"
 			xmlns="http://www.w3.org/2000/svg"
