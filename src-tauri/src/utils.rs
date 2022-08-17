@@ -48,6 +48,8 @@ mod tests_string_slice {
 
 pub mod geometry {
 
+    use cocoa::appkit::CGPoint;
+    use core_graphics::geometry::CGSize;
     use core_graphics_types::geometry::CGRect;
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
@@ -74,6 +76,20 @@ pub mod geometry {
             Self {
                 x: rect.origin.x as f64,
                 y: rect.origin.y as f64,
+            }
+        }
+
+        pub fn as_tauri_LogicalPosition(&self) -> tauri::LogicalPosition<f64> {
+            tauri::LogicalPosition {
+                x: self.x,
+                y: self.y,
+            }
+        }
+
+        pub fn as_CGPoint(&self) -> CGPoint {
+            CGPoint {
+                x: self.x as f64,
+                y: self.y as f64,
             }
         }
     }
@@ -103,6 +119,47 @@ pub mod geometry {
             Self {
                 width: rect.size.width as f64,
                 height: rect.size.height as f64,
+            }
+        }
+
+        pub fn as_tauri_LogicalSize(&self) -> tauri::LogicalSize<f64> {
+            tauri::LogicalSize {
+                width: self.width,
+                height: self.height,
+            }
+        }
+
+        pub fn as_CGSize(&self) -> CGSize {
+            CGSize {
+                width: self.width as f64,
+                height: self.height as f64,
+            }
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+    #[ts(export, export_to = "bindings/geometry/")]
+    pub struct LogicalFrame {
+        pub origin: LogicalPosition,
+        pub size: LogicalSize,
+    }
+
+    impl LogicalFrame {
+        pub fn new(origin: LogicalPosition, size: LogicalSize) -> Self {
+            Self { origin, size }
+        }
+
+        pub fn from_CGRect(rect: &CGRect) -> Self {
+            Self {
+                origin: LogicalPosition::from_CGRect(rect),
+                size: LogicalSize::from_CGRect(rect),
+            }
+        }
+
+        pub fn as_CGRect(&self) -> CGRect {
+            CGRect {
+                origin: self.origin.as_CGPoint(),
+                size: self.size.as_CGSize(),
             }
         }
     }

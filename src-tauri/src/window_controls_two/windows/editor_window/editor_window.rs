@@ -1,6 +1,9 @@
+use tauri::Manager;
+
 use crate::{
     ax_interaction::models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
+    window_controls_two::config::AppWindow,
 };
 
 #[derive(Debug)]
@@ -144,6 +147,56 @@ impl EditorWindow {
 
         self.window_position = window_position;
         self.window_size = window_size;
+    }
+
+    pub fn get_monitor(&self, app_handle: tauri::AppHandle) -> Option<LogicalFrame> {
+        // Because we've seen the OS calls to get a window's screen position and size are not
+        // reliable, we determine the window by calculating which of the windows has the largest
+        // overlap area with the editor window.
+
+        let widget_window = app_handle.get_window(&AppWindow::Widget.to_string())?;
+        let available_monitors = widget_window.available_monitors().ok()?;
+
+        // Compute the overlapping area between all available monitors and the editor window's outer size
+        let mut overlap_areas: Vec<(f64, LogicalFrame)> = Vec::new();
+        for monitor in available_monitors {
+            let scale_factor = monitor.scale_factor();
+            let position = LogicalPosition::from_tauri_LogicalPosition(
+                &monitor.position().to_logical::<f64>(scale_factor),
+            );
+            let size = LogicalSize::from_tauri_LogicalSize(
+                &monitor.size().to_logical::<f64>(scale_factor),
+            );
+
+            if let Some(intersection_area) = intersection_area(
+                LogicalFrame {
+                    origin: position,
+                    size,
+                },
+                LogicalFrame {
+                    origin: self.window_position,
+                    size: self.window_size,
+                },
+            ) {
+                overlap_areas.push((
+                    intersection_area,
+                    LogicalFrame {
+                        origin: position,
+                        size,
+                    },
+                ));
+            }
+        }
+
+        // get the item of overlap_areas with the largest area
+        if let Some((_, monitor)) = overlap_areas
+            .iter()
+            .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+        {
+            Some(*monitor)
+        } else {
+            None
+        }
     }
 
     pub fn update_focused_ui_element(
@@ -334,5 +387,81 @@ impl EditorWindow {
         }
 
         return local_position;
+    }
+}
+
+fn intersection_area(rect_a: LogicalFrame, rect_b: LogicalFrame) -> Option<f64> {
+    let (a_x_min, a_y_min, a_x_max, a_y_max) = (
+        rect_a.origin.x,
+        rect_a.origin.y,
+        rect_a.origin.x + rect_a.size.width,
+        rect_a.origin.y + rect_a.size.height,
+    );
+
+    let (b_x_min, b_y_min, b_x_max, b_y_max) = (
+        rect_b.origin.x,
+        rect_b.origin.y,
+        rect_b.origin.x + rect_b.size.width,
+        rect_b.origin.y + rect_b.size.height,
+    );
+
+    let x_min = f64::max(a_x_min, b_x_min);
+    let y_min = f64::max(a_y_min, b_y_min);
+    let x_max = f64::min(a_x_max, b_x_max);
+    let y_max = f64::min(a_y_max, b_y_max);
+    let width = x_max - x_min;
+    let height = y_max - y_min;
+    if width < 0.0 || height < 0.0 {
+        return None;
+    }
+
+    Some(width * height)
+}
+
+#[cfg(test)]
+mod tests_editor_window {
+    use crate::{
+        utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
+        window_controls_two::windows::editor_window::editor_window::intersection_area,
+    };
+
+    #[test]
+    fn test_intersection_area_some() {
+        let rect_a = LogicalFrame {
+            origin: LogicalPosition { x: 0.0, y: 0.0 },
+            size: LogicalSize {
+                width: 10.0,
+                height: 10.0,
+            },
+        };
+        let rect_b = LogicalFrame {
+            origin: LogicalPosition { x: 5.0, y: 5.0 },
+            size: LogicalSize {
+                width: 10.0,
+                height: 10.0,
+            },
+        };
+        let intersection = intersection_area(rect_a, rect_b);
+        assert_eq!(intersection, Some(25.0));
+    }
+
+    #[test]
+    fn test_intersection_area_none() {
+        let rect_a = LogicalFrame {
+            origin: LogicalPosition { x: 0.0, y: 0.0 },
+            size: LogicalSize {
+                width: 10.0,
+                height: 10.0,
+            },
+        };
+        let rect_b = LogicalFrame {
+            origin: LogicalPosition { x: 15.0, y: 15.0 },
+            size: LogicalSize {
+                width: 10.0,
+                height: 10.0,
+            },
+        };
+        let intersection = intersection_area(rect_a, rect_b);
+        assert_eq!(intersection, None);
     }
 }

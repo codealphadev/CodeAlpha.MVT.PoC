@@ -7,7 +7,7 @@ use crate::{app_handle, CORE_ENGINE_ACTIVE_AT_STARTUP};
 use super::{
     config::AppWindow,
     listeners::{app_listener, user_interaction_listener, xcode_listener},
-    windows::{CodeOverlay, EditorWindow, WidgetWindow},
+    windows::{CodeOverlayWindow, EditorWindow, WidgetWindow},
 };
 
 pub static SUPPORTED_EDITORS: &[&str] = &["Xcode"];
@@ -25,7 +25,7 @@ pub struct WindowManager {
     widget_window: Arc<Mutex<WidgetWindow>>,
 
     // CodeOverlayWindow
-    code_overlay: Arc<Mutex<CodeOverlay>>,
+    code_overlay_window: Arc<Mutex<CodeOverlayWindow>>,
 
     /// Identitfier of the currently focused editor window. Is None until the first window was focused.
     focused_editor_window: Option<Uuid>,
@@ -49,8 +49,8 @@ impl WindowManager {
         let widget_window = Arc::new(Mutex::new(WidgetWindow::new()?));
         WidgetWindow::start_event_listeners(&widget_window);
 
-        let code_overlay = Arc::new(Mutex::new(CodeOverlay::new()?));
-        CodeOverlay::start_event_listeners(&code_overlay);
+        let code_overlay_window = Arc::new(Mutex::new(CodeOverlayWindow::new()?));
+        CodeOverlayWindow::start_event_listeners(&code_overlay_window);
 
         Ok(Self {
             app_handle: app_handle(),
@@ -61,7 +61,7 @@ impl WindowManager {
             focused_app_window: None,
             is_core_engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
             widget_window,
-            code_overlay,
+            code_overlay_window,
         })
     }
 
