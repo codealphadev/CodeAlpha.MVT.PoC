@@ -73,6 +73,10 @@ impl EditorWindow {
         self.pid
     }
 
+    pub fn editor_name(&self) -> &String {
+        &self.editor_name
+    }
+
     pub fn textarea_position(&self, as_global_position: bool) -> Option<LogicalPosition> {
         if as_global_position {
             Some(self.transform_local_position_to_global_position(self.textarea_position?))
@@ -231,6 +235,42 @@ impl EditorWindow {
         }
 
         Some(())
+    }
+
+    pub fn update_widget_position(&mut self, widget_position_global: LogicalPosition) {
+        // Transforming the global position of the widget to a local position.
+        let widget_position =
+            self.transform_global_position_to_local_position(widget_position_global, None);
+
+        self.widget_position = Some(widget_position);
+
+        // Recalculate boundaries
+        if let (Some(textarea_pos), Some(textarea_size)) =
+            (self.textarea_position, self.textarea_size)
+        {
+            let left_boundary = textarea_pos.x;
+            let right_boundary = textarea_pos.x + textarea_size.width;
+            let bottom_boundary = textarea_pos.y + textarea_size.height;
+            let top_boundary = textarea_pos.y;
+
+            let dist_to_left = (left_boundary - widget_position.x).abs();
+            let dist_to_right = (right_boundary - widget_position.x).abs();
+            let dist_to_top = (top_boundary - widget_position.y).abs();
+            let dist_to_bottom = (bottom_boundary - widget_position.y).abs();
+
+            // Match closest distance
+            if dist_to_left > dist_to_right {
+                self.h_boundary = HorizontalBoundary::Right;
+            } else {
+                self.h_boundary = HorizontalBoundary::Left;
+            }
+
+            if dist_to_top > dist_to_bottom {
+                self.v_boundary = VerticalBoundary::Bottom;
+            } else {
+                self.v_boundary = VerticalBoundary::Top;
+            }
+        }
     }
 
     fn calc_widget_pos_by_respecting_boundaries(

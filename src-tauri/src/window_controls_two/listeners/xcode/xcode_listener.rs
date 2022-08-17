@@ -8,6 +8,12 @@ use crate::{
     window_controls_two::WindowManager,
 };
 
+use super::handlers::{
+    on_activate_editor_app, on_close_editor_app, on_created_editor_window,
+    on_deactivate_editor_app, on_destroyed_editor_window, on_editor_textarea_scrolled,
+    on_editor_ui_element_focus_change, on_move_editor_window, on_resize_editor_window,
+};
+
 pub fn xcode_listener(window_manager: &Arc<Mutex<WindowManager>>) {
     let window_manager_move_copy = (window_manager).clone();
     app_handle().listen_global(ChannelList::AXEventXcode.to_string(), move |msg| {
@@ -15,46 +21,46 @@ pub fn xcode_listener(window_manager: &Arc<Mutex<WindowManager>>) {
 
         match axevent_xcode {
             AXEventXcode::EditorUIElementFocused(msg) => {
-                // Do Nothing
+                on_editor_ui_element_focus_change(&window_manager_move_copy, &msg);
             }
             AXEventXcode::EditorWindowCreated(msg) => {
-                // Do Nothing
+                on_created_editor_window(&window_manager_move_copy, &msg);
             }
             AXEventXcode::EditorWindowDestroyed(msg) => {
-                // Do Nothing
+                on_destroyed_editor_window(&window_manager_move_copy, &msg);
             }
             AXEventXcode::EditorWindowResized(msg) => {
-                // Do Nothing
+                on_resize_editor_window(&window_manager_move_copy, &msg);
             }
             AXEventXcode::EditorWindowMoved(msg) => {
-                // Do Nothing
+                on_move_editor_window(&window_manager_move_copy, &msg);
             }
             AXEventXcode::EditorAppActivated(msg) => {
-                // Do Nothing
+                on_activate_editor_app(&window_manager_move_copy, &msg);
             }
             AXEventXcode::EditorAppDeactivated(msg) => {
-                // Do Nothing
+                on_deactivate_editor_app(&window_manager_move_copy, &msg);
             }
             AXEventXcode::EditorAppClosed(msg) => {
-                // Do Nothing
+                on_close_editor_app(&window_manager_move_copy, &msg);
             }
-            AXEventXcode::EditorAppCodeSelected(msg) => {
-                // Do Nothing
+            AXEventXcode::EditorAppCodeSelected(_) => {
+                // Do Nothing here, DEPRECATED MESSAGE
             }
             AXEventXcode::EditorTextareaScrolled(msg) => {
-                // Do Nothing
+                on_editor_textarea_scrolled(&window_manager_move_copy, &msg);
             }
-            AXEventXcode::EditorTextareaZoomed(msg) => {
-                // Do Nothing
+            AXEventXcode::EditorTextareaZoomed(_) => {
+                // Do Nothing here
             }
-            AXEventXcode::EditorTextareaContentChanged(msg) => {
-                // Do Nothing
+            AXEventXcode::EditorTextareaContentChanged(_) => {
+                // Do Nothing here
             }
-            AXEventXcode::EditorTextareaSelectedTextChanged(msg) => {
-                // Do Nothing
+            AXEventXcode::EditorTextareaSelectedTextChanged(_) => {
+                // Do Nothing here
             }
-            AXEventXcode::EditorShortcutPressed(msg) => {
-                // Do Nothing
+            AXEventXcode::EditorShortcutPressed(_) => {
+                // Do Nothing here
             }
         }
     });
