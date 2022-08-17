@@ -1,53 +1,4 @@
-#![allow(dead_code)]
-
-use unicode_segmentation::UnicodeSegmentation;
-
 /// A file containing utilities that are used/shared across all modules of the project
-
-pub fn slice_string(string: &str, start: usize, length: usize) -> Option<String> {
-    let graphemes = string.graphemes(true).collect::<Vec<&str>>();
-    if graphemes.len() < start + length {
-        return None;
-    }
-    Some(graphemes[start..(start + length)].join("").to_string())
-}
-
-#[cfg(test)]
-mod tests_string_slice {
-    use super::slice_string;
-
-    fn test_slice_string(string: &str, start: usize, length: usize, expected: Option<&str>) {
-        assert_eq!(
-            slice_string(string, start, length),
-            if expected.is_some() {
-                Some(expected.unwrap().to_string())
-            } else {
-                None
-            }
-        );
-    }
-
-    #[test]
-    fn utf8() {
-        test_slice_string("Hello, World!", 3, 4, Some("lo, "));
-    }
-
-    #[test]
-    fn unicode() {
-        test_slice_string("H©स्lo ,👮🏻‍♀️ дorld!", 2, 9, Some("स्lo ,👮🏻‍♀️ дo"));
-    }
-
-    #[test]
-    fn unicode_out_of_range() {
-        test_slice_string("H©llo , дorld!", 3, 20, None);
-    }
-
-    #[test]
-    fn zero_range() {
-        test_slice_string("H©llo , дorld!", 3, 0, Some(""));
-    }
-}
-
 pub mod geometry {
 
     use cocoa::appkit::CGPoint;
@@ -66,10 +17,6 @@ pub mod geometry {
     }
 
     impl LogicalPosition {
-        pub fn new(x: f64, y: f64) -> Self {
-            Self { x, y }
-        }
-
         pub fn from_tauri_LogicalPosition(pos: &tauri::LogicalPosition<f64>) -> Self {
             Self { x: pos.x, y: pos.y }
         }

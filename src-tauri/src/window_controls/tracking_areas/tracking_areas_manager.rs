@@ -164,8 +164,6 @@ impl TrackingAreasManager {
                 .iter()
                 .any(|rectangle| rectangle.contains_point(mouse_x, mouse_y))
             {
-                println!("Mouse clicking tracking area: {:?}", tracking_area.0.id);
-
                 if let Some(tracking_start) = tracking_area.1 {
                     tracking_results.push(TrackingEvent {
                         area: tracking_area.0.clone(),

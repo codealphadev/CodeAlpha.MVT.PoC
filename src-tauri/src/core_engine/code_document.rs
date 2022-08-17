@@ -5,10 +5,7 @@ use super::{
     features::BracketHighlight,
     features::DocsGenerator,
     formatter::format_swift_file,
-    rules::{
-        RuleBase, RuleResults, RuleType, SearchRule, SearchRuleProps, SwiftLinterProps,
-        TextPosition, TextRange,
-    },
+    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps, TextPosition, TextRange},
     syntax_tree::SwiftSyntaxTree,
 };
 use crate::{
@@ -77,7 +74,7 @@ impl CodeDocument {
 
         CodeDocument {
             app_handle,
-            rules: vec![RuleType::SearchRule(SearchRule::new())],
+            rules: vec![],
             editor_window_props,
             text: None,
             file_path: None,
@@ -101,7 +98,9 @@ impl CodeDocument {
             return;
         }
 
-        self.swift_syntax_tree.parse(new_content);
+        let new_content_u16 = (*new_content).encode_utf16().collect::<Vec<u16>>();
+
+        self.swift_syntax_tree.parse(&new_content_u16);
 
         self.text = Some(new_content.clone());
         self.file_path = file_path.clone();
@@ -109,10 +108,6 @@ impl CodeDocument {
         // Update Rule Properties
         for rule in self.rules_mut() {
             match rule {
-                RuleType::SearchRule(rule) => rule.update_properties(SearchRuleProps {
-                    search_str: None,
-                    content: Some(new_content.clone()),
-                }),
                 RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
                     file_path_as_str: file_path.clone(),
                     linter_config: None,
@@ -122,9 +117,9 @@ impl CodeDocument {
         }
 
         // Update text content in features
-        self.bracket_highlight.update_content(&new_content);
+        self.bracket_highlight.update_content(&new_content_u16);
 
-        (*self.docs_generator.lock().unwrap()).update_content(new_content);
+        (*self.docs_generator.lock().unwrap()).update_content(&new_content_u16);
     }
 
     pub fn process_rules(&mut self) {
@@ -195,7 +190,8 @@ impl CodeDocument {
             self.text.as_ref(),
         ) {
             if content_text != *text {
-                self.bracket_highlight.update_content(&content_text);
+                let new_content_u16 = (*content_text).encode_utf16().collect::<Vec<u16>>();
+                self.bracket_highlight.update_content(&new_content_u16);
                 self.process_bracket_highlight();
             }
         }
@@ -258,8 +254,8 @@ impl CodeDocument {
             if let Ok(_) = set_selected_text_range(
                 self.editor_window_props.pid,
                 get_new_cursor_index(
-                    &old_text,
-                    &formatted_content.content,
+                    &old_text.encode_utf16().collect(),
+                    &formatted_content.content.encode_utf16().collect(),
                     selected_text_range.index,
                 ),
                 selected_text_range.length,
@@ -316,7 +312,11 @@ impl CodeDocument {
     }
 }
 
-fn get_new_cursor_index(old_content: &String, formatted_content: &String, index: usize) -> usize {
+fn get_new_cursor_index(
+    old_content: &Vec<u16>,
+    formatted_content: &Vec<u16>,
+    index: usize,
+) -> usize {
     let mut new_index = formatted_content.len();
     if let Some(text_position) = TextPosition::from_TextIndex(old_content, index) {
         if let Some(text_index) = text_position.as_TextIndex_stay_on_line(formatted_content, true) {

@@ -6,6 +6,7 @@ use crate::{
     core_engine::{
         rules::{TextPosition, TextRange},
         syntax_tree::{SwiftCodeBlock, SwiftSyntaxTree},
+        utils::utf16_lines,
     },
     utils::messaging::ChannelList,
     window_controls::EventWindowControls,
@@ -15,7 +16,7 @@ use super::docs_generation_task::DocsGenerationTask;
 
 pub struct DocsGenerator {
     swift_syntax_tree: SwiftSyntaxTree,
-    text_content: Option<String>,
+    text_content: Option<Vec<u16>>,
     selected_text_range: Option<TextRange>,
     docs_generation_task: Option<DocsGenerationTask>,
     window_pid: i32,
@@ -39,12 +40,12 @@ impl DocsGenerator {
         self.docs_generation_task = None;
     }
 
-    fn create_docs_gen_task(&self, text_content: &String) -> Option<DocsGenerationTask> {
+    fn create_docs_gen_task(&self, text_content: &Vec<u16>) -> Option<DocsGenerationTask> {
         let codeblock: SwiftCodeBlock = self
             .swift_syntax_tree
             .get_selected_codeblock_node(&self.selected_text_range?)?;
         let first_char_position = codeblock.get_first_char_position();
-        let codeblock_text = codeblock.get_codeblock_text()?;
+        let codeblock_text = codeblock.get_codeblock_text();
         let (docs_insertion_index, docs_indentation) =
             self.compute_docs_insertion_point_and_indentation(first_char_position.row)?;
 
@@ -65,7 +66,7 @@ impl DocsGenerator {
         None
     }
 
-    pub fn update_content(&mut self, text_content: &String) {
+    pub fn update_content(&mut self, text_content: &Vec<u16>) {
         if self.swift_syntax_tree.parse(text_content) {
             self.text_content = Some(text_content.to_owned());
 
@@ -97,11 +98,11 @@ impl DocsGenerator {
     ) -> Option<(DocsInsertionIndex, DocsIndetation)> {
         // split the text into lines
         if let Some(text) = self.text_content.as_ref() {
-            if let Some(line) = text.lines().nth(insertion_line) {
+            if let Some(line) = utf16_lines(text).nth(insertion_line) {
                 // count whitespaces in insertion_line until first character
                 let mut whitespaces = 0;
-                for c in line.chars() {
-                    if c == ' ' {
+                for c_u16 in line {
+                    if c_u16 == ' ' as u16 {
                         whitespaces += 1;
                     } else {
                         break;

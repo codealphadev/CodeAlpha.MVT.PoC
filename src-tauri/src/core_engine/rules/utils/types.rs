@@ -71,17 +71,17 @@ mod tests_MatchRectangle {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct MatchRange {
-    pub string: String,
+    pub string: Vec<u16>,
     pub range: TextRange,
 }
 
 impl MatchRange {
-    pub fn from_text_and_range(text: &String, range: TextRange) -> Option<Self> {
+    pub fn from_text_and_range(text: &Vec<u16>, range: TextRange) -> Option<Self> {
         if text.len() < range.index + range.length {
             return None;
         }
         Some(Self {
-            string: (text[(range.index)..(range.index + range.length)]).to_string(),
+            string: text[(range.index)..(range.index + range.length)].to_vec(),
             range,
         })
     }
@@ -96,7 +96,7 @@ mod tests_MatchRange {
 
     #[test]
     fn test_from_text_and_range() {
-        let s = &"0123456789".to_string();
+        let s = &"0123456789".encode_utf16().collect();
 
         let match_range = MatchRange::from_text_and_range(
             s,
@@ -109,7 +109,7 @@ mod tests_MatchRange {
         assert_eq!(
             match_range,
             Some(MatchRange {
-                string: "23456".to_string(),
+                string: "23456".encode_utf16().collect(),
                 range: TextRange {
                     index: 2,
                     length: 5,

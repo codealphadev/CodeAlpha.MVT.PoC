@@ -3,6 +3,10 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::core_engine::utils::{
+    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position,
+};
+
 /// A position in a multi-line text document, in terms of rows and columns.
 /// Rows and columns are zero-based.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -18,10 +22,7 @@ impl TextPosition {
     }
 
     pub fn from_TSPoint(tree_sitter_point: &tree_sitter::Point) -> Self {
-        Self {
-            row: tree_sitter_point.row,
-            column: tree_sitter_point.column,
-        }
+        utf16_treesitter_point_to_position(tree_sitter_point)
     }
 
     /// > Given a string and an index, return the row number and column number of the character at that
@@ -37,72 +38,68 @@ impl TextPosition {
     /// Returns:
     ///
     /// A TextPosition struct
-    pub fn from_TextIndex(text: &String, index: usize) -> Option<TextPosition> {
-        let mut text_with_newline_ending = text.clone();
-        ensure_last_char_is_newline_char(&mut text_with_newline_ending);
+    pub fn from_TextIndex(text: &Vec<u16>, index: usize) -> Option<TextPosition> {
+        // let text_with_newline_ending = text.encode_utf16();
+        // ensure_last_char_is_newline_char(&mut text_with_newline_ending);
 
         let mut row = 0;
         let mut col = 0;
-        let mut text_iter = text_with_newline_ending.char_indices();
-        let mut additional_bytes_from_none_utf8_chars = 0;
-        while let Some((text_index, char)) = text_iter.next() {
-            additional_bytes_from_none_utf8_chars += char.len_utf8();
-            additional_bytes_from_none_utf8_chars -= 1;
+        // let mut text_iter = text_with_newline_ending.char_indices();
+        // let mut additional_bytes_from_none_utf8_chars = 0;
+        let mut i = 0;
+        for c in text {
+            // additional_bytes_from_none_utf8_chars += char.len_utf1();
+            // additional_bytes_from_none_utf8_chars -= 1;
 
-            if text_index == index + additional_bytes_from_none_utf8_chars {
+            if i == index {
                 return Some(TextPosition { row, column: col });
             }
 
-            if char == '\n' {
+            if *c == 10 {
+                // newline char
                 row += 1;
                 col = 0;
+                i += 1;
                 continue;
             }
 
             col += 1;
+            i += 1;
         }
 
         None
     }
 
     pub fn as_TSPoint(&self) -> tree_sitter::Point {
-        tree_sitter::Point {
-            row: self.row,
-            column: self.column,
-        }
+        utf16_position_to_tresitter_point(self)
     }
 
-    pub fn as_TextIndex(&self, text: &String) -> Option<usize> {
+    pub fn as_TextIndex(&self, text: &Vec<u16>) -> Option<usize> {
         self.as_TextIndex_stay_on_line(text, false)
     }
 
-    pub fn as_TextIndex_stay_on_line(&self, text: &String, stay_on_line: bool) -> Option<usize> {
-        let mut text_with_newline_ending = text.clone();
-        ensure_last_char_is_newline_char(&mut text_with_newline_ending);
-
+    pub fn as_TextIndex_stay_on_line(&self, text: &Vec<u16>, stay_on_line: bool) -> Option<usize> {
         let mut row = 0;
         let mut col = 0;
-        let mut text_iter = text_with_newline_ending.char_indices();
-        let mut additional_bytes_from_none_utf8_chars = 0;
-        while let Some((text_index, char)) = text_iter.next() {
-            additional_bytes_from_none_utf8_chars += char.len_utf8();
-            additional_bytes_from_none_utf8_chars -= 1;
-
+        let mut i = 0;
+        for c in text {
             if self.row == row && self.column == col {
-                return Some(text_index - additional_bytes_from_none_utf8_chars);
+                return Some(i);
             }
 
-            if char == '\n' {
+            if *c == '\n' as u16 {
                 // if stay_on_line is true, we want to return the index of the last character of the line self.row
                 if stay_on_line && self.row == row {
-                    return Some((text_index - additional_bytes_from_none_utf8_chars).clone());
+                    return Some(i);
                 }
                 row += 1;
                 col = 0;
+                i += 1;
                 continue;
             }
 
             col += 1;
+            i += 1;
         }
 
         None
@@ -115,11 +112,11 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_respects_new_line_character() {
-        let text = "\nHello, \nWorld!";
+        let text: Vec<u16> = "\nHello, \nWorld!".encode_utf16().collect();
         let index = 12; // ... starting from zero, so the 13th character, which is the 'l'
-        assert_eq!(text.chars().nth(index).unwrap(), 'l');
+        assert_eq!(text[index], 'l' as u16);
 
-        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+        let position_option = TextPosition::from_TextIndex(&text, index);
 
         assert_eq!(position_option.is_some(), true);
 
@@ -131,9 +128,9 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_one_line() {
-        let text = "Hello, World!";
+        let text = "Hello, World!".encode_utf16().collect();
         let index = 5;
-        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+        let position_option = TextPosition::from_TextIndex(&text, index);
 
         assert_eq!(position_option.is_some(), true);
 
@@ -145,10 +142,10 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_two_lines() {
-        let text = "Hello, World!\nGoodbye, World!";
+        let text: Vec<u16> = "Hello, World!\nGoodbye, World!".encode_utf16().collect();
         let index = 20; // ... starting from zero, so the 21th character, which is the 'e'
-        assert_eq!(text.chars().nth(index).unwrap(), 'e');
-        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+        assert_eq!(text[index], 'e' as u16);
+        let position_option = TextPosition::from_TextIndex(&text, index);
 
         assert_eq!(position_option.is_some(), true);
 
@@ -160,10 +157,10 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_none_with_emojis() {
-        let text = "Hell😊, W😊rld!";
+        let text = "Hell😊, W😊rld!".encode_utf16().collect();
         //       is 4 bytes ->|   |<- is 4 bytes
         let index = 5;
-        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+        let position_option = TextPosition::from_TextIndex(&text, index);
 
         assert_eq!(position_option.is_some(), true);
 
@@ -175,18 +172,18 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_too_far() {
-        let text = "Hello, World!";
-        let index = 100;
-        let position_option = TextPosition::from_TextIndex(&text.to_string(), index);
+        let text = "Hello, World!".encode_utf16().collect();
+        let index = 14;
+        let position_option = TextPosition::from_TextIndex(&text, index);
 
         assert_eq!(position_option.is_none(), true);
     }
 
     #[test]
     fn test_convert_TextPosition_as_TextIndex() {
-        let text = "Hello, World!";
+        let text = "Hello, World!".encode_utf16().collect();
         let position = TextPosition::new(0, 5);
-        let index_option = position.as_TextIndex(&text.to_string());
+        let index_option = position.as_TextIndex(&text);
 
         assert_eq!(index_option.is_some(), true);
 
@@ -197,10 +194,10 @@ mod tests_TextPosition {
 
     #[test]
     fn test_convert_TextPosition_as_TextIndex_with_emojis() {
-        let text = "Hell😊, W😊rld!";
+        let text = "Hell😊, W😊rld!".encode_utf16().collect();
         //       is 4 bytes ->|   |<- is 4 bytes
         let position = TextPosition::new(0, 5);
-        let index_option = position.as_TextIndex(&text.to_string());
+        let index_option = position.as_TextIndex(&text);
 
         assert_eq!(index_option.is_some(), true);
 
@@ -211,9 +208,9 @@ mod tests_TextPosition {
 
     #[test]
     fn test_convert_TextPosition_as_TextIndex_multi_line() {
-        let text = "Hello,\n World\n!";
+        let text = "Hello,\n World\n!".encode_utf16().collect();
         let position = TextPosition::new(2, 0);
-        let index_option = position.as_TextIndex(&text.to_string());
+        let index_option = position.as_TextIndex(&text);
 
         assert_eq!(index_option.is_some(), true);
 
@@ -224,36 +221,36 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far() {
-        let text = "Hello, World!";
+        let text = "Hello, World!".encode_utf16().collect();
         let position = TextPosition::new(0, 100);
-        let index_option = position.as_TextIndex(&text.to_string());
+        let index_option = position.as_TextIndex(&text);
 
         assert_eq!(index_option.is_none(), true);
     }
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line() {
-        let text = "Hello,\nWorld!\n";
+        let text = "Hello,\nWorld!\n".encode_utf16().collect();
         let position = TextPosition::new(0, 100);
-        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), true);
+        let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
         assert_eq!(index_option.unwrap(), 6);
     }
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_with_emojis() {
-        let text = "Hell😊,\nW😊rld!\n";
+        let text = "Hell😊,\nW😊rld!\n".encode_utf16().collect();
         let position = TextPosition::new(0, 100);
-        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), true);
+        let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
-        assert_eq!(index_option.unwrap(), 6);
+        assert_eq!(index_option.unwrap(), 7);
     }
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_false() {
-        let text = "Hello,\nWorld!\n";
+        let text = "Hello,\nWorld!\n".encode_utf16().collect();
         let position = TextPosition::new(0, 100);
-        let index_option = position.as_TextIndex_stay_on_line(&text.to_string(), false);
+        let index_option = position.as_TextIndex_stay_on_line(&text, false);
 
         assert_eq!(index_option.is_none(), true);
     }
@@ -281,7 +278,7 @@ impl TextRange {
     }
 
     pub fn from_StartEndTextPosition(
-        text: &String,
+        text: &Vec<u16>,
         start_position: &TextPosition,
         end_position: &TextPosition,
     ) -> Option<TextRange> {
@@ -296,20 +293,14 @@ impl TextRange {
     }
 
     pub fn from_StartEndTSPoint(
-        text: &String,
+        text: &Vec<u16>,
         start_position: &tree_sitter::Point,
         end_position: &tree_sitter::Point,
     ) -> Option<TextRange> {
         Self::from_StartEndTextPosition(
             text,
-            &TextPosition {
-                row: start_position.row,
-                column: start_position.column,
-            },
-            &TextPosition {
-                row: end_position.row,
-                column: end_position.column,
-            },
+            &utf16_treesitter_point_to_position(start_position),
+            &utf16_treesitter_point_to_position(end_position),
         )
     }
 
@@ -321,7 +312,7 @@ impl TextRange {
         }
     }
 
-    pub fn as_StartEndTextPosition(&self, text: &String) -> Option<(TextPosition, TextPosition)> {
+    pub fn as_StartEndTextPosition(&self, text: &Vec<u16>) -> Option<(TextPosition, TextPosition)> {
         let (start_index, end_index) = self.as_StartEndIndex();
 
         if let (Some(start_position), Some(end_position)) = (
@@ -336,7 +327,7 @@ impl TextRange {
 
     pub fn as_StartEndTSPoint(
         &self,
-        text: &String,
+        text: &Vec<u16>,
     ) -> Option<(tree_sitter::Point, tree_sitter::Point)> {
         if let Some((start_position, end_position)) = self.as_StartEndTextPosition(text) {
             Some((start_position.as_TSPoint(), end_position.as_TSPoint()))
@@ -376,8 +367,11 @@ mod tests_TextRange {
         //                     |--->| <- Length is 6 characters
         let start_position = TextPosition::new(0, 5);
         let end_position = TextPosition::new(0, 10);
-        let range_option =
-            TextRange::from_StartEndTextPosition(&text.to_string(), &start_position, &end_position);
+        let range_option = TextRange::from_StartEndTextPosition(
+            &text.encode_utf16().collect(),
+            &start_position,
+            &end_position,
+        );
 
         assert_eq!(range_option.is_some(), true);
 
@@ -393,8 +387,11 @@ mod tests_TextRange {
         //                    |-- ------ ->| <- Length 12 ('\n' is one character)
         let start_position = TextPosition::new(1, 0);
         let end_position = TextPosition::new(3, 2);
-        let range_option =
-            TextRange::from_StartEndTextPosition(&text.to_string(), &start_position, &end_position);
+        let range_option = TextRange::from_StartEndTextPosition(
+            &text.encode_utf16().collect(),
+            &start_position,
+            &end_position,
+        );
 
         assert_eq!(range_option.is_some(), true);
 
@@ -409,8 +406,11 @@ mod tests_TextRange {
         let text = "He\nll\no, Wo\nrld!";
         let start_position = TextPosition::new(1, 100);
         let end_position = TextPosition::new(3, 2);
-        let range_option =
-            TextRange::from_StartEndTextPosition(&text.to_string(), &start_position, &end_position);
+        let range_option = TextRange::from_StartEndTextPosition(
+            &text.encode_utf16().collect(),
+            &start_position,
+            &end_position,
+        );
 
         assert_eq!(range_option.is_some(), false);
     }
@@ -420,8 +420,11 @@ mod tests_TextRange {
         let text = "He\nll\no, Wo\nrld!";
         let start_position = TextPosition::new(1, 1);
         let end_position = TextPosition::new(100, 2);
-        let range_option =
-            TextRange::from_StartEndTextPosition(&text.to_string(), &start_position, &end_position);
+        let range_option = TextRange::from_StartEndTextPosition(
+            &text.encode_utf16().collect(),
+            &start_position,
+            &end_position,
+        );
 
         assert_eq!(range_option.is_some(), false);
     }
@@ -460,7 +463,7 @@ mod tests_TextRange {
         //                |---->| <- Length is 6 characters, start is [0,0], end is [0,6]
         let range = TextRange::new(0, 6);
 
-        let range_option = range.as_StartEndTextPosition(&text.to_string());
+        let range_option = range.as_StartEndTextPosition(&text.encode_utf16().collect());
 
         assert_eq!(range_option.is_some(), true);
 
@@ -481,7 +484,7 @@ mod tests_TextRange {
         //                    |-- ------ -->| <- Length 12 ('\n' is one character)
         let range = TextRange::new(3, 12);
 
-        let range_option = range.as_StartEndTextPosition(&text.to_string());
+        let range_option = range.as_StartEndTextPosition(&text.encode_utf16().collect());
 
         assert_eq!(range_option.is_some(), true);
 
@@ -498,7 +501,7 @@ mod tests_TextRange {
 }
 
 pub fn StartEndIndex_from_StartEndTextPosition(
-    text: &String,
+    text: &Vec<u16>,
     start_position: &TextPosition,
     end_position: &TextPosition,
 ) -> Option<(usize, usize)> {
@@ -512,7 +515,7 @@ pub fn StartEndIndex_from_StartEndTextPosition(
 }
 
 pub fn StartEndIndex_from_StartEndTSPoint(
-    text: &String,
+    text: &Vec<u16>,
     start_point: &tree_sitter::Point,
     end_point: &tree_sitter::Point,
 ) -> Option<(usize, usize)> {
@@ -524,7 +527,7 @@ pub fn StartEndIndex_from_StartEndTSPoint(
 }
 
 pub fn StartEndTextPosition_from_StartEndIndex(
-    text: &String,
+    text: &Vec<u16>,
     start_index: usize,
     end_index: usize,
 ) -> Option<(TextPosition, TextPosition)> {
@@ -544,7 +547,7 @@ pub fn StartEndTextPosition_from_StartEndTSPoint(
 }
 
 pub fn StartEndTSPoint_from_StartEndIndex(
-    text: &String,
+    text: &Vec<u16>,
     start_index: usize,
     end_index: usize,
 ) -> Option<(tree_sitter::Point, tree_sitter::Point)> {
@@ -567,30 +570,10 @@ pub fn StartEndTSPoint_from_StartEndTextPosition(
     )
 }
 
-fn ensure_last_char_is_newline_char(text: &mut String) -> bool {
-    if let Some(last_char) = text.pop() {
-        if last_char == '\n' {
-            text.push(last_char);
-            true
-        } else {
-            text.push(last_char);
-            text.push('\n');
-            false
-        }
-    } else {
-        text.push('\n');
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests_TextConversions {
-    use crate::core_engine::{
-        rules::utils::text_types::{
-            StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition,
-            TextPosition,
-        },
-        text_types::ensure_last_char_is_newline_char,
+    use crate::core_engine::rules::utils::text_types::{
+        StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition, TextPosition,
     };
 
     use pretty_assertions::assert_eq;
@@ -602,7 +585,7 @@ mod tests_TextConversions {
         let start_position = TextPosition::new(0, 0);
         let end_position = TextPosition::new(0, 5);
         let result = StartEndIndex_from_StartEndTextPosition(
-            &text.to_string(),
+            &text.encode_utf16().collect(),
             &start_position,
             &end_position,
         );
@@ -622,7 +605,7 @@ mod tests_TextConversions {
         let start_position = TextPosition::new(0, 0);
         let end_position = TextPosition::new(1, 5);
         let result = StartEndIndex_from_StartEndTextPosition(
-            &text.to_string(),
+            &text.encode_utf16().collect(),
             &start_position,
             &end_position,
         );
@@ -638,11 +621,12 @@ mod tests_TextConversions {
     // Write test for StartEndIndex_from_StartEndTSPoint
     #[test]
     fn test_StartEndIndex_from_StartEndTSPoint_one_line() {
-        let text = "Hello, World!";
-        let start_point = tree_sitter::Point::new(0, 0);
-        let end_point = tree_sitter::Point::new(0, 5);
-        let result =
-            StartEndIndex_from_StartEndTSPoint(&text.to_string(), &start_point, &end_point);
+        let text = "Hello, World!".encode_utf16().collect();
+        let start_position = TextPosition::new(0, 0);
+        let end_position = TextPosition::new(0, 5);
+        let start_point = start_position.as_TSPoint();
+        let end_point = end_position.as_TSPoint();
+        let result = StartEndIndex_from_StartEndTSPoint(&text, &start_point, &end_point);
 
         assert_eq!(result.is_some(), true);
 
@@ -651,33 +635,12 @@ mod tests_TextConversions {
         assert_eq!(start_index, 0);
         assert_eq!(end_index, 5);
     }
-
-    #[test]
-    fn test_ensure_last_char_is_newline_char_false() {
-        let mut text = "Hello, World!".to_string();
-        assert_eq!(ensure_last_char_is_newline_char(&mut text), false);
-        assert_eq!(text, "Hello, World!\n");
-    }
-
-    #[test]
-    fn test_ensure_last_char_is_newline_char_true() {
-        let mut text = "Hello, World!\n".to_string();
-        assert_eq!(ensure_last_char_is_newline_char(&mut text), true);
-        assert_eq!(text, "Hello, World!\n");
-    }
-
-    #[test]
-    fn test_ensure_last_char_is_newline_char_empty_text() {
-        let mut text = "".to_string();
-        assert_eq!(ensure_last_char_is_newline_char(&mut text), false);
-        assert_eq!(text, "\n");
-    }
 }
 
-pub fn get_index_of_next_row(index: usize, text: &String) -> Option<usize> {
+pub fn get_index_of_next_row(index: usize, text: &Vec<u16>) -> Option<usize> {
     let mut i = 0;
-    for c in text.chars().skip(index) {
-        if c == '\n' {
+    for c in text[index..].to_vec() {
+        if c == 10 {
             return Some(index + i + 1);
         }
         i += 1;
@@ -692,17 +655,21 @@ mod tests_Text {
     #[test]
     fn test_index_of_next_row() {
         // No new row in text
-        assert_eq!(get_index_of_next_row(5, &"Hello, World!".to_string()), None);
+        assert_eq!(
+            get_index_of_next_row(5, &"Hello, World!".encode_utf16().collect()),
+            None
+        );
 
         // return index at new row and keep end index
         let text = "Hello,
       World!"
-            .to_string();
+            .encode_utf16()
+            .collect();
         assert_eq!(get_index_of_next_row(5, &text), Some(7));
 
         // return index at new row and keep end index
         assert_eq!(
-            get_index_of_next_row(5, &"Hello test,\n Wor!ld!\n".to_string()),
+            get_index_of_next_row(5, &"Hello test,\n Wor!ld!\n".encode_utf16().collect()),
             Some(12)
         );
     }

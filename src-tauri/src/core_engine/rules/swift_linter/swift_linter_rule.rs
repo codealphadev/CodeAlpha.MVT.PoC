@@ -78,7 +78,7 @@ impl RuleBase for SwiftLinterRule {
                 let rule_match = RuleMatch::new(
                     RuleName::SwiftLinter,
                     MatchRange {
-                        string: "unknown yet".to_string(),
+                        string: "unknown yet".encode_utf16().collect::<Vec<u16>>(),
                         range: TextRange {
                             index: char_range_for_line.index + lint_alert.1.column,
                             length: 1,

@@ -5,7 +5,7 @@ import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bra
 import type { BracketHighlightBracketPair } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightBracketPair';
 
 export const BORDER_WIDTH = 1;
-const LEFT_MOST_LINE_X = 5;
+const LEFT_MOST_LINE_X = 18;
 
 export const compute_bracket_highlight_box_rects = (
 	bracket_highlight_boxes: BracketHighlightBracketPair

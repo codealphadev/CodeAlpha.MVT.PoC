@@ -36,14 +36,14 @@ pub fn calc_rectangles_and_line_matches(
                 ),
             };
 
-            let mut substr: String = String::new();
-            let mut matched_str_char_iter = match_range.string.char_indices();
-            for (i, c) in matched_str_char_iter.by_ref() {
+            let mut substr = vec![];
+            // let mut matched_str_char_iter = match_range.string.char_indices();
+            for (i, c) in match_range.string.iter().enumerate() {
                 if i >= matched_char_range.index - match_range.range.index
                     && i < (matched_char_range.index - match_range.range.index)
                         + matched_char_range.length
                 {
-                    substr.push(c);
+                    substr.push(*c);
                 }
             }
 

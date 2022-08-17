@@ -20,9 +20,6 @@ pub fn user_interaction_listener(window_manager: &Arc<Mutex<WindowManager>>) {
             EventUserInteraction::CoreActivationStatus(msg) => {
                 on_core_activation_status_update(&window_manager_move_copy, &msg);
             }
-            EventUserInteraction::SearchQuery(_) => {
-                // Do Nothing here - DEPRECATED, needs refactoring
-            }
             EventUserInteraction::None => {
                 // Do Nothing here - DEPRECATED, needs refactoring
             }
