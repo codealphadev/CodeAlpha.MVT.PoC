@@ -83,7 +83,7 @@ pub struct BracketHighlight {
     results: Option<BracketHighlightResults>,
     selected_text_range: Option<TextRange>,
     swift_syntax_tree: SwiftSyntaxTree,
-    text_content: Option<String>,
+    text_content: Option<Vec<u16>>,
     window_pid: i32,
 }
 
@@ -98,9 +98,9 @@ impl BracketHighlight {
         }
     }
 
-    pub fn update_content(&mut self, text_content: &String) {
+    pub fn update_content(&mut self, text_content: &Vec<u16>) {
         if self.swift_syntax_tree.parse(text_content) {
-            self.text_content = Some(text_content.to_owned());
+            self.text_content = Some((*text_content).clone());
         }
     }
 
@@ -115,8 +115,8 @@ impl BracketHighlight {
     pub fn generate_results(&mut self) {
         let (selected_text_range, text_content, textarea_ui_element) =
             if let (Some(selected_text_range), Some(text_content), Some(textarea_ui_element)) = (
-                self.selected_text_range.clone(),
-                self.text_content.clone(),
+                self.selected_text_range,
+                self.text_content.as_ref(),
                 get_textarea_uielement(self.window_pid),
             ) {
                 (selected_text_range, text_content, textarea_ui_element)
@@ -247,7 +247,7 @@ impl BracketHighlight {
 
         // Elbow needed because the open and closing bracket are on different lines
         let is_line_on_same_row = line_positions.0.row == line_positions.1.row;
-        if !is_line_on_same_row {
+        if false && !is_line_on_same_row {
             let first_line_bracket_range = line_brackets_match_range.0.range.clone();
             if let Some(next_row_index) =
                 get_index_of_next_row(first_line_bracket_range.index, &text_content)
@@ -306,17 +306,23 @@ impl BracketHighlight {
         }
 
         // Check if bottom line should be to the top or bottom of last line rectangle
-        let elbow_bottom_line_top = only_whitespace_on_line_until_position(
-            TextPosition {
-                row: line_positions.1.row,
-                column: if line_positions.1.column == 0 {
-                    0
-                } else {
-                    line_positions.1.column - 1
+        let elbow_bottom_line_top = if let Some(elbow_bottom_line_top) =
+            only_whitespace_on_line_until_position(
+                TextPosition {
+                    row: line_positions.1.row,
+                    column: if line_positions.1.column == 0 {
+                        0
+                    } else {
+                        line_positions.1.column - 1
+                    },
                 },
-            },
-            &text_content,
-        );
+                &text_content,
+            ) {
+            elbow_bottom_line_top
+        } else {
+            self.results = None;
+            return;
+        };
 
         if elbow_origin_x_left_most {
             elbow = Some(BracketHighlightElbow {

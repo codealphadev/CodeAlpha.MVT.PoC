@@ -48,16 +48,12 @@ pub async fn mintlify_documentation(
         context: ctx_string,
     };
 
-    println!("{:?}", req_body);
-
     let response = reqwest::Client::new()
         .post("https://europe-west1-codealpha-analyze-text-dev.cloudfunctions.net/analyze-code")
         .json(&req_body)
         .send()
         .await?;
-    println!("{:?}", response);
     let parsed_response = response.json().await?;
-    println!("{:?}", parsed_response);
     Ok(parsed_response)
 }
 

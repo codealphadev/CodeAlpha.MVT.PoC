@@ -4,16 +4,19 @@ use std::{
     path::PathBuf,
     process::{Command, Stdio},
 };
-use tree_sitter::{Node, Parser, Point, Tree};
+use tree_sitter::{Node, Parser, Tree};
 
-use crate::core_engine::rules::TextRange;
+use crate::core_engine::{
+    rules::{TextPosition, TextRange},
+    utils::utf16_position_to_tresitter_point,
+};
 
 use super::swift_codeblock::SwiftCodeBlock;
 
 pub struct SwiftSyntaxTree {
     tree_sitter_parser: Parser,
     tree_sitter_tree: Option<Tree>,
-    content: Option<String>,
+    content: Option<Vec<u16>>,
     logging_folder: Option<PathBuf>,
 }
 
@@ -37,34 +40,8 @@ impl SwiftSyntaxTree {
         self.content = None;
     }
 
-    pub fn parse(&mut self, content: &String) -> bool {
-        // If there already exists a tree, we are updating it with the new content.
-        // We assume the content is an updated version of the content parsed before.
-
-        let updated_tree: Option<Tree>;
-        if let (Some(_), Some(_)) = (&mut self.tree_sitter_tree, &self.content) {
-            // // Skip if the content is the same as before.
-            // if old_content == content {
-            //     return true;
-            // }
-
-            // // Determine the edits made to the code document.
-            // let mut input_edits: Vec<InputEdit> = detect_input_edits(old_content, content);
-            // println!("{:?}", input_edits);
-
-            // // Sort input_edits by start_byte in descending order before applying them to the tree.
-            // input_edits.sort_by(|a, b| b.start_byte.cmp(&a.start_byte));
-
-            // // Apply the sorted edits to the old tree.
-            // for edit in input_edits.iter() {
-            //     old_tree.edit(edit);
-            // }
-
-            // updated_tree = self.tree_sitter_parser.parse(content, Some(old_tree));
-            updated_tree = self.tree_sitter_parser.parse(content, None);
-        } else {
-            updated_tree = self.tree_sitter_parser.parse(content, None);
-        }
+    pub fn parse(&mut self, content: &Vec<u16>) -> bool {
+        let updated_tree = self.tree_sitter_parser.parse_utf16(content, None);
 
         if updated_tree.is_some() {
             self.tree_sitter_tree = updated_tree;
@@ -83,14 +60,14 @@ impl SwiftSyntaxTree {
                 selected_text_range.as_StartEndTextPosition(text_content)
             {
                 let node = syntax_tree.root_node().named_descendant_for_point_range(
-                    Point {
+                    utf16_position_to_tresitter_point(&TextPosition {
                         row: start_position.row,
                         column: start_position.column,
-                    },
-                    Point {
+                    }),
+                    utf16_position_to_tresitter_point(&TextPosition {
                         row: start_position.row,
                         column: start_position.column,
-                    },
+                    }),
                 );
 
                 return node;
@@ -187,10 +164,14 @@ mod tests_SwiftSyntaxTree {
 
     use std::path::PathBuf;
 
+    use crate::core_engine::{
+        rules::TextPosition,
+        utils::{utf16_bytes_count, utf16_treesitter_point_to_position},
+    };
+
     use super::SwiftSyntaxTree;
     use pretty_assertions::assert_eq;
     use rand::Rng;
-    use tree_sitter::Point;
 
     #[test]
     #[ignore]
@@ -202,11 +183,15 @@ mod tests_SwiftSyntaxTree {
         let code_original = format!(
             "{} apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"",
             original_string
-        );
+        )
+        .encode_utf16()
+        .collect();
         let code_updated = format!(
             "{} apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"",
             replace_string
-        );
+        )
+        .encode_utf16()
+        .collect();
 
         swift_syntax_tree.parse(&code_original);
         {
@@ -221,7 +206,7 @@ mod tests_SwiftSyntaxTree {
                     "Child before - ID {:?}, Kind {:?}, Text {:?}",
                     child.id(),
                     child.kind(),
-                    child.utf8_text(code_original.as_bytes()).unwrap()
+                    child.utf16_text(&code_original)
                 );
             }
         }
@@ -238,7 +223,7 @@ mod tests_SwiftSyntaxTree {
                 "Child after - ID {:?}, Kind {:?}, Text {:?}",
                 child.id(),
                 child.kind(),
-                child.utf8_text(code_updated.as_bytes()).unwrap()
+                child.utf16_text(&code_original)
             );
         }
     }
@@ -250,10 +235,12 @@ mod tests_SwiftSyntaxTree {
 
         _ = swift_syntax_tree.start_logging(&prepare_treesitter_logging());
 
-        let code = "var apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"";
-        swift_syntax_tree.parse(&code.to_string());
-        let updated_code = "let apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"\nlet appleSummary2 = \"I have \\(apples) apples.\"";
-        swift_syntax_tree.parse(&updated_code.to_string());
+        let code = "var apples = 3\nlet appleSummary = \"I have \\(apples) apples.\""
+            .encode_utf16()
+            .collect();
+        swift_syntax_tree.parse(&code);
+        let updated_code = "let apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"\nlet appleSummary2 = \"I have \\(apples) apples.\"".encode_utf16().collect();
+        swift_syntax_tree.parse(&updated_code);
     }
 
     fn prepare_treesitter_logging() -> PathBuf {
@@ -271,63 +258,71 @@ mod tests_SwiftSyntaxTree {
 
     #[test]
     fn test_start_end_point_end_newline_char() {
-        let text = "let x = 1; console.log(x);\n";
+        let text = "let x = 1; console.log(x);\n".encode_utf16().collect();
         //                |------------------------>| <- end column is zero on row 1
         //                                            <- end byte is one past the last byte (27), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
-        swift_syntax_tree.parse(&text.to_string());
+        swift_syntax_tree.parse(&text);
 
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
-        // println!("{:#?}", root_node.start_position());
-        // println!("{:#?}", root_node.end_position());
-
         assert_eq!(root_node.start_byte(), 0);
-        assert_eq!(root_node.end_byte(), 27);
-        assert_eq!(root_node.start_position(), Point { row: 0, column: 0 });
-        assert_eq!(root_node.end_position(), Point { row: 1, column: 0 });
+        assert_eq!(root_node.end_byte(), utf16_bytes_count(&text));
+        assert_eq!(
+            utf16_treesitter_point_to_position(&root_node.start_position()),
+            TextPosition { row: 0, column: 0 }
+        );
+        assert_eq!(
+            utf16_treesitter_point_to_position(&root_node.end_position()),
+            TextPosition { row: 1, column: 0 }
+        );
     }
 
     #[test]
     fn test_start_end_point_end_no_newline_char() {
-        let text = "let x = 1; console.log(x);";
+        let text = "let x = 1; console.log(x);".encode_utf16().collect();
         //                |------------------------>| <- end column is one past the last char (26)
         //                |------------------------>| <- end byte is one past the last byte (26), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
-        swift_syntax_tree.parse(&text.to_string());
+        swift_syntax_tree.parse(&text);
 
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
-        // println!("{:#?}", root_node.start_position());
-        // println!("{:#?}", root_node.end_position());
-
         assert_eq!(root_node.start_byte(), 0);
-        assert_eq!(root_node.end_byte(), 26);
-        assert_eq!(root_node.start_position(), Point { row: 0, column: 0 });
-        assert_eq!(root_node.end_position(), Point { row: 0, column: 26 });
+        assert_eq!(root_node.end_byte(), utf16_bytes_count(&text));
+        assert_eq!(
+            utf16_treesitter_point_to_position(&root_node.start_position()),
+            TextPosition { row: 0, column: 0 }
+        );
+        assert_eq!(
+            utf16_treesitter_point_to_position(&root_node.end_position()),
+            TextPosition { row: 0, column: 26 }
+        );
     }
 
     #[test]
     fn test_start_end_point_with_UTF16_chars() {
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
 
-        let utf16_str = "// 😊\n";
-        let utf8_str = "let x = 1; console.log(x);";
-        let text = format!("{}{}", utf16_str, utf8_str);
+        let mut text = "// 😊\n".encode_utf16().collect::<Vec<u16>>();
+        let mut utf8_str = "let x = 1; console.log(x);"
+            .encode_utf16()
+            .collect::<Vec<u16>>();
+        text.append(&mut utf8_str);
 
-        swift_syntax_tree.parse(&text.to_string());
+        swift_syntax_tree.parse(&text);
 
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
-        // println!("Start Pos: {:#?}", root_node.start_position());
-        // println!("End Pos: {:#?}", root_node.end_position());
-        // println!("Start Byte: {:#?}", root_node.start_byte());
-        // println!("End Byte: {:#?}", root_node.end_byte());
-
         assert_eq!(root_node.start_byte(), 0);
-        let byte_count = utf8_str.bytes().count() + utf16_str.bytes().count(); // 26 (utf8) + 8 (utf16, emoji is 4 bytes)
-        assert_eq!(root_node.end_byte(), byte_count);
-        assert_eq!(root_node.start_position(), Point { row: 0, column: 0 });
-        assert_eq!(root_node.end_position(), Point { row: 1, column: 26 });
+        assert_eq!(root_node.end_byte(), utf16_bytes_count(&text));
+        assert_eq!(
+            utf16_treesitter_point_to_position(&root_node.start_position()),
+            TextPosition { row: 0, column: 0 }
+        );
+        assert_eq!(
+            utf16_treesitter_point_to_position(&root_node.end_position()),
+            TextPosition { row: 1, column: 26 }
+        );
     }
 }

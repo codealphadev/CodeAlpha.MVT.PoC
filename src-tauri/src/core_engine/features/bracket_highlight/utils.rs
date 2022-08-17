@@ -1,10 +1,11 @@
 use accessibility::AXUIElement;
-use tree_sitter::Node;
+use tree_sitter::{Node, Point};
 
 use crate::core_engine::{
     ax_utils::{calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped},
     rules::{TextPosition, TextRange},
     types::{MatchRange, MatchRectangle},
+    utils::{utf16_is_whitespace, utf16_lines},
 };
 
 fn code_block_kinds_with_declaration() -> Vec<&'static str> {
@@ -34,7 +35,7 @@ pub fn rectangles_from_match_range(
 
 pub fn length_to_code_block_body_start(
     node: &Node,
-    text: &String,
+    text: &Vec<u16>,
     selected_text_index: usize,
 ) -> Option<(usize, bool)> {
     let mut is_selected_text_in_declaration = false;
@@ -45,8 +46,9 @@ pub fn length_to_code_block_body_start(
         ) {
             let text_from_index = &text[first_index..last_index];
             let mut additional_index: usize = 0;
-            for c in text_from_index.chars() {
-                if c == '{' {
+            for c in text_from_index {
+                if *c == 123 {
+                    // utf16 for '{'
                     if selected_text_index < first_index + additional_index
                         && selected_text_index >= first_index
                     {
@@ -112,7 +114,7 @@ pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Opti
 
 pub fn get_match_range_of_first_and_last_char_in_node(
     node: &Node,
-    text: &String,
+    text: &Vec<u16>,
     selected_text_index: usize,
 ) -> Option<(MatchRange, MatchRange)> {
     if let (Some(first_index), Some(last_index)) = (
@@ -133,6 +135,7 @@ pub fn get_match_range_of_first_and_last_char_in_node(
                 length: 1,
             },
         );
+
         if let Some(additional_length) =
             length_to_code_block_body_start(node, text, selected_text_index)
         {
@@ -154,7 +157,7 @@ pub fn get_match_range_of_first_and_last_char_in_node(
 
 pub fn rectanges_of_wrapped_line(
     row: usize,
-    content: &String,
+    content: &Vec<u16>,
     textarea_ui_element: AXUIElement,
 ) -> Vec<MatchRectangle> {
     if let Some(is_wrapped) = is_text_of_line_wrapped(row, &textarea_ui_element) {
@@ -173,15 +176,27 @@ pub fn rectanges_of_wrapped_line(
     vec![]
 }
 
-pub fn only_whitespace_on_line_until_position(position: TextPosition, text: &String) -> bool {
+pub fn only_whitespace_on_line_until_position(
+    position: TextPosition,
+    text: &Vec<u16>,
+) -> Option<bool> {
     let text_clone = text.clone();
-    let row = &text_clone.lines().collect::<Vec<&str>>()[position.row][0..position.column];
-    for c in row.chars() {
-        if c != ' ' {
-            return false;
+    let lines = &utf16_lines(&text_clone).collect::<Vec<Vec<u16>>>();
+    if lines.len() - 1 < position.row {
+        return None;
+    }
+
+    let row = &lines[position.row];
+    if row.len() - 1 < position.column {
+        return None;
+    }
+
+    for c_u16 in row[0..position.column].into_iter() {
+        if *c_u16 != ' ' as u16 {
+            return Some(false);
         }
     }
-    true
+    Some(true)
 }
 
 #[derive(Debug, PartialEq)]
@@ -202,12 +217,12 @@ pub struct LeftMostColumn {
 /// A LeftMostColumn struct
 pub fn get_left_most_column_in_rows(
     range: TextRange,
-    text_content: &String,
+    text_content: &Vec<u16>,
 ) -> Option<LeftMostColumn> {
     if text_content.len() < range.index + range.length {
         return None;
     }
-    let text = &text_content[range.index..range.index + range.length];
+    let text = &text_content[range.index..range.index + range.length].to_vec();
     let mut left_most_column_option: Option<usize> = None;
     let mut left_most_row: usize = 0;
     let mut left_most_index: usize = 0;
@@ -215,16 +230,16 @@ pub fn get_left_most_column_in_rows(
     let mut index = range.index;
     let mut row = 0;
 
-    for line in text.lines() {
+    for line in utf16_lines(text) {
         let mut column: usize = 0;
-        for (_, c) in line.chars().enumerate() {
-            if c != ' ' {
+        for &c_u16 in &line {
+            if c_u16 != ' ' as u16 {
                 break;
             }
             column += 1;
         }
 
-        if line.trim().chars().count() > 0 {
+        if (&line).iter().any(|c| !utf16_is_whitespace(c)) {
             if let Some(left_most_column) = left_most_column_option {
                 if column < left_most_column {
                     left_most_column_option = Some(column);
@@ -238,7 +253,7 @@ pub fn get_left_most_column_in_rows(
             }
         }
 
-        index += line.len() + 1;
+        index += &line.len() + 1;
         row += 1;
     }
 
@@ -252,130 +267,190 @@ pub fn get_left_most_column_in_rows(
     }
 }
 
-fn get_node_start_index(node: &Node, text: &String) -> Option<usize> {
-    TextPosition::from_TSPoint(&node.start_position()).as_TextIndex(&text)
+fn get_node_start_index(node: &Node, text: &Vec<u16>) -> Option<usize> {
+    TextPosition::from_TSPoint(&Point {
+        row: node.start_position().row,
+        column: node.start_position().column,
+    })
+    .as_TextIndex(&text)
 }
 
-fn get_node_end_index(node: &Node, text: &String) -> Option<usize> {
-    TextPosition::from_TSPoint(&node.end_position()).as_TextIndex(&text)
+fn get_node_end_index(node: &Node, text: &Vec<u16>) -> Option<usize> {
+    TextPosition::from_TSPoint(&Point {
+        row: node.end_position().row,
+        column: node.end_position().column,
+    })
+    .as_TextIndex(&text)
 }
 
 #[cfg(test)]
-mod tests_bracket_highlight {
-    use crate::core_engine::rules::{TextPosition, TextRange};
+mod tests {
+    #[cfg(test)]
+    mod only_whitespace_on_line_until_position {
+        use crate::core_engine::{
+            features::bracket_highlight::utils::only_whitespace_on_line_until_position,
+            rules::TextPosition,
+        };
 
-    use super::only_whitespace_on_line_until_position;
+        fn test_fn(text: &str, row: usize, column: usize, expected: Option<bool>) {
+            let text = text.encode_utf16().collect();
+            let result =
+                only_whitespace_on_line_until_position(TextPosition { row, column }, &text);
+            assert_eq!(result, expected);
+        }
 
-    #[test]
-    fn test_only_whitespace_on_line_until_position() {
-        let text = "if (test) {
-        print(x)
-       }"
-        .to_string();
-        assert_eq!(
-            only_whitespace_on_line_until_position(TextPosition { row: 2, column: 9 }, &text),
-            true
-        );
+        #[test]
+        fn last_row() {
+            test_fn(
+                "if (test) {
+            print(x)
+          }",
+                2,
+                10,
+                Some(true),
+            );
+        }
 
-        let text_false = "if (test) {
-        print(x)
-       ss}"
-        .to_string();
-        assert_eq!(
-            only_whitespace_on_line_until_position(
-                TextPosition { row: 2, column: 11 },
-                &text_false
-            ),
-            false
-        );
+        #[test]
+        fn last_row_false() {
+            test_fn(
+                "if (test) {
+     print(x)
+         x}",
+                2,
+                10,
+                Some(false),
+            );
+        }
 
-        let text_false = "if (test) { }".to_string();
-        assert_eq!(
-            only_whitespace_on_line_until_position(
-                TextPosition { row: 0, column: 12 },
-                &text_false
-            ),
-            false
-        );
+        #[test]
+        fn middle_row() {
+            test_fn(
+                "if (test) {
+            print(x)
+          }",
+                1,
+                12,
+                Some(true),
+            );
+        }
+
+        #[test]
+        fn middle_row_false() {
+            test_fn(
+                "if (test) {
+      x     print(x)
+          }",
+                1,
+                12,
+                Some(false),
+            );
+        }
+
+        #[test]
+        fn out_of_bounds_row() {
+            test_fn(
+                "if (test) {
+            print(x)
+          }",
+                3,
+                0,
+                None,
+            );
+        }
+
+        #[test]
+        fn out_of_bounds_col() {
+            test_fn(
+                "if (test) {
+            print(x)
+          }",
+                12,
+                0,
+                None,
+            );
+        }
     }
 
-    use super::{get_left_most_column_in_rows, LeftMostColumn};
+    #[cfg(test)]
+    mod get_left_most_column_in_rows {
+        use crate::core_engine::{
+            features::bracket_highlight::utils::{get_left_most_column_in_rows, LeftMostColumn},
+            rules::TextRange,
+        };
 
-    #[test]
-    fn test_get_left_most_column() {
-        let text = "if (test) {
-        print(x)
-       }"
-        .to_string();
-        assert_eq!(
-            get_left_most_column_in_rows(
-                TextRange {
-                    index: 12,
-                    length: 29
-                },
-                &text
-            ),
-            Some(LeftMostColumn { index: 40, row: 1 })
-        );
+        fn test_fn(text: &str, index: usize, length: usize, expected: Option<LeftMostColumn>) {
+            assert_eq!(
+                get_left_most_column_in_rows(
+                    TextRange { index, length },
+                    &text.encode_utf16().collect()
+                ),
+                expected
+            );
+        }
 
-        let text_left_of_closing = "if (test) {
+        #[test]
+        fn last_row() {
+            test_fn(
+                "if (test) {
             print(x)
-          print(y)
+           }",
+                12,
+                33,
+                Some(LeftMostColumn { index: 44, row: 1 }),
+            );
+        }
 
-            }"
-        .to_string();
-        assert_eq!(
-            get_left_most_column_in_rows(
-                TextRange {
-                    index: 12,
-                    length: 60
-                },
-                &text_left_of_closing
-            ),
-            Some(LeftMostColumn { index: 47, row: 1 })
-        );
-
-        let text_on_last_row = "if (test) {
-          print(x)
-    print(y)}"
-            .to_string();
-        assert_eq!(
-            get_left_most_column_in_rows(
-                TextRange {
-                    index: 12,
-                    length: 36
-                },
-                &text_on_last_row
-            ),
-            Some(LeftMostColumn { index: 39, row: 1 })
-        );
-
-        let text_out_of_range = "if (test) { ".to_string();
-        assert_eq!(
-            get_left_most_column_in_rows(
-                TextRange {
-                    index: 12,
-                    length: 35
-                },
-                &text_out_of_range
-            ),
-            None
-        );
-
-        let text_out_of_range = "self.init(
+        #[test]
+        fn middle_row() {
+            test_fn(
+                "if (test) {
+                  print(x)
+                print(y)
       
-              
-            forKnownProcessID: app.processIdentifier)"
-            .to_string();
-        assert_eq!(
-            get_left_most_column_in_rows(
-                TextRange {
-                    index: 11,
-                    length: 81
-                },
-                &text_out_of_range
-            ),
-            Some(LeftMostColumn { index: 51, row: 2 })
-        );
+                  }",
+                12,
+                78,
+                Some(LeftMostColumn { index: 55, row: 1 }),
+            );
+        }
+
+        #[test]
+        fn text_on_last_row() {
+            test_fn(
+                "if (test) {
+                  print(x)
+            print(y)}",
+                12,
+                48,
+                Some(LeftMostColumn { index: 51, row: 1 }),
+            );
+        }
+
+        #[test]
+        fn empty_lines() {
+            test_fn(
+                "self.init(
+
+
+                  forKnownProcessID: app.processIdentifier)",
+                11,
+                61,
+                Some(LeftMostColumn { index: 31, row: 2 }),
+            );
+        }
+
+        #[test]
+        fn out_of_range() {
+            test_fn(
+                "self.init(
+
+
+                  forKnownProcessID: app.processIdentifier)",
+                11,
+                62,
+                None,
+            );
+        }
     }
 }

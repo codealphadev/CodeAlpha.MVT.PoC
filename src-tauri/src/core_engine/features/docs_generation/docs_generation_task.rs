@@ -38,7 +38,7 @@ pub struct DocsGenerationTask {
     _docs_indentation: usize,
     codeblock_first_char_pos: TextPosition,
     codeblock_last_char_pos: TextPosition,
-    codeblock_text: String,
+    codeblock_text: Vec<u16>,
     pid: i32,
     task_state: Arc<Mutex<DocsGenerationTaskState>>,
 }
@@ -53,7 +53,7 @@ impl DocsGenerationTask {
         codeblock_last_char_position: TextPosition,
         docs_insertion_point: TextRange,
         _docs_indentation: usize,
-        codeblock_text: String,
+        codeblock_text: Vec<u16>,
     ) -> Self {
         Self {
             tracking_area: None,
@@ -99,15 +99,13 @@ impl DocsGenerationTask {
             return;
         };
 
-        let codeblock_text_move_copy = self.codeblock_text.to_owned();
+        let codeblock_text_string =
+            String::from_utf16(&self.codeblock_text).expect("`codeblock_text` is not valid UTF-16");
         let pid_move_copy = self.pid;
         let docs_insertion_point_move_copy = self.docs_insertion_point.clone();
         let task_state = self.task_state.clone();
         tauri::async_runtime::spawn(async move {
-            let mut mintlify_response =
-                mintlify_documentation(&codeblock_text_move_copy, None).await;
-
-            println!("Mintlify response received");
+            let mut mintlify_response = mintlify_documentation(&codeblock_text_string, None).await;
 
             if let Ok(mintlify_response) = &mut mintlify_response {
                 // add newline character at the end of mintlify_response.docstring
@@ -142,7 +140,7 @@ impl DocsGenerationTask {
         });
     }
 
-    pub fn create_code_annotation(&mut self, text: &String) -> Result<(), &str> {
+    pub fn create_code_annotation(&mut self, text: &Vec<u16>) -> Result<(), &str> {
         if self.tracking_area.is_some() || self.is_frozen() {
             return Err("Task is frozen or tracking");
         }
@@ -184,7 +182,7 @@ impl DocsGenerationTask {
         Ok(())
     }
 
-    pub fn update_code_annotation_position(&mut self, text: &String) -> bool {
+    pub fn update_code_annotation_position(&mut self, text: &Vec<u16>) -> bool {
         if self.tracking_area.is_none() {
             return false;
         };
@@ -261,7 +259,7 @@ impl DocsGenerationTask {
     /// the one that is going to be highlighted.
     fn calculate_annotation_bounds(
         &self,
-        text: &String,
+        text: &Vec<u16>,
     ) -> Result<(Option<AnnotationIconRectangle>, Option<CodeblockRectangle>), &'static str> {
         // 1. Get textarea dimensions
         let textarea_ui_element = if let Some(elem) = get_textarea_uielement(self.pid) {

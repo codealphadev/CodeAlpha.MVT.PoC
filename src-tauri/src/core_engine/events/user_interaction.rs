@@ -4,13 +4,12 @@ use ts_rs::TS;
 
 use crate::utils::messaging::ChannelList;
 
-use super::models::{CoreActivationStatusMessage, SearchQueryMessage};
+use super::models::CoreActivationStatusMessage;
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[ts(export, export_to = "bindings/user_interaction/")]
 #[serde(tag = "event", content = "payload")]
 pub enum EventUserInteraction {
-    SearchQuery(SearchQueryMessage),
     CoreActivationStatus(CoreActivationStatusMessage),
     None,
 }

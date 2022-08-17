@@ -47,7 +47,7 @@
 {#if code_overlay_rectangle}
 	<div
 		style="height: {code_overlay_rectangle.size
-			.height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,0.0);"
+			.height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,1.0);"
 		class=" h-full w-full"
 		id="overlay"
 	>
