@@ -8,6 +8,8 @@ use crate::{
     window_controls_two::WindowManager,
 };
 
+use super::handlers::on_core_activation_status_update;
+
 pub fn user_interaction_listener(window_manager: &Arc<Mutex<WindowManager>>) {
     let window_manager_move_copy = (window_manager).clone();
     app_handle().listen_global(ChannelList::EventUserInteractions.to_string(), move |msg| {
@@ -16,11 +18,13 @@ pub fn user_interaction_listener(window_manager: &Arc<Mutex<WindowManager>>) {
 
         match event_user_interaction {
             EventUserInteraction::CoreActivationStatus(msg) => {
-                // Do Nothing
+                on_core_activation_status_update(&window_manager_move_copy, &msg);
             }
-            EventUserInteraction::SearchQuery(_) => { // Do Nothing
+            EventUserInteraction::SearchQuery(_) => {
+                // Do Nothing here - DEPRECATED, needs refactoring
             }
-            EventUserInteraction::None => { // Do Nothing
+            EventUserInteraction::None => {
+                // Do Nothing here - DEPRECATED, needs refactoring
             }
         }
     });

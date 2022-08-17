@@ -36,6 +36,9 @@ lazy_static! {
         parking_lot::Mutex::new(None);
 }
 
+pub static CORE_ENGINE_ACTIVE_AT_STARTUP: bool = true;
+pub static DEV_MODE: bool = true;
+
 fn set_static_app_handle(app_handle: &tauri::AppHandle) {
     APP_HANDLE.lock().replace(app_handle.clone());
 }

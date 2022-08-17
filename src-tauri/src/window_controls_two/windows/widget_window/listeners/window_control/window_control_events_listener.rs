@@ -6,7 +6,7 @@ use tauri::Manager;
 use crate::{
     app_handle,
     utils::messaging::ChannelList,
-    window_controls_two::{events::EventWindowControls, widget_window::WidgetWindow},
+    window_controls_two::{events::EventWindowControls, windows::WidgetWindow},
 };
 
 pub fn window_control_events_listener(widget_window: &Arc<Mutex<WidgetWindow>>) {
@@ -16,14 +16,14 @@ pub fn window_control_events_listener(widget_window: &Arc<Mutex<WidgetWindow>>) 
             serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
         match event_window_controls {
-            EventWindowControls::TrackingAreaClicked(msg) => {
-                // Do Nothing
+            EventWindowControls::TrackingAreaClicked(_) => {
+                // Do Nothing here
             }
-            EventWindowControls::TrackingAreaEntered(msg) => {
-                // Do Nothing
+            EventWindowControls::TrackingAreaEntered(_) => {
+                // Do Nothing here
             }
-            EventWindowControls::TrackingAreaExited(msg) => {
-                // Do Nothing
+            EventWindowControls::TrackingAreaExited(_) => {
+                // Do Nothing here
             }
             EventWindowControls::AppWindowHide(msg) => {
                 // Do Nothing
