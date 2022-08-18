@@ -100,7 +100,7 @@ impl BracketHighlight {
 
     pub fn update_content(&mut self, text_content: &Vec<u16>) {
         if self.swift_syntax_tree.parse(text_content) {
-            self.text_content = Some((*text_content).clone());
+            self.text_content = Some(text_content.to_vec());
         }
     }
 
@@ -247,7 +247,7 @@ impl BracketHighlight {
 
         // Elbow needed because the open and closing bracket are on different lines
         let is_line_on_same_row = line_positions.0.row == line_positions.1.row;
-        if false && !is_line_on_same_row {
+        if !is_line_on_same_row {
             let first_line_bracket_range = line_brackets_match_range.0.range.clone();
             if let Some(next_row_index) =
                 get_index_of_next_row(first_line_bracket_range.index, &text_content)

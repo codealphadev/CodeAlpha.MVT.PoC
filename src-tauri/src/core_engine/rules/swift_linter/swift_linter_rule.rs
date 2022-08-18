@@ -14,7 +14,7 @@ use super::types::{LintAlert, LintLevel, LintResults};
 pub struct SwiftLinterProps {
     pub file_path_as_str: Option<String>,
     pub linter_config: Option<String>,
-    pub file_content: Option<String>,
+    pub file_content: Option<Vec<u16>>,
 }
 
 pub struct SwiftLinterRule {
@@ -22,7 +22,7 @@ pub struct SwiftLinterRule {
     rule_matches: Option<Vec<RuleMatch>>,
     file_path_updated: bool,
     file_path_as_str: Option<String>,
-    file_content: Option<String>,
+    file_content: Option<Vec<u16>>,
     file_content_updated: bool,
     linter_config: Option<String>,
     linter_config_updated: bool,
@@ -167,7 +167,7 @@ impl SwiftLinterRule {
         }
     }
 
-    fn update_file_content(&mut self, file_content: Option<String>) {
+    fn update_file_content(&mut self, file_content: Option<Vec<u16>>) {
         if let Some(file_content) = file_content {
             // Update content if it has changed
             if self.file_content.is_none() || self.file_content.as_ref().unwrap() != &file_content {

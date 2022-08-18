@@ -1,17 +1,9 @@
 use std::sync::{Arc, Mutex};
-
-use accessibility::AXUIElementAttributes;
-use core_foundation::string::CFString;
 use tauri::Manager;
 
 use crate::{
-    ax_interaction::{generate_axui_element_hash, get_textarea_uielement},
     core_engine::{
-        events::{
-            models::{CoreActivationStatusMessage, SearchQueryMessage},
-            EventUserInteraction,
-        },
-        rules::RuleType,
+        events::{models::CoreActivationStatusMessage, EventUserInteraction},
         CoreEngine,
     },
     utils::messaging::ChannelList, app_handle,

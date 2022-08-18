@@ -6,10 +6,7 @@ use std::{
 };
 use tree_sitter::{Node, Parser, Tree};
 
-use crate::core_engine::{
-    rules::{TextPosition, TextRange},
-    utils::utf16_position_to_tresitter_point,
-};
+use crate::core_engine::rules::{TextPosition, TextRange};
 
 use super::swift_codeblock::SwiftCodeBlock;
 
@@ -60,14 +57,16 @@ impl SwiftSyntaxTree {
                 selected_text_range.as_StartEndTextPosition(text_content)
             {
                 let node = syntax_tree.root_node().named_descendant_for_point_range(
-                    utf16_position_to_tresitter_point(&TextPosition {
+                    TextPosition {
                         row: start_position.row,
                         column: start_position.column,
-                    }),
-                    utf16_position_to_tresitter_point(&TextPosition {
+                    }
+                    .as_TSPoint(),
+                    TextPosition {
                         row: start_position.row,
                         column: start_position.column,
-                    }),
+                    }
+                    .as_TSPoint(),
                 );
 
                 return node;
