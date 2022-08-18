@@ -13,7 +13,9 @@ pub fn on_hide_app_window(
     if hide_msg.app_windows.contains(&AppWindow::CodeOverlay) {
         let code_overlay_window = code_overlay_window.lock();
 
-        code_overlay_window.hide();
+        if code_overlay_window.hide().is_none() {
+            println!("Failed to hide code overlay window");
+        };
     }
 
     Some(())

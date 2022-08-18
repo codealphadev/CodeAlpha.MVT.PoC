@@ -13,10 +13,15 @@ pub fn on_show_app_window(
     if show_msg.app_windows.contains(&AppWindow::CodeOverlay) {
         let code_overlay_window = code_overlay_window.lock();
 
-        code_overlay_window.show(
-            &show_msg.editor_textarea.origin,
-            &show_msg.editor_textarea.size,
-        );
+        if code_overlay_window
+            .show(
+                &show_msg.editor_textarea.origin,
+                &show_msg.editor_textarea.size,
+            )
+            .is_none()
+        {
+            println!("Failed to show code overlay window");
+        };
     }
 
     Some(())
