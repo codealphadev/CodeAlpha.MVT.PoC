@@ -12,7 +12,7 @@
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
 
-	export let annotation_msg: CodeAnnotationMessage | null;
+	export let annotation: CodeAnnotationMessage;
 	export let code_overlay_position: LogicalPosition | null;
 
 	let is_hovered = false;
@@ -46,29 +46,31 @@
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
 		await listen(WindowControlsChannel, (event) => {
 			const tracking_area_event = JSON.parse(event.payload as string) as EventWindowControls;
-			if (annotation_msg !== null) {
-				switch (tracking_area_event.event) {
-					case 'TrackingAreaClicked':
-						let clicked_msg = tracking_area_event.payload as unknown as TrackingAreaClickedMessage;
-						if (clicked_msg.id === annotation_msg.id) {
-							is_hovered = true;
-						}
-						break;
-					case 'TrackingAreaEntered':
-						let entered_msg = tracking_area_event.payload as unknown as TrackingAreaEnteredMessage;
-						if (entered_msg.id === annotation_msg.id) {
-							is_hovered = true;
-						}
-						break;
-					case 'TrackingAreaExited':
-						let exited_msg = tracking_area_event.payload as unknown as TrackingAreaExitedMessage;
-						if (exited_msg.id === annotation_msg.id) {
-							is_hovered = false;
-						}
-						break;
-					default:
-						break;
-				}
+			console.log(tracking_area_event);
+			switch (tracking_area_event.event) {
+				case 'TrackingAreaClicked':
+					console.log('TrackingAreaClicked');
+					let clicked_msg = tracking_area_event.payload as unknown as TrackingAreaClickedMessage;
+					if (clicked_msg.id === annotation.id) {
+						is_hovered = true;
+					}
+					break;
+				case 'TrackingAreaEntered':
+					console.log('TrackingAreaEntered');
+					let entered_msg = tracking_area_event.payload as unknown as TrackingAreaEnteredMessage;
+					if (entered_msg.id === annotation.id) {
+						is_hovered = true;
+					}
+					break;
+				case 'TrackingAreaExited':
+					console.log('TrackingAreaExited');
+					let exited_msg = tracking_area_event.payload as unknown as TrackingAreaExitedMessage;
+					if (exited_msg.id === annotation.id) {
+						is_hovered = false;
+					}
+					break;
+				default:
+					break;
 			}
 		});
 	};
@@ -77,22 +79,22 @@
 	listenToDocsGenerationEvents();
 </script>
 
-{#if annotation_msg !== null && code_overlay_position !== null && annotation_msg.annotation_icon !== null}
+{#if annotation.annotation_codeblock !== null && code_overlay_position !== null && annotation.annotation_icon !== null}
 	<div
 		style="position: absolute; top: {Math.round(
-			annotation_msg.annotation_icon.origin.y - code_overlay_position.y
+			annotation.annotation_icon.origin.y - code_overlay_position.y
 		)}px; left: {Math.round(
-			annotation_msg.annotation_icon.origin.x - code_overlay_position.x
-		)}px; width: {Math.round(annotation_msg.annotation_icon.size.width)}px;height: {Math.round(
-			annotation_msg.annotation_icon.size.height
+			annotation.annotation_icon.origin.x - code_overlay_position.x
+		)}px; width: {Math.round(annotation.annotation_icon.size.width)}px;height: {Math.round(
+			annotation.annotation_icon.size.height
 		)}px;"
 	>
 		<AnnotationIcon {is_hovered} {is_processing} />
 		<AnnotationLine
 			visible={is_hovered || is_processing}
 			highlighted={is_hovered && !is_processing}
-			height={annotation_msg.annotation_codeblock.size.height -
-				annotation_msg.annotation_icon.size.height}
+			height={annotation.annotation_codeblock.size.height -
+				annotation.annotation_icon.size.height}
 		/>
 	</div>
 {/if}

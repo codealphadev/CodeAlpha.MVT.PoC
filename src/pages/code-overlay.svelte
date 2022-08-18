@@ -2,15 +2,16 @@
 	import { listen, Event } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { EventDocsGeneration } from '../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
-	import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
 	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
 	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
 
+	type CodeAnnotation = CodeAnnotationMessage;
+
 	let code_overlay_rectangle: LogicalFrame | null = null;
-	let docs_gen_annotations: CodeAnnotationMessage | null = null;
+	let code_annotations: Array<CodeAnnotation> = [];
 
 	const listenTauriEvents = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
@@ -29,11 +30,19 @@
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
-			const docs_gen_event = JSON.parse(event.payload as string) as EventDocsGeneration;
-
-			switch (docs_gen_event.event) {
-				case 'CodeAnnotations':
-					docs_gen_annotations = docs_gen_event.payload as unknown as CodeAnnotationMessage;
+			const {payload, event: event_type} = JSON.parse(event.payload as string) as EventDocsGeneration;
+			switch (event_type) {
+				case 'UpdateCodeAnnotation':
+					const existing_item_index = code_annotations.findIndex((annotation) => annotation.id === payload.id);
+					if (existing_item_index !== -1) {
+						code_annotations[existing_item_index] = payload;
+					} else {
+						code_annotations.push(payload);
+					}
+					code_annotations = code_annotations;
+					break;
+				case 'RemoveCodeAnnotation':
+					code_annotations = code_annotations.filter(annotation => annotation.id !== payload.id)
 					break;
 				default:
 					break;
@@ -47,14 +56,16 @@
 {#if code_overlay_rectangle}
 	<div
 		style="height: {code_overlay_rectangle.size
-			.height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,1.0);"
+			.height}px; border-style: solid; border-width: 1px; border-color: rgba(0,255,0,0.0);"
 		class=" h-full w-full"
 		id="overlay"
 	>
 		<BracketHighlight {code_overlay_rectangle} />
-		<DocsAnnotations
-			annotation_msg={docs_gen_annotations}
-			code_overlay_position={code_overlay_rectangle.origin}
-		/>
+		{#each code_annotations as annotation}
+			<DocsAnnotations
+				annotation={annotation}
+				code_overlay_position={code_overlay_rectangle.origin}
+			/>
+		{/each}
 	</div>
 {/if}

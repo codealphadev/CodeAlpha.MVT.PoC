@@ -9,7 +9,7 @@ use crate::{
     core_engine::{
         ax_utils::get_bounds_of_TextRange,
         events::{
-            models::{CodeAnnotationMessage, DocsGeneratedMessage},
+            models::{CodeAnnotationMessage, DocsGeneratedMessage, RemoveCodeAnnotationMessage},
             EventDocsGeneration, EventRuleExecutionState,
         },
         features::docs_generation::mintlify_documentation,
@@ -34,7 +34,7 @@ pub enum DocsGenerationTaskState {
 
 pub struct DocsGenerationTask {
     // The tracking area attached to the task. Is set to none, if it can not
-    tracking_area: Option<TrackingArea>,
+    tracking_area: Option<TrackingArea>, // TODO: Don't think this should be optional. Guard in the factory pattern constructor.
     docs_insertion_point: TextRange,
     _docs_indentation: usize,
     codeblock_first_char_pos: TextPosition,
@@ -169,7 +169,7 @@ impl DocsGenerationTask {
         EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
 
         // Publish annotation_rect and codeblock_rect to frontend. Even if empty, publish to remove ghosts from previous messages.
-        EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+        EventDocsGeneration::UpdateCodeAnnotation(CodeAnnotationMessage {
             id: tracking_area.id,
             annotation_icon: annotation_rect_opt,
             annotation_codeblock: codeblock_rect_opt,
@@ -209,7 +209,7 @@ impl DocsGenerationTask {
                     .publish_to_tauri(&app_handle());
 
                 // Publish annotation_rect and codeblock_rect to frontend
-                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+                EventDocsGeneration::UpdateCodeAnnotation(CodeAnnotationMessage {
                     id: tracking_area.id,
                     annotation_icon: Some(annotation_rect),
                     annotation_codeblock: Some(codeblock_rect),
@@ -226,7 +226,7 @@ impl DocsGenerationTask {
                     .publish_to_tauri(&app_handle());
 
                 // Hide the annotation_icon and annotation_codeblock from the frontend
-                EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+                EventDocsGeneration::UpdateCodeAnnotation(CodeAnnotationMessage {
                     id: tracking_area.id,
                     annotation_icon: None,
                     annotation_codeblock: None,
@@ -244,7 +244,7 @@ impl DocsGenerationTask {
             *task_state = DocsGenerationTaskState::Canceled;
 
             // Remove the annotation from the frontend
-            EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
+            EventDocsGeneration::UpdateCodeAnnotation(CodeAnnotationMessage {
                 id: self.tracking_area.as_ref().unwrap().id,
                 annotation_icon: None,
                 annotation_codeblock: None,
@@ -347,7 +347,12 @@ impl DocsGenerationTask {
 
 impl Drop for DocsGenerationTask {
     fn drop(&mut self) {
+        println!("DocsGenerationTask::drop");
         if let Some(tracking_area) = self.tracking_area.as_ref() {
+            EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage {
+                id: tracking_area.id,
+            })
+            .publish_to_tauri(&app_handle());
             EventTrackingArea::Remove(vec![tracking_area.id]).publish_to_tauri(&app_handle());
         }
     }
