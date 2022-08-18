@@ -3,6 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::CORE_ENGINE_ACTIVE_AT_STARTUP;
+
 use super::{
     listeners::{register_listener_user_interactions, register_listener_xcode},
     CodeDocument,
@@ -27,7 +29,7 @@ impl CoreEngine {
         Self {
             app_handle: app_handle.clone(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
-            engine_active: true,
+            engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
     }
 
