@@ -52,6 +52,8 @@ pub fn utf16_is_whitespace(c: &u16) -> bool {
     false
 }
 
+// Used in tests
+#[allow(dead_code)]
 pub fn utf16_bytes_count(c: &Vec<u16>) -> usize {
     c.len() * 2
 }

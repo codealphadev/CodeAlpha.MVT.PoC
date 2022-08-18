@@ -6,7 +6,6 @@ use super::{
     features::DocsGenerator,
     formatter::format_swift_file,
     rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps, TextPosition, TextRange},
-    syntax_tree::SwiftSyntaxTree,
 };
 use crate::{
     ax_interaction::{
@@ -41,15 +40,12 @@ pub struct CodeDocument {
     rules: Vec<RuleType>,
 
     /// The content of the loaded code document.
-    text: Option<String>,
+    text: Option<Vec<u16>>,
 
     /// The file path of the loaded code document. If it is none, then the code document
     /// loaded its contents purely through the AX API from a textarea that is not linked
     /// to a file on disk.
     file_path: Option<String>,
-
-    /// The syntax tree of the loaded code document.
-    swift_syntax_tree: SwiftSyntaxTree,
 
     selected_text_range: Option<TextRange>,
 
@@ -64,7 +60,6 @@ impl CodeDocument {
         app_handle: tauri::AppHandle,
         editor_window_props: EditorWindowProps,
     ) -> CodeDocument {
-        let swift_syntax_tree = SwiftSyntaxTree::new();
         let editor_window_props_clone = editor_window_props.clone();
 
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(
@@ -78,18 +73,18 @@ impl CodeDocument {
             editor_window_props,
             text: None,
             file_path: None,
-            swift_syntax_tree,
             selected_text_range: None,
             bracket_highlight: BracketHighlight::new(editor_window_props_clone.pid),
             docs_generator: docs_generator_arc,
         }
     }
 
-    pub fn editor_window_props(&self) -> &EditorWindowProps {
-        &self.editor_window_props
-    }
-
-    pub fn update_doc_properties(&mut self, new_content: &String, file_path: &Option<String>) {
+    pub fn update_doc_properties(
+        &mut self,
+        new_content_string: &String,
+        file_path: &Option<String>,
+    ) {
+        let new_content = &new_content_string.encode_utf16().collect::<Vec<u16>>();
         let is_file_path_updated = self.is_file_path_updated(file_path);
         let is_file_text_updated = self.is_file_text_updated(new_content);
 
@@ -98,11 +93,7 @@ impl CodeDocument {
             return;
         }
 
-        let new_content_u16 = (*new_content).encode_utf16().collect::<Vec<u16>>();
-
-        self.swift_syntax_tree.parse(&new_content_u16);
-
-        self.text = Some(new_content.clone());
+        self.text = Some(new_content.to_vec());
         self.file_path = file_path.clone();
 
         // Update Rule Properties
@@ -111,15 +102,15 @@ impl CodeDocument {
                 RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
                     file_path_as_str: file_path.clone(),
                     linter_config: None,
-                    file_content: Some(new_content.clone()),
+                    file_content: Some(new_content.to_vec()),
                 }),
             }
         }
 
         // Update text content in features
-        self.bracket_highlight.update_content(&new_content_u16);
+        self.bracket_highlight.update_content(&new_content);
 
-        (*self.docs_generator.lock().unwrap()).update_content(&new_content_u16);
+        (*self.docs_generator.lock().unwrap()).update_content(&new_content);
     }
 
     pub fn process_rules(&mut self) {
@@ -189,90 +180,90 @@ impl CodeDocument {
             get_xcode_editor_content(self.editor_window_props.pid),
             self.text.as_ref(),
         ) {
-            if content_text != *text {
-                let new_content_u16 = (*content_text).encode_utf16().collect::<Vec<u16>>();
-                self.bracket_highlight.update_content(&new_content_u16);
+            let content_text_u16 = &content_text.encode_utf16().collect::<Vec<u16>>();
+            if content_text_u16 != text {
+                let new_content_u16 = content_text_u16;
+                self.bracket_highlight.update_content(new_content_u16);
                 self.process_bracket_highlight();
             }
         }
     }
 
     pub fn on_save(&mut self) {
-        let old_text = if let Some(text) = &self.text {
-            text
+        let (old_text, file_path, selected_text_range) =
+            if let (Some(text), Some(file_path), Some(selected_text_range)) = (
+                &self.text,
+                self.file_path.clone(),
+                self.selected_text_range.clone(),
+            ) {
+                (text, file_path, selected_text_range)
+            } else {
+                return;
+            };
+        let formatted_content = if let Some(formatted_content) = format_swift_file(file_path) {
+            formatted_content
         } else {
             return;
         };
 
-        if let (Some(file_path), Some(selected_text_range)) =
-            (self.file_path.clone(), self.selected_text_range.clone())
+        if formatted_content == *old_text {
+            return;
+        }
+
+        // Get position of selected text
+        let mut scroll_delta = None;
+        if let Some(editor_textarea_ui_element) =
+            get_textarea_uielement(self.editor_window_props.pid)
         {
-            let formatted_content = if let Some(formatted_content) =
-                format_swift_file(file_path, selected_text_range.clone())
+            // Get the dimensions of the textarea viewport
+            if let Ok(textarea_viewport) =
+                derive_xcode_textarea_dimensions(&editor_textarea_ui_element)
             {
-                formatted_content
-            } else {
-                return;
-            };
-
-            if formatted_content.content == *old_text {
-                return;
-            }
-
-            // Get position of selected text
-            let mut scroll_delta = None;
-            if let Some(editor_textarea_ui_element) =
-                get_textarea_uielement(self.editor_window_props.pid)
-            {
-                // Get the dimensions of the textarea viewport
-                if let Ok(textarea_viewport) =
-                    derive_xcode_textarea_dimensions(&editor_textarea_ui_element)
-                {
-                    if let Some(bounds_of_selected_text) = get_bounds_of_first_char_in_range(
-                        &selected_text_range,
-                        &editor_textarea_ui_element,
-                    ) {
-                        scroll_delta = Some(tauri::LogicalSize {
-                            width: textarea_viewport.0.x - bounds_of_selected_text.origin.x,
-                            height: bounds_of_selected_text.origin.y - textarea_viewport.0.y,
-                        });
-                    }
+                if let Some(bounds_of_selected_text) = get_bounds_of_first_char_in_range(
+                    &selected_text_range,
+                    &editor_textarea_ui_element,
+                ) {
+                    scroll_delta = Some(tauri::LogicalSize {
+                        width: textarea_viewport.0.x - bounds_of_selected_text.origin.x,
+                        height: bounds_of_selected_text.origin.y - textarea_viewport.0.y,
+                    });
                 }
             }
+        }
 
-            // Update content
-            if let Ok(_) = update_xcode_editor_content(
-                self.editor_window_props.pid,
-                &formatted_content.content,
-            ) {
+        // Update content
+        let formatted_content_string =
+            if let Ok(formatted_content_string) = String::from_utf16(&formatted_content) {
+                formatted_content_string
             } else {
                 return;
             };
+        if let Ok(_) =
+            update_xcode_editor_content(self.editor_window_props.pid, &formatted_content_string)
+        {
+        } else {
+            return;
+        };
 
-            // Restore cursor position
-            // At this point we only place the curser a the exact same ROW | COL as before the formatting.
-            if let Ok(_) = set_selected_text_range(
-                self.editor_window_props.pid,
-                get_new_cursor_index(
-                    &old_text.encode_utf16().collect(),
-                    &formatted_content.content.encode_utf16().collect(),
-                    selected_text_range.index,
-                ),
-                selected_text_range.length,
-            ) {}
+        // Restore cursor position
+        // At this point we only place the curser a the exact same ROW | COL as before the formatting.
+        if let Ok(_) = set_selected_text_range(
+            self.editor_window_props.pid,
+            get_new_cursor_index(&old_text, &formatted_content, selected_text_range.index),
+            selected_text_range.length,
+        ) {}
 
-            // Scroll to the same position as before the formatting
-            let pid_move_copy = self.editor_window_props.pid;
-            if let Some(scroll_delta) = scroll_delta {
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-                    if let Ok(true) = send_event_mouse_wheel(pid_move_copy, scroll_delta) {}
-                });
-            }
-
-            // Notifiy the frontend that the file has been formatted successfully
-            EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&self.app_handle);
+        // Scroll to the same position as before the formatting
+        let pid_move_copy = self.editor_window_props.pid;
+        if let Some(scroll_delta) = scroll_delta {
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+                if let Ok(true) = send_event_mouse_wheel(pid_move_copy, scroll_delta) {}
+            });
         }
+
+        // Notifiy the frontend that the file has been formatted successfully
+        EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&self.app_handle);
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {
@@ -299,7 +290,7 @@ impl CodeDocument {
         }
     }
 
-    fn is_file_text_updated(&self, file_text_new: &String) -> bool {
+    fn is_file_text_updated(&self, file_text_new: &Vec<u16>) -> bool {
         if let Some(file_text_old) = &self.text {
             if file_text_old != file_text_new {
                 true
@@ -325,23 +316,4 @@ fn get_new_cursor_index(
     }
 
     new_index
-}
-
-#[cfg(test)]
-mod Check {
-    extern crate diff;
-
-    #[test]
-    fn checka() {
-        let left = "foobar\nbaz\nquux";
-        let right = "foo\nbaz\nbar\nquux";
-
-        for diff in diff::lines(left, right) {
-            match diff {
-                diff::Result::Left(l) => println!("-{}", l),
-                diff::Result::Both(l, _) => println!(" {}", l),
-                diff::Result::Right(r) => println!("+{}", r),
-            }
-        }
-    }
 }

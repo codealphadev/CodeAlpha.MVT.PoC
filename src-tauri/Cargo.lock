@@ -13,7 +13,7 @@ dependencies = [
  "core-foundation 0.9.3",
  "core-graphics 0.22.3",
  "core-graphics-types",
- "diff",
+ "differ",
  "enigo",
  "lazy_static",
  "objc",
@@ -762,6 +762,17 @@ name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
+
+[[package]]
+name = "differ"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e315f24d746768bf0339f3497cd067968296608c4334bc29860f2a0adc419c7"
+dependencies = [
+ "fnv",
+ "serde",
+ "serde_derive",
+]
 
 [[package]]
 name = "digest"

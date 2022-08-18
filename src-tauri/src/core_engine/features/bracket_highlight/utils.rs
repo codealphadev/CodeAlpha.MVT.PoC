@@ -1,5 +1,5 @@
 use accessibility::AXUIElement;
-use tree_sitter::{Node, Point};
+use tree_sitter::Node;
 
 use crate::core_engine::{
     ax_utils::{calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped},
@@ -47,8 +47,7 @@ pub fn length_to_code_block_body_start(
             let text_from_index = &text[first_index..last_index];
             let mut additional_index: usize = 0;
             for c in text_from_index {
-                if *c == 123 {
-                    // utf16 for '{'
+                if *c == '{' as u16 {
                     if selected_text_index < first_index + additional_index
                         && selected_text_index >= first_index
                     {
@@ -268,19 +267,11 @@ pub fn get_left_most_column_in_rows(
 }
 
 fn get_node_start_index(node: &Node, text: &Vec<u16>) -> Option<usize> {
-    TextPosition::from_TSPoint(&Point {
-        row: node.start_position().row,
-        column: node.start_position().column,
-    })
-    .as_TextIndex(&text)
+    TextPosition::from_TSPoint(&node.start_position()).as_TextIndex(&text)
 }
 
 fn get_node_end_index(node: &Node, text: &Vec<u16>) -> Option<usize> {
-    TextPosition::from_TSPoint(&Point {
-        row: node.end_position().row,
-        column: node.end_position().column,
-    })
-    .as_TextIndex(&text)
+    TextPosition::from_TSPoint(&node.end_position()).as_TextIndex(&text)
 }
 
 #[cfg(test)]

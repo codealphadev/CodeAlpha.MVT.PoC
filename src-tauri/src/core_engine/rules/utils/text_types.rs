@@ -39,34 +39,25 @@ impl TextPosition {
     ///
     /// A TextPosition struct
     pub fn from_TextIndex(text: &Vec<u16>, index: usize) -> Option<TextPosition> {
-        // let text_with_newline_ending = text.encode_utf16();
-        // ensure_last_char_is_newline_char(&mut text_with_newline_ending);
-
         let mut row = 0;
         let mut col = 0;
-        // let mut text_iter = text_with_newline_ending.char_indices();
-        // let mut additional_bytes_from_none_utf8_chars = 0;
-        let mut i = 0;
-        for c in text {
-            // additional_bytes_from_none_utf8_chars += char.len_utf1();
-            // additional_bytes_from_none_utf8_chars -= 1;
 
+        for i in 0..=text.len() {
             if i == index {
                 return Some(TextPosition { row, column: col });
             }
-
-            if *c == 10 {
-                // newline char
+            if i == text.len() {
+                return None;
+            }
+            let c = text[i];
+            if c == '\n' as u16 {
                 row += 1;
                 col = 0;
-                i += 1;
                 continue;
             }
 
             col += 1;
-            i += 1;
         }
-
         None
     }
 
@@ -81,25 +72,28 @@ impl TextPosition {
     pub fn as_TextIndex_stay_on_line(&self, text: &Vec<u16>, stay_on_line: bool) -> Option<usize> {
         let mut row = 0;
         let mut col = 0;
-        let mut i = 0;
-        for c in text {
+        for i in 0..=text.len() {
             if self.row == row && self.column == col {
                 return Some(i);
             }
-
-            if *c == '\n' as u16 {
+            if i == text.len() {
+                if stay_on_line && self.row == row {
+                    return Some(i);
+                }
+                return None;
+            }
+            let c = text[i];
+            if c == '\n' as u16 {
                 // if stay_on_line is true, we want to return the index of the last character of the line self.row
                 if stay_on_line && self.row == row {
                     return Some(i);
                 }
                 row += 1;
                 col = 0;
-                i += 1;
                 continue;
             }
 
             col += 1;
-            i += 1;
         }
 
         None
@@ -171,6 +165,16 @@ mod tests_TextPosition {
     }
 
     #[test]
+    fn test_TextPosition_from_TextIndex_last_position() {
+        let text = "Hello, World!".encode_utf16().collect();
+        let index = 13;
+        let position = TextPosition::from_TextIndex(&text, index).unwrap();
+
+        assert_eq!(position.row, 0);
+        assert_eq!(position.column, 13);
+    }
+
+    #[test]
     fn test_TextPosition_from_TextIndex_too_far() {
         let text = "Hello, World!".encode_utf16().collect();
         let index = 14;
@@ -222,7 +226,7 @@ mod tests_TextPosition {
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far() {
         let text = "Hello, World!".encode_utf16().collect();
-        let position = TextPosition::new(0, 100);
+        let position = TextPosition::new(0, 14);
         let index_option = position.as_TextIndex(&text);
 
         assert_eq!(index_option.is_none(), true);
@@ -231,10 +235,19 @@ mod tests_TextPosition {
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line() {
         let text = "Hello,\nWorld!\n".encode_utf16().collect();
-        let position = TextPosition::new(0, 100);
+        let position = TextPosition::new(1, 7);
         let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
-        assert_eq!(index_option.unwrap(), 6);
+        assert_eq!(index_option.unwrap(), 13);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_last() {
+        let text = "Hello,\nWorld!\n".encode_utf16().collect();
+        let position = TextPosition::new(2, 7);
+        let index_option = position.as_TextIndex_stay_on_line(&text, true);
+
+        assert_eq!(index_option.unwrap(), 14);
     }
 
     #[test]

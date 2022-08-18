@@ -53,10 +53,6 @@ pub mod geometry {
     }
 
     impl LogicalSize {
-        pub fn new(width: f64, height: f64) -> Self {
-            Self { width, height }
-        }
-
         pub fn from_tauri_LogicalSize(size: &tauri::LogicalSize<f64>) -> Self {
             Self {
                 width: size.width,
