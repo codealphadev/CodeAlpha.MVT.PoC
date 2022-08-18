@@ -32,7 +32,9 @@ pub fn window_control_events_listener(widget_window: &Arc<Mutex<WidgetWindow>>) 
             }
             EventWindowControls::AppWindowShow(msg) => {
                 on_show_app_window(&widget_window_move_copy, &msg);
-                // Do Nothing
+            }
+            EventWindowControls::CodeOverlayDimensionsUpdate(_) => {
+                // Do nothing here
             }
         }
     });

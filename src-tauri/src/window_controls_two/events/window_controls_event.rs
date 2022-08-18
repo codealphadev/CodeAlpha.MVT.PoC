@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
-use crate::utils::messaging::ChannelList;
+use crate::utils::{geometry::LogicalFrame, messaging::ChannelList};
 
 use super::models::{
     app_window::{HideAppWindowMessage, ShowAppWindowMessage},
@@ -16,6 +16,7 @@ pub enum EventWindowControls {
     TrackingAreaExited(TrackingAreaExitedMessage),
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
+    CodeOverlayDimensionsUpdate(LogicalFrame),
 }
 
 impl EventWindowControls {

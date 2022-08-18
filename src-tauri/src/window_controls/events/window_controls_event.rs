@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use ts_rs::TS;
 
-use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
+use crate::{
+    utils::{geometry::LogicalFrame, messaging::ChannelList},
+    window_controls::config::AppWindow,
+};
 
 use super::models::{
     TrackingAreaClickedMessage, TrackingAreaEnteredMessage, TrackingAreaExitedMessage,
@@ -15,6 +18,7 @@ pub enum EventWindowControls {
     TrackingAreaClicked(TrackingAreaClickedMessage),
     TrackingAreaEntered(TrackingAreaEnteredMessage),
     TrackingAreaExited(TrackingAreaExitedMessage),
+    CodeOverlayDimensionsUpdate(LogicalFrame),
 }
 
 impl EventWindowControls {
