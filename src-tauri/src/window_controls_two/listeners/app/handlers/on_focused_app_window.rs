@@ -13,6 +13,20 @@ pub fn on_focused_app_window(
 ) {
     let mut window_manager = window_manager.lock();
 
-    window_manager.set_focused_app_window(AppWindow::Widget);
-    panic!("Change the AppWindow used in appactivate messge")
+    window_manager
+        .set_focused_app_window(convert_app_window_to_app_window_type(focused_msg.window));
+}
+
+fn convert_app_window_to_app_window_type(
+    app_window: crate::window_controls::config::AppWindow,
+) -> AppWindow {
+    match app_window {
+        crate::window_controls::config::AppWindow::Settings => AppWindow::Settings,
+        crate::window_controls::config::AppWindow::Analytics => AppWindow::Analytics,
+        crate::window_controls::config::AppWindow::Widget => AppWindow::Widget,
+        crate::window_controls::config::AppWindow::Content => AppWindow::Content,
+        crate::window_controls::config::AppWindow::Repair => AppWindow::Repair,
+        crate::window_controls::config::AppWindow::CodeOverlay => AppWindow::CodeOverlay,
+        crate::window_controls::config::AppWindow::None => AppWindow::Widget,
+    }
 }

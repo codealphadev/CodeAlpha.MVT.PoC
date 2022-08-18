@@ -22,7 +22,7 @@ enum VerticalBoundary {
 #[derive(Debug)]
 pub struct EditorWindow {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
-    id: usize,
+    _id: usize,
 
     /// The application name of the editor this window belongs to. For XCode it is "Xcode".
     editor_name: String,
@@ -57,7 +57,7 @@ pub struct EditorWindow {
 impl EditorWindow {
     pub fn new(created_msg: &EditorWindowCreatedMessage) -> Self {
         Self {
-            id: created_msg.ui_elem_hash,
+            _id: created_msg.ui_elem_hash,
             editor_name: created_msg.editor_name.clone(),
             pid: created_msg.pid,
             window_position: LogicalPosition::from_tauri_LogicalPosition(
@@ -102,14 +102,6 @@ impl EditorWindow {
 
     pub fn textarea_size(&self) -> Option<LogicalSize> {
         self.textarea_size
-    }
-
-    pub fn window_size(&self) -> LogicalSize {
-        self.window_size
-    }
-
-    pub fn window_position(&self) -> LogicalPosition {
-        self.window_position
     }
 
     pub fn widget_position(&self, as_global_position: bool) -> Option<LogicalPosition> {

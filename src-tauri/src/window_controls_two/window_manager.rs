@@ -2,7 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use parking_lot::Mutex;
 
-use crate::{app_handle, utils::geometry::LogicalFrame, CORE_ENGINE_ACTIVE_AT_STARTUP};
+use crate::{
+    app_handle, utils::geometry::LogicalFrame, window_controls::code_overlay::TrackingAreasManager,
+    CORE_ENGINE_ACTIVE_AT_STARTUP,
+};
 
 use super::{
     config::AppWindow,
@@ -14,8 +17,6 @@ use super::{
     windows::{CodeOverlayWindow, EditorWindow, WidgetWindow},
 };
 
-pub static SUPPORTED_EDITORS: &[&str] = &["Xcode"];
-
 pub type Uuid = usize;
 
 #[derive(Clone, Debug)]
@@ -26,10 +27,13 @@ pub struct WindowManager {
     editor_windows: Arc<Mutex<HashMap<Uuid, EditorWindow>>>,
 
     // WidgetWindow
-    widget_window: Arc<Mutex<WidgetWindow>>,
+    _widget_window: Arc<Mutex<WidgetWindow>>,
 
     // CodeOverlayWindow
-    code_overlay_window: Arc<Mutex<CodeOverlayWindow>>,
+    _code_overlay_window: Arc<Mutex<CodeOverlayWindow>>,
+
+    // TrackingAreasManager
+    _tracking_areas_manager: Arc<Mutex<TrackingAreasManager>>,
 
     /// Identitfier of the currently focused editor window. Is None until the first window was focused.
     focused_editor_window: Arc<Mutex<Option<Uuid>>>,
@@ -56,6 +60,9 @@ impl WindowManager {
         let code_overlay_window = Arc::new(Mutex::new(CodeOverlayWindow::new()?));
         CodeOverlayWindow::start_event_listeners(&code_overlay_window);
 
+        let tracking_areas_manager = Arc::new(Mutex::new(TrackingAreasManager::new()));
+        TrackingAreasManager::start_event_listeners(&tracking_areas_manager);
+
         Ok(Self {
             app_handle: app_handle(),
             editor_windows: Arc::new(Mutex::new(HashMap::new())),
@@ -64,8 +71,9 @@ impl WindowManager {
             is_editor_focused: false,
             focused_app_window: None,
             is_core_engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
-            widget_window,
-            code_overlay_window,
+            _widget_window: widget_window,
+            _code_overlay_window: code_overlay_window,
+            _tracking_areas_manager: tracking_areas_manager,
         })
     }
 
@@ -90,16 +98,8 @@ impl WindowManager {
         self.focused_editor_window.lock().clone()
     }
 
-    pub fn is_editor_focused(&self) -> bool {
-        self.is_editor_focused
-    }
-
     pub fn set_is_editor_focused(&mut self, is_editor_focused: bool) {
         self.is_editor_focused = is_editor_focused;
-    }
-
-    pub fn is_app_focused(&self) -> bool {
-        self.is_app_focused
     }
 
     pub fn set_is_app_focused(&mut self, is_app_focused: bool) {
