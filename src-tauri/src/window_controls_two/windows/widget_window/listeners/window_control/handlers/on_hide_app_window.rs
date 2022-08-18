@@ -13,7 +13,9 @@ pub fn on_hide_app_window(
     if hide_msg.app_windows.contains(&AppWindow::Widget) {
         let widget_window = widget_window.lock();
 
-        widget_window.hide();
+        if widget_window.hide().is_none() {
+            println!("Failed to hide widget window");
+        };
     }
 
     Some(())

@@ -13,11 +13,16 @@ pub fn on_show_app_window(
     if show_msg.app_windows.contains(&AppWindow::Widget) {
         let widget_window = widget_window.lock();
 
-        widget_window.show(
-            &show_msg.widget_position,
-            &show_msg.editor_textarea,
-            &show_msg.monitor,
-        );
+        if widget_window
+            .show(
+                &show_msg.widget_position,
+                &show_msg.editor_textarea,
+                &show_msg.monitor,
+            )
+            .is_none()
+        {
+            println!("Failed to show widget window");
+        }
     }
 
     Some(())
