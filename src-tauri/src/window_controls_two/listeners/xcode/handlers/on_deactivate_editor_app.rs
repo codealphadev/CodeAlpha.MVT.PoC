@@ -6,7 +6,7 @@ use crate::{
     ax_interaction::{
         is_currently_focused_app_our_app, models::editor::EditorAppDeactivatedMessage,
     },
-    window_controls_two::WindowManager,
+    window_controls_two::{config::AppWindow, WindowManager},
 };
 
 pub fn on_deactivate_editor_app(
@@ -19,9 +19,9 @@ pub fn on_deactivate_editor_app(
 
     if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {
-            todo!("WidgetWindow::hide_widget_routine(&widget_window.app_handle)");
+            window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost());
         }
     } else {
-        todo!("WidgetWindow::hide_widget_routine(&widget_window.app_handle)");
+        window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost());
     }
 }

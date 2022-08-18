@@ -1,9 +1,10 @@
 use tauri::Manager;
 
 use crate::{
+    app_handle,
     ax_interaction::models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
-    window_controls_two::config::AppWindow,
+    window_controls_two::{config::AppWindow, events::EventWindowControls},
 };
 
 #[derive(Debug)]
@@ -21,7 +22,7 @@ enum VerticalBoundary {
 #[derive(Debug)]
 pub struct EditorWindow {
     /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
-    uielement_hash: usize,
+    id: usize,
 
     /// The application name of the editor this window belongs to. For XCode it is "Xcode".
     editor_name: String,
@@ -56,7 +57,7 @@ pub struct EditorWindow {
 impl EditorWindow {
     pub fn new(created_msg: &EditorWindowCreatedMessage) -> Self {
         Self {
-            uielement_hash: created_msg.ui_elem_hash,
+            id: created_msg.ui_elem_hash,
             editor_name: created_msg.editor_name.clone(),
             pid: created_msg.pid,
             window_position: LogicalPosition::from_tauri_LogicalPosition(
@@ -84,8 +85,19 @@ impl EditorWindow {
         if as_global_position {
             Some(self.transform_local_position_to_global_position(self.textarea_position?))
         } else {
-            Some(self.textarea_position?)
+            self.textarea_position
         }
+    }
+
+    fn set_textarea_dimensions(&mut self, position: LogicalPosition, size: LogicalSize) {
+        self.textarea_position = Some(position);
+        self.textarea_size = Some(size);
+
+        EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
+            origin: position,
+            size: size,
+        })
+        .publish_to_tauri(&app_handle());
     }
 
     pub fn textarea_size(&self) -> Option<LogicalSize> {
@@ -149,7 +161,7 @@ impl EditorWindow {
         self.window_size = window_size;
     }
 
-    pub fn get_monitor(&self, app_handle: tauri::AppHandle) -> Option<LogicalFrame> {
+    pub fn get_monitor(&self, app_handle: &tauri::AppHandle) -> Option<LogicalFrame> {
         // Because we've seen the OS calls to get a window's screen position and size are not
         // reliable, we determine the window by calculating which of the windows has the largest
         // overlap area with the editor window.
@@ -212,12 +224,8 @@ impl EditorWindow {
             None
         };
 
-        if textarea_position.is_some() {
-            self.textarea_position = textarea_position;
-        }
-
-        if textarea_size.is_some() {
-            self.textarea_size = textarea_size;
+        if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
+            self.set_textarea_dimensions(position, size)
         }
 
         self.focused_ui_element = Some(focused_ui_element.clone());
@@ -273,9 +281,8 @@ impl EditorWindow {
         textarea_position: Option<LogicalPosition>,
         textarea_size: Option<LogicalSize>,
     ) -> Option<()> {
-        if textarea_position.is_some() && textarea_size.is_some() {
-            self.textarea_position = textarea_position;
-            self.textarea_size = textarea_size;
+        if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
+            self.set_textarea_dimensions(position, size)
         } else {
             // Case: valid updated textarea dimensions are provided;
             // Case: Deriving updated textarea dimensions from window dimension change;
