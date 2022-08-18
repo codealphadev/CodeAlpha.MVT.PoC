@@ -4,11 +4,11 @@ use cocoa::{base::id, foundation::NSInteger};
 use objc::{class, msg_send, sel, sel_impl};
 
 use crate::{
-    core_engine::types::MatchRectangle,
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
         actions::{close_window, open_window, resize_window, set_position},
         config::AppWindow,
+        events::EventWindowControls,
     },
 };
 
@@ -32,16 +32,11 @@ pub fn show_code_overlay(
 
         open_window(app_handle, AppWindow::CodeOverlay);
 
-        app_handle.emit_to(
-            &AppWindow::CodeOverlay.to_string(),
-            "event-compute-height",
-            {
-                MatchRectangle {
-                    origin: LogicalPosition::from_tauri_LogicalPosition(&origin),
-                    size: LogicalSize::from_tauri_LogicalSize(&size),
-                }
-            },
-        )?;
+        EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
+            origin: LogicalPosition::from_tauri_LogicalPosition(&origin),
+            size: LogicalSize::from_tauri_LogicalSize(&size),
+        })
+        .publish_to_tauri(app_handle);
     }
 
     // if is_main_thread().unwrap() {
