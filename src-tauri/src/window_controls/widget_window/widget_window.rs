@@ -77,11 +77,6 @@ impl WidgetWindow {
             panic!("Could not create CodeOverlay Window");
         }
 
-        // Register Observer for Widget AX Events
-        if register_observer_app(&app_handle).is_err() {
-            panic!("Could not register observer app");
-        }
-
         Self {
             app_handle: app_handle.clone(),
             editor_windows: editor_windows.clone(),

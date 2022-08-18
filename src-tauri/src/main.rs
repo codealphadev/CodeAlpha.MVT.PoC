@@ -61,7 +61,7 @@ fn main() {
             cmd_toggle_app_activation
         ])
         .setup(|app| {
-            setup_observers(&app.handle());
+            setup_observers();
 
             let handle = app.handle();
 
