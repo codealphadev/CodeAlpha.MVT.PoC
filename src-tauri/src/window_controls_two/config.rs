@@ -9,12 +9,29 @@ pub enum AppWindow {
     Content,
     Repair,
     CodeOverlay,
-    None,
 }
 
 impl std::fmt::Display for AppWindow {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+impl AppWindow {
+    pub fn hidden_windows_on_core_engine_inactive() -> Vec<AppWindow> {
+        vec![AppWindow::CodeOverlay, AppWindow::Repair]
+    }
+
+    pub fn hidden_windows_on_focus_lost() -> Vec<AppWindow> {
+        vec![AppWindow::Widget, AppWindow::CodeOverlay, AppWindow::Repair]
+    }
+
+    pub fn shown_windows_on_focus_gained() -> Vec<AppWindow> {
+        vec![AppWindow::Widget, AppWindow::CodeOverlay]
+    }
+
+    pub fn shown_windows_on_core_engine_activated() -> Vec<AppWindow> {
+        vec![AppWindow::Widget, AppWindow::CodeOverlay]
     }
 }
 
@@ -42,7 +59,6 @@ pub mod default_properties {
             AppWindow::Repair => {
                 format!("{}{}", r"\", AppWindow::Repair.to_string().to_lowercase())
             }
-            AppWindow::None => "".to_string(),
             AppWindow::CodeOverlay => {
                 format!(
                     "{}{}",
@@ -63,7 +79,6 @@ pub mod default_properties {
             AppWindow::Widget => "CodeAlpha - Widget".to_string(),
             AppWindow::Content => "CodeAlpha - Guide".to_string(),
             AppWindow::Repair => "CodeAlpha - Explanation".to_string(),
-            AppWindow::None => "".to_string(),
             AppWindow::CodeOverlay => "CodeAlpha - CodeOverlay".to_string(),
         }
     }
@@ -75,7 +90,6 @@ pub mod default_properties {
             AppWindow::Widget => (48.0, 48.0),
             AppWindow::Content => (322.0, 398.0),
             AppWindow::Repair => (513.0, 500.0),
-            AppWindow::None => (0.0, 0.0),
             AppWindow::CodeOverlay => (0.0, 0.0),
         }
     }
@@ -87,7 +101,6 @@ pub mod default_properties {
             AppWindow::Widget => false,
             AppWindow::Content => false,
             AppWindow::Repair => false,
-            AppWindow::None => false,
             AppWindow::CodeOverlay => false,
         }
     }
@@ -98,7 +111,6 @@ pub mod default_properties {
             AppWindow::Widget => true,
             AppWindow::Content => true,
             AppWindow::Repair => true,
-            AppWindow::None => false,
             AppWindow::CodeOverlay => true,
         }
     }
@@ -110,7 +122,6 @@ pub mod default_properties {
             AppWindow::Widget => false,
             AppWindow::Content => false,
             AppWindow::Repair => false,
-            AppWindow::None => false,
             AppWindow::CodeOverlay => false,
         }
     }
@@ -122,7 +133,6 @@ pub mod default_properties {
             AppWindow::Widget => false,
             AppWindow::Content => false,
             AppWindow::Repair => true,
-            AppWindow::None => true,
             AppWindow::CodeOverlay => false,
         }
     }
@@ -134,7 +144,6 @@ pub mod default_properties {
             AppWindow::Widget => true,
             AppWindow::Content => true,
             AppWindow::Repair => true,
-            AppWindow::None => false,
             AppWindow::CodeOverlay => true,
         }
     }
@@ -146,7 +155,6 @@ pub mod default_properties {
             AppWindow::Widget => true,
             AppWindow::Content => true,
             AppWindow::Repair => true,
-            AppWindow::None => true,
             AppWindow::CodeOverlay => true,
         }
     }

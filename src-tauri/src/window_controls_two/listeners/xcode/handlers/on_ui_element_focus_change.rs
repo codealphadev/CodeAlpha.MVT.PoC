@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use crate::{
     ax_interaction::models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
     utils::geometry::{LogicalPosition, LogicalSize},
-    window_controls_two::WindowManager,
+    window_controls_two::{config::AppWindow, WindowManager},
 };
 
 pub fn on_editor_ui_element_focus_change(
@@ -33,31 +33,25 @@ pub fn on_editor_ui_element_focus_change(
                 // This gives our windows time to gracefully update their positions and sizes.
                 need_temporary_hide = true;
             } else {
-                todo!("WidgetWindow::hide_widget_routine(&widget_props.app_handle)")
+                window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost());
             }
         } else {
             if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-                todo!(
-                    "WidgetWindow::show_widget_routine(
-                &widget_props.app_handle,
-                widget_props,
-                &mut editor_list_locked,
-            )"
-                )
+                window_manager.show_app_windows(
+                    AppWindow::shown_windows_on_focus_gained(),
+                    Some(focus_msg.ui_elem_hash),
+                );
             } else {
-                todo!("WidgetWindow::hide_widget_routine(&widget_props.app_handle)")
+                window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost());
             }
         }
     } else {
         // Case: app was started while focus was already on a valid editor textarea.
         if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-            todo!(
-                "WidgetWindow::show_widget_routine(
-            &widget_props.app_handle,
-            widget_props,
-            &mut editor_list_locked,
-        )"
-            )
+            window_manager.show_app_windows(
+                AppWindow::shown_windows_on_focus_gained(),
+                Some(focus_msg.ui_elem_hash),
+            );
         }
     }
 
