@@ -14,7 +14,7 @@
 		// Listen for rule execution events to determine if the processing icon should be displayed
 		await listen('EventRuleExecutionState' as ChannelList, (event) => {
 			const ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
-
+			
 			switch (ruleExecutionState.event) {
 				case 'DocsGenerationStarted':
 					is_processing = true;
