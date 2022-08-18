@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::CORE_ENGINE_ACTIVE_AT_STARTUP;
+use crate::{app_handle, CORE_ENGINE_ACTIVE_AT_STARTUP};
 
 use super::{
     listeners::{register_listener_user_interactions, register_listener_xcode},
@@ -25,9 +25,9 @@ pub struct CoreEngine {
 }
 
 impl CoreEngine {
-    pub fn new(app_handle: &tauri::AppHandle) -> Self {
+    pub fn new() -> Self {
         Self {
-            app_handle: app_handle.clone(),
+            app_handle: app_handle(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
             engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
@@ -62,11 +62,8 @@ impl CoreEngine {
         }
     }
 
-    pub fn start_core_engine_listeners(
-        app_handle: &tauri::AppHandle,
-        core_engine: &Arc<Mutex<CoreEngine>>,
-    ) {
-        register_listener_xcode(app_handle, &core_engine);
-        register_listener_user_interactions(app_handle, &core_engine);
+    pub fn start_core_engine_listeners(core_engine: &Arc<Mutex<CoreEngine>>) {
+        register_listener_xcode(&core_engine);
+        register_listener_user_interactions(&core_engine);
     }
 }

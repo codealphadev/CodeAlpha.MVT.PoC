@@ -8,8 +8,7 @@ use std::{
 
 use crate::{
     ax_interaction::{
-        app::observer_app::register_observer_app, derive_xcode_textarea_dimensions,
-        get_textarea_uielement, models::app::ContentWindowState,
+        derive_xcode_textarea_dimensions, get_textarea_uielement, models::app::ContentWindowState,
     },
     window_controls::{
         actions::{close_window, create_window, open_window, set_position},
