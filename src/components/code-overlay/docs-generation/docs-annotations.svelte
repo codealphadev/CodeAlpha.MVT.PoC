@@ -8,8 +8,8 @@
 	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
 	import type { TrackingAreaEnteredMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaEnteredMessage';
 	import type { TrackingAreaExitedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaExitedMessage';
-	import { CodeAlphaOrange } from '../../../theme';
 	import AnnotationIcon from './annotation-icon.svelte';
+	import AnnotationLine from './annotation-line.svelte';
 
 	export let annotation_msg: CodeAnnotationMessage | null;
 	export let code_overlay_position: LogicalPosition | null;
@@ -17,16 +17,13 @@
 	let is_hovered = false;
 	let is_processing = false;
 
-	const ANNOTATION_LINE_WIDTH_PCT = 10;
-
-
 	let processing_timeout = 15000; // ms
 
 	const listenToDocsGenerationEvents = async () => {
 		// Listen for rule execution events to determine if the processing icon should be displayed
 		await listen('EventRuleExecutionState' as ChannelList, (event) => {
 			const ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
-			
+
 			switch (ruleExecutionState.event) {
 				case 'DocsGenerationStarted':
 					is_processing = true;
@@ -34,7 +31,7 @@
 						is_processing = false;
 					}, processing_timeout);
 					break;
-				case 'DocsGenerationFinished': 
+				case 'DocsGenerationFinished':
 					is_processing = false;
 					break;
 				default:
@@ -42,7 +39,6 @@
 			}
 		});
 	};
-
 
 	const listenToTrackingAreaEvents = async () => {
 		// Listen for click & hover events on the tracking area
@@ -56,7 +52,7 @@
 						console.log('TrackingAreaClicked');
 						let clicked_msg = tracking_area_event.payload as unknown as TrackingAreaClickedMessage;
 						if (clicked_msg.id === annotation_msg.id) {
-							is_hovered = false;
+							is_hovered = true;
 						}
 						break;
 					case 'TrackingAreaEntered':
@@ -82,7 +78,6 @@
 
 	listenToTrackingAreaEvents();
 	listenToDocsGenerationEvents();
-
 </script>
 
 {#if annotation_msg !== null && code_overlay_position !== null && annotation_msg.annotation_icon !== null}
@@ -96,21 +91,11 @@
 		)}px;"
 	>
 		<AnnotationIcon {is_hovered} {is_processing} />
-		{#if is_hovered}
-			<div class="annotation-line" style="width: {ANNOTATION_LINE_WIDTH_PCT}%; top: 100%; left: {50-ANNOTATION_LINE_WIDTH_PCT/2}%; height: {annotation_msg.annotation_codeblock.size.height - annotation_msg.annotation_icon.size.height}px; position: absolute; background-color: {CodeAlphaOrange};"/>
-		{/if}
-		
+		<AnnotationLine
+			visible={is_hovered || is_processing}
+			highlighted={is_hovered && !is_processing}
+			height={annotation_msg.annotation_codeblock.size.height -
+				annotation_msg.annotation_icon.size.height}
+		/>
 	</div>
 {/if}
-
-<style>
-	@keyframes reveal {
-		from { clip-path: inset(0% 0% 100% 0%); }
-		to { clip-path: inset(0% 0% 0% 0%)}
-	}
-
-	.annotation-line {
-		animation: reveal 0.13s ease-out forwards;
-
-	}
-</style>
