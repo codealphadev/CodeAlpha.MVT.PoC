@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A file containing utilities that are used/shared across all modules of the project
