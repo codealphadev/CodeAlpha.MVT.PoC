@@ -8,7 +8,7 @@ use crate::{
         models::editor::EditorWindowResizedMessage,
     },
     utils::geometry::{LogicalPosition, LogicalSize},
-    window_controls_two::WindowManager,
+    window_controls_two::{config::AppWindow, WindowManager},
 };
 
 pub fn on_resize_editor_window(
@@ -38,7 +38,7 @@ pub fn on_resize_editor_window(
         unpack_logical_size_tauri(textarea_size),
     );
 
-    todo!("WidgetWindow::temporary_hide_check_routine(&app_handle, window_manager, true, true);");
+    window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
 
     Some(())
 }

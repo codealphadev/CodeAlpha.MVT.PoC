@@ -3,10 +3,8 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::models::editor::{EditorWindowCreatedMessage, EditorWindowDestroyedMessage},
-    window_controls_two::{
-        window_manager::SUPPORTED_EDITORS, windows::EditorWindow, WindowManager,
-    },
+    ax_interaction::models::editor::EditorWindowDestroyedMessage,
+    window_controls_two::WindowManager,
 };
 
 pub fn on_destroyed_editor_window(

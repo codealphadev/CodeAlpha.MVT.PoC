@@ -32,7 +32,7 @@ pub struct WindowManager {
     code_overlay_window: Arc<Mutex<CodeOverlayWindow>>,
 
     /// Identitfier of the currently focused editor window. Is None until the first window was focused.
-    focused_editor_window: Option<Uuid>,
+    focused_editor_window: Arc<Mutex<Option<Uuid>>>,
 
     /// Boolean saying if the currently focused application is an editor window.
     is_editor_focused: bool,
@@ -59,7 +59,7 @@ impl WindowManager {
         Ok(Self {
             app_handle: app_handle(),
             editor_windows: Arc::new(Mutex::new(HashMap::new())),
-            focused_editor_window: None,
+            focused_editor_window: Arc::new(Mutex::new(None)),
             is_app_focused: false,
             is_editor_focused: false,
             focused_app_window: None,
@@ -79,7 +79,7 @@ impl WindowManager {
             if editor_window.editor_name() != editor_name {
                 true
             } else {
-                self.focused_editor_window = None;
+                self.focused_editor_window.lock().take();
                 self.is_editor_focused = false;
                 false
             }
@@ -87,7 +87,7 @@ impl WindowManager {
     }
 
     pub fn focused_editor_window(&self) -> Option<Uuid> {
-        self.focused_editor_window
+        self.focused_editor_window.lock().clone()
     }
 
     pub fn is_editor_focused(&self) -> bool {
@@ -115,22 +115,24 @@ impl WindowManager {
     }
 
     pub fn set_focused_editor_window(&mut self, editor_window_hash: Uuid) {
-        self.focused_editor_window = Some(editor_window_hash);
+        self.focused_editor_window
+            .lock()
+            .replace(editor_window_hash);
     }
 
     pub fn set_focused_app_window(&mut self, app_window: AppWindow) {
         self.focused_app_window = Some(app_window);
     }
 
-    pub fn hide_app_windows(&mut self, app_windows: Vec<AppWindow>) {
+    pub fn hide_app_windows(&self, app_windows: Vec<AppWindow>) {
         EventWindowControls::AppWindowHide(HideAppWindowMessage { app_windows })
             .publish_to_tauri(&app_handle());
     }
 
     pub fn show_app_windows(
-        &mut self,
+        &self,
         app_windows: Vec<AppWindow>,
-        editor_id: Option<usize>,
+        editor_id: Option<Uuid>,
     ) -> Option<()> {
         // If no editor id is given, the app windows are being shown in relation to the currently
         // focused editor window.
@@ -151,7 +153,7 @@ impl WindowManager {
         let mut corrected_app_window_list = app_windows.clone();
         if !self.is_core_engine_active() {
             corrected_app_window_list.retain(|app_window| {
-                if AppWindow::hidden_windows_on_core_engine_inactive().contains(&app_window) {
+                if AppWindow::hidden_on_core_engine_inactive().contains(&app_window) {
                     false
                 } else {
                     true
@@ -167,6 +169,43 @@ impl WindowManager {
             },
             widget_position: editor_window.widget_position(true),
             monitor: editor_window.get_monitor(&self.app_handle)?,
+        })
+        .publish_to_tauri(&app_handle());
+
+        Some(())
+    }
+
+    pub fn temporarily_hide_app_windows(&self, app_windows: Vec<AppWindow>) {
+        self.hide_app_windows(app_windows);
+
+        let editor_windows_move_copy = self.editor_windows.clone();
+        let focused_editor_window_move_copy = self.focused_editor_window.clone();
+        tauri::async_runtime::spawn(async move {
+            Self::async_show_app_windows(editor_windows_move_copy, focused_editor_window_move_copy)
+        });
+    }
+
+    pub async fn async_show_app_windows(
+        editor_windows_arc: Arc<Mutex<HashMap<Uuid, EditorWindow>>>,
+        focused_editor_window_arc: Arc<Mutex<Option<Uuid>>>,
+    ) -> Option<()> {
+        let editor_windows = editor_windows_arc.lock();
+        let focused_editor_window = focused_editor_window_arc.lock();
+
+        let editor_uuid = focused_editor_window.as_ref()?;
+        let editor_window = editor_windows.get(editor_uuid)?;
+
+        let textarea_position = editor_window.textarea_position(true)?;
+        let textarea_size = editor_window.textarea_size()?;
+
+        EventWindowControls::AppWindowShow(ShowAppWindowMessage {
+            app_windows: AppWindow::shown_on_focus_gained(),
+            editor_textarea: LogicalFrame {
+                origin: textarea_position,
+                size: textarea_size,
+            },
+            widget_position: editor_window.widget_position(true),
+            monitor: editor_window.get_monitor(&app_handle())?,
         })
         .publish_to_tauri(&app_handle());
 

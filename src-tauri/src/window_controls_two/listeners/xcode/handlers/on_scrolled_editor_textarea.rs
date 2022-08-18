@@ -4,12 +4,14 @@ use parking_lot::Mutex;
 
 use crate::{
     ax_interaction::models::editor::EditorTextareaScrolledMessage,
-    window_controls_two::WindowManager,
+    window_controls_two::{config::AppWindow, WindowManager},
 };
 
 pub fn on_editor_textarea_scrolled(
     window_manager: &Arc<Mutex<WindowManager>>,
     _scrolled_msg: &EditorTextareaScrolledMessage,
 ) {
-    todo!("WidgetWindow::temporary_hide_check_routine(&app_handle, widget_props, false, true)");
+    let window_manager = window_manager.lock();
+
+    window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_scroll_event());
 }

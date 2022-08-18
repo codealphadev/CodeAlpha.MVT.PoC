@@ -18,19 +18,23 @@ impl std::fmt::Display for AppWindow {
 }
 
 impl AppWindow {
-    pub fn hidden_windows_on_core_engine_inactive() -> Vec<AppWindow> {
+    pub fn hidden_on_core_engine_inactive() -> Vec<AppWindow> {
         vec![AppWindow::CodeOverlay, AppWindow::Repair]
     }
 
-    pub fn hidden_windows_on_focus_lost() -> Vec<AppWindow> {
+    pub fn hidden_on_focus_lost() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay, AppWindow::Repair]
     }
 
-    pub fn shown_windows_on_focus_gained() -> Vec<AppWindow> {
+    pub fn hidden_on_scroll_event() -> Vec<AppWindow> {
+        vec![AppWindow::CodeOverlay, AppWindow::Repair]
+    }
+
+    pub fn shown_on_focus_gained() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay]
     }
 
-    pub fn shown_windows_on_core_engine_activated() -> Vec<AppWindow> {
+    pub fn shown_on_core_engine_activated() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay]
     }
 }
