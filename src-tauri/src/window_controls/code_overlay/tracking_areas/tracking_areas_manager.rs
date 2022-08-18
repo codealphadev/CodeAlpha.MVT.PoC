@@ -1,8 +1,10 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use tauri::Manager;
 
 use crate::{
+    app_handle,
     ax_interaction::{
         models::input_device::{ClickType, MouseButton, MouseClickMessage, MouseMovedMessage},
         EventInputDevice,
@@ -22,6 +24,7 @@ use crate::{
 
 use super::{EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType};
 
+#[derive(Clone, Debug)]
 pub struct TrackingAreasManager {
     pub app_handle: tauri::AppHandle,
     tracking_areas: Vec<(TrackingArea, Option<std::time::Instant>)>,
@@ -35,9 +38,9 @@ struct TrackingEvent {
 }
 
 impl TrackingAreasManager {
-    pub fn new(app_handle: &tauri::AppHandle) -> Self {
+    pub fn new() -> Self {
         Self {
-            app_handle: app_handle.clone(),
+            app_handle: app_handle(),
             tracking_areas: Vec::new(),
             previous_mouse_position: None,
         }
@@ -245,12 +248,9 @@ impl TrackingAreasManager {
         }
     }
 
-    pub fn start_listener_events_input_devices(
-        app_handle: &tauri::AppHandle,
-        tracking_area_manager: &Arc<Mutex<Self>>,
-    ) {
+    fn start_listener_events_input_devices(tracking_area_manager: &Arc<Mutex<Self>>) {
         let tracking_area_manager_move_copy = (tracking_area_manager).clone();
-        app_handle.listen_global(ChannelList::EventInputDevice.to_string(), move |msg| {
+        app_handle().listen_global(ChannelList::EventInputDevice.to_string(), move |msg| {
             // Only process mouse events if the CodeOverlay window is shown.
             if !check_code_overlay_visible() {
                 return;
@@ -270,19 +270,13 @@ impl TrackingAreasManager {
         });
     }
 
-    pub fn start_listener_tracking_areas(
-        app_handle: &tauri::AppHandle,
-        tracking_area_manager: &Arc<Mutex<Self>>,
-    ) {
+    fn start_listener_tracking_areas(tracking_area_manager: &Arc<Mutex<Self>>) {
         let tracking_area_manager_move_copy = (tracking_area_manager).clone();
-        app_handle.listen_global(ChannelList::EventTrackingAreas.to_string(), move |msg| {
+        app_handle().listen_global(ChannelList::EventTrackingAreas.to_string(), move |msg| {
             let event_tracking_areas: EventTrackingArea =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
-            let tracking_area_manager = &mut *(match tracking_area_manager_move_copy.lock() {
-                Ok(guard) => guard,
-                Err(poisoned) => poisoned.into_inner(),
-            });
+            let mut tracking_area_manager = tracking_area_manager_move_copy.lock();
 
             match event_tracking_areas {
                 EventTrackingArea::Add(msg) => {
@@ -304,11 +298,13 @@ impl TrackingAreasManager {
         });
     }
 
+    pub fn start_event_listeners(tracking_area_manager: &Arc<Mutex<Self>>) {
+        Self::start_listener_tracking_areas(tracking_area_manager);
+        Self::start_listener_events_input_devices(tracking_area_manager);
+    }
+
     fn on_mouse_moved(tracking_area_manager_arc: &Arc<Mutex<Self>>, move_msg: &MouseMovedMessage) {
-        let tracking_area_manager = &mut *(match tracking_area_manager_arc.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        });
+        let mut tracking_area_manager = tracking_area_manager_arc.lock();
 
         tracking_area_manager
             .track_mouse_position(move_msg.cursor_position.x, move_msg.cursor_position.y);
@@ -318,10 +314,7 @@ impl TrackingAreasManager {
         tracking_area_manager_arc: &Arc<Mutex<Self>>,
         click_msg: &MouseClickMessage,
     ) {
-        let tracking_area_manager = &mut *(match tracking_area_manager_arc.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        });
+        let mut tracking_area_manager = tracking_area_manager_arc.lock();
 
         if click_msg.button == MouseButton::Left && click_msg.click_type == ClickType::Down {
             tracking_area_manager
@@ -331,8 +324,6 @@ impl TrackingAreasManager {
 }
 
 fn check_code_overlay_visible() -> bool {
-    use crate::app_handle;
-
     if let Some(window) = app_handle().get_window(&AppWindow::CodeOverlay.to_string()) {
         if let Ok(visible) = window.is_visible() {
             if visible {
@@ -345,7 +336,6 @@ fn check_code_overlay_visible() -> bool {
 }
 
 fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> bool {
-    use crate::app_handle;
     use strum::IntoEnumIterator;
 
     for app_window in AppWindow::iter() {

@@ -14,15 +14,12 @@ use crate::{
         rules::{search_and_replace::SearchRuleProps, RuleType},
         CoreEngine,
     },
-    utils::messaging::ChannelList,
+    utils::messaging::ChannelList, app_handle,
 };
 
-pub fn register_listener_user_interactions(
-    app_handle: &tauri::AppHandle,
-    core_engine: &Arc<Mutex<CoreEngine>>,
-) {
+pub fn register_listener_user_interactions(core_engine: &Arc<Mutex<CoreEngine>>) {
     let core_engine_move_copy = (core_engine).clone();
-    app_handle.listen_global(ChannelList::EventUserInteractions.to_string(), move |msg| {
+    app_handle().listen_global(ChannelList::EventUserInteractions.to_string(), move |msg| {
         let event_user_interaction: EventUserInteraction =
             serde_json::from_str(&msg.payload().unwrap()).unwrap();
 

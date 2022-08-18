@@ -8,6 +8,7 @@ use core_foundation::string::CFString;
 use tauri::Manager;
 
 use crate::{
+    app_handle,
     ax_interaction::{
         get_file_path_from_window, get_selected_text_range, get_textarea_uielement,
         models::editor::{
@@ -23,12 +24,9 @@ use crate::{
     utils::messaging::ChannelList,
 };
 
-pub fn register_listener_xcode(
-    app_handle: &tauri::AppHandle,
-    core_engine: &Arc<Mutex<CoreEngine>>,
-) {
+pub fn register_listener_xcode(core_engine: &Arc<Mutex<CoreEngine>>) {
     let core_engine_move_copy = core_engine.clone();
-    app_handle.listen_global(ChannelList::AXEventXcode.to_string(), move |msg| {
+    app_handle().listen_global(ChannelList::AXEventXcode.to_string(), move |msg| {
         let axevent_xcode: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
         match axevent_xcode {
