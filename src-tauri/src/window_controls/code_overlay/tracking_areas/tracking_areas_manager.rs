@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-use super::{EventTrackingArea, TrackingArea, TrackingEventType, TrackingEventSubscription};
+use super::{EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType};
 
 pub struct TrackingAreasManager {
     pub app_handle: tauri::AppHandle,
@@ -31,7 +31,7 @@ pub struct TrackingAreasManager {
 struct TrackingEvent {
     area: TrackingArea,
     event_type: TrackingEventType,
-    duration_in_area_ms: Option<u64>
+    duration_in_area_ms: Option<u64>,
 }
 
 impl TrackingAreasManager {
@@ -97,7 +97,7 @@ impl TrackingAreasManager {
                     if check_overlap_with_other_app_windows(mouse_x, mouse_y) {
                         // Case: Mouse is still inside the tracking area, but an app window opens above it.
                         // We publish a MouseExited event to the tracking area.
-                        tracking_events.push( TrackingEvent {
+                        tracking_events.push(TrackingEvent {
                             area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseExited,
                             duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
@@ -166,13 +166,13 @@ impl TrackingAreasManager {
                         area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
-                });
+                    });
                 } else {
                     tracking_results.push(TrackingEvent {
                         area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: None,
-                }   );
+                    });
                 }
             }
         }
@@ -180,15 +180,14 @@ impl TrackingAreasManager {
         self.publish_tracking_state(&tracking_results);
     }
 
-    fn publish_tracking_state(
-        &self,
-        tracking_results: &Vec<TrackingEvent>,
-    ) {
-        for TrackingEvent { area, duration_in_area_ms, event_type} in tracking_results.iter() {
-            if Self::evaluate_event_subscriptions(
-                event_type,
-                &area.event_subscriptions,
-            ) {
+    fn publish_tracking_state(&self, tracking_results: &Vec<TrackingEvent>) {
+        for TrackingEvent {
+            area,
+            duration_in_area_ms,
+            event_type,
+        } in tracking_results.iter()
+        {
+            if Self::evaluate_event_subscriptions(event_type, &area.event_subscriptions) {
                 match event_type {
                     TrackingEventType::MouseEntered => {
                         println!("Mouse entered tracking area: {:?}", area.id);
