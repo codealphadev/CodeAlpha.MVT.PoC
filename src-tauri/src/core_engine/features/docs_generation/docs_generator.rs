@@ -5,7 +5,7 @@ use tauri::Manager;
 use crate::{
     core_engine::{
         rules::{TextPosition, TextRange},
-        syntax_tree::{SwiftSyntaxTree, SwiftCodeBlock},
+        syntax_tree::{SwiftCodeBlock, SwiftSyntaxTree},
     },
     utils::messaging::ChannelList,
     window_controls::events::EventWindowControls,
@@ -40,10 +40,13 @@ impl DocsGenerator {
     }
 
     fn create_docs_gen_task(&self, text_content: &String) -> Option<DocsGenerationTask> {
-        let codeblock: SwiftCodeBlock = self.swift_syntax_tree.get_selected_codeblock_node(&self.selected_text_range?)?;
+        let codeblock: SwiftCodeBlock = self
+            .swift_syntax_tree
+            .get_selected_codeblock_node(&self.selected_text_range?)?;
         let first_char_position = codeblock.get_first_char_position();
         let codeblock_text = codeblock.get_codeblock_text()?;
-        let (docs_insertion_index, docs_indentation) = self.compute_docs_insertion_point_and_indetation(first_char_position.row)?;
+        let (docs_insertion_index, docs_indentation) =
+            self.compute_docs_insertion_point_and_indentation(first_char_position.row)?;
 
         let mut new_task = DocsGenerationTask::new(
             self.window_pid,
@@ -69,7 +72,7 @@ impl DocsGenerator {
             // Create a new DocsGenerationTask if there is no task running.
             // We create a new one because the text has changed and code annotation might need to be recomputed
             if !self.is_docs_gen_task_running() {
-                self.docs_generation_task = self.create_docs_gen_task( text_content)
+                self.docs_generation_task = self.create_docs_gen_task(text_content)
             } else {
                 println!("DocsGenerator: update_content: docs generation task is running");
             }
@@ -81,14 +84,14 @@ impl DocsGenerator {
 
         // Create a new DocsGenerationTask if there is no task running.
         // We create a new one because the cursor might have moved into a new codeblock. In this case we need to create a new code annotation.
-        if !self.is_docs_gen_task_running()  {
+        if !self.is_docs_gen_task_running() {
             if let Some(text_content) = self.text_content.as_ref() {
                 self.docs_generation_task = self.create_docs_gen_task(&text_content);
             }
         }
     }
 
-    fn compute_docs_insertion_point_and_indetation(
+    fn compute_docs_insertion_point_and_indentation(
         &self,
         insertion_line: usize,
     ) -> Option<(DocsInsertionIndex, DocsIndetation)> {

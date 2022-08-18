@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use crate::{
     app_handle,
     ax_interaction::{
@@ -16,7 +18,7 @@ use crate::{
     },
     utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::code_overlay::{
-        EventTrackingArea, TrackingArea, TrackingEventType, TrackingEventSubscription,
+        EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };
 
@@ -38,7 +40,7 @@ pub struct DocsGenerationTask {
     codeblock_last_char_pos: TextPosition,
     codeblock_text: String,
     pid: i32,
-    task_state: DocsGenerationTaskState,
+    task_state: Arc<Mutex<DocsGenerationTaskState>>,
 }
 
 type AnnotationIconRectangle = MatchRectangle;
@@ -59,14 +61,14 @@ impl DocsGenerationTask {
             codeblock_last_char_pos: codeblock_last_char_position,
             codeblock_text,
             pid,
-            task_state: DocsGenerationTaskState::Uninitialized,
+            task_state: Arc::new(Mutex::new(DocsGenerationTaskState::Uninitialized)),
             docs_insertion_point,
             docs_indentation,
         }
     }
 
     pub fn task_state(&self) -> DocsGenerationTaskState {
-        self.task_state.clone()
+        (*self.task_state.lock().unwrap()).clone()
     }
 
     pub fn id(&self) -> Option<uuid::Uuid> {
@@ -78,13 +80,17 @@ impl DocsGenerationTask {
     }
 
     fn is_frozen(&self) -> bool {
-        self.task_state == DocsGenerationTaskState::Finished
-            || self.task_state == DocsGenerationTaskState::Canceled
-            || self.task_state == DocsGenerationTaskState::Processing
+        let task_state = (self.task_state).lock().unwrap();
+
+        *task_state == DocsGenerationTaskState::Finished
+            || *task_state == DocsGenerationTaskState::Canceled
+            || *task_state == DocsGenerationTaskState::Processing
     }
 
     pub fn generate_documentation(&mut self) {
-        self.task_state = DocsGenerationTaskState::Processing;
+        let mut task_state = (self.task_state).lock().unwrap();
+        *task_state = DocsGenerationTaskState::Processing;
+
         EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
 
         let task_id = if let Some(id) = self.id() {
@@ -96,11 +102,12 @@ impl DocsGenerationTask {
         let codeblock_text_move_copy = self.codeblock_text.to_owned();
         let pid_move_copy = self.pid;
         let docs_insertion_point_move_copy = self.docs_insertion_point.clone();
+        let task_state = self.task_state.clone();
         tauri::async_runtime::spawn(async move {
             let mut mintlify_response =
                 mintlify_documentation(&codeblock_text_move_copy, None).await;
 
-            println!("{:?}", mintlify_response);
+            println!("Mintlify response received");
 
             if let Ok(mintlify_response) = &mut mintlify_response {
                 // add newline character at the end of mintlify_response.docstring
@@ -131,8 +138,8 @@ impl DocsGenerationTask {
                 // Notifiy the frontend that the file has been formatted successfully
                 EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
             }
+            (*task_state.lock().unwrap()) = DocsGenerationTaskState::Finished;
         });
-        self.task_state = DocsGenerationTaskState::Finished;
     }
 
     pub fn create_code_annotation(&mut self, text: &String) -> Result<(), &str> {
@@ -148,7 +155,7 @@ impl DocsGenerationTask {
                 event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                     TrackingEventType::MouseClicked,
                     TrackingEventType::MouseEntered,
-                    TrackingEventType::MouseExited
+                    TrackingEventType::MouseExited,
                 ]),
             }
         } else {
@@ -159,7 +166,7 @@ impl DocsGenerationTask {
                 event_subscriptions: TrackingEventSubscription::None,
             }
         };
-        
+
         EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
 
         // Publish annotation_rect and codeblock_rect to frontend. Even if empty, publish to remove ghosts from previous messages.
@@ -171,7 +178,8 @@ impl DocsGenerationTask {
         .publish_to_tauri(&app_handle());
 
         self.tracking_area = Some(tracking_area);
-        self.task_state = DocsGenerationTaskState::Prepared;
+        let mut task_state = (self.task_state).lock().unwrap();
+        *task_state = DocsGenerationTaskState::Prepared;
 
         Ok(())
     }
@@ -233,7 +241,8 @@ impl DocsGenerationTask {
             EventTrackingArea::Remove(vec![self.tracking_area.as_ref().unwrap().id])
                 .publish_to_tauri(&app_handle());
             self.tracking_area = None;
-            self.task_state = DocsGenerationTaskState::Canceled;
+            let mut task_state = (self.task_state).lock().unwrap();
+            *task_state = DocsGenerationTaskState::Canceled;
 
             // Remove the annotation from the frontend
             EventDocsGeneration::CodeAnnotations(CodeAnnotationMessage {
