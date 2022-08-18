@@ -33,23 +33,23 @@ pub fn on_editor_ui_element_focus_change(
                 // This gives our windows time to gracefully update their positions and sizes.
                 need_temporary_hide = true;
             } else {
-                window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost());
+                window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
             }
         } else {
             if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
                 window_manager.show_app_windows(
-                    AppWindow::shown_windows_on_focus_gained(),
+                    AppWindow::shown_on_focus_gained(),
                     Some(focus_msg.ui_elem_hash),
                 );
             } else {
-                window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost());
+                window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
             }
         }
     } else {
         // Case: app was started while focus was already on a valid editor textarea.
         if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
             window_manager.show_app_windows(
-                AppWindow::shown_windows_on_focus_gained(),
+                AppWindow::shown_on_focus_gained(),
                 Some(focus_msg.ui_elem_hash),
             );
         }
@@ -59,9 +59,7 @@ pub fn on_editor_ui_element_focus_change(
     window_manager.set_focused_editor_window(focus_msg.ui_elem_hash);
 
     if need_temporary_hide {
-        todo!(
-            "WidgetWindow::temporary_hide_check_routine(&app_handle, window_manager, true, true);"
-        );
+        window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
     }
 
     Some(())
