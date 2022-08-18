@@ -1,10 +1,10 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use parking_lot::Mutex;
 
 use crate::{
     ax_interaction::models::editor::EditorAppClosedMessage,
-    window_controls_two::{config::AppWindow, window_manager::SUPPORTED_EDITORS, WindowManager},
+    window_controls_two::{config::AppWindow, WindowManager},
 };
 
 pub fn on_close_editor_app(
@@ -30,7 +30,7 @@ pub fn on_close_editor_app(
     }
 
     if hide_app_windows {
-        window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost());
+        window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
     }
 
     window_manager.clear_editor_windows(&closed_msg.editor_name);

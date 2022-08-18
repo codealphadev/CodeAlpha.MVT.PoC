@@ -28,9 +28,9 @@ pub fn on_deactivate_app(
             .get(&window_hash)
             .is_none()
         {
-            window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost())
+            window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost())
         }
     } else {
-        window_manager.hide_app_windows(AppWindow::hidden_windows_on_focus_lost())
+        window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost())
     }
 }

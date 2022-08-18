@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use crate::{
     ax_interaction::models::editor::EditorWindowMovedMessage,
     utils::geometry::{LogicalPosition, LogicalSize},
-    window_controls_two::WindowManager,
+    window_controls_two::{config::AppWindow, WindowManager},
 };
 
 pub fn on_move_editor_window(
@@ -24,7 +24,7 @@ pub fn on_move_editor_window(
         None,
     );
 
-    todo!("WidgetWindow::temporary_hide_check_routine(&app_handle, window_manager, true, true);");
+    window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
 
     Some(())
 }

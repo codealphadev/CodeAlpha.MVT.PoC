@@ -17,10 +17,9 @@ pub fn on_core_activation_status_update(
 
     // Depending on the activation status, we either show or hide the CodeOverlay window.
     if activation_msg.engine_active {
-        window_manager
-            .show_app_windows(AppWindow::shown_windows_on_core_engine_activated(), None)?
+        window_manager.show_app_windows(AppWindow::shown_on_core_engine_activated(), None)?
     } else {
-        window_manager.hide_app_windows(AppWindow::hidden_windows_on_core_engine_inactive());
+        window_manager.hide_app_windows(AppWindow::hidden_on_core_engine_inactive());
     }
 
     Some(())
