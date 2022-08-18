@@ -22,7 +22,7 @@ pub struct DocsGenerator {
     window_pid: i32,
 }
 
-type DocsIndetation = usize;
+type DocsIndentation = usize;
 type DocsInsertionIndex = usize;
 
 impl DocsGenerator {
@@ -40,7 +40,9 @@ impl DocsGenerator {
         self.docs_generation_task = None;
     }
 
+    // TODO: move inside constructor as factory creator?
     fn create_docs_gen_task(&self, text_content: &XcodeText) -> Option<DocsGenerationTask> {
+        // TODO: Convert to return Result
         let codeblock: SwiftCodeBlock = self
             .swift_syntax_tree
             .get_selected_codeblock_node(&self.selected_text_range?)?;
@@ -48,7 +50,6 @@ impl DocsGenerator {
         let codeblock_text = codeblock.get_codeblock_text();
         let (docs_insertion_index, docs_indentation) =
             self.compute_docs_insertion_point_and_indentation(first_char_position.row)?;
-
         let mut new_task = DocsGenerationTask::new(
             self.window_pid,
             codeblock.get_first_char_position(),
@@ -73,7 +74,7 @@ impl DocsGenerator {
             // Create a new DocsGenerationTask if there is no task running.
             // We create a new one because the text has changed and code annotation might need to be recomputed
             if !self.is_docs_gen_task_running() {
-                self.docs_generation_task = self.create_docs_gen_task(text_content)
+                self.docs_generation_task = self.create_docs_gen_task(text_content);
             } else {
                 println!("DocsGenerator: update_content: docs generation task is running");
             }
@@ -95,7 +96,7 @@ impl DocsGenerator {
     fn compute_docs_insertion_point_and_indentation(
         &self,
         insertion_line: usize,
-    ) -> Option<(DocsInsertionIndex, DocsIndetation)> {
+    ) -> Option<(DocsInsertionIndex, DocsIndentation)> {
         // split the text into lines
         if let Some(text) = self.text_content.as_ref() {
             if let Some(line) = text.rows_iter().nth(insertion_line) {

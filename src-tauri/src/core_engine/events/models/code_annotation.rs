@@ -10,3 +10,9 @@ pub struct CodeAnnotationMessage {
     pub annotation_icon: Option<LogicalFrame>,
     pub annotation_codeblock: Option<LogicalFrame>,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/features/docs_generation/")]
+pub struct RemoveCodeAnnotationMessage {
+    pub id: uuid::Uuid,
+}
