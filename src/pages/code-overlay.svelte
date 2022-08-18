@@ -7,15 +7,24 @@
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
+	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
+	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
 
-	let code_overlay_rectangle: MatchRectangle | null = null;
+	let code_overlay_rectangle: LogicalFrame | null = null;
 	let docs_gen_annotations: CodeAnnotationMessage | null = null;
 
 	const listenTauriEvents = async () => {
-		await listen('event-compute-height', (event) => {
-			const tauriEvent = event as Event<MatchRectangle>;
-			const payload: MatchRectangle = tauriEvent.payload;
-			code_overlay_rectangle = payload;
+		let WindowControlsChannel: ChannelList = 'EventWindowControls';
+		await listen(WindowControlsChannel, (event) => {
+			const event_window_controls = JSON.parse(event.payload as string) as EventWindowControls;
+
+			switch (event_window_controls.event) {
+				case 'CodeOverlayDimensionsUpdate':
+					code_overlay_rectangle = event_window_controls.payload as unknown as LogicalFrame;
+					break;
+				default:
+					break;
+			}
 		});
 
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
