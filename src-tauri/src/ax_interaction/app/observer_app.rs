@@ -41,13 +41,6 @@ pub fn register_observer_app() -> Result<(), Error> {
 /// The list of notifications is managed at the top of the file in a static variable.
 fn create_observer_and_add_notifications() -> Result<(), Error> {
     let pid: i32 = std::process::id().try_into().unwrap();
-    tauri::async_runtime::spawn(async move {
-        // 0. Delay observer registration on macOS, because there is a good chance no
-        // notifications will be received despite seemingly successful observer registration
-        tokio::time::sleep(std::time::Duration::from_millis(
-            OBSERVER_REGISTRATION_DELAY_IN_MILLIS,
-        ))
-        .await;
 
     // 1. Create AXObserver
     let app_observer = AXObserver::new(pid, callback_app_notifications);
