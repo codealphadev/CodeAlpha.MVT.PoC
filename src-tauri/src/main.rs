@@ -4,18 +4,13 @@
     windows_subsystem = "windows"
 )]
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
 use commands::search_and_replace_commands;
 use core_engine::CoreEngine;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
-use window_controls::{
-    code_overlay::TrackingAreasManager, EditorWindow, WidgetWindow, WindowControls,
-};
+use window_controls_two::WindowManager;
 
 use crate::window_controls::{
     cmd_toggle_app_activation, content_window::cmd_resize_content_window,
@@ -69,12 +64,12 @@ fn main() {
             // Setup the observers for AX interactions and mouse events
             setup_observers();
 
-            // Create instance of widget window; panics if creation fails
-            let widget_window_arc =
-                Arc::new(Mutex::new(WidgetWindow::new(&handle, &editor_windows_arc)));
-            WidgetWindow::setup_widget_listeners(&handle, &widget_window_arc);
+            let core_engine_arc = Arc::new(Mutex::new(CoreEngine::new()));
+            CoreEngine::start_core_engine_listeners(&core_engine_arc);
 
-            let _window_controls = WindowControls::new(&handle, editor_windows_arc.clone());
+            // Start the window manager instance
+            let window_manager = Arc::new(parking_lot::Mutex::new(WindowManager::new()?));
+            WindowManager::start_event_listeners(&window_manager);
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
             let handle_move_copy = app.handle().clone();
