@@ -4,47 +4,60 @@ pub type XcodeChar = u16;
 pub type XcodeText = Vec<XcodeChar>;
 pub type XcodeTextRows = Vec<XcodeText>;
 
+#[derive(PartialEq, Clone, Debug)]
 pub struct XcodeTextLinesIterator {
     curr: XcodeText,
-    next: XcodeText,
+    next: Option<XcodeText>,
 }
 impl Iterator for XcodeTextLinesIterator {
     type Item = XcodeText;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.curr.is_empty() {
+        let next = if let Some(next) = &self.next {
+            next
+        } else {
+            self.next = None;
             return None;
+        };
+
+        if next.is_empty() {
+            self.next = None;
+            return Some(vec![]);
         }
 
-        let mut last_char_was_carriage_return = false;
-        for (i, c) in self.curr.iter().enumerate() {
+        let mut index_last_carriage_return = None;
+        for (i, c) in next.iter().enumerate() {
             if *c == '\r' as XcodeChar {
-                last_char_was_carriage_return = true;
+                index_last_carriage_return = Some(i);
             }
             if *c == '\n' as XcodeChar {
-                let mut rest = self.curr.split_off(if last_char_was_carriage_return {
-                    i - 1
-                } else {
-                    i
-                });
-                let response = self.curr.clone();
-                let chars_to_remove = if last_char_was_carriage_return { 2 } else { 1 };
-                self.curr = rest.split_off(chars_to_remove); // remove the newline
-                self.next = vec![];
-                return Some(response);
+                let mut chars_to_remove = 0;
+                if let Some(last_char_was_carriage_return) = index_last_carriage_return {
+                    if last_char_was_carriage_return == i - 1 {
+                        chars_to_remove = 1;
+                    }
+                }
+
+                let curr = next[..i - chars_to_remove].to_vec();
+                let rest = next[i + 1..].to_vec();
+
+                self.curr = curr.clone();
+                self.next = Some(rest);
+                return Some(curr);
             }
         }
 
-        let response = self.curr.clone();
+        // No newline found
+        let response = next.clone();
         self.curr = vec![];
-        self.next = vec![];
+        self.next = None;
         Some(response)
     }
 }
 
 pub fn xcode_text_rows(text: &XcodeText) -> XcodeTextLinesIterator {
     XcodeTextLinesIterator {
-        curr: text.to_vec(),
-        next: vec![],
+        curr: vec![],
+        next: Some(text.to_vec()),
     }
 }
 
@@ -102,6 +115,22 @@ mod tests_utf16_lines {
     }
 
     #[test]
+    fn newline_last_char() {
+        let text: XcodeText = "o\n".encode_utf16().collect();
+        let expected: XcodeTextRows = vec!["o".encode_utf16().collect(), vec![]];
+        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
+        assert_eq!(lines, expected);
+    }
+
+    #[test]
+    fn only_newline() {
+        let text: XcodeText = "\n".encode_utf16().collect();
+        let expected: XcodeTextRows = vec![vec![], vec![]];
+        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
+        assert_eq!(lines, expected);
+    }
+
+    #[test]
     fn carriage_return() {
         let text: XcodeText = "Hello ✌🏻\nWorld\r\ntest".encode_utf16().collect();
         let expected: XcodeTextRows = vec![
@@ -115,9 +144,21 @@ mod tests_utf16_lines {
     }
 
     #[test]
+    fn carriage_return_wrong_place() {
+        let text: XcodeText = "He\rllo\nWorld".encode_utf16().collect();
+        let expected: XcodeTextRows = vec![
+            "He\rllo".encode_utf16().collect(),
+            "World".encode_utf16().collect(),
+        ];
+        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
+        println!("{:?}", lines);
+        assert_eq!(lines, expected);
+    }
+
+    #[test]
     fn empty_vec() {
         let text: XcodeText = vec![];
-        let expected: XcodeTextRows = vec![];
+        let expected: XcodeTextRows = vec![vec![]];
         let lines: XcodeTextRows = xcode_text_rows(&text).collect();
         assert_eq!(lines, expected);
     }
