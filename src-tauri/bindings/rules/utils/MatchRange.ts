@@ -2,6 +2,6 @@
 import type { TextRange } from "./TextRange";
 
 export interface MatchRange {
-  string: Array<number>;
+  string: Array;
   range: TextRange;
 }

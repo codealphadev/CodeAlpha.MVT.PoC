@@ -6,14 +6,17 @@ use std::{
 };
 use tree_sitter::{Node, Parser, Tree};
 
-use crate::core_engine::rules::{TextPosition, TextRange};
+use crate::core_engine::{
+    rules::{TextPosition, TextRange},
+    utils::XcodeText,
+};
 
 use super::swift_codeblock::SwiftCodeBlock;
 
 pub struct SwiftSyntaxTree {
     tree_sitter_parser: Parser,
     tree_sitter_tree: Option<Tree>,
-    content: Option<Vec<u16>>,
+    content: Option<XcodeText>,
     logging_folder: Option<PathBuf>,
 }
 
@@ -37,7 +40,7 @@ impl SwiftSyntaxTree {
         self.content = None;
     }
 
-    pub fn parse(&mut self, content: &Vec<u16>) -> bool {
+    pub fn parse(&mut self, content: &XcodeText) -> bool {
         let updated_tree = self.tree_sitter_parser.parse_utf16(content, None);
 
         if updated_tree.is_some() {
@@ -165,7 +168,7 @@ mod tests_SwiftSyntaxTree {
 
     use crate::core_engine::{
         rules::TextPosition,
-        utils::{utf16_bytes_count, utf16_treesitter_point_to_position},
+        utils::{utf16_bytes_count, utf16_treesitter_point_to_position, XcodeText},
     };
 
     use super::SwiftSyntaxTree;
@@ -303,10 +306,10 @@ mod tests_SwiftSyntaxTree {
     fn test_start_end_point_with_UTF16_chars() {
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
 
-        let mut text = "// 😊\n".encode_utf16().collect::<Vec<u16>>();
+        let mut text = "// 😊\n".encode_utf16().collect::<XcodeText>();
         let mut utf8_str = "let x = 1; console.log(x);"
             .encode_utf16()
-            .collect::<Vec<u16>>();
+            .collect::<XcodeText>();
         text.append(&mut utf8_str);
 
         swift_syntax_tree.parse(&text);

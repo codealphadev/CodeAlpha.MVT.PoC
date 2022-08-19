@@ -1,3 +1,3 @@
-pub use utf16::*;
+pub use xcode_text::*;
 
-mod utf16;
+mod xcode_text;

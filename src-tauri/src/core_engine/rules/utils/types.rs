@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    core_engine::rules::swift_linter::LintLevel,
+    core_engine::{rules::swift_linter::LintLevel, utils::XcodeText},
     core_engine::rules::RuleMatch,
     utils::geometry::{LogicalPosition, LogicalSize},
 };
@@ -71,12 +71,12 @@ mod tests_MatchRectangle {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct MatchRange {
-    pub string: Vec<u16>,
+    pub string: XcodeText,
     pub range: TextRange,
 }
 
 impl MatchRange {
-    pub fn from_text_and_range(text: &Vec<u16>, range: TextRange) -> Option<Self> {
+    pub fn from_text_and_range(text: &XcodeText, range: TextRange) -> Option<Self> {
         if text.len() < range.index + range.length {
             return None;
         }

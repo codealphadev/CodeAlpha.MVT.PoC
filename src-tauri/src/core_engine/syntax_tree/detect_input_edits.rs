@@ -3,7 +3,7 @@
 use differ::Differ;
 use tree_sitter::InputEdit;
 
-use crate::core_engine::rules::{TextPosition, TextRange};
+use crate::core_engine::{rules::{TextPosition, TextRange}, utils::XcodeText};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum DiffType {
@@ -15,12 +15,12 @@ pub enum DiffType {
 #[derive(Clone, Debug)]
 pub struct TextDiff {
     pub diff_type: DiffType,
-    pub added_char_sequence: Vec<u16>,
-    pub removed_char_sequence: Vec<u16>,
+    pub added_char_sequence: XcodeText,
+    pub removed_char_sequence: XcodeText,
     pub start_index: usize,
 }
 
-pub fn detect_input_edits(old_string: &Vec<u16>, new_string: &Vec<u16>) -> Vec<InputEdit> {
+pub fn detect_input_edits(old_string: &XcodeText, new_string: &XcodeText) -> Vec<InputEdit> {
     let mut edits: Vec<TextDiff> = Vec::new();
     let differ = Differ::new(old_string, new_string);
     for span in differ.spans() {
@@ -57,8 +57,8 @@ pub fn detect_input_edits(old_string: &Vec<u16>, new_string: &Vec<u16>) -> Vec<I
 }
 
 fn construct_InputEdits_from_detected_edits(
-    old_string: &Vec<u16>,
-    new_string: &Vec<u16>,
+    old_string: &XcodeText,
+    new_string: &XcodeText,
     detected_edits: &Vec<TextDiff>,
 ) -> Vec<InputEdit> {
     let mut input_edits: Vec<InputEdit> = Vec::new();
