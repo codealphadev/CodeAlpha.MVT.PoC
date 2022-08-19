@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use parking_lot::Mutex;
 
@@ -17,9 +21,11 @@ use super::{
     windows::{CodeOverlayWindow, EditorWindow, WidgetWindow},
 };
 
+pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
+
 pub type Uuid = usize;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct WindowManager {
     app_handle: tauri::AppHandle,
 
@@ -49,6 +55,9 @@ pub struct WindowManager {
 
     /// Boolean stating if the the core engine is active.
     is_core_engine_active: bool,
+
+    // A timer instance used to temporarily hide our windows
+    temporarily_hide_until: Arc<Mutex<std::time::Instant>>,
 }
 
 impl WindowManager {
@@ -74,6 +83,7 @@ impl WindowManager {
             _widget_window: widget_window,
             _code_overlay_window: code_overlay_window,
             _tracking_areas_manager: tracking_areas_manager,
+            temporarily_hide_until: Arc::new(Mutex::new(std::time::Instant::now())),
         })
     }
 
@@ -178,18 +188,53 @@ impl WindowManager {
     pub fn temporarily_hide_app_windows(&self, app_windows: Vec<AppWindow>) {
         self.hide_app_windows(app_windows);
 
+        // Check if another instance of this routine is already running
+        // Update the Instant time stamp when the widget should be shown again
+        if *self.temporarily_hide_until.lock() > Instant::now() {
+            *self.temporarily_hide_until.lock() =
+                Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
+
+            return;
+        } else {
+            *self.temporarily_hide_until.lock() =
+                Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
+        }
+
         let editor_windows_move_copy = self.editor_windows.clone();
         let focused_editor_window_move_copy = self.focused_editor_window.clone();
-        tauri::async_runtime::spawn(async move {
-            Self::async_show_app_windows(editor_windows_move_copy, focused_editor_window_move_copy)
+        let temporarily_hide_move_copy = self.temporarily_hide_until.clone();
+
+        std::thread::spawn(move || {
+            loop {
+                let hide_until;
+                {
+                    hide_until = temporarily_hide_move_copy.lock().clone();
+                }
+
+                // Is zero when hide_until is older than Instant::now()
+                let duration = hide_until.duration_since(Instant::now());
+
+                if duration.is_zero() {
+                    //
+                    Self::delayed_show_app_windows(
+                        &editor_windows_move_copy,
+                        &focused_editor_window_move_copy,
+                    );
+                    break;
+                }
+
+                std::thread::sleep(duration);
+            }
         });
     }
 
-    pub async fn async_show_app_windows(
-        editor_windows_arc: Arc<Mutex<HashMap<Uuid, EditorWindow>>>,
-        focused_editor_window_arc: Arc<Mutex<Option<Uuid>>>,
+    pub fn delayed_show_app_windows(
+        editor_windows_arc: &Arc<Mutex<HashMap<Uuid, EditorWindow>>>,
+        focused_editor_window_arc: &Arc<Mutex<Option<Uuid>>>,
     ) -> Option<()> {
-        let editor_windows = editor_windows_arc.lock();
+        // Attempt try_lock() and early return if this fails; prevents deadlocks from happening.
+        let editor_windows = editor_windows_arc.try_lock()?;
+
         let focused_editor_window = focused_editor_window_arc.lock();
 
         let editor_uuid = focused_editor_window.as_ref()?;
