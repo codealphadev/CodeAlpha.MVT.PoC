@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::core_engine::utils::{
-    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position, XcodeText,
+    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position, xcode_text_rows,
+    XcodeText,
 };
 
 /// A position in a multi-line text document, in terms of rows and columns.
@@ -39,24 +40,21 @@ impl TextPosition {
     ///
     /// A TextPosition struct
     pub fn from_TextIndex(text: &XcodeText, index: usize) -> Option<TextPosition> {
-        let mut row = 0;
-        let mut col = 0;
+        if index > text.len() {
+            return None;
+        }
 
-        for i in 0..=text.len() {
-            if i == index {
-                return Some(TextPosition { row, column: col });
+        let mut i = 0;
+        for (row_i, row) in xcode_text_rows(text).enumerate() {
+            for col_i in 0..=row.len() {
+                if i == index {
+                    return Some(TextPosition {
+                        row: row_i,
+                        column: col_i,
+                    });
+                }
+                i += 1;
             }
-            if i == text.len() {
-                return None;
-            }
-            let c = text[i];
-            if c == '\n' as u16 {
-                row += 1;
-                col = 0;
-                continue;
-            }
-
-            col += 1;
         }
         None
     }
@@ -70,30 +68,17 @@ impl TextPosition {
     }
 
     pub fn as_TextIndex_stay_on_line(&self, text: &XcodeText, stay_on_line: bool) -> Option<usize> {
-        let mut row = 0;
-        let mut col = 0;
-        for i in 0..=text.len() {
-            if self.row == row && self.column == col {
-                return Some(i);
-            }
-            if i == text.len() {
-                if stay_on_line && self.row == row {
+        let mut i = 0;
+        for (row_i, row) in xcode_text_rows(text).enumerate() {
+            for col_i in 0..=row.len() {
+                if self.row == row_i && self.column == col_i {
                     return Some(i);
                 }
-                return None;
+                i += 1;
             }
-            let c = text[i];
-            if c == '\n' as u16 {
-                // if stay_on_line is true, we want to return the index of the last character of the line self.row
-                if stay_on_line && self.row == row {
-                    return Some(i);
-                }
-                row += 1;
-                col = 0;
-                continue;
+            if stay_on_line && self.row == row_i {
+                return Some(i - 1);
             }
-
-            col += 1;
         }
 
         None
@@ -251,6 +236,24 @@ mod tests_TextPosition {
     }
 
     #[test]
+    fn convert_TextPosition_as_TextIndex_stay_on_line_empty_string() {
+        let text = "".encode_utf16().collect();
+        let position = TextPosition::new(0, 7);
+        let index_option = position.as_TextIndex_stay_on_line(&text, true);
+
+        assert_eq!(index_option.unwrap(), 0);
+    }
+
+    #[test]
+    fn convert_TextPosition_as_TextIndex_stay_on_line_out_of_range() {
+        let text = "Hello".encode_utf16().collect();
+        let position = TextPosition::new(1, 7);
+        let index_option = position.as_TextIndex_stay_on_line(&text, true);
+
+        assert!(index_option.is_none());
+    }
+
+    #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_with_emojis() {
         let text = "Hell😊,\nW😊rld!\n".encode_utf16().collect();
         let position = TextPosition::new(0, 100);
@@ -265,7 +268,7 @@ mod tests_TextPosition {
         let position = TextPosition::new(0, 100);
         let index_option = position.as_TextIndex_stay_on_line(&text, false);
 
-        assert_eq!(index_option.is_none(), true);
+        assert!(index_option.is_none());
     }
 }
 
