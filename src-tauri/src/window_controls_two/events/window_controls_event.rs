@@ -34,7 +34,7 @@ impl EventWindowControls {
             Some(serde_json::to_string(self).unwrap()),
         );
 
-        let mut publish_to_frontend = false;
+        let publish_to_frontend;
         match self {
             EventWindowControls::TrackingAreaClicked(_) => publish_to_frontend = true,
             EventWindowControls::TrackingAreaEntered(_) => publish_to_frontend = true,
