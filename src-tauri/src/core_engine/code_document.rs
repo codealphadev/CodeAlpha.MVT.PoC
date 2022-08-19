@@ -11,8 +11,9 @@ use super::{
 };
 use crate::{
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement, get_xcode_editor_content,
-        send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
+        derive_xcode_textarea_dimensions, get_dark_mode, get_textarea_uielement,
+        get_xcode_editor_content, send_event_mouse_wheel, set_selected_text_range,
+        update_xcode_editor_content,
     },
     core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
@@ -55,6 +56,8 @@ pub struct CodeDocument {
 
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,
+
+    dark_mode: Option<bool>,
 }
 
 impl CodeDocument {
@@ -64,21 +67,25 @@ impl CodeDocument {
     ) -> CodeDocument {
         let editor_window_props_clone = editor_window_props.clone();
 
-        let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(
-            editor_window_props_clone.pid,
-        )));
+        let pid = editor_window_props.pid;
+        let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
         DocsGenerator::start_listener_window_control_events(&app_handle, &docs_generator_arc);
+        // TODO: Log if dark mode detection is not working properly.
+        let dark_mode = get_dark_mode(pid).ok();
 
-        CodeDocument {
+        let created_doc = CodeDocument {
             app_handle,
             rules: vec![],
             editor_window_props,
             text: None,
             file_path: None,
+            dark_mode,
             selected_text_range: None,
             bracket_highlight: BracketHighlight::new(editor_window_props_clone.pid),
             docs_generator: docs_generator_arc,
-        }
+        };
+        created_doc.notify_dark_mode();
+        return created_doc;
     }
 
     pub fn update_doc_properties(
@@ -119,6 +126,15 @@ impl CodeDocument {
         for rule in &mut self.rules {
             rule.run();
         }
+    }
+
+    fn notify_dark_mode(&self) {
+        // Send to CodeOverlay window
+        let _ = self.app_handle.emit_to(
+            &AppWindow::CodeOverlay.to_string(),
+            &ChannelList::DarkModeUpdate.to_string(),
+            self.dark_mode,
+        );
     }
 
     pub fn process_bracket_highlight(&mut self) {

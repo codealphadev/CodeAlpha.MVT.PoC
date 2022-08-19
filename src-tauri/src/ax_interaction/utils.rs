@@ -3,14 +3,16 @@ use accessibility_sys::{
     kAXErrorNoValue, kAXTrustedCheckOptionPrompt, pid_t, AXIsProcessTrusted,
     AXIsProcessTrustedWithOptions,
 };
-use cocoa::appkit::CGPoint;
+use cocoa::appkit::{CGFloat, CGPoint};
 use core_foundation::{
+    attributed_string::{CFAttributedString, CFAttributedStringRef},
     base::{CFHash, CFRange, TCFType},
     boolean::CFBoolean,
-    dictionary::CFDictionary,
-    string::CFString,
+    dictionary::{CFDictionary, CFDictionaryRef},
+    mach_port::CFIndex,
+    string::{CFString, CFStringRef},
 };
-use core_graphics_types::geometry::CGSize;
+use core_graphics::{geometry::CGSize, sys::CGColorRef};
 use rdev::{simulate, EventType};
 
 use crate::core_engine::TextRange;
@@ -137,6 +139,87 @@ pub fn update_xcode_editor_content(pid: pid_t, content: &str) -> Result<bool, Er
     }
 
     Ok(false)
+}
+
+extern "C" {
+    pub fn CFAttributedStringGetAttributes(
+        aStr: CFAttributedStringRef,
+        loc: CFIndex,
+        effectiveRange: *const CFRange,
+    ) -> CFDictionaryRef;
+
+    pub fn CFAttributedStringGetAttribute(
+        aStr: CFAttributedStringRef,
+        loc: CFIndex,
+        attrName: CFStringRef,
+        effectiveRange: *const CFRange,
+    ) -> CGColorRef;
+
+    pub fn CGColorGetComponents(color: CGColorRef) -> *const CGFloat;
+}
+
+pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
+    println!("Getting dark mode");
+    // TODO: better error typing
+    // TODO: Better error typing
+    if is_focused_uielement_of_app_xcode_editor_field(pid)
+        .map_err(|x| "Cannot get focused ui_element")?
+        == false
+    {
+        return Err("We are not focused on the Xcode editor");
+    }
+
+    let editor_element =
+        focused_uielement_of_app(pid).map_err(|e| "Could not get editor element")?;
+
+    let range = CFRange {
+        location: 0,
+        length: 1,
+    };
+
+    let str: CFAttributedString = editor_element
+        .parameterized_attribute(
+            &AXAttribute::attributed_string_for_range(),
+            &AXValue::from_CFRange(range).map_err(|x| "Could not create CFRange")?,
+        )
+        .map_err(|e| "Could not get attributed string")?;
+
+    let attributes_dict: CFDictionary = unsafe {
+        CFDictionary::wrap_under_create_rule(CFAttributedStringGetAttributes(
+            str.as_concrete_TypeRef(),
+            0,
+            std::ptr::null(),
+        ))
+    };
+    // Everything is fine up to now.
+    let keys_and_value_ptrs = attributes_dict.get_keys_and_values();
+    println!("hi");
+    let mut background_color_ptr = None;
+
+    for i in 0..keys_and_value_ptrs.0.len() {
+        let key =
+            unsafe { CFString::wrap_under_get_rule((keys_and_value_ptrs.0)[i] as CFStringRef) };
+        if key.to_string() == "AXBackgroundColor" {
+            background_color_ptr = Some((keys_and_value_ptrs.1)[i]);
+            break;
+        }
+    }
+    if background_color_ptr.is_none() {
+        return Err("Could not find background color");
+    }
+
+    let components: *const CGFloat =
+        unsafe { CGColorGetComponents(background_color_ptr.unwrap() as CGColorRef) };
+
+    let [r, g, b, _]: [_; 4] = unsafe {
+        std::slice::from_raw_parts(components as *const CGFloat, 4)
+            .try_into()
+            .map_err(|x| "Could not convert components to array")?
+    };
+
+    let lightness = (r + g + b) / 3.0;
+    println!("Lightness: {}", lightness);
+    return Ok(lightness < 0.5);
 }
 
 pub fn set_selected_text_range(pid: pid_t, index: usize, length: usize) -> Result<bool, Error> {

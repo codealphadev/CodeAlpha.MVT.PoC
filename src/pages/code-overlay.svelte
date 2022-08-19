@@ -7,11 +7,12 @@
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
 	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
 	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
-
+	import type { DarkModeUpdateMessage} from '../../src-tauri/bindings/dark_mode_update/DarkModeUpdateMessage'
 	type CodeAnnotation = CodeAnnotationMessage;
 
 	let code_overlay_rectangle: LogicalFrame | null = null;
 	let code_annotations: Array<CodeAnnotation> = [];
+
 
 	const listenTauriEvents = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
@@ -26,6 +27,11 @@
 					break;
 			}
 		});
+
+		let DarkModeUpdateChannel: ChannelList = 'DarkModeUpdate'
+		await listen(DarkModeUpdateChannel,(event) => {
+			const message = JSON.parse(event.payload as string) as DarkModeUpdateMessage;
+			console.log(message)		})
 
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
