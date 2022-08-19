@@ -7,7 +7,7 @@ use crate::{
         derive_xcode_textarea_dimensions, get_textarea_uielement,
         models::editor::EditorWindowResizedMessage,
     },
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls_two::{config::AppWindow, WindowManager},
 };
 
@@ -31,30 +31,24 @@ pub fn on_resize_editor_window(
         }
     }
 
-    editor_window.update_window_dimensions(
-        LogicalPosition::from_tauri_LogicalPosition(&resize_msg.window_position),
-        LogicalSize::from_tauri_LogicalSize(&resize_msg.window_size),
-        unpack_logical_position_tauri(textarea_position),
-        unpack_logical_size_tauri(textarea_size),
+    editor_window.update_window_and_textarea_dimensions(
+        LogicalFrame {
+            origin: LogicalPosition::from_tauri_LogicalPosition(&resize_msg.window_position),
+            size: LogicalSize::from_tauri_LogicalSize(&resize_msg.window_size),
+        },
+        LogicalFrame {
+            origin: LogicalPosition {
+                x: textarea_position?.x,
+                y: textarea_position?.y,
+            },
+            size: LogicalSize {
+                width: textarea_size?.width,
+                height: textarea_size?.height,
+            },
+        },
     );
 
     window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
 
     Some(())
-}
-
-fn unpack_logical_position_tauri(
-    position: Option<tauri::LogicalPosition<f64>>,
-) -> Option<LogicalPosition> {
-    Some(LogicalPosition {
-        x: position?.x,
-        y: position?.y,
-    })
-}
-
-fn unpack_logical_size_tauri(size: Option<tauri::LogicalSize<f64>>) -> Option<LogicalSize> {
-    Some(LogicalSize {
-        width: size?.width,
-        height: size?.height,
-    })
 }

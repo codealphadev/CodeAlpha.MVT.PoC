@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 
 use crate::{
     ax_interaction::models::editor::EditorWindowMovedMessage,
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls_two::{config::AppWindow, WindowManager},
 };
 
@@ -17,12 +17,10 @@ pub fn on_move_editor_window(
 
     let editor_window = editor_window_list.get_mut(&moved_msg.uielement_hash)?;
 
-    editor_window.update_window_dimensions(
-        LogicalPosition::from_tauri_LogicalPosition(&moved_msg.window_position),
-        LogicalSize::from_tauri_LogicalSize(&moved_msg.window_size),
-        None,
-        None,
-    );
+    editor_window.update_window_dimensions(LogicalFrame {
+        origin: LogicalPosition::from_tauri_LogicalPosition(&moved_msg.window_position),
+        size: LogicalSize::from_tauri_LogicalSize(&moved_msg.window_size),
+    });
 
     window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
 

@@ -89,17 +89,6 @@ impl EditorWindow {
         }
     }
 
-    fn set_textarea_dimensions(&mut self, position: LogicalPosition, size: LogicalSize) {
-        self.textarea_position = Some(position);
-        self.textarea_size = Some(size);
-
-        EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
-            origin: position,
-            size: size,
-        })
-        .publish_to_tauri(&app_handle());
-    }
-
     pub fn textarea_size(&self) -> Option<LogicalSize> {
         self.textarea_size
     }
@@ -116,41 +105,198 @@ impl EditorWindow {
         self.focused_ui_element.as_ref()
     }
 
-    pub fn update_window_dimensions(
+    fn set_textarea_dimensions(&mut self, position: LogicalPosition, size: LogicalSize) {
+        self.textarea_position = Some(position);
+        self.textarea_size = Some(size);
+
+        EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
+            origin: self.transform_local_position_to_global_position(position),
+            size,
+        })
+        .publish_to_tauri(&app_handle());
+    }
+
+    pub fn update_window_and_textarea_dimensions(
         &mut self,
-        window_position: LogicalPosition,
-        window_size: LogicalSize,
+        window: LogicalFrame,
+        textarea_global: LogicalFrame,
+    ) -> Option<()> {
+        // Transform the textarea's origin to local coordinates.
+        let textarea = LogicalFrame {
+            origin: self.transform_global_position_to_local_position(
+                textarea_global.origin,
+                Some(window.origin),
+            ),
+            size: textarea_global.size,
+        };
+
+        // Calculate how much both the window and the textarea have been moved and/or changed in size.
+        // These values are needed to calculate the widget's position after the update.
+        // If self.textarea_position is None, we use the change from the window's origin/size.
+        let mut change_of_origin = LogicalSize {
+            width: window.origin.x - self.window_position.x,
+            height: window.origin.y - self.window_position.y,
+        };
+
+        let mut change_of_size = LogicalSize {
+            width: window.size.width - self.window_size.width,
+            height: window.size.height - self.window_size.height,
+        };
+
+        if let (Some(textarea_pos_old), Some(textarea_size_old)) =
+            (self.textarea_position, self.textarea_size)
+        {
+            let textarea_pos_old_global =
+                self.transform_local_position_to_global_position(textarea_pos_old);
+
+            change_of_origin = LogicalSize {
+                width: textarea_global.origin.x - textarea_pos_old_global.x,
+                height: textarea_global.origin.y - textarea_pos_old_global.y,
+            };
+
+            change_of_size = LogicalSize {
+                width: textarea.size.width - textarea_size_old.width,
+                height: textarea.size.height - textarea_size_old.height,
+            };
+        }
+
+        // Update the widget's position
+        let widget_position_global_updated =
+            self.get_updated_widget_position_global(change_of_origin, change_of_size);
+
+        // Update the editor window's and textarea's dimensions.
+        self.window_position = window.origin;
+        self.window_size = window.size;
+        self.set_textarea_dimensions(textarea.origin, textarea.size);
+        self.widget_position
+            .replace(self.transform_global_position_to_local_position(
+                widget_position_global_updated?,
+                Some(window.origin),
+            ));
+
+        Some(())
+    }
+
+    pub fn update_window_dimensions(&mut self, window: LogicalFrame) -> Option<()> {
+        // Calculate how much both the window and the textarea have been moved and/or changed in size.
+        // These values are needed to calculate the widget's position after the update.
+        // If self.textarea_position is None, we use the change from the window's origin/size.
+        let change_of_origin = LogicalSize {
+            width: window.origin.x - self.window_position.x,
+            height: window.origin.y - self.window_position.y,
+        };
+
+        let change_of_size = LogicalSize {
+            width: window.size.width - self.window_size.width,
+            height: window.size.height - self.window_size.height,
+        };
+
+        // Update the widget's position
+        let widget_position_global_updated =
+            self.get_updated_widget_position_global(change_of_origin, change_of_size);
+
+        // Update the editor window's and textarea's dimensions.
+        self.window_position = window.origin;
+        self.window_size = window.size;
+        self.widget_position
+            .replace(self.transform_global_position_to_local_position(
+                widget_position_global_updated?,
+                Some(window.origin),
+            ));
+
+        Some(())
+    }
+
+    pub fn update_focused_ui_element(
+        &mut self,
+        focused_ui_element: &FocusedUIElement,
         textarea_position_global: Option<LogicalPosition>,
         textarea_size: Option<LogicalSize>,
     ) {
         // Transforming the global position of the textarea to a local position.
         let textarea_position = if let Some(textarea_position) = textarea_position_global {
-            Some(self.transform_global_position_to_local_position(
-                textarea_position,
-                Some(window_position),
-            ))
+            Some(self.transform_global_position_to_local_position(textarea_position, None))
         } else {
             None
         };
 
-        // Calculate the change of the window dimensions
-        let (diff_pos, diff_size) = self.calculate_dimension_change(
-            window_position,
-            window_size,
-            textarea_position,
-            textarea_size,
-        );
-
-        // Update textarea dimension
-        self.update_textarea_dimensions(diff_size, textarea_position, textarea_size);
-
-        // Update widget position
-        if textarea_position.is_some() {
-            self.calc_widget_pos_by_respecting_boundaries(diff_pos, diff_size);
+        if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
+            self.set_textarea_dimensions(position, size)
         }
 
-        self.window_position = window_position;
-        self.window_size = window_size;
+        self.focused_ui_element = Some(focused_ui_element.clone());
+    }
+
+    pub fn update_widget_position(&mut self, widget_position_global: LogicalPosition) {
+        // Transforming the global position of the widget to a local position.
+        let widget_position =
+            self.transform_global_position_to_local_position(widget_position_global, None);
+
+        self.widget_position = Some(widget_position);
+
+        // Recalculate boundaries
+        if let (Some(textarea_pos), Some(textarea_size)) =
+            (self.textarea_position, self.textarea_size)
+        {
+            let left_boundary = textarea_pos.x;
+            let right_boundary = textarea_pos.x + textarea_size.width;
+            let bottom_boundary = textarea_pos.y + textarea_size.height;
+            let top_boundary = textarea_pos.y;
+
+            let dist_to_left = (left_boundary - widget_position.x).abs();
+            let dist_to_right = (right_boundary - widget_position.x).abs();
+            let dist_to_top = (top_boundary - widget_position.y).abs();
+            let dist_to_bottom = (bottom_boundary - widget_position.y).abs();
+
+            // Match closest distance
+            if dist_to_left > dist_to_right {
+                self.h_boundary = HorizontalBoundary::Right;
+            } else {
+                self.h_boundary = HorizontalBoundary::Left;
+            }
+
+            if dist_to_top > dist_to_bottom {
+                self.v_boundary = VerticalBoundary::Bottom;
+            } else {
+                self.v_boundary = VerticalBoundary::Top;
+            }
+        } else {
+            panic!("Textarea position and size are not set; this should be impossible");
+        }
+    }
+
+    fn get_updated_widget_position_global(
+        &mut self,
+        diff_pos: LogicalSize,
+        diff_size: LogicalSize,
+    ) -> Option<LogicalPosition> {
+        let widget_pos = &mut self.widget_position?;
+
+        // Determine how much each side/boundary moved
+        let left_boundary_diff = diff_pos.width;
+        let right_boundary_diff = diff_pos.width + diff_size.width;
+        let bottom_boundary_diff = diff_pos.height + diff_size.height;
+        let top_boundary_diff = diff_pos.height;
+
+        match self.v_boundary {
+            VerticalBoundary::Top => {
+                widget_pos.y += top_boundary_diff;
+            }
+            VerticalBoundary::Bottom => {
+                widget_pos.y += bottom_boundary_diff;
+            }
+        }
+
+        match self.h_boundary {
+            HorizontalBoundary::Left => {
+                widget_pos.x += left_boundary_diff;
+            }
+            HorizontalBoundary::Right => {
+                widget_pos.x += right_boundary_diff;
+            }
+        }
+
+        Some(self.transform_local_position_to_global_position(*widget_pos))
     }
 
     pub fn get_monitor(&self, app_handle: &tauri::AppHandle) -> Option<LogicalFrame> {
@@ -203,161 +349,8 @@ impl EditorWindow {
         }
     }
 
-    pub fn update_focused_ui_element(
-        &mut self,
-        focused_ui_element: &FocusedUIElement,
-        textarea_position_global: Option<LogicalPosition>,
-        textarea_size: Option<LogicalSize>,
-    ) {
-        // Transforming the global position of the textarea to a local position.
-        let textarea_position = if let Some(textarea_position) = textarea_position_global {
-            Some(self.transform_global_position_to_local_position(textarea_position, None))
-        } else {
-            None
-        };
-
-        if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
-            self.set_textarea_dimensions(position, size)
-        }
-
-        self.focused_ui_element = Some(focused_ui_element.clone());
-    }
-
-    fn calculate_dimension_change(
-        &self,
-        window_position: LogicalPosition,
-        window_size: LogicalSize,
-        textarea_position: Option<LogicalPosition>,
-        textarea_size: Option<LogicalSize>,
-    ) -> (LogicalSize, LogicalSize) {
-        // Calculate the change of the dimensions
-        let mut diff_pos = LogicalSize {
-            width: window_position.x - self.window_position.x,
-            height: window_position.y - self.window_position.y,
-        };
-
-        let mut diff_size = LogicalSize {
-            width: window_size.width - self.window_size.width,
-            height: window_size.height - self.window_size.height,
-        };
-
-        // If textarea dimensions are provided, use their change of the dimensions
-        if let (
-            Some(textarea_pos_new),
-            Some(textarea_size_new),
-            Some(textarea_pos_old),
-            Some(textarea_size_old),
-        ) = (
-            textarea_position,
-            textarea_size,
-            self.textarea_position,
-            self.textarea_size,
-        ) {
-            diff_pos = LogicalSize {
-                width: textarea_pos_new.x - textarea_pos_old.x,
-                height: textarea_pos_new.y - textarea_pos_old.y,
-            };
-
-            diff_size = LogicalSize {
-                width: textarea_size_new.width - textarea_size_old.width,
-                height: textarea_size_new.height - textarea_size_old.height,
-            };
-        }
-
-        return (diff_pos, diff_size);
-    }
-
-    fn update_textarea_dimensions(
-        &mut self,
-        diff_size: LogicalSize,
-        textarea_position: Option<LogicalPosition>,
-        textarea_size: Option<LogicalSize>,
-    ) -> Option<()> {
-        if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
-            self.set_textarea_dimensions(position, size)
-        } else {
-            // Case: valid updated textarea dimensions are provided;
-            // Case: Deriving updated textarea dimensions from window dimension change;
-            if self.textarea_size.is_some() && self.textarea_position.is_some() {
-                self.textarea_size = Some(LogicalSize {
-                    width: self.textarea_size?.width + diff_size.width,
-                    height: self.textarea_size?.height + diff_size.height,
-                });
-            }
-        }
-
-        Some(())
-    }
-
-    pub fn update_widget_position(&mut self, widget_position_global: LogicalPosition) {
-        // Transforming the global position of the widget to a local position.
-        let widget_position =
-            self.transform_global_position_to_local_position(widget_position_global, None);
-
-        self.widget_position = Some(widget_position);
-
-        // Recalculate boundaries
-        if let (Some(textarea_pos), Some(textarea_size)) =
-            (self.textarea_position, self.textarea_size)
-        {
-            let left_boundary = textarea_pos.x;
-            let right_boundary = textarea_pos.x + textarea_size.width;
-            let bottom_boundary = textarea_pos.y + textarea_size.height;
-            let top_boundary = textarea_pos.y;
-
-            let dist_to_left = (left_boundary - widget_position.x).abs();
-            let dist_to_right = (right_boundary - widget_position.x).abs();
-            let dist_to_top = (top_boundary - widget_position.y).abs();
-            let dist_to_bottom = (bottom_boundary - widget_position.y).abs();
-
-            // Match closest distance
-            if dist_to_left > dist_to_right {
-                self.h_boundary = HorizontalBoundary::Right;
-            } else {
-                self.h_boundary = HorizontalBoundary::Left;
-            }
-
-            if dist_to_top > dist_to_bottom {
-                self.v_boundary = VerticalBoundary::Bottom;
-            } else {
-                self.v_boundary = VerticalBoundary::Top;
-            }
-        }
-    }
-
-    fn calc_widget_pos_by_respecting_boundaries(
-        &mut self,
-        diff_pos: LogicalSize,
-        diff_size: LogicalSize,
-    ) -> Option<()> {
-        let widget_pos = &mut self.widget_position?;
-        // Determine how much each side/boundary moved
-        let left_boundary_diff = diff_pos.width;
-        let right_boundary_diff = diff_pos.width + diff_size.width;
-        let bottom_boundary_diff = diff_pos.height + diff_size.height;
-        let top_boundary_diff = diff_pos.height;
-
-        match self.v_boundary {
-            VerticalBoundary::Top => {
-                widget_pos.y = widget_pos.y + top_boundary_diff;
-            }
-            VerticalBoundary::Bottom => {
-                widget_pos.y = widget_pos.y + bottom_boundary_diff;
-            }
-        }
-
-        match self.h_boundary {
-            HorizontalBoundary::Left => {
-                widget_pos.x = widget_pos.x + left_boundary_diff;
-            }
-            HorizontalBoundary::Right => {
-                widget_pos.x = widget_pos.x + right_boundary_diff;
-            }
-        }
-
-        Some(())
-    }
-
+    /// A global position is relative to the origin of the primary screen. A local position, in this context,
+    /// is defined as a position relative to the top left corner of the editor window (=origin).
     fn transform_local_position_to_global_position(
         &self,
         local_position: LogicalPosition,
@@ -370,16 +363,21 @@ impl EditorWindow {
         return global_position;
     }
 
+    /// A global position is relative to the origin of the primary screen. A local position, in this context,
+    /// is defined as a position relative to the top left corner of the editor window (=origin).
+    ///
+    /// In case the editor window origin is updated and we need to use this new value for the transformation _before_
+    /// updating Self, this method can take this updated origin as optional argument.
     fn transform_global_position_to_local_position(
         &self,
         global_position: LogicalPosition,
-        local_origin: Option<LogicalPosition>,
+        updated_local_origin: Option<LogicalPosition>,
     ) -> LogicalPosition {
         let mut local_position = global_position;
 
-        if let Some(local_origin) = local_origin {
-            local_position.x -= local_origin.x;
-            local_position.y -= local_origin.y;
+        if let Some(updated_local_origin) = updated_local_origin {
+            local_position.x -= updated_local_origin.x;
+            local_position.y -= updated_local_origin.y;
         } else {
             local_position.x -= &self.window_position.x;
             local_position.y -= &self.window_position.y;
