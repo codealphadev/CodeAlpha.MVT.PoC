@@ -2,7 +2,10 @@ use std::str::FromStr;
 
 use tree_sitter::Node;
 
-use crate::core_engine::{rules::{TextPosition, TextRange}, utils::XcodeText};
+use crate::core_engine::{
+    rules::{TextPosition, TextRange},
+    utils::XcodeText,
+};
 
 pub type Err = ();
 
@@ -68,11 +71,13 @@ impl<'a> SwiftCodeBlock<'a> {
             &self.node.start_position(),
             &self.node.end_position(),
         ) {
-            self.text[code_block_range.index..code_block_range.index + code_block_range.length]
-                .to_vec()
+            XcodeText::from_array(
+                &self.text
+                    [code_block_range.index..code_block_range.index + code_block_range.length],
+            )
         } else {
             println!("get_codeblock_text: TextRange::from_StartEndTSPoint failed");
-            return vec![];
+            return XcodeText::new_empty();
         }
     }
 }

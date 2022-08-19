@@ -15,7 +15,7 @@ pub fn format_swift_file(file_path: String) -> Option<XcodeText> {
     let formatted_file = block_on(handle);
 
     if let Some(content) = formatted_file {
-        Some(content.encode_utf16().collect())
+        Some(XcodeText::from_str(&content))
     } else {
         None
     }

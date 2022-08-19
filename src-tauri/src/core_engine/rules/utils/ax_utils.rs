@@ -6,6 +6,7 @@ use std::convert::TryFrom;
 
 use crate::{
     ax_interaction::derive_xcode_textarea_dimensions,
+    core_engine::utils::XcodeText,
     utils::geometry::{LogicalPosition, LogicalSize},
 };
 
@@ -36,7 +37,7 @@ pub fn calc_rectangles_and_line_matches(
                 ),
             };
 
-            let mut substr = vec![];
+            let mut substr = XcodeText::new_empty();
             // let mut matched_str_char_iter = match_range.string.char_indices();
             for (i, c) in match_range.string.iter().enumerate() {
                 if i >= matched_char_range.index - match_range.range.index

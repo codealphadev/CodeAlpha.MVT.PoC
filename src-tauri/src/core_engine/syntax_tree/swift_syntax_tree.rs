@@ -182,18 +182,14 @@ mod tests_SwiftSyntaxTree {
 
         let original_string = "let";
         let replace_string = "var";
-        let code_original = format!(
+        let code_original = XcodeText::from_str(&format!(
             "{} apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"",
             original_string
-        )
-        .encode_utf16()
-        .collect();
-        let code_updated = format!(
+        ));
+        let code_updated = XcodeText::from_str(&format!(
             "{} apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"",
             replace_string
-        )
-        .encode_utf16()
-        .collect();
+        ));
 
         swift_syntax_tree.parse(&code_original);
         {
@@ -237,11 +233,10 @@ mod tests_SwiftSyntaxTree {
 
         _ = swift_syntax_tree.start_logging(&prepare_treesitter_logging());
 
-        let code = "var apples = 3\nlet appleSummary = \"I have \\(apples) apples.\""
-            .encode_utf16()
-            .collect();
+        let code =
+            XcodeText::from_str("var apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"");
         swift_syntax_tree.parse(&code);
-        let updated_code = "let apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"\nlet appleSummary2 = \"I have \\(apples) apples.\"".encode_utf16().collect();
+        let updated_code = XcodeText::from_str("let apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"\nlet appleSummary2 = \"I have \\(apples) apples.\"");
         swift_syntax_tree.parse(&updated_code);
     }
 
@@ -260,7 +255,7 @@ mod tests_SwiftSyntaxTree {
 
     #[test]
     fn test_start_end_point_end_newline_char() {
-        let text = "let x = 1; console.log(x);\n".encode_utf16().collect();
+        let text = XcodeText::from_str("let x = 1; console.log(x);\n");
         //                |------------------------>| <- end column is zero on row 1
         //                                            <- end byte is one past the last byte (27), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
@@ -282,7 +277,7 @@ mod tests_SwiftSyntaxTree {
 
     #[test]
     fn test_start_end_point_end_no_newline_char() {
-        let text = "let x = 1; console.log(x);".encode_utf16().collect();
+        let text = XcodeText::from_str("let x = 1; console.log(x);");
         //                |------------------------>| <- end column is one past the last char (26)
         //                |------------------------>| <- end byte is one past the last byte (26), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
@@ -306,10 +301,8 @@ mod tests_SwiftSyntaxTree {
     fn test_start_end_point_with_UTF16_chars() {
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
 
-        let mut text = "// 😊\n".encode_utf16().collect::<XcodeText>();
-        let mut utf8_str = "let x = 1; console.log(x);"
-            .encode_utf16()
-            .collect::<XcodeText>();
+        let mut text = XcodeText::from_str("// 😊\n");
+        let mut utf8_str = XcodeText::from_str("let x = 1; console.log(x);");
         text.append(&mut utf8_str);
 
         swift_syntax_tree.parse(&text);

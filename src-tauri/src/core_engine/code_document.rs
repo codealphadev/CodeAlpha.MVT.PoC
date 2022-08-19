@@ -5,7 +5,8 @@ use super::{
     features::BracketHighlight,
     features::DocsGenerator,
     formatter::format_swift_file,
-    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps, TextPosition, TextRange}, utils::XcodeText,
+    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps, TextPosition, TextRange},
+    utils::XcodeText,
 };
 use crate::{
     ax_interaction::{
@@ -84,7 +85,7 @@ impl CodeDocument {
         new_content_string: &String,
         file_path: &Option<String>,
     ) {
-        let new_content = &new_content_string.encode_utf16().collect::<XcodeText>();
+        let new_content = &XcodeText::from_str(new_content_string);
         let is_file_path_updated = self.is_file_path_updated(file_path);
         let is_file_text_updated = self.is_file_text_updated(new_content);
 
@@ -93,7 +94,7 @@ impl CodeDocument {
             return;
         }
 
-        self.text = Some(new_content.to_vec());
+        self.text = Some(new_content.clone());
         self.file_path = file_path.clone();
 
         // Update Rule Properties
@@ -102,7 +103,7 @@ impl CodeDocument {
                 RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
                     file_path_as_str: file_path.clone(),
                     linter_config: None,
-                    file_content: Some(new_content.to_vec()),
+                    file_content: Some(new_content.clone()),
                 }),
             }
         }
@@ -180,7 +181,7 @@ impl CodeDocument {
             get_xcode_editor_content(self.editor_window_props.pid),
             self.text.as_ref(),
         ) {
-            let content_text_u16 = &content_text.encode_utf16().collect::<XcodeText>();
+            let content_text_u16 = &XcodeText::from_str(&content_text);
             if content_text_u16 != text {
                 let new_content_u16 = content_text_u16;
                 self.bracket_highlight.update_content(new_content_u16);
