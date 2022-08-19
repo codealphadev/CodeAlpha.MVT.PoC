@@ -71,11 +71,15 @@ impl WidgetWindow {
         };
 
         // Determine if the widget would be off-screen and needs to be moved.
-        if let Some(off_screen_distance) =
-            self.calc_off_screen_distance(&corrected_position, &monitor)
-        {
-            corrected_position.x += off_screen_distance.width;
-            corrected_position.y += off_screen_distance.height;
+        let (offscreen_dist_x, offscreen_dist_y) =
+            self.calc_off_screen_distance(&corrected_position, &monitor);
+
+        if let Some(offscreen_dist_x) = offscreen_dist_x {
+            corrected_position.x += offscreen_dist_x;
+        }
+
+        if let Some(offscreen_dist_y) = offscreen_dist_y {
+            corrected_position.y += offscreen_dist_y;
         }
 
         tauri_window
@@ -99,7 +103,7 @@ impl WidgetWindow {
         &self,
         widget_position: &LogicalPosition,
         monitor: &LogicalFrame,
-    ) -> Option<LogicalSize> {
+    ) -> (Option<f64>, Option<f64>) {
         let mut dist_x: Option<f64> = None;
         let mut dist_y: Option<f64> = None;
 
@@ -119,14 +123,7 @@ impl WidgetWindow {
                 Some(monitor.origin.y + monitor.size.height - self.size.height - widget_position.y);
         }
 
-        if let (Some(dist_x), Some(dist_y)) = (dist_x, dist_y) {
-            Some(LogicalSize {
-                width: dist_x,
-                height: dist_y,
-            })
-        } else {
-            None
-        }
+        (dist_x, dist_y)
     }
 
     fn initial_widget_position(&self, editor_textarea: &LogicalFrame) -> LogicalPosition {
