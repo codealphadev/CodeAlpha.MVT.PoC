@@ -8,12 +8,23 @@
 	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
 	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { DarkModeUpdateMessage} from '../../src-tauri/bindings/dark_mode_update/DarkModeUpdateMessage'
+	import { getContext } from 'svelte';
+	const { setTheme } = getContext("theme");
+
 	type CodeAnnotation = CodeAnnotationMessage;
 
 	let code_overlay_rectangle: LogicalFrame | null = null;
 	let code_annotations: Array<CodeAnnotation> = [];
 
 
+	const listenDarkModeEvents = async () => {
+		let DarkModeUpdateChannel: ChannelList = 'DarkModeUpdate'
+		await listen(DarkModeUpdateChannel, (event) => {
+			const payload = event.payload as DarkModeUpdateMessage;
+			setTheme(payload.dark_mode ? 'dark' : 'light');	 //TODO: Type safety
+		})
+	}
+	
 	const listenTauriEvents = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
 		await listen(WindowControlsChannel, (event) => {
@@ -28,10 +39,6 @@
 			}
 		});
 
-		let DarkModeUpdateChannel: ChannelList = 'DarkModeUpdate'
-		await listen(DarkModeUpdateChannel,(event) => {
-			const message = JSON.parse(event.payload as string) as DarkModeUpdateMessage;
-			console.log(message)		})
 
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
@@ -57,6 +64,8 @@
 	};
 
 	listenTauriEvents();
+	listenDarkModeEvents();
+
 </script>
 
 {#if code_overlay_rectangle}

@@ -14,7 +14,9 @@ use crate::{
         get_xcode_editor_content, send_event_mouse_wheel, set_selected_text_range,
         update_xcode_editor_content,
     },
-    core_engine::rules::get_bounds_of_first_char_in_range,
+    core_engine::{
+        events::models::DarkModeUpdateMessage, rules::get_bounds_of_first_char_in_range,
+    },
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
@@ -65,14 +67,12 @@ impl CodeDocument {
         editor_window_props: EditorWindowProps,
     ) -> CodeDocument {
         let editor_window_props_clone = editor_window_props.clone();
-
         let pid = editor_window_props.pid;
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
         DocsGenerator::start_listener_window_control_events(&app_handle, &docs_generator_arc);
         // TODO: Log if dark mode detection is not working properly.
-        let dark_mode = get_dark_mode(pid).ok();
 
-        let created_doc = CodeDocument {
+        let mut created_doc: CodeDocument = CodeDocument {
             app_handle,
             rules: vec![],
             editor_window_props,
@@ -83,7 +83,7 @@ impl CodeDocument {
             bracket_highlight: BracketHighlight::new(editor_window_props_clone.pid),
             docs_generator: docs_generator_arc,
         };
-        created_doc.notify_dark_mode();
+        created_doc.check_and_update_dark_mode();
         return created_doc;
     }
 
@@ -127,13 +127,27 @@ impl CodeDocument {
         }
     }
 
-    fn notify_dark_mode(&self) {
+    pub fn handle_gain_focus(&mut self) {
+        self.check_and_update_dark_mode();
+    }
+
+    fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
+        self.dark_mode = get_dark_mode(self.editor_window_props.pid).ok();
+        dbg!(get_dark_mode(self.editor_window_props.pid));
+
         // Send to CodeOverlay window
-        let _ = self.app_handle.emit_to(
-            &AppWindow::CodeOverlay.to_string(),
-            &ChannelList::DarkModeUpdate.to_string(),
-            self.dark_mode,
-        );
+        if (self.dark_mode.is_some()) {
+            let _ = self.app_handle.emit_to(
+                &AppWindow::CodeOverlay.to_string(),
+                &ChannelList::DarkModeUpdate.to_string(),
+                DarkModeUpdateMessage {
+                    dark_mode: self.dark_mode.ok_or("dark mode is None".to_string())?,
+                },
+            );
+        }
+        Ok(())
+    }
+        Ok(())
     }
 
     pub fn process_bracket_highlight(&mut self) {

@@ -46,24 +46,20 @@
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
 		await listen(WindowControlsChannel, (event) => {
 			const tracking_area_event = JSON.parse(event.payload as string) as EventWindowControls;
-			console.log(tracking_area_event);
 			switch (tracking_area_event.event) {
 				case 'TrackingAreaClicked':
-					console.log('TrackingAreaClicked');
 					let clicked_msg = tracking_area_event.payload as unknown as TrackingAreaClickedMessage;
 					if (clicked_msg.id === annotation.id) {
 						is_hovered = true;
 					}
 					break;
 				case 'TrackingAreaEntered':
-					console.log('TrackingAreaEntered');
 					let entered_msg = tracking_area_event.payload as unknown as TrackingAreaEnteredMessage;
 					if (entered_msg.id === annotation.id) {
 						is_hovered = true;
 					}
 					break;
 				case 'TrackingAreaExited':
-					console.log('TrackingAreaExited');
 					let exited_msg = tracking_area_event.payload as unknown as TrackingAreaExitedMessage;
 					if (exited_msg.id === annotation.id) {
 						is_hovered = false;

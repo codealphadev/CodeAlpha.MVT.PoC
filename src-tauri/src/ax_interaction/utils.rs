@@ -159,8 +159,6 @@ extern "C" {
 }
 
 pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
-    println!("Getting dark mode");
-    // TODO: better error typing
     // TODO: Better error typing
     if is_focused_uielement_of_app_xcode_editor_field(pid)
         .map_err(|x| "Cannot get focused ui_element")?
@@ -193,7 +191,6 @@ pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
     };
     // Everything is fine up to now.
     let keys_and_value_ptrs = attributes_dict.get_keys_and_values();
-    println!("hi");
     let mut background_color_ptr = None;
 
     for i in 0..keys_and_value_ptrs.0.len() {
@@ -218,7 +215,6 @@ pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
     };
 
     let lightness = (r + g + b) / 3.0;
-    println!("Lightness: {}", lightness);
     return Ok(lightness < 0.5);
 }
 
