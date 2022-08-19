@@ -36,7 +36,12 @@ pub fn setup_observers() {
 fn startup_observer_registration() {
     std::thread::spawn(|| {
         subscribe_mouse_events();
+    });
 
+    std::thread::spawn(|| {
+        // As our application is still starting up, we need to wait before registering its AX observer.
+        // We found that 2 seconds is enough.
+        std::thread::sleep(std::time::Duration::from_millis(2000));
         _ = register_observer_app();
     });
 }
