@@ -7,5 +7,6 @@ pub use search_query::SearchQueryMessage;
 
 mod code_annotation;
 mod core_activation_status;
+mod dark_mode_update;
 mod docs_generated;
 mod search_query;
