@@ -3,18 +3,21 @@
 	import CodeOverlay from './pages/code-overlay.svelte';
 	import Content from './pages/content.svelte';
 	import Widget from './pages/widget.svelte';
+	import ThemeContext from './theme-context.svelte';
 </script>
 
-<Router>
-	<Route path="/content">
-		<Content />
-	</Route>
+<ThemeContext>
+	<Router>
+		<Route path="/content">
+			<Content />
+		</Route>
 
-	<Route path="/widget">
-		<Widget />
-	</Route>
+		<Route path="/widget">
+			<Widget />
+		</Route>
 
-	<Route path="/codeoverlay">
-		<CodeOverlay />
-	</Route>
-</Router>
+		<Route path="/codeoverlay">
+			<CodeOverlay />
+		</Route>
+	</Router>
+</ThemeContext>

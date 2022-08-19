@@ -1,13 +1,11 @@
 <script lang="ts">
-	import { CodeAlphaOrange, NeutralGrey } from '../../../theme';
-
 	export let visible = false;
 	export let highlighted = false;
 	const ANNOTATION_LINE_WIDTH_PCT = 10;
 
 	export let height = 0;
 
-	$: background_color = highlighted ? CodeAlphaOrange : NeutralGrey;
+	$: background_color = highlighted ? "var(--theme-primary)" : "var(--theme-inactive)";
 </script>
 
 {#if visible}

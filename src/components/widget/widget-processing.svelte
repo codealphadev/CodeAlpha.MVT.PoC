@@ -1,6 +1,9 @@
+<script lang="ts">
+	export let color: string = "#fff";
+</script>
 <svg
-	style="width: 100%"
-	class="animate-spin text-white"
+	style="width: 100%; color: {color};"
+	class="animate-spin"
 	xmlns="http://www.w3.org/2000/svg"
 	fill="none"
 	viewBox="0 0 24 24"

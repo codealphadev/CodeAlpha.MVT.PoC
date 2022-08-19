@@ -346,7 +346,6 @@ impl DocsGenerationTask {
 
 impl Drop for DocsGenerationTask {
     fn drop(&mut self) {
-        println!("DocsGenerationTask::drop");
         if let Some(tracking_area) = self.tracking_area.as_ref() {
             EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage {
                 id: tracking_area.id,
