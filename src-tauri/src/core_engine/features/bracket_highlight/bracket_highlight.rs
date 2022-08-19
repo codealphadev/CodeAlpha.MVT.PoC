@@ -7,7 +7,7 @@ use crate::{
         ax_utils::get_bounds_of_TextRange,
         rules::{get_index_of_next_row, TextPosition, TextRange},
         syntax_tree::SwiftSyntaxTree,
-        types::MatchRectangle,
+        types::MatchRectangle, utils::XcodeText,
     },
 };
 
@@ -83,7 +83,7 @@ pub struct BracketHighlight {
     results: Option<BracketHighlightResults>,
     selected_text_range: Option<TextRange>,
     swift_syntax_tree: SwiftSyntaxTree,
-    text_content: Option<Vec<u16>>,
+    text_content: Option<XcodeText>,
     window_pid: i32,
 }
 
@@ -98,7 +98,7 @@ impl BracketHighlight {
         }
     }
 
-    pub fn update_content(&mut self, text_content: &Vec<u16>) {
+    pub fn update_content(&mut self, text_content: &XcodeText) {
         if self.swift_syntax_tree.parse(text_content) {
             self.text_content = Some(text_content.to_vec());
         }

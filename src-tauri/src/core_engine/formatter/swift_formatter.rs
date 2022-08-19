@@ -4,7 +4,9 @@ use tauri::{
     async_runtime::block_on,
 };
 
-pub fn format_swift_file(file_path: String) -> Option<Vec<u16>> {
+use crate::core_engine::utils::XcodeText;
+
+pub fn format_swift_file(file_path: String) -> Option<XcodeText> {
     if !Path::new(&file_path).exists() {
         println!("File does not exist: {}", file_path);
         return None;

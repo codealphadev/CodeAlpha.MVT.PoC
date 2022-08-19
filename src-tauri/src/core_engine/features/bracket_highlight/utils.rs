@@ -5,7 +5,7 @@ use crate::core_engine::{
     ax_utils::{calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped},
     rules::{TextPosition, TextRange},
     types::{MatchRange, MatchRectangle},
-    utils::{utf16_is_whitespace, utf16_lines},
+    utils::{xcode_char_is_whitespace, xcode_text_rows, XcodeText, XcodeTextRows},
 };
 
 fn code_block_kinds_with_declaration() -> Vec<&'static str> {
@@ -35,7 +35,7 @@ pub fn rectangles_from_match_range(
 
 pub fn length_to_code_block_body_start(
     node: &Node,
-    text: &Vec<u16>,
+    text: &XcodeText,
     selected_text_index: usize,
 ) -> Option<(usize, bool)> {
     let mut is_selected_text_in_declaration = false;
@@ -113,7 +113,7 @@ pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Opti
 
 pub fn get_match_range_of_first_and_last_char_in_node(
     node: &Node,
-    text: &Vec<u16>,
+    text: &XcodeText,
     selected_text_index: usize,
 ) -> Option<(MatchRange, MatchRange)> {
     if let (Some(first_index), Some(last_index)) = (
@@ -156,7 +156,7 @@ pub fn get_match_range_of_first_and_last_char_in_node(
 
 pub fn rectanges_of_wrapped_line(
     row: usize,
-    content: &Vec<u16>,
+    content: &XcodeText,
     textarea_ui_element: AXUIElement,
 ) -> Vec<MatchRectangle> {
     if let Some(is_wrapped) = is_text_of_line_wrapped(row, &textarea_ui_element) {
@@ -177,10 +177,10 @@ pub fn rectanges_of_wrapped_line(
 
 pub fn only_whitespace_on_line_until_position(
     position: TextPosition,
-    text: &Vec<u16>,
+    text: &XcodeText,
 ) -> Option<bool> {
     let text_clone = text.clone();
-    let lines = &utf16_lines(&text_clone).collect::<Vec<Vec<u16>>>();
+    let lines = &xcode_text_rows(&text_clone).collect::<XcodeTextRows>();
     if lines.len() - 1 < position.row {
         return None;
     }
@@ -216,7 +216,7 @@ pub struct LeftMostColumn {
 /// A LeftMostColumn struct
 pub fn get_left_most_column_in_rows(
     range: TextRange,
-    text_content: &Vec<u16>,
+    text_content: &XcodeText,
 ) -> Option<LeftMostColumn> {
     if text_content.len() < range.index + range.length {
         return None;
@@ -229,7 +229,7 @@ pub fn get_left_most_column_in_rows(
     let mut index = range.index;
     let mut row = 0;
 
-    for line in utf16_lines(text) {
+    for line in xcode_text_rows(text) {
         let mut column: usize = 0;
         for &c_u16 in &line {
             if c_u16 != ' ' as u16 {
@@ -238,7 +238,7 @@ pub fn get_left_most_column_in_rows(
             column += 1;
         }
 
-        if (&line).iter().any(|c| !utf16_is_whitespace(c)) {
+        if (&line).iter().any(|c| !xcode_char_is_whitespace(c)) {
             if let Some(left_most_column) = left_most_column_option {
                 if column < left_most_column {
                     left_most_column_option = Some(column);
@@ -266,11 +266,11 @@ pub fn get_left_most_column_in_rows(
     }
 }
 
-fn get_node_start_index(node: &Node, text: &Vec<u16>) -> Option<usize> {
+fn get_node_start_index(node: &Node, text: &XcodeText) -> Option<usize> {
     TextPosition::from_TSPoint(&node.start_position()).as_TextIndex(&text)
 }
 
-fn get_node_end_index(node: &Node, text: &Vec<u16>) -> Option<usize> {
+fn get_node_end_index(node: &Node, text: &XcodeText) -> Option<usize> {
     TextPosition::from_TSPoint(&node.end_position()).as_TextIndex(&text)
 }
 

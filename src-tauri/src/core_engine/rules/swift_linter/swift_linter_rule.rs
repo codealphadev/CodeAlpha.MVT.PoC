@@ -2,11 +2,11 @@ use std::process::Command;
 
 use crate::{
     ax_interaction::get_textarea_uielement,
-    core_engine::rules::{
+    core_engine::{rules::{
         rule_match::RuleMatchProps,
         utils::{ax_utils::get_text_range_of_line, text_types::TextRange, types::MatchRange},
         RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
-    },
+    }, utils::XcodeText},
 };
 
 use super::types::{LintAlert, LintLevel, LintResults};
@@ -14,7 +14,7 @@ use super::types::{LintAlert, LintLevel, LintResults};
 pub struct SwiftLinterProps {
     pub file_path_as_str: Option<String>,
     pub linter_config: Option<String>,
-    pub file_content: Option<Vec<u16>>,
+    pub file_content: Option<XcodeText>,
 }
 
 pub struct SwiftLinterRule {
@@ -22,7 +22,7 @@ pub struct SwiftLinterRule {
     rule_matches: Option<Vec<RuleMatch>>,
     file_path_updated: bool,
     file_path_as_str: Option<String>,
-    file_content: Option<Vec<u16>>,
+    file_content: Option<XcodeText>,
     file_content_updated: bool,
     linter_config: Option<String>,
     linter_config_updated: bool,
@@ -78,7 +78,7 @@ impl RuleBase for SwiftLinterRule {
                 let rule_match = RuleMatch::new(
                     RuleName::SwiftLinter,
                     MatchRange {
-                        string: "unknown yet".encode_utf16().collect::<Vec<u16>>(),
+                        string: "unknown yet".encode_utf16().collect::<XcodeText>(),
                         range: TextRange {
                             index: char_range_for_line.index + lint_alert.1.column,
                             length: 1,
@@ -167,7 +167,7 @@ impl SwiftLinterRule {
         }
     }
 
-    fn update_file_content(&mut self, file_content: Option<Vec<u16>>) {
+    fn update_file_content(&mut self, file_content: Option<XcodeText>) {
         if let Some(file_content) = file_content {
             // Update content if it has changed
             if self.file_content.is_none() || self.file_content.as_ref().unwrap() != &file_content {

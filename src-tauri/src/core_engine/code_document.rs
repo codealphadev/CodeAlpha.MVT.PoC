@@ -5,7 +5,7 @@ use super::{
     features::BracketHighlight,
     features::DocsGenerator,
     formatter::format_swift_file,
-    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps, TextPosition, TextRange},
+    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps, TextPosition, TextRange}, utils::XcodeText,
 };
 use crate::{
     ax_interaction::{
@@ -40,7 +40,7 @@ pub struct CodeDocument {
     rules: Vec<RuleType>,
 
     /// The content of the loaded code document.
-    text: Option<Vec<u16>>,
+    text: Option<XcodeText>,
 
     /// The file path of the loaded code document. If it is none, then the code document
     /// loaded its contents purely through the AX API from a textarea that is not linked
@@ -84,7 +84,7 @@ impl CodeDocument {
         new_content_string: &String,
         file_path: &Option<String>,
     ) {
-        let new_content = &new_content_string.encode_utf16().collect::<Vec<u16>>();
+        let new_content = &new_content_string.encode_utf16().collect::<XcodeText>();
         let is_file_path_updated = self.is_file_path_updated(file_path);
         let is_file_text_updated = self.is_file_text_updated(new_content);
 
@@ -180,7 +180,7 @@ impl CodeDocument {
             get_xcode_editor_content(self.editor_window_props.pid),
             self.text.as_ref(),
         ) {
-            let content_text_u16 = &content_text.encode_utf16().collect::<Vec<u16>>();
+            let content_text_u16 = &content_text.encode_utf16().collect::<XcodeText>();
             if content_text_u16 != text {
                 let new_content_u16 = content_text_u16;
                 self.bracket_highlight.update_content(new_content_u16);
@@ -290,7 +290,7 @@ impl CodeDocument {
         }
     }
 
-    fn is_file_text_updated(&self, file_text_new: &Vec<u16>) -> bool {
+    fn is_file_text_updated(&self, file_text_new: &XcodeText) -> bool {
         if let Some(file_text_old) = &self.text {
             if file_text_old != file_text_new {
                 true
@@ -304,8 +304,8 @@ impl CodeDocument {
 }
 
 fn get_new_cursor_index(
-    old_content: &Vec<u16>,
-    formatted_content: &Vec<u16>,
+    old_content: &XcodeText,
+    formatted_content: &XcodeText,
     index: usize,
 ) -> usize {
     let mut new_index = formatted_content.len();

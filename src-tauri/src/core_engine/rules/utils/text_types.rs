@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::core_engine::utils::{
-    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position,
+    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position, XcodeText,
 };
 
 /// A position in a multi-line text document, in terms of rows and columns.
@@ -38,7 +38,7 @@ impl TextPosition {
     /// Returns:
     ///
     /// A TextPosition struct
-    pub fn from_TextIndex(text: &Vec<u16>, index: usize) -> Option<TextPosition> {
+    pub fn from_TextIndex(text: &XcodeText, index: usize) -> Option<TextPosition> {
         let mut row = 0;
         let mut col = 0;
 
@@ -65,11 +65,11 @@ impl TextPosition {
         utf16_position_to_tresitter_point(self)
     }
 
-    pub fn as_TextIndex(&self, text: &Vec<u16>) -> Option<usize> {
+    pub fn as_TextIndex(&self, text: &XcodeText) -> Option<usize> {
         self.as_TextIndex_stay_on_line(text, false)
     }
 
-    pub fn as_TextIndex_stay_on_line(&self, text: &Vec<u16>, stay_on_line: bool) -> Option<usize> {
+    pub fn as_TextIndex_stay_on_line(&self, text: &XcodeText, stay_on_line: bool) -> Option<usize> {
         let mut row = 0;
         let mut col = 0;
         for i in 0..=text.len() {
@@ -102,11 +102,11 @@ impl TextPosition {
 
 #[cfg(test)]
 mod tests_TextPosition {
-    use crate::core_engine::rules::utils::text_types::TextPosition;
+    use crate::core_engine::{rules::utils::text_types::TextPosition, utils::XcodeText};
 
     #[test]
     fn test_TextPosition_from_TextIndex_respects_new_line_character() {
-        let text: Vec<u16> = "\nHello, \nWorld!".encode_utf16().collect();
+        let text: XcodeText = "\nHello, \nWorld!".encode_utf16().collect();
         let index = 12; // ... starting from zero, so the 13th character, which is the 'l'
         assert_eq!(text[index], 'l' as u16);
 
@@ -136,7 +136,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_two_lines() {
-        let text: Vec<u16> = "Hello, World!\nGoodbye, World!".encode_utf16().collect();
+        let text: XcodeText = "Hello, World!\nGoodbye, World!".encode_utf16().collect();
         let index = 20; // ... starting from zero, so the 21th character, which is the 'e'
         assert_eq!(text[index], 'e' as u16);
         let position_option = TextPosition::from_TextIndex(&text, index);
@@ -291,7 +291,7 @@ impl TextRange {
     }
 
     pub fn from_StartEndTextPosition(
-        text: &Vec<u16>,
+        text: &XcodeText,
         start_position: &TextPosition,
         end_position: &TextPosition,
     ) -> Option<TextRange> {
@@ -306,7 +306,7 @@ impl TextRange {
     }
 
     pub fn from_StartEndTSPoint(
-        text: &Vec<u16>,
+        text: &XcodeText,
         start_position: &tree_sitter::Point,
         end_position: &tree_sitter::Point,
     ) -> Option<TextRange> {
@@ -325,7 +325,10 @@ impl TextRange {
         }
     }
 
-    pub fn as_StartEndTextPosition(&self, text: &Vec<u16>) -> Option<(TextPosition, TextPosition)> {
+    pub fn as_StartEndTextPosition(
+        &self,
+        text: &XcodeText,
+    ) -> Option<(TextPosition, TextPosition)> {
         let (start_index, end_index) = self.as_StartEndIndex();
 
         if let (Some(start_position), Some(end_position)) = (
@@ -340,7 +343,7 @@ impl TextRange {
 
     pub fn as_StartEndTSPoint(
         &self,
-        text: &Vec<u16>,
+        text: &XcodeText,
     ) -> Option<(tree_sitter::Point, tree_sitter::Point)> {
         if let Some((start_position, end_position)) = self.as_StartEndTextPosition(text) {
             Some((start_position.as_TSPoint(), end_position.as_TSPoint()))
@@ -514,7 +517,7 @@ mod tests_TextRange {
 }
 
 pub fn StartEndIndex_from_StartEndTextPosition(
-    text: &Vec<u16>,
+    text: &XcodeText,
     start_position: &TextPosition,
     end_position: &TextPosition,
 ) -> Option<(usize, usize)> {
@@ -528,7 +531,7 @@ pub fn StartEndIndex_from_StartEndTextPosition(
 }
 
 pub fn StartEndIndex_from_StartEndTSPoint(
-    text: &Vec<u16>,
+    text: &XcodeText,
     start_point: &tree_sitter::Point,
     end_point: &tree_sitter::Point,
 ) -> Option<(usize, usize)> {
@@ -540,7 +543,7 @@ pub fn StartEndIndex_from_StartEndTSPoint(
 }
 
 pub fn StartEndTextPosition_from_StartEndIndex(
-    text: &Vec<u16>,
+    text: &XcodeText,
     start_index: usize,
     end_index: usize,
 ) -> Option<(TextPosition, TextPosition)> {
@@ -560,7 +563,7 @@ pub fn StartEndTextPosition_from_StartEndTSPoint(
 }
 
 pub fn StartEndTSPoint_from_StartEndIndex(
-    text: &Vec<u16>,
+    text: &XcodeText,
     start_index: usize,
     end_index: usize,
 ) -> Option<(tree_sitter::Point, tree_sitter::Point)> {
@@ -650,7 +653,7 @@ mod tests_TextConversions {
     }
 }
 
-pub fn get_index_of_next_row(index: usize, text: &Vec<u16>) -> Option<usize> {
+pub fn get_index_of_next_row(index: usize, text: &XcodeText) -> Option<usize> {
     let mut i = 0;
     for c in text[index..].to_vec() {
         if c == 10 {

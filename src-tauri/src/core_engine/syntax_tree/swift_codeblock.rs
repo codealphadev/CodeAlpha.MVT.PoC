@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use tree_sitter::Node;
 
-use crate::core_engine::rules::{TextPosition, TextRange};
+use crate::core_engine::{rules::{TextPosition, TextRange}, utils::XcodeText};
 
 pub type Err = ();
 
@@ -38,13 +38,13 @@ impl FromStr for SwiftCodeBlockType {
 }
 
 pub struct SwiftCodeBlock<'a> {
-    pub text: Vec<u16>,
+    pub text: XcodeText,
     pub codeblock_type: SwiftCodeBlockType,
     node: Node<'a>,
 }
 
 impl<'a> SwiftCodeBlock<'a> {
-    pub fn new(node: Node<'a>, text: &Vec<u16>) -> Result<Self, Err> {
+    pub fn new(node: Node<'a>, text: &XcodeText) -> Result<Self, Err> {
         let codeblock_type = SwiftCodeBlockType::from_str(&node.kind())?;
 
         Ok(Self {
@@ -62,7 +62,7 @@ impl<'a> SwiftCodeBlock<'a> {
         TextPosition::from_TSPoint(&self.node.end_position())
     }
 
-    pub fn get_codeblock_text(&self) -> Vec<u16> {
+    pub fn get_codeblock_text(&self) -> XcodeText {
         if let Some(code_block_range) = TextRange::from_StartEndTSPoint(
             &self.text,
             &self.node.start_position(),

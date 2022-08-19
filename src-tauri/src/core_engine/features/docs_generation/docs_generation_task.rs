@@ -15,6 +15,7 @@ use crate::{
         features::docs_generation::mintlify_documentation,
         rules::{TextPosition, TextRange},
         types::MatchRectangle,
+        utils::XcodeText,
     },
     utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::{
@@ -38,7 +39,7 @@ pub struct DocsGenerationTask {
     _docs_indentation: usize,
     codeblock_first_char_pos: TextPosition,
     codeblock_last_char_pos: TextPosition,
-    codeblock_text: Vec<u16>,
+    codeblock_text: XcodeText,
     pid: i32,
     task_state: Arc<Mutex<DocsGenerationTaskState>>,
 }
@@ -53,7 +54,7 @@ impl DocsGenerationTask {
         codeblock_last_char_position: TextPosition,
         docs_insertion_point: TextRange,
         _docs_indentation: usize,
-        codeblock_text: Vec<u16>,
+        codeblock_text: XcodeText,
     ) -> Self {
         Self {
             tracking_area: None,
@@ -140,7 +141,7 @@ impl DocsGenerationTask {
         });
     }
 
-    pub fn create_code_annotation(&mut self, text: &Vec<u16>) -> Result<(), &str> {
+    pub fn create_code_annotation(&mut self, text: &XcodeText) -> Result<(), &str> {
         if self.tracking_area.is_some() || self.is_frozen() {
             return Err("Task is frozen or tracking");
         }
@@ -182,7 +183,7 @@ impl DocsGenerationTask {
         Ok(())
     }
 
-    pub fn update_code_annotation_position(&mut self, text: &Vec<u16>) -> bool {
+    pub fn update_code_annotation_position(&mut self, text: &XcodeText) -> bool {
         if self.tracking_area.is_none() {
             return false;
         };
@@ -259,7 +260,7 @@ impl DocsGenerationTask {
     /// the one that is going to be highlighted.
     fn calculate_annotation_bounds(
         &self,
-        text: &Vec<u16>,
+        text: &XcodeText,
     ) -> Result<(Option<AnnotationIconRectangle>, Option<CodeblockRectangle>), &'static str> {
         // 1. Get textarea dimensions
         let textarea_ui_element = if let Some(elem) = get_textarea_uielement(self.pid) {
