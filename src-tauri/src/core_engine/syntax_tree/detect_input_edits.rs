@@ -3,7 +3,10 @@
 use differ::Differ;
 use tree_sitter::InputEdit;
 
-use crate::core_engine::{rules::{TextPosition, TextRange}, utils::XcodeText};
+use crate::core_engine::{
+    rules::{TextPosition, TextRange},
+    utils::XcodeText,
+};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum DiffType {
@@ -29,24 +32,32 @@ pub fn detect_input_edits(old_string: &XcodeText, new_string: &XcodeText) -> Vec
             differ::Tag::Insert => {
                 edits.push(TextDiff {
                     diff_type: DiffType::Add,
-                    added_char_sequence: new_string[span.b_start..span.b_end].to_vec(),
-                    removed_char_sequence: vec![],
+                    added_char_sequence: XcodeText::from_array(
+                        &new_string[span.b_start..span.b_end],
+                    ),
+                    removed_char_sequence: XcodeText::new_empty(),
                     start_index: span.b_start,
                 });
             }
             differ::Tag::Delete => {
                 edits.push(TextDiff {
                     diff_type: DiffType::Delete,
-                    added_char_sequence: vec![],
-                    removed_char_sequence: old_string[span.a_start..span.a_end].to_vec(),
+                    added_char_sequence: XcodeText::new_empty(),
+                    removed_char_sequence: XcodeText::from_array(
+                        &old_string[span.a_start..span.a_end],
+                    ),
                     start_index: span.a_start,
                 });
             }
             differ::Tag::Replace => {
                 edits.push(TextDiff {
                     diff_type: DiffType::Replace,
-                    added_char_sequence: new_string[span.b_start..span.b_end].to_vec(),
-                    removed_char_sequence: old_string[span.a_start..span.a_end].to_vec(),
+                    added_char_sequence: XcodeText::from_array(
+                        &new_string[span.b_start..span.b_end],
+                    ),
+                    removed_char_sequence: XcodeText::from_array(
+                        &old_string[span.a_start..span.a_end],
+                    ),
                     start_index: span.a_start,
                 });
             }
@@ -108,8 +119,8 @@ mod tests {
         new_end_position: TextPosition,
     ) {
         let input_edits = detect_input_edits(
-            &old_string.encode_utf16().collect(),
-            &new_string.encode_utf16().collect(),
+            &XcodeText::from_str(&old_string),
+            &XcodeText::from_str(&new_string),
         );
         assert_eq!(input_edits.len(), 1);
         assert_eq!(input_edits[0].start_byte, start_index * 2);

@@ -6,7 +6,7 @@ use crate::{
     core_engine::{
         rules::{TextPosition, TextRange},
         syntax_tree::{SwiftCodeBlock, SwiftSyntaxTree},
-        utils::{xcode_text_rows, XcodeText},
+        utils::{XcodeChar, XcodeText},
     },
     utils::messaging::ChannelList,
     window_controls::EventWindowControls,
@@ -40,7 +40,7 @@ impl DocsGenerator {
         self.docs_generation_task = None;
     }
 
-    fn create_docs_gen_task(&self, text_content: &Vec<u16>) -> Option<DocsGenerationTask> {
+    fn create_docs_gen_task(&self, text_content: &XcodeText) -> Option<DocsGenerationTask> {
         let codeblock: SwiftCodeBlock = self
             .swift_syntax_tree
             .get_selected_codeblock_node(&self.selected_text_range?)?;
@@ -98,11 +98,11 @@ impl DocsGenerator {
     ) -> Option<(DocsInsertionIndex, DocsIndetation)> {
         // split the text into lines
         if let Some(text) = self.text_content.as_ref() {
-            if let Some(line) = xcode_text_rows(text).nth(insertion_line) {
+            if let Some(line) = text.rows_iter().nth(insertion_line) {
                 // count whitespaces in insertion_line until first character
                 let mut whitespaces = 0;
                 for c_u16 in line {
-                    if c_u16 == ' ' as u16 {
+                    if *c_u16 == ' ' as XcodeChar {
                         whitespaces += 1;
                     } else {
                         break;

@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::core_engine::utils::{
-    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position, xcode_text_rows,
-    XcodeText,
+    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position, XcodeText,
 };
 
 /// A position in a multi-line text document, in terms of rows and columns.
@@ -45,7 +44,7 @@ impl TextPosition {
         }
 
         let mut i = 0;
-        for (row_i, row) in xcode_text_rows(text).enumerate() {
+        for (row_i, row) in text.rows_iter().enumerate() {
             for col_i in 0..=row.len() {
                 if i == index {
                     return Some(TextPosition {
@@ -69,7 +68,7 @@ impl TextPosition {
 
     pub fn as_TextIndex_stay_on_line(&self, text: &XcodeText, stay_on_line: bool) -> Option<usize> {
         let mut i = 0;
-        for (row_i, row) in xcode_text_rows(text).enumerate() {
+        for (row_i, row) in text.rows_iter().enumerate() {
             for col_i in 0..=row.len() {
                 if self.row == row_i && self.column == col_i {
                     return Some(i);
@@ -91,7 +90,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_respects_new_line_character() {
-        let text: XcodeText = "\nHello, \nWorld!".encode_utf16().collect();
+        let text = XcodeText::from_str("\nHello, \nWorld!");
         let index = 12; // ... starting from zero, so the 13th character, which is the 'l'
         assert_eq!(text[index], 'l' as u16);
 
@@ -107,7 +106,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_one_line() {
-        let text = "Hello, World!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello, World!");
         let index = 5;
         let position_option = TextPosition::from_TextIndex(&text, index);
 
@@ -121,7 +120,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_two_lines() {
-        let text: XcodeText = "Hello, World!\nGoodbye, World!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello, World!\nGoodbye, World!");
         let index = 20; // ... starting from zero, so the 21th character, which is the 'e'
         assert_eq!(text[index], 'e' as u16);
         let position_option = TextPosition::from_TextIndex(&text, index);
@@ -136,7 +135,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_none_with_emojis() {
-        let text = "Hell😊, W😊rld!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hell😊, W😊rld!");
         //       is 4 bytes ->|   |<- is 4 bytes
         let index = 5;
         let position_option = TextPosition::from_TextIndex(&text, index);
@@ -151,7 +150,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_last_position() {
-        let text = "Hello, World!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello, World!");
         let index = 13;
         let position = TextPosition::from_TextIndex(&text, index).unwrap();
 
@@ -161,7 +160,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_TextPosition_from_TextIndex_too_far() {
-        let text = "Hello, World!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello, World!");
         let index = 14;
         let position_option = TextPosition::from_TextIndex(&text, index);
 
@@ -170,7 +169,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_convert_TextPosition_as_TextIndex() {
-        let text = "Hello, World!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello, World!");
         let position = TextPosition::new(0, 5);
         let index_option = position.as_TextIndex(&text);
 
@@ -183,7 +182,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_convert_TextPosition_as_TextIndex_with_emojis() {
-        let text = "Hell😊, W😊rld!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hell😊, W😊rld!");
         //       is 4 bytes ->|   |<- is 4 bytes
         let position = TextPosition::new(0, 5);
         let index_option = position.as_TextIndex(&text);
@@ -197,7 +196,7 @@ mod tests_TextPosition {
 
     #[test]
     fn test_convert_TextPosition_as_TextIndex_multi_line() {
-        let text = "Hello,\n World\n!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello,\n World\n!");
         let position = TextPosition::new(2, 0);
         let index_option = position.as_TextIndex(&text);
 
@@ -210,7 +209,7 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far() {
-        let text = "Hello, World!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello, World!");
         let position = TextPosition::new(0, 14);
         let index_option = position.as_TextIndex(&text);
 
@@ -219,7 +218,7 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line() {
-        let text = "Hello,\nWorld!\n".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello,\nWorld!\n");
         let position = TextPosition::new(1, 7);
         let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
@@ -228,7 +227,7 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_last() {
-        let text = "Hello,\nWorld!\n".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello,\nWorld!\n");
         let position = TextPosition::new(2, 7);
         let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
@@ -237,7 +236,7 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_stay_on_line_empty_string() {
-        let text = "".encode_utf16().collect();
+        let text = XcodeText::from_str("");
         let position = TextPosition::new(0, 7);
         let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
@@ -246,7 +245,7 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_stay_on_line_out_of_range() {
-        let text = "Hello".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello");
         let position = TextPosition::new(1, 7);
         let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
@@ -255,7 +254,7 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_with_emojis() {
-        let text = "Hell😊,\nW😊rld!\n".encode_utf16().collect();
+        let text = XcodeText::from_str("Hell😊,\nW😊rld!\n");
         let position = TextPosition::new(0, 100);
         let index_option = position.as_TextIndex_stay_on_line(&text, true);
 
@@ -264,7 +263,7 @@ mod tests_TextPosition {
 
     #[test]
     fn convert_TextPosition_as_TextIndex_too_far_multiline_stay_on_line_false() {
-        let text = "Hello,\nWorld!\n".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello,\nWorld!\n");
         let position = TextPosition::new(0, 100);
         let index_option = position.as_TextIndex_stay_on_line(&text, false);
 
@@ -358,7 +357,10 @@ impl TextRange {
 
 #[cfg(test)]
 mod tests_TextRange {
-    use crate::core_engine::rules::utils::text_types::{TextPosition, TextRange};
+    use crate::core_engine::{
+        rules::utils::text_types::{TextPosition, TextRange},
+        utils::XcodeText,
+    };
 
     use pretty_assertions::assert_eq;
 
@@ -382,15 +384,12 @@ mod tests_TextRange {
 
     #[test]
     fn test_TextRange_from_StartEndTextPosition_one_line() {
-        let text = "Hello, World!";
+        let text = XcodeText::from_str("Hello, World!");
         //                     |--->| <- Length is 6 characters
         let start_position = TextPosition::new(0, 5);
         let end_position = TextPosition::new(0, 10);
-        let range_option = TextRange::from_StartEndTextPosition(
-            &text.encode_utf16().collect(),
-            &start_position,
-            &end_position,
-        );
+        let range_option =
+            TextRange::from_StartEndTextPosition(&text, &start_position, &end_position);
 
         assert_eq!(range_option.is_some(), true);
 
@@ -402,15 +401,12 @@ mod tests_TextRange {
 
     #[test]
     fn test_TextRange_from_StartEndTextPosition_multi_line() {
-        let text = "He\nll\no, Wo\nrld!";
+        let text = XcodeText::from_str("He\nll\no, Wo\nrld!");
         //                    |-- ------ ->| <- Length 12 ('\n' is one character)
         let start_position = TextPosition::new(1, 0);
         let end_position = TextPosition::new(3, 2);
-        let range_option = TextRange::from_StartEndTextPosition(
-            &text.encode_utf16().collect(),
-            &start_position,
-            &end_position,
-        );
+        let range_option =
+            TextRange::from_StartEndTextPosition(&text, &start_position, &end_position);
 
         assert_eq!(range_option.is_some(), true);
 
@@ -422,28 +418,22 @@ mod tests_TextRange {
 
     #[test]
     fn test_TextRange_from_StartEndTextPosition_col_too_big() {
-        let text = "He\nll\no, Wo\nrld!";
+        let text = XcodeText::from_str("He\nll\no, Wo\nrld!");
         let start_position = TextPosition::new(1, 100);
         let end_position = TextPosition::new(3, 2);
-        let range_option = TextRange::from_StartEndTextPosition(
-            &text.encode_utf16().collect(),
-            &start_position,
-            &end_position,
-        );
+        let range_option =
+            TextRange::from_StartEndTextPosition(&text, &start_position, &end_position);
 
         assert_eq!(range_option.is_some(), false);
     }
 
     #[test]
     fn test_TextRange_from_StartEndTextPosition_row_too_big() {
-        let text = "He\nll\no, Wo\nrld!";
+        let text = XcodeText::from_str("He\nll\no, Wo\nrld!");
         let start_position = TextPosition::new(1, 1);
         let end_position = TextPosition::new(100, 2);
-        let range_option = TextRange::from_StartEndTextPosition(
-            &text.encode_utf16().collect(),
-            &start_position,
-            &end_position,
-        );
+        let range_option =
+            TextRange::from_StartEndTextPosition(&text, &start_position, &end_position);
 
         assert_eq!(range_option.is_some(), false);
     }
@@ -478,11 +468,11 @@ mod tests_TextRange {
     // test TextRange as_StartEndPosition
     #[test]
     fn test_TextRange_as_StartEndTextPosition_one_line() {
-        let text = "Hello, World!";
+        let text = XcodeText::from_str("Hello, World!");
         //                |---->| <- Length is 6 characters, start is [0,0], end is [0,6]
         let range = TextRange::new(0, 6);
 
-        let range_option = range.as_StartEndTextPosition(&text.encode_utf16().collect());
+        let range_option = range.as_StartEndTextPosition(&text);
 
         assert_eq!(range_option.is_some(), true);
 
@@ -499,11 +489,11 @@ mod tests_TextRange {
 
     #[test]
     fn test_TextRange_as_StartEndTextPosition_multi_line() {
-        let text = "He\nll\no, Wo\nrld!";
+        let text = XcodeText::from_str("He\nll\no, Wo\nrld!");
         //                    |-- ------ -->| <- Length 12 ('\n' is one character)
         let range = TextRange::new(3, 12);
 
-        let range_option = range.as_StartEndTextPosition(&text.encode_utf16().collect());
+        let range_option = range.as_StartEndTextPosition(&text);
 
         assert_eq!(range_option.is_some(), true);
 
@@ -591,23 +581,23 @@ pub fn StartEndTSPoint_from_StartEndTextPosition(
 
 #[cfg(test)]
 mod tests_TextConversions {
-    use crate::core_engine::rules::utils::text_types::{
-        StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition, TextPosition,
+    use crate::core_engine::{
+        rules::utils::text_types::{
+            StartEndIndex_from_StartEndTSPoint, StartEndIndex_from_StartEndTextPosition,
+            TextPosition,
+        },
+        utils::XcodeText,
     };
 
     use pretty_assertions::assert_eq;
 
     #[test]
     fn test_StartEndIndex_from_StartEndTextPosition_one_line() {
-        let text = "Hello, World!";
+        let text = XcodeText::from_str("Hello, World!");
         //                |--->|  start index 0, end index 5
         let start_position = TextPosition::new(0, 0);
         let end_position = TextPosition::new(0, 5);
-        let result = StartEndIndex_from_StartEndTextPosition(
-            &text.encode_utf16().collect(),
-            &start_position,
-            &end_position,
-        );
+        let result = StartEndIndex_from_StartEndTextPosition(&text, &start_position, &end_position);
 
         assert_eq!(result.is_some(), true);
 
@@ -619,15 +609,11 @@ mod tests_TextConversions {
 
     #[test]
     fn test_StartEndIndex_from_StartEndTextPosition_two_lines() {
-        let text = "Hello, World!\nHello, World!";
+        let text = XcodeText::from_str("Hello, World!\nHello, World!");
         //                |------------- ---->|  start index 0, end index 19
         let start_position = TextPosition::new(0, 0);
         let end_position = TextPosition::new(1, 5);
-        let result = StartEndIndex_from_StartEndTextPosition(
-            &text.encode_utf16().collect(),
-            &start_position,
-            &end_position,
-        );
+        let result = StartEndIndex_from_StartEndTextPosition(&text, &start_position, &end_position);
 
         assert_eq!(result.is_some(), true);
 
@@ -640,7 +626,7 @@ mod tests_TextConversions {
     // Write test for StartEndIndex_from_StartEndTSPoint
     #[test]
     fn test_StartEndIndex_from_StartEndTSPoint_one_line() {
-        let text = "Hello, World!".encode_utf16().collect();
+        let text = XcodeText::from_str("Hello, World!");
         let start_position = TextPosition::new(0, 0);
         let end_position = TextPosition::new(0, 5);
         let start_point = start_position.as_TSPoint();
@@ -669,26 +655,26 @@ pub fn get_index_of_next_row(index: usize, text: &XcodeText) -> Option<usize> {
 
 #[cfg(test)]
 mod tests_Text {
-    use crate::core_engine::rules::get_index_of_next_row;
+    use crate::core_engine::{rules::get_index_of_next_row, utils::XcodeText};
 
     #[test]
     fn test_index_of_next_row() {
         // No new row in text
         assert_eq!(
-            get_index_of_next_row(5, &"Hello, World!".encode_utf16().collect()),
+            get_index_of_next_row(5, &(XcodeText::from_str("Hello, World!"))),
             None
         );
 
         // return index at new row and keep end index
-        let text = "Hello,
-      World!"
-            .encode_utf16()
-            .collect();
+        let text = XcodeText::from_str(
+            "Hello,
+      World!",
+        );
         assert_eq!(get_index_of_next_row(5, &text), Some(7));
 
         // return index at new row and keep end index
         assert_eq!(
-            get_index_of_next_row(5, &"Hello test,\n Wor!ld!\n".encode_utf16().collect()),
+            get_index_of_next_row(5, &XcodeText::from_str("Hello test,\n Wor!ld!\n")),
             Some(12)
         );
     }

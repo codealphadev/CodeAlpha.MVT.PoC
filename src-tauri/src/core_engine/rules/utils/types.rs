@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    core_engine::{rules::swift_linter::LintLevel, utils::XcodeText},
     core_engine::rules::RuleMatch,
+    core_engine::{rules::swift_linter::LintLevel, utils::XcodeText},
     utils::geometry::{LogicalPosition, LogicalSize},
 };
 
@@ -81,7 +81,7 @@ impl MatchRange {
             return None;
         }
         Some(Self {
-            string: text[(range.index)..(range.index + range.length)].to_vec(),
+            string: XcodeText::from_array(&text[(range.index)..(range.index + range.length)]),
             range,
         })
     }
@@ -90,13 +90,13 @@ impl MatchRange {
 #[cfg(test)]
 mod tests_MatchRange {
 
-    use crate::core_engine::rules::TextRange;
+    use crate::core_engine::{rules::TextRange, utils::XcodeText};
 
     use super::MatchRange;
 
     #[test]
     fn test_from_text_and_range() {
-        let s = &"0123456789".encode_utf16().collect();
+        let s = &XcodeText::from_str(&"0123456789");
 
         let match_range = MatchRange::from_text_and_range(
             s,
@@ -109,7 +109,7 @@ mod tests_MatchRange {
         assert_eq!(
             match_range,
             Some(MatchRange {
-                string: "23456".encode_utf16().collect(),
+                string: XcodeText::from_str("23456"),
                 range: TextRange {
                     index: 2,
                     length: 5,

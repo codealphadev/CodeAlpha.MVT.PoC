@@ -5,7 +5,7 @@ use crate::core_engine::{
     ax_utils::{calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped},
     rules::{TextPosition, TextRange},
     types::{MatchRange, MatchRectangle},
-    utils::{xcode_char_is_whitespace, xcode_text_rows, XcodeText, XcodeTextRows},
+    utils::{xcode_char_is_whitespace, XcodeChar, XcodeText, XcodeTextRows},
 };
 
 fn code_block_kinds_with_declaration() -> Vec<&'static str> {
@@ -179,19 +179,18 @@ pub fn only_whitespace_on_line_until_position(
     position: TextPosition,
     text: &XcodeText,
 ) -> Option<bool> {
-    let text_clone = text.clone();
-    let lines = &xcode_text_rows(&text_clone).collect::<XcodeTextRows>();
-    if lines.len() - 1 < position.row {
+    let rows = &text.rows;
+    if rows.len() - 1 < position.row {
         return None;
     }
 
-    let row = &lines[position.row];
+    let row = &rows[position.row];
     if row.len() - 1 < position.column {
         return None;
     }
 
     for c_u16 in row[0..position.column].into_iter() {
-        if *c_u16 != ' ' as u16 {
+        if !xcode_char_is_whitespace(c_u16) {
             return Some(false);
         }
     }
@@ -214,56 +213,31 @@ pub struct LeftMostColumn {
 /// Returns:
 ///
 /// A LeftMostColumn struct
-pub fn get_left_most_column_in_rows(
-    range: TextRange,
-    text_content: &XcodeText,
-) -> Option<LeftMostColumn> {
-    if text_content.len() < range.index + range.length {
+pub fn get_left_most_column_in_rows(range: TextRange, text: &XcodeText) -> Option<LeftMostColumn> {
+    if text.len() < range.index + range.length {
         return None;
     }
-    let text = &text_content[range.index..range.index + range.length].to_vec();
-    let mut left_most_column_option: Option<usize> = None;
-    let mut left_most_row: usize = 0;
-    let mut left_most_index: usize = 0;
-
+    let text = XcodeText::from_array(&text[range.index..range.index + range.length]);
     let mut index = range.index;
-    let mut row = 0;
+    let mut rows_data = vec![];
 
-    for line in xcode_text_rows(text) {
-        let mut column: usize = 0;
-        for &c_u16 in &line {
-            if c_u16 != ' ' as u16 {
-                break;
-            }
-            column += 1;
+    for (row_i, row) in text.rows_iter().enumerate() {
+        if let Some(non_whitespace_column_i) = row.iter().position(|c| !xcode_char_is_whitespace(c))
+        {
+            rows_data.push((row_i, index, non_whitespace_column_i));
         }
-
-        if (&line).iter().any(|c| !xcode_char_is_whitespace(c)) {
-            if let Some(left_most_column) = left_most_column_option {
-                if column < left_most_column {
-                    left_most_column_option = Some(column);
-                    left_most_row = row;
-                    left_most_index = index + column;
-                }
-            } else {
-                left_most_column_option = Some(column);
-                left_most_row = row;
-                left_most_index = index + column;
-            }
-        }
-
-        index += &line.len() + 1;
-        row += 1;
+        index += row.len() + 1;
     }
+    rows_data.sort_by(|a, b| a.2.cmp(&b.2));
 
-    if let Some(_) = left_most_column_option {
-        Some(LeftMostColumn {
-            index: left_most_index,
-            row: left_most_row,
-        })
-    } else {
-        None
+    if rows_data.len() > 0 {
+        let (row_i, index, non_whitespace_column_i) = rows_data[0];
+        return Some(LeftMostColumn {
+            index: index + non_whitespace_column_i,
+            row: row_i,
+        });
     }
+    None
 }
 
 fn get_node_start_index(node: &Node, text: &XcodeText) -> Option<usize> {
@@ -280,11 +254,11 @@ mod tests {
     mod only_whitespace_on_line_until_position {
         use crate::core_engine::{
             features::bracket_highlight::utils::only_whitespace_on_line_until_position,
-            rules::TextPosition,
+            rules::TextPosition, utils::XcodeText,
         };
 
         fn test_fn(text: &str, row: usize, column: usize, expected: Option<bool>) {
-            let text = text.encode_utf16().collect();
+            let text = XcodeText::from_str(text);
             let result =
                 only_whitespace_on_line_until_position(TextPosition { row, column }, &text);
             assert_eq!(result, expected);
@@ -368,13 +342,14 @@ mod tests {
         use crate::core_engine::{
             features::bracket_highlight::utils::{get_left_most_column_in_rows, LeftMostColumn},
             rules::TextRange,
+            utils::XcodeText,
         };
 
         fn test_fn(text: &str, index: usize, length: usize, expected: Option<LeftMostColumn>) {
             assert_eq!(
                 get_left_most_column_in_rows(
                     TextRange { index, length },
-                    &text.encode_utf16().collect()
+                    &XcodeText::from_str(text)
                 ),
                 expected
             );

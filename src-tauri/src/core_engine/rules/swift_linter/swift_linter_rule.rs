@@ -2,11 +2,14 @@ use std::process::Command;
 
 use crate::{
     ax_interaction::get_textarea_uielement,
-    core_engine::{rules::{
-        rule_match::RuleMatchProps,
-        utils::{ax_utils::get_text_range_of_line, text_types::TextRange, types::MatchRange},
-        RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
-    }, utils::XcodeText},
+    core_engine::{
+        rules::{
+            rule_match::RuleMatchProps,
+            utils::{ax_utils::get_text_range_of_line, text_types::TextRange, types::MatchRange},
+            RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
+        },
+        utils::XcodeText,
+    },
 };
 
 use super::types::{LintAlert, LintLevel, LintResults};
@@ -78,7 +81,7 @@ impl RuleBase for SwiftLinterRule {
                 let rule_match = RuleMatch::new(
                     RuleName::SwiftLinter,
                     MatchRange {
-                        string: "unknown yet".encode_utf16().collect::<XcodeText>(),
+                        string: XcodeText::from_str("unknown yet"),
                         range: TextRange {
                             index: char_range_for_line.index + lint_alert.1.column,
                             length: 1,

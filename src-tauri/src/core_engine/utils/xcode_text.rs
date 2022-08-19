@@ -1,35 +1,75 @@
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
 use crate::core_engine::rules::TextPosition;
+use std::{
+    ops::{Deref, DerefMut},
+    slice,
+};
 
 pub type XcodeChar = u16;
-pub type XcodeText = Vec<XcodeChar>;
-pub type XcodeTextRows = Vec<XcodeText>;
+pub type XcodeTextRows = Vec<Vec<XcodeChar>>;
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct XcodeTextLinesIterator {
-    curr: XcodeText,
-    next: Option<XcodeText>,
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+pub struct XcodeText {
+    pub text: Vec<XcodeChar>,
+    pub rows: Vec<Vec<XcodeChar>>,
 }
-impl Iterator for XcodeTextLinesIterator {
-    type Item = XcodeText;
-    fn next(&mut self) -> Option<Self::Item> {
-        let next = if let Some(next) = &self.next {
-            next
-        } else {
-            self.next = None;
-            return None;
-        };
 
-        if next.is_empty() {
-            self.next = None;
-            return Some(vec![]);
+impl<'a> XcodeText {
+    pub fn new_empty() -> Self {
+        Self {
+            text: vec![],
+            rows: vec![],
+        }
+    }
+
+    pub fn from_vec(vec: &Vec<XcodeChar>) -> Self {
+        Self {
+            text: vec.to_vec(),
+            rows: XcodeText::create_rows(vec),
+        }
+    }
+
+    pub fn from_str(str: &str) -> Self {
+        Self::from_vec(&str.encode_utf16().collect())
+    }
+
+    pub fn from_array(array: &[XcodeChar]) -> Self {
+        Self::from_vec(&array.to_vec())
+    }
+
+    pub fn utf16_bytes_count(&self) -> usize {
+        self.text.len() * 2
+    }
+
+    pub fn rows_iter(&self) -> slice::Iter<'_, Vec<u16>> {
+        self.rows.iter()
+    }
+
+    pub fn clone(&self) -> Self {
+        Self {
+            text: self.text.clone(),
+            rows: self.rows.clone(),
+        }
+    }
+
+    pub fn create_rows(text: &Vec<u16>) -> XcodeTextRows {
+        if text.is_empty() {
+            return vec![vec![]];
         }
 
+        let mut rows = vec![];
         let mut index_last_carriage_return = None;
-        for (i, c) in next.iter().enumerate() {
-            if *c == '\r' as XcodeChar {
+        let mut last_row_index = 0;
+        let mut i = 0;
+        while i < text.len() {
+            let ch = text[i];
+            if ch == '\r' as XcodeChar {
                 index_last_carriage_return = Some(i);
             }
-            if *c == '\n' as XcodeChar {
+
+            if ch == '\n' as XcodeChar {
                 let mut chars_to_remove = 0;
                 if let Some(last_char_was_carriage_return) = index_last_carriage_return {
                     if last_char_was_carriage_return == i - 1 {
@@ -37,27 +77,73 @@ impl Iterator for XcodeTextLinesIterator {
                     }
                 }
 
-                let curr = next[..i - chars_to_remove].to_vec();
-                let rest = next[i + 1..].to_vec();
-
-                self.curr = curr.clone();
-                self.next = Some(rest);
-                return Some(curr);
+                rows.push(text[last_row_index..i - chars_to_remove].to_vec());
+                last_row_index = i + 1;
+                i += chars_to_remove;
             }
+            i += 1;
         }
+        // last row where no \n exists
+        rows.push(text[last_row_index..].to_vec());
 
-        // No newline found
-        let response = next.clone();
-        self.curr = vec![];
-        self.next = None;
-        Some(response)
+        rows
     }
 }
 
-pub fn xcode_text_rows(text: &XcodeText) -> XcodeTextLinesIterator {
-    XcodeTextLinesIterator {
-        curr: vec![],
-        next: Some(text.to_vec()),
+impl<'a> IntoIterator for XcodeText {
+    type Item = XcodeChar;
+    type IntoIter = <Vec<u16> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.text.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a XcodeText {
+    type Item = &'a XcodeChar;
+    type IntoIter = slice::Iter<'a, XcodeChar>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.text.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut XcodeText {
+    type Item = &'a mut XcodeChar;
+    type IntoIter = slice::IterMut<'a, XcodeChar>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.text.iter_mut()
+    }
+}
+
+impl FromIterator<u16> for XcodeText {
+    fn from_iter<I: IntoIterator<Item = u16>>(iter: I) -> Self {
+        let mut text = vec![];
+        for i in iter {
+            text.push(i);
+        }
+        XcodeText::from_array(&text)
+    }
+}
+
+impl<'a> AsRef<[u16]> for XcodeText {
+    fn as_ref(&self) -> &[u16] {
+        &self.text
+    }
+}
+
+impl<'a> Deref for XcodeText {
+    type Target = Vec<XcodeChar>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.text
+    }
+}
+
+impl<'a> DerefMut for XcodeText {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.text
     }
 }
 
@@ -91,75 +177,62 @@ pub fn utf16_position_to_tresitter_point(point: &TextPosition) -> tree_sitter::P
 }
 
 #[cfg(test)]
-mod tests_utf16_lines {
-    use super::*;
+mod tests {
 
-    #[test]
-    fn no_new_line() {
-        let text: XcodeText = "Hello ✌🏻".encode_utf16().collect();
-        let expected: XcodeTextRows = vec![text.clone()];
-        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
-        println!("{:?}", lines);
-        assert_eq!(lines, expected);
-    }
+    #[cfg(test)]
+    mod rows {
+        use super::super::*;
 
-    #[test]
-    fn one_new_line() {
-        let text: XcodeText = "Hello ✌🏻\nWorld".encode_utf16().collect();
-        let expected: XcodeTextRows = vec![
-            "Hello ✌🏻".encode_utf16().collect(),
-            "World".encode_utf16().collect(),
-        ];
-        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
-        assert_eq!(lines, expected);
-    }
+        fn test_fn(text: &str, expected_str: Vec<&str>) {
+            let mut expected = vec![];
+            for i in 0..expected_str.len() {
+                expected.push(expected_str[i].encode_utf16().collect::<Vec<u16>>());
+            }
+            let rows = XcodeText::create_rows(&text.encode_utf16().collect::<XcodeText>());
+            assert_eq!(rows, expected);
+        }
 
-    #[test]
-    fn newline_last_char() {
-        let text: XcodeText = "o\n".encode_utf16().collect();
-        let expected: XcodeTextRows = vec!["o".encode_utf16().collect(), vec![]];
-        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
-        assert_eq!(lines, expected);
-    }
+        #[test]
+        fn no_new_row() {
+            test_fn("Hello ✌🏻", vec!["Hello ✌🏻"]);
+        }
 
-    #[test]
-    fn only_newline() {
-        let text: XcodeText = "\n".encode_utf16().collect();
-        let expected: XcodeTextRows = vec![vec![], vec![]];
-        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
-        assert_eq!(lines, expected);
-    }
+        #[test]
+        fn one_new_row() {
+            test_fn("Hello ✌🏻\nWorld", vec!["Hello ✌🏻", "World"]);
+        }
 
-    #[test]
-    fn carriage_return() {
-        let text: XcodeText = "Hello ✌🏻\nWorld\r\ntest".encode_utf16().collect();
-        let expected: XcodeTextRows = vec![
-            "Hello ✌🏻".encode_utf16().collect(),
-            "World".encode_utf16().collect(),
-            "test".encode_utf16().collect(),
-        ];
-        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
-        println!("{:?}", lines);
-        assert_eq!(lines, expected);
-    }
+        #[test]
+        fn newline_last_char() {
+            test_fn("o\n", vec!["o", ""]);
+        }
 
-    #[test]
-    fn carriage_return_wrong_place() {
-        let text: XcodeText = "He\rllo\nWorld".encode_utf16().collect();
-        let expected: XcodeTextRows = vec![
-            "He\rllo".encode_utf16().collect(),
-            "World".encode_utf16().collect(),
-        ];
-        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
-        println!("{:?}", lines);
-        assert_eq!(lines, expected);
-    }
+        #[test]
+        fn only_newline() {
+            test_fn("\n", vec!["", ""]);
+        }
 
-    #[test]
-    fn empty_vec() {
-        let text: XcodeText = vec![];
-        let expected: XcodeTextRows = vec![vec![]];
-        let lines: XcodeTextRows = xcode_text_rows(&text).collect();
-        assert_eq!(lines, expected);
+        #[test]
+        fn start_two_empty_lines() {
+            test_fn("\n\n          test", vec!["", "", "          test"]);
+        }
+
+        #[test]
+        fn carriage_return() {
+            test_fn(
+                "Hello ✌🏻\nWorld\r\ntest",
+                vec!["Hello ✌🏻", "World", "test"],
+            );
+        }
+
+        #[test]
+        fn carriage_return_wrong_place() {
+            test_fn("He\rllo\nWorld", vec!["He\rllo", "World"]);
+        }
+
+        #[test]
+        fn empty_vec() {
+            test_fn("", vec![""]);
+        }
     }
 }
