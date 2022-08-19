@@ -87,29 +87,28 @@ fn create_observer_and_add_notifications() -> Result<(), Error> {
     let xcode_pid = AXUIElement::application_with_bundle(EDITOR_XCODE_BUNDLE_ID)?.pid()?;
 
     // 1. Create AXObserver
-    let xcode_observer = AXObserver::new(xcode_pid, callback_xcode_notifications);
+    let mut xcode_observer = AXObserver::new(xcode_pid, callback_xcode_notifications)?;
     let ui_element = AXUIElement::application(xcode_pid);
 
-    if let Ok(mut xcode_observer) = xcode_observer {
-        store_registered_ax_observer(xcode_pid, ObserverType::XCode, &xcode_observer);
+    store_registered_ax_observer(xcode_pid, ObserverType::XCode, &xcode_observer);
 
-        // 2. Start AXObserver before adding notifications
-        xcode_observer.start();
+    // 2. Start AXObserver before adding notifications
+    xcode_observer.start();
 
-        // 3. Add notifications
-        for notification in OBSERVER_NOTIFICATIONS.iter() {
-            let _ = xcode_observer.add_notification(
-                notification,
-                &ui_element,
-                XCodeObserverState {
-                    app_handle: app_handle(),
-                    window_list: Vec::new(),
-                },
-            );
-        }
-
-        // 4. Kick of RunLoop on this thread
-        CFRunLoop::run_current();
+    // 3. Add notifications
+    for notification in OBSERVER_NOTIFICATIONS.iter() {
+        let _ = xcode_observer.add_notification(
+            notification,
+            &ui_element,
+            XCodeObserverState {
+                app_handle: app_handle(),
+                window_list: Vec::new(),
+            },
+        );
     }
+
+    // 4. Kick of RunLoop on this thread
+    CFRunLoop::run_current();
+
     Ok(())
 }
