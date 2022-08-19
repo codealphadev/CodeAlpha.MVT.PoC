@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
-#[derive(EnumIter, Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
+use ts_rs::TS;
+
+#[derive(EnumIter, Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, TS)]
+#[ts(export)]
 pub enum AppWindow {
     Settings,
     Analytics,
