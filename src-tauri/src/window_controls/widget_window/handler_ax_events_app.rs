@@ -1,6 +1,6 @@
 use crate::{
     ax_interaction::{
-        is_currently_focused_app_editor,
+        _is_currently_focused_app_editor,
         models::app::{AppContentActivationMessage, AppDeactivatedMessage, AppWindowMovedMessage},
     },
     window_controls::config::AppWindow,
@@ -47,7 +47,7 @@ pub fn on_deactivate_app(
 ) {
     widget_props.is_app_focused = false;
 
-    if let Some(is_focused_app_editor) = is_currently_focused_app_editor() {
+    if let Some(is_focused_app_editor) = _is_currently_focused_app_editor() {
         if !is_focused_app_editor {
             WidgetWindow::hide_widget_routine(&widget_props.app_handle);
         }

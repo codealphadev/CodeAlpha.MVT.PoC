@@ -8,7 +8,7 @@ use crate::{
         syntax_tree::{SwiftCodeBlock, SwiftSyntaxTree},
     },
     utils::messaging::ChannelList,
-    window_controls::events::EventWindowControls,
+    window_controls_two::EventWindowControls,
 };
 
 use super::docs_generation_task::DocsGenerationTask;
