@@ -82,6 +82,8 @@ impl WidgetWindow {
             corrected_position.y += offscreen_dist_y;
         }
 
+        set_shadow(&tauri_window, true).expect("Unsupported platform!");
+
         tauri_window
             .set_position(corrected_position.as_tauri_LogicalPosition())
             .ok()?;
