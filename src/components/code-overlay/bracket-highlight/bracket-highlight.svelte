@@ -3,6 +3,7 @@
 	import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { MatchRectangle } from '../../../../src-tauri/bindings/rules/utils/MatchRectangle';
+import { NeutralGrey } from '../../../theme';
 	import {
 		adjust_bracket_results_for_overlay,
 		BORDER_WIDTH,
@@ -56,7 +57,7 @@
 			bracket_highlight_line_rectangle.size.width
 		)}px;height: {Math.round(
 			bracket_highlight_line_rectangle.size.height
-		)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
+		)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: {NeutralGrey}; border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
 	/>
 {/if}
 {#if bracket_highlight_box_rectangle_first !== null}
@@ -67,7 +68,7 @@
 			bracket_highlight_box_rectangle_first.size.width
 		)}px;height: {Math.round(
 			bracket_highlight_box_rectangle_first.size.height
-		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
+		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {NeutralGrey};"
 	/>
 {/if}
 {#if bracket_highlight_box_rectangle_last !== null}
@@ -78,7 +79,7 @@
 			bracket_highlight_box_rectangle_last.size.width
 		)}px;height: {Math.round(
 			bracket_highlight_box_rectangle_last.size.height
-		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
+		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {NeutralGrey};"
 	/>
 {/if}
 {#if bottom_elbow_rectangle !== null}
@@ -89,6 +90,6 @@
 			bottom_elbow_rectangle.size.width
 		)}px;height: {Math.round(
 			bottom_elbow_rectangle.size.height
-		)}px; border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: rgba(182,182,182,0.7);"
+		)}px; border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: {NeutralGrey};"
 	/>
 {/if}
