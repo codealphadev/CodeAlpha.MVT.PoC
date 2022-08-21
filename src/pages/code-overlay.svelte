@@ -2,6 +2,7 @@
 	import { listen, Event } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { EventDocsGeneration } from '../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
+	import type { MatchRectangle } from '../../src-tauri/bindings/rules/utils/MatchRectangle';
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
@@ -25,24 +26,6 @@
 			}
 		});
 
-		let WindowControlsChannel: ChannelList = 'EventWindowControls';
-		await listen(WindowControlsChannel, (event) => {
-			const event_window_controls = JSON.parse(event.payload as string) as EventWindowControls;
-
-			switch (event_window_controls.event) {
-				case 'CodeOverlayDimensionsUpdate':
-					const updated_code_overlay_dim = event_window_controls.payload as unknown as LogicalFrame;
-					outerSize = updated_code_overlay_dim.size;
-					outerPosition = updated_code_overlay_dim.origin;
-					height = updated_code_overlay_dim.size.height;
-
-					compute_rule_rects();
-
-					break;
-				default:
-					break;
-			}
-		});
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
