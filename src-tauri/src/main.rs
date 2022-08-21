@@ -66,7 +66,8 @@ fn main() {
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
 
-            let handle = app.handle();
+            // Setup the observers for AX interactions and mouse events
+            setup_observers();
 
             // Create instance of widget window; panics if creation fails
             let widget_window_arc =
