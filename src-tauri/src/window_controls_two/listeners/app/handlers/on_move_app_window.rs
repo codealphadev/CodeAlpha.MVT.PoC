@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 
 use crate::{
     ax_interaction::models::app::AppWindowMovedMessage, utils::geometry::LogicalPosition,
-    window_controls::config::AppWindow, window_controls_two::WindowManager,
+    window_controls_two::config::AppWindow, window_controls_two::WindowManager,
 };
 
 pub fn on_move_app_window(

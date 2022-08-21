@@ -8,8 +8,8 @@ use crate::{
     app_handle,
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls_two::{
-        actions::create_default_window_builder,
         config::{default_properties, AppWindow},
+        utils::create_default_window_builder,
     },
 };
 

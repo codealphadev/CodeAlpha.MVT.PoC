@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use ts_rs::TS;
 
-use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
+use crate::{utils::messaging::ChannelList, window_controls_two::config::AppWindow};
 
 use super::models::{CodeAnnotationMessage, DocsGeneratedMessage};
 

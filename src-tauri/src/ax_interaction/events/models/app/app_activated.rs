@@ -1,4 +1,4 @@
-use crate::window_controls::config::AppWindow;
+use crate::window_controls_two::config::AppWindow;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

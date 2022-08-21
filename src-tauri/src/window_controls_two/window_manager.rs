@@ -7,7 +7,9 @@ use std::{
 use parking_lot::Mutex;
 
 use crate::{
-    app_handle, utils::geometry::LogicalFrame, window_controls::code_overlay::TrackingAreasManager,
+    app_handle,
+    core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
+    utils::geometry::LogicalFrame,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
@@ -19,6 +21,7 @@ use super::{
     },
     listeners::{app_listener, user_interaction_listener, xcode_listener},
     windows::{CodeOverlayWindow, EditorWindow, WidgetWindow},
+    TrackingAreasManager,
 };
 
 pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
@@ -262,4 +265,13 @@ impl WindowManager {
         user_interaction_listener(window_manager);
         xcode_listener(window_manager);
     }
+}
+
+#[tauri::command]
+pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool) {
+    EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
+        engine_active: app_active,
+        active_feature: None,
+    })
+    .publish_to_tauri(&app_handle);
 }

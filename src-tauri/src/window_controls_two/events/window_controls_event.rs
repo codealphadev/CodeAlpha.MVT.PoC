@@ -4,7 +4,7 @@ use ts_rs::TS;
 
 use crate::{
     utils::{geometry::LogicalFrame, messaging::ChannelList},
-    window_controls_two::AppWindow,
+    window_controls_two::config::AppWindow,
 };
 
 use super::models::{

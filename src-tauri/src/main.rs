@@ -7,24 +7,20 @@
 use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
-use commands::search_and_replace_commands;
 use core_engine::CoreEngine;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls_two::WindowManager;
 
-use crate::window_controls::{
-    cmd_toggle_app_activation, content_window::cmd_resize_content_window,
-};
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
 
 mod ax_interaction;
-mod commands;
 mod core_engine;
 mod utils;
-mod window_controls;
 mod window_controls_two;
 
 use lazy_static::lazy_static;
+
+use crate::window_controls_two::cmd_toggle_app_activation;
 
 lazy_static! {
     static ref APP_HANDLE: parking_lot::Mutex<Option<tauri::AppHandle>> =
@@ -52,11 +48,7 @@ fn main() {
     let system_tray = SystemTray::new().with_menu(tray_menu);
 
     let mut app: tauri::App = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            search_and_replace_commands::cmd_search_and_replace,
-            cmd_resize_content_window,
-            cmd_toggle_app_activation
-        ])
+        .invoke_handler(tauri::generate_handler![cmd_toggle_app_activation])
         .setup(|app| {
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());

@@ -10,8 +10,7 @@ use crate::{
         EventInputDevice,
     },
     utils::messaging::ChannelList,
-    window_controls::{
-        actions::{get_position, get_size},
+    window_controls_two::{
         config::AppWindow,
         events::{
             models::{
@@ -19,6 +18,7 @@ use crate::{
             },
             EventWindowControls,
         },
+        utils::{get_position, get_size},
     },
 };
 
@@ -82,7 +82,7 @@ impl TrackingAreasManager {
         self.tracking_areas = new_tracking_areas;
     }
 
-    pub fn track_mouse_position(&mut self, mouse_x: f64, mouse_y: f64) {
+    pub fn track_mouse_position(&mut self, mouse_x: f64, mouse_y: f64) -> Option<()> {
         self.previous_mouse_position = Some((mouse_x, mouse_y));
 
         // `Option<u64>` contains the duration in millis for how long the mouse has been in this tracking area.
@@ -97,7 +97,7 @@ impl TrackingAreasManager {
             {
                 if let Some(tracking_start) = tracking_area.1 {
                     // Case: TrackingArea was already entered before.
-                    if check_overlap_with_other_app_windows(mouse_x, mouse_y) {
+                    if check_overlap_with_other_app_windows(mouse_x, mouse_y)? {
                         // Case: Mouse is still inside the tracking area, but an app window opens above it.
                         // We publish a MouseExited event to the tracking area.
                         tracking_events.push(TrackingEvent {
@@ -116,7 +116,7 @@ impl TrackingAreasManager {
                     }
                 } else {
                     // Case: TrackingArea was not entered before, start tracking the time spent in the area.
-                    if check_overlap_with_other_app_windows(mouse_x, mouse_y) {
+                    if check_overlap_with_other_app_windows(mouse_x, mouse_y)? {
                         continue;
                     } else {
                         tracking_area.1 = Some(std::time::Instant::now());
@@ -143,13 +143,15 @@ impl TrackingAreasManager {
         }
 
         self.publish_tracking_state(&tracking_events);
+
+        Some(())
     }
 
-    pub fn track_mouse_click(&mut self, mouse_x: f64, mouse_y: f64) {
+    pub fn track_mouse_click(&mut self, mouse_x: f64, mouse_y: f64) -> Option<()> {
         self.previous_mouse_position = Some((mouse_x, mouse_y));
 
-        if check_overlap_with_other_app_windows(mouse_x, mouse_y) {
-            return;
+        if check_overlap_with_other_app_windows(mouse_x, mouse_y)? {
+            return Some(());
         }
 
         // `Option<u128>` contains the duration in millis for how long the mouse has been in this tracking area.
@@ -181,6 +183,8 @@ impl TrackingAreasManager {
         }
 
         self.publish_tracking_state(&tracking_results);
+
+        Some(())
     }
 
     fn publish_tracking_state(&self, tracking_results: &Vec<TrackingEvent>) {
@@ -335,7 +339,7 @@ fn check_code_overlay_visible() -> bool {
     false
 }
 
-fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> bool {
+fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> Option<bool> {
     use strum::IntoEnumIterator;
 
     for app_window in AppWindow::iter() {
@@ -343,19 +347,16 @@ fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> bool {
             continue;
         }
 
-        if let (Ok(origin), Ok(size)) = (
-            get_position(&app_handle(), app_window),
-            get_size(&app_handle(), app_window),
-        ) {
+        if let (Some(origin), Some(size)) = (get_position(app_window), get_size(app_window)) {
             if mouse_x >= origin.x
                 && mouse_x <= origin.x + size.width
                 && mouse_y >= origin.y
                 && mouse_y <= origin.y + size.height
             {
-                return true;
+                return Some(true);
             }
         }
     }
 
-    false
+    Some(false)
 }
