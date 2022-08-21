@@ -18,7 +18,7 @@ pub struct MintlifyRequest {
     context: String,
 }
 
-pub fn get_mintlify_documentation(
+pub fn _get_mintlify_documentation(
     code: &String,
     context: Option<String>,
 ) -> Option<MintlifyResponse> {
@@ -64,11 +64,11 @@ pub async fn mintlify_documentation(
 #[cfg(test)]
 mod tests_mintlify {
 
-    use super::get_mintlify_documentation;
+    use super::_get_mintlify_documentation;
 
     #[test]
     fn test_get_mintlify_documentation() {
-        let resp = get_mintlify_documentation(
+        let resp = _get_mintlify_documentation(
             &"print(\"Hello World\")".to_string(),
             Some("print(\"Hello World\")".to_string()),
         );
@@ -77,7 +77,7 @@ mod tests_mintlify {
 
     #[test]
     fn test_get_mintlify_documentation_without_context() {
-        let resp = get_mintlify_documentation(&"print(\"Hello World\")".to_string(), None);
+        let resp = _get_mintlify_documentation(&"print(\"Hello World\")".to_string(), None);
         assert!(resp.is_some());
     }
 }

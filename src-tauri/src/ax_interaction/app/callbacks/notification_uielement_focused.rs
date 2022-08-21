@@ -5,7 +5,7 @@ use crate::{
         models::app::{AppUIElementFocusedMessage, FocusedAppUIElement},
         AXEventApp, AppObserverState,
     },
-    window_controls::config::AppWindow,
+    window_controls_two::config::{default_properties, AppWindow},
 };
 
 /// Notify Tauri that a new uielement in a window of our app has been focused
@@ -17,23 +17,25 @@ pub fn notify_uielement_focused(
 
     let title = window_element.attribute(&AXAttribute::title())?;
 
-    #[allow(unused_assignments)]
-    let mut window = AppWindow::None;
+    use strum::IntoEnumIterator;
 
-    match title.to_string().as_str() {
-        "CodeAlpha - Guide" => window = AppWindow::Content,
-        "CodeAlpha - Settings" => window = AppWindow::Settings,
-        "CodeAlpha - Analytics" => window = AppWindow::Analytics,
-        "CodeAlpha - Widget" => window = AppWindow::Widget,
-        _ => window = AppWindow::None,
+    let mut window: Option<AppWindow> = None;
+    for app_window in AppWindow::iter() {
+        if title.to_string() == default_properties::title(&app_window) {
+            window = Some(app_window);
+            break;
+        }
     }
 
-    let uielement_focused_msg = AppUIElementFocusedMessage {
-        focused_ui_element: FocusedAppUIElement::Other,
-        window: window,
-    };
+    if let Some(window) = window {
+        let uielement_focused_msg = AppUIElementFocusedMessage {
+            focused_ui_element: FocusedAppUIElement::Other,
+            window: window,
+        };
 
-    AXEventApp::AppUIElementFocused(uielement_focused_msg).publish_to_tauri(&app_state.app_handle);
+        AXEventApp::AppUIElementFocused(uielement_focused_msg)
+            .publish_to_tauri(&app_state.app_handle);
+    }
 
     Ok(())
 }

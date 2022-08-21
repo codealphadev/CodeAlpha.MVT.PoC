@@ -17,7 +17,7 @@ use crate::{
         types::MatchRectangle,
     },
     utils::geometry::{LogicalPosition, LogicalSize},
-    window_controls::code_overlay::{
+    window_controls_two::{
         EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };
@@ -35,7 +35,7 @@ pub struct DocsGenerationTask {
     // The tracking area attached to the task. Is set to none, if it can not
     tracking_area: Option<TrackingArea>,
     docs_insertion_point: TextRange,
-    docs_indentation: usize,
+    _docs_indentation: usize,
     codeblock_first_char_pos: TextPosition,
     codeblock_last_char_pos: TextPosition,
     codeblock_text: String,
@@ -52,7 +52,7 @@ impl DocsGenerationTask {
         codeblock_first_char_position: TextPosition,
         codeblock_last_char_position: TextPosition,
         docs_insertion_point: TextRange,
-        docs_indentation: usize,
+        _docs_indentation: usize,
         codeblock_text: String,
     ) -> Self {
         Self {
@@ -63,7 +63,7 @@ impl DocsGenerationTask {
             pid,
             task_state: Arc::new(Mutex::new(DocsGenerationTaskState::Uninitialized)),
             docs_insertion_point,
-            docs_indentation,
+            _docs_indentation,
         }
     }
 

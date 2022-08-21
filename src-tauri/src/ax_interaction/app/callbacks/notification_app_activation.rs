@@ -1,15 +1,13 @@
 use accessibility::{AXAttribute, AXUIElement, Error};
 use enigo::Enigo;
+use tauri::Manager;
 
 use crate::{
     ax_interaction::{
         models::app::{AppActivatedMessage, AppDeactivatedMessage},
         AXEventApp, AppObserverState,
     },
-    window_controls::{
-        actions::{get_position, get_size},
-        config::AppWindow,
-    },
+    window_controls_two::config::AppWindow,
 };
 
 /// Notify Tauri that our app has been activated, which means focus has moved to our app from a different application.
@@ -75,23 +73,27 @@ pub fn notifiy_app_deactivated(
 ///
 /// An Option containing the focused AppWindow if mouse cursor is inside the widget window, otherwise None
 fn check_focus_on_widget_window(app_handle: &tauri::AppHandle) -> Option<AppWindow> {
-    let mut app_window: Option<AppWindow> = None;
-    if let (Ok(position), Ok(size)) = (
-        get_position(&app_handle, AppWindow::Widget),
-        get_size(&app_handle, AppWindow::Widget),
-    ) {
-        let cursor_location: (i32, i32) = Enigo::mouse_location();
+    let tauri_window = app_handle.get_window(&AppWindow::Widget.to_string())?;
+    let monitor = tauri_window.current_monitor().ok()??;
+    let scale_factor = monitor.scale_factor();
+    let origin = tauri_window
+        .outer_position()
+        .ok()?
+        .to_logical::<f64>(scale_factor);
+    let size = tauri_window
+        .outer_size()
+        .ok()?
+        .to_logical::<f64>(scale_factor);
 
-        if cursor_location.0 >= position.x as i32
-            && cursor_location.0 <= position.x as i32 + size.width as i32
-            && cursor_location.1 >= position.y as i32
-            && cursor_location.1 <= position.y as i32 + size.height as i32
-        {
-            app_window = Some(AppWindow::Widget);
-        }
-    } else {
-        app_window = None;
+    let cursor_location: (i32, i32) = Enigo::mouse_location();
+
+    if cursor_location.0 >= origin.x as i32
+        && cursor_location.0 <= origin.x as i32 + size.width as i32
+        && cursor_location.1 >= origin.y as i32
+        && cursor_location.1 <= origin.y as i32 + size.height as i32
+    {
+        Some(AppWindow::Widget);
     }
 
-    app_window
+    None
 }

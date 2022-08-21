@@ -10,7 +10,7 @@ use window_shadows::set_shadow;
 use crate::{
     app_handle,
     utils::geometry::{LogicalPosition, LogicalSize},
-    window_controls_two::{actions::create_default_window_builder, config::AppWindow},
+    window_controls_two::{config::AppWindow, utils::create_default_window_builder},
     DEV_MODE,
 };
 
