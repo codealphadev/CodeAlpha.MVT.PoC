@@ -17,7 +17,7 @@ use crate::{
         types::MatchRectangle,
     },
     utils::geometry::{LogicalPosition, LogicalSize},
-    window_controls_two::{
+    window_controls::{
         EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };

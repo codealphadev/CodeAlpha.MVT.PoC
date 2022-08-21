@@ -7,7 +7,7 @@ use crate::{
         models::app::{AppActivatedMessage, AppDeactivatedMessage},
         AXEventApp, AppObserverState,
     },
-    window_controls_two::config::AppWindow,
+    window_controls::config::AppWindow,
 };
 
 /// Notify Tauri that our app has been activated, which means focus has moved to our app from a different application.

@@ -3,7 +3,7 @@ use cocoa::appkit::CGPoint;
 
 use crate::{
     ax_interaction::{models::app::AppWindowMovedMessage, AXEventApp, AppObserverState},
-    window_controls_two::config::{default_properties, AppWindow},
+    window_controls::config::{default_properties, AppWindow},
 };
 
 /// Notify Tauri that a window of our app has been moved
