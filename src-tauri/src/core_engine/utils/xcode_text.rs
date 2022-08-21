@@ -88,6 +88,29 @@ impl<'a> XcodeText {
 
         rows
     }
+
+    pub fn char_is_whitespace(c: &XcodeChar) -> bool {
+        if let Ok(u8_c) = u8::try_from(*c) {
+            if (u8_c as char).is_whitespace() {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn treesitter_point_to_position(point: &tree_sitter::Point) -> TextPosition {
+        TextPosition {
+            row: point.row,
+            column: point.column / 2,
+        }
+    }
+
+    pub fn position_to_tresitter_point(point: &TextPosition) -> tree_sitter::Point {
+        tree_sitter::Point {
+            row: point.row,
+            column: point.column * 2,
+        }
+    }
 }
 
 impl<'a> IntoIterator for XcodeText {
@@ -144,35 +167,6 @@ impl<'a> Deref for XcodeText {
 impl<'a> DerefMut for XcodeText {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.text
-    }
-}
-
-pub fn xcode_char_is_whitespace(c: &XcodeChar) -> bool {
-    if let Ok(u8_c) = u8::try_from(*c) {
-        if (u8_c as char).is_whitespace() {
-            return true;
-        }
-    }
-    false
-}
-
-// Used in tests
-#[allow(dead_code)]
-pub fn utf16_bytes_count(c: &XcodeText) -> usize {
-    c.len() * 2
-}
-
-pub fn utf16_treesitter_point_to_position(point: &tree_sitter::Point) -> TextPosition {
-    TextPosition {
-        row: point.row,
-        column: point.column / 2,
-    }
-}
-
-pub fn utf16_position_to_tresitter_point(point: &TextPosition) -> tree_sitter::Point {
-    tree_sitter::Point {
-        row: point.row,
-        column: point.column * 2,
     }
 }
 

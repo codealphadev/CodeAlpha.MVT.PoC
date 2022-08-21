@@ -166,10 +166,7 @@ mod tests_SwiftSyntaxTree {
 
     use std::path::PathBuf;
 
-    use crate::core_engine::{
-        rules::TextPosition,
-        utils::{utf16_bytes_count, utf16_treesitter_point_to_position, XcodeText},
-    };
+    use crate::core_engine::{rules::TextPosition, utils::XcodeText};
 
     use super::SwiftSyntaxTree;
     use pretty_assertions::assert_eq;
@@ -264,13 +261,13 @@ mod tests_SwiftSyntaxTree {
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
         assert_eq!(root_node.start_byte(), 0);
-        assert_eq!(root_node.end_byte(), utf16_bytes_count(&text));
+        assert_eq!(root_node.end_byte(), text.utf16_bytes_count());
         assert_eq!(
-            utf16_treesitter_point_to_position(&root_node.start_position()),
+            XcodeText::treesitter_point_to_position(&root_node.start_position()),
             TextPosition { row: 0, column: 0 }
         );
         assert_eq!(
-            utf16_treesitter_point_to_position(&root_node.end_position()),
+          XcodeText::treesitter_point_to_position(&root_node.end_position()),
             TextPosition { row: 1, column: 0 }
         );
     }
@@ -286,13 +283,13 @@ mod tests_SwiftSyntaxTree {
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
         assert_eq!(root_node.start_byte(), 0);
-        assert_eq!(root_node.end_byte(), utf16_bytes_count(&text));
+        assert_eq!(root_node.end_byte(), text.utf16_bytes_count());
         assert_eq!(
-            utf16_treesitter_point_to_position(&root_node.start_position()),
+            XcodeText::treesitter_point_to_position(&root_node.start_position()),
             TextPosition { row: 0, column: 0 }
         );
         assert_eq!(
-            utf16_treesitter_point_to_position(&root_node.end_position()),
+            XcodeText::treesitter_point_to_position(&root_node.end_position()),
             TextPosition { row: 0, column: 26 }
         );
     }
@@ -310,13 +307,13 @@ mod tests_SwiftSyntaxTree {
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
         assert_eq!(root_node.start_byte(), 0);
-        assert_eq!(root_node.end_byte(), utf16_bytes_count(&text));
+        assert_eq!(root_node.end_byte(), text.utf16_bytes_count());
         assert_eq!(
-            utf16_treesitter_point_to_position(&root_node.start_position()),
+            XcodeText::treesitter_point_to_position(&root_node.start_position()),
             TextPosition { row: 0, column: 0 }
         );
         assert_eq!(
-            utf16_treesitter_point_to_position(&root_node.end_position()),
+            XcodeText::treesitter_point_to_position(&root_node.end_position()),
             TextPosition { row: 1, column: 26 }
         );
     }
