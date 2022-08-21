@@ -133,7 +133,6 @@ impl CodeDocument {
 
     fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
         self.dark_mode = get_dark_mode(self.editor_window_props.pid).ok();
-        dbg!(get_dark_mode(self.editor_window_props.pid));
 
         // Send to CodeOverlay window
         if (self.dark_mode.is_some()) {
