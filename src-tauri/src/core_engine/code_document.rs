@@ -17,7 +17,8 @@ use crate::{
         send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
     },
     core_engine::rules::get_bounds_of_first_char_in_range,
-    utils::messaging::ChannelList, window_controls_two::config::AppWindow,
+    utils::messaging::ChannelList,
+    window_controls::config::AppWindow,
 };
 use tauri::Manager;
 

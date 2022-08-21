@@ -9,18 +9,18 @@ use std::sync::{Arc, Mutex};
 use ax_interaction::setup_observers;
 use core_engine::CoreEngine;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
-use window_controls_two::WindowManager;
+use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
 
 mod ax_interaction;
 mod core_engine;
 mod utils;
-mod window_controls_two;
+mod window_controls;
 
 use lazy_static::lazy_static;
 
-use crate::window_controls_two::cmd_toggle_app_activation;
+use crate::window_controls::cmd_toggle_app_activation;
 
 lazy_static! {
     static ref APP_HANDLE: parking_lot::Mutex<Option<tauri::AppHandle>> =

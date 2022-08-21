@@ -5,7 +5,7 @@ use crate::{
         models::app::{AppUIElementFocusedMessage, FocusedAppUIElement},
         AXEventApp, AppObserverState,
     },
-    window_controls_two::config::{default_properties, AppWindow},
+    window_controls::config::{default_properties, AppWindow},
 };
 
 /// Notify Tauri that a new uielement in a window of our app has been focused
