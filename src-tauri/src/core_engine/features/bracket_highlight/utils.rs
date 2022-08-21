@@ -5,7 +5,7 @@ use crate::core_engine::{
     ax_utils::{calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped},
     rules::{TextPosition, TextRange},
     types::{MatchRange, MatchRectangle},
-    utils::{xcode_char_is_whitespace, XcodeChar, XcodeText, XcodeTextRows},
+    utils::XcodeText,
 };
 
 fn code_block_kinds_with_declaration() -> Vec<&'static str> {
@@ -190,7 +190,7 @@ pub fn only_whitespace_on_line_until_position(
     }
 
     for c_u16 in row[0..position.column].into_iter() {
-        if !xcode_char_is_whitespace(c_u16) {
+        if !XcodeText::char_is_whitespace(c_u16) {
             return Some(false);
         }
     }
@@ -222,7 +222,8 @@ pub fn get_left_most_column_in_rows(range: TextRange, text: &XcodeText) -> Optio
     let mut rows_data = vec![];
 
     for (row_i, row) in text.rows_iter().enumerate() {
-        if let Some(non_whitespace_column_i) = row.iter().position(|c| !xcode_char_is_whitespace(c))
+        if let Some(non_whitespace_column_i) =
+            row.iter().position(|c| !XcodeText::char_is_whitespace(c))
         {
             rows_data.push((row_i, index, non_whitespace_column_i));
         }

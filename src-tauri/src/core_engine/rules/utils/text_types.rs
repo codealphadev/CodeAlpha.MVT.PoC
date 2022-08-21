@@ -3,9 +3,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::core_engine::utils::{
-    utf16_position_to_tresitter_point, utf16_treesitter_point_to_position, XcodeText,
-};
+use crate::core_engine::utils::XcodeText;
 
 /// A position in a multi-line text document, in terms of rows and columns.
 /// Rows and columns are zero-based.
@@ -22,7 +20,7 @@ impl TextPosition {
     }
 
     pub fn from_TSPoint(tree_sitter_point: &tree_sitter::Point) -> Self {
-        utf16_treesitter_point_to_position(tree_sitter_point)
+        XcodeText::treesitter_point_to_position(tree_sitter_point)
     }
 
     /// > Given a string and an index, return the row number and column number of the character at that
@@ -59,7 +57,7 @@ impl TextPosition {
     }
 
     pub fn as_TSPoint(&self) -> tree_sitter::Point {
-        utf16_position_to_tresitter_point(self)
+        XcodeText::position_to_tresitter_point(self)
     }
 
     pub fn as_TextIndex(&self, text: &XcodeText) -> Option<usize> {
@@ -314,8 +312,8 @@ impl TextRange {
     ) -> Option<TextRange> {
         Self::from_StartEndTextPosition(
             text,
-            &utf16_treesitter_point_to_position(start_position),
-            &utf16_treesitter_point_to_position(end_position),
+            &XcodeText::treesitter_point_to_position(start_position),
+            &XcodeText::treesitter_point_to_position(end_position),
         )
     }
 
