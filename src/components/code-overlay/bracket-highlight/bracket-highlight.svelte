@@ -12,10 +12,10 @@
 
 	export let code_overlay_rectangle: LogicalFrame | null;
 
-	let bracket_highlight_line_rectangle: LogicalFrame = null;
-	let bracket_highlight_box_rectangle_first: LogicalFrame = null;
-	let bracket_highlight_box_rectangle_last: LogicalFrame = null;
-	let bottom_elbow_rectangle: LogicalFrame = null;
+	let bracket_highlight_line_rectangle: LogicalFrame | null = null;
+	let bracket_highlight_box_rectangle_first: LogicalFrame | null = null;
+	let bracket_highlight_box_rectangle_last: LogicalFrame | null = null;
+	let bottom_elbow_rectangle: LogicalFrame | null = null;
 
 	const listenTauriEvents = async () => {
 		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
