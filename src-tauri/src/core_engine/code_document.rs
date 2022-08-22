@@ -78,7 +78,7 @@ impl CodeDocument {
             editor_window_props,
             text: None,
             file_path: None,
-            dark_mode,
+            dark_mode: None,
             selected_text_range: None,
             bracket_highlight: BracketHighlight::new(editor_window_props_clone.pid),
             docs_generator: docs_generator_arc,
@@ -135,7 +135,7 @@ impl CodeDocument {
         self.dark_mode = get_dark_mode(self.editor_window_props.pid).ok();
 
         // Send to CodeOverlay window
-        if (self.dark_mode.is_some()) {
+        if self.dark_mode.is_some() {
             let _ = self.app_handle.emit_to(
                 &AppWindow::CodeOverlay.to_string(),
                 &ChannelList::DarkModeUpdate.to_string(),
@@ -144,8 +144,6 @@ impl CodeDocument {
                 },
             );
         }
-        Ok(())
-    }
         Ok(())
     }
 
