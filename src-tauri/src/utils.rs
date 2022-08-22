@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 /// A file containing utilities that are used/shared across all modules of the project
 pub mod geometry {
 
