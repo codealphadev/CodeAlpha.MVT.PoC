@@ -76,8 +76,8 @@ pub mod geometry {
 
         pub fn from_CGRect(rect: &CGRect) -> Self {
             Self {
-                x: rect.origin.x as f64,
-                y: rect.origin.y as f64,
+                x: rect.origin.x,
+                y: rect.origin.y,
             }
         }
 
@@ -90,8 +90,8 @@ pub mod geometry {
 
         pub fn as_CGPoint(&self) -> CGPoint {
             CGPoint {
-                x: self.x as f64,
-                y: self.y as f64,
+                x: self.x,
+                y: self.y,
             }
         }
     }
@@ -119,8 +119,8 @@ pub mod geometry {
 
         pub fn from_CGRect(rect: &CGRect) -> Self {
             Self {
-                width: rect.size.width as f64,
-                height: rect.size.height as f64,
+                width: rect.size.width,
+                height: rect.size.height,
             }
         }
 
@@ -133,8 +133,8 @@ pub mod geometry {
 
         pub fn as_CGSize(&self) -> CGSize {
             CGSize {
-                width: self.width as f64,
-                height: self.height as f64,
+                width: self.width,
+                height: self.height,
             }
         }
     }
