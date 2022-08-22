@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { listen, Event } from '@tauri-apps/api/event';
+	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { EventDocsGeneration } from '../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
 	import type { CodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
@@ -14,7 +14,7 @@
 	type CodeAnnotation = CodeAnnotationMessage;
 
 	let code_overlay_rectangle: LogicalFrame | null = null;
-	let code_annotations: Array<CodeAnnotation> = [];
+	let code_annotation: CodeAnnotation | undefined = undefined;
 
 
 	const listenDarkModeEvents = async () => {
@@ -24,8 +24,8 @@
 			setTheme(payload.dark_mode ? 'dark' : 'light');	 //TODO: Type safety
 		})
 	}
-	
-	const listenTauriEvents = async () => {
+
+	const listenWindowChannels = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
 		await listen(WindowControlsChannel, (event) => {
 			const event_window_controls = JSON.parse(event.payload as string) as EventWindowControls;
@@ -38,24 +38,21 @@
 					break;
 			}
 		});
+	}
 
-
+	const listenCodeAnnotations = async () => {
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
 			const {payload, event: event_type} = JSON.parse(event.payload as string) as EventDocsGeneration;
 			switch (event_type) {
 				case 'UpdateCodeAnnotation':
-					const existing_item_index = code_annotations.findIndex((annotation) => annotation.id === payload.id);
-					if (existing_item_index !== -1) {
-						code_annotations[existing_item_index] = payload;
-					} else {
-						code_annotations.push(payload);
-					}
-					code_annotations = code_annotations;
+					code_annotation = payload;
 					break;
 				case 'RemoveCodeAnnotation':
-					code_annotations = code_annotations.filter(annotation => annotation.id !== payload.id)
+					if (code_annotation?.id === payload.id) {
+						code_annotation = undefined;
+					}
 					break;
 				default:
 					break;
@@ -63,7 +60,8 @@
 		});
 	};
 
-	listenTauriEvents();
+	listenCodeAnnotations();
+	listenWindowChannels();
 	listenDarkModeEvents();
 
 </script>
@@ -76,11 +74,11 @@
 		id="overlay"
 	>
 		<BracketHighlight {code_overlay_rectangle} />
-		{#each code_annotations as annotation}
+		{#if code_annotation}
 			<DocsAnnotations
-				annotation={annotation}
+				annotation={code_annotation}
 				code_overlay_position={code_overlay_rectangle.origin}
 			/>
-		{/each}
+		{/if}
 	</div>
 {/if}

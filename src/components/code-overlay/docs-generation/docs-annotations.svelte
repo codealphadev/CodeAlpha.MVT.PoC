@@ -93,15 +93,3 @@
 		/>
 	</div>
 {/if}
-
-<style>
-	@keyframes reveal {
-		from { clip-path: inset(0% 0% 100% 0%); }
-		to { clip-path: inset(0% 0% 0% 0%)}
-	}
-
-	.annotation-line {
-		animation: reveal 0.13s ease-out forwards;
-
-	}
-</style>
