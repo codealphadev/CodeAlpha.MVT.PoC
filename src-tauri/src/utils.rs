@@ -109,6 +109,37 @@ pub mod geometry {
                 size: self.size.as_CGSize(),
             }
         }
+
+        pub fn contains_point(&self, x: f64, y: f64) -> bool {
+            // Check if mouse_x and mouse_y are within the bounds of the rectangle.
+            let x_in_bounds = x >= self.origin.x && x <= self.origin.x + self.size.width;
+            let y_in_bounds = y >= self.origin.y && y <= self.origin.y + self.size.height;
+            x_in_bounds && y_in_bounds
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+
+        use crate::utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize};
+
+        #[test]
+        fn contains_point() {
+            let rectangle = LogicalFrame {
+                origin: LogicalPosition { x: 0.0, y: 0.0 },
+                size: LogicalSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            };
+
+            assert!(rectangle.contains_point(50., 50.));
+            assert!(rectangle.contains_point(0., 0.));
+            assert!(rectangle.contains_point(100., 100.));
+            assert!(!rectangle.contains_point(101., 100.));
+            assert!(!rectangle.contains_point(100., 101.));
+            assert!(!rectangle.contains_point(150., 150.));
+        }
     }
 }
 

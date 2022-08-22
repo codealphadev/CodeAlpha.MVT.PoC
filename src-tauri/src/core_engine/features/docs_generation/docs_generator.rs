@@ -4,9 +4,9 @@ use tauri::Manager;
 
 use crate::{
     core_engine::{
-        rules::{TextPosition, TextRange},
         syntax_tree::{SwiftCodeBlock, SwiftSyntaxTree},
         utils::{XcodeChar, XcodeText},
+        TextPosition, TextRange,
     },
     utils::messaging::ChannelList,
     window_controls::EventWindowControls,

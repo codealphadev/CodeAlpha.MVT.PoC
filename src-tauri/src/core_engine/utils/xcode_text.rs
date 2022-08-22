@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::core_engine::rules::TextPosition;
 use std::{
     ops::{Deref, DerefMut},
     slice,
 };
+
+use super::TextPosition;
 
 pub type XcodeChar = u16;
 pub type XcodeTextRows = Vec<Vec<XcodeChar>>;

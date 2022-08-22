@@ -5,8 +5,9 @@ use super::{
     features::BracketHighlight,
     features::DocsGenerator,
     formatter::format_swift_file,
-    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps, TextPosition, TextRange},
+    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps},
     utils::XcodeText,
+    TextPosition, TextRange,
 };
 use crate::{
     ax_interaction::{

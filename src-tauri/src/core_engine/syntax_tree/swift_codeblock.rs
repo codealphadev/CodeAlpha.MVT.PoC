@@ -2,10 +2,7 @@ use std::str::FromStr;
 
 use tree_sitter::Node;
 
-use crate::core_engine::{
-    rules::{TextPosition, TextRange},
-    utils::XcodeText,
-};
+use crate::core_engine::utils::{TextPosition, XcodeText, TextRange};
 
 pub type Err = ();
 

@@ -2,10 +2,12 @@ use accessibility::AXUIElement;
 use tree_sitter::Node;
 
 use crate::core_engine::{
-    ax_utils::{calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped},
-    rules::{TextPosition, TextRange},
-    types::{MatchRange, MatchRectangle},
+    rules::{
+        calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped,
+        MatchRange, MatchRectangle,
+    },
     utils::XcodeText,
+    TextPosition, TextRange,
 };
 
 fn code_block_kinds_with_declaration() -> Vec<&'static str> {
@@ -255,7 +257,7 @@ mod tests {
     mod only_whitespace_on_line_until_position {
         use crate::core_engine::{
             features::bracket_highlight::utils::only_whitespace_on_line_until_position,
-            rules::TextPosition, utils::XcodeText,
+            utils::XcodeText, TextPosition,
         };
 
         fn test_fn(text: &str, row: usize, column: usize, expected: Option<bool>) {
@@ -342,8 +344,8 @@ mod tests {
     mod get_left_most_column_in_rows {
         use crate::core_engine::{
             features::bracket_highlight::utils::{get_left_most_column_in_rows, LeftMostColumn},
-            rules::TextRange,
             utils::XcodeText,
+            TextRange,
         };
 
         fn test_fn(text: &str, index: usize, length: usize, expected: Option<LeftMostColumn>) {

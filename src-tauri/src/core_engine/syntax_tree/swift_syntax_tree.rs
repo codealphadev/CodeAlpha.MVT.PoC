@@ -6,10 +6,7 @@ use std::{
 };
 use tree_sitter::{Node, Parser, Tree};
 
-use crate::core_engine::{
-    rules::{TextPosition, TextRange},
-    utils::XcodeText,
-};
+use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
 use super::swift_codeblock::SwiftCodeBlock;
 
@@ -166,7 +163,7 @@ mod tests_SwiftSyntaxTree {
 
     use std::path::PathBuf;
 
-    use crate::core_engine::{rules::TextPosition, utils::XcodeText};
+    use crate::core_engine::utils::{TextPosition, XcodeText};
 
     use super::SwiftSyntaxTree;
     use pretty_assertions::assert_eq;

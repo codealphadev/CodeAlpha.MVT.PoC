@@ -7,17 +7,16 @@ use crate::{
         xcode::actions::replace_range_with_clipboard_text,
     },
     core_engine::{
-        ax_utils::get_bounds_of_TextRange,
         events::{
             models::{CodeAnnotationMessage, DocsGeneratedMessage},
             EventDocsGeneration, EventRuleExecutionState,
         },
         features::docs_generation::mintlify_documentation,
-        rules::{TextPosition, TextRange},
-        types::MatchRectangle,
+        rules::get_bounds_of_TextRange,
         utils::XcodeText,
+        TextPosition, TextRange,
     },
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
         EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
@@ -44,8 +43,8 @@ pub struct DocsGenerationTask {
     task_state: Arc<Mutex<DocsGenerationTaskState>>,
 }
 
-type AnnotationIconRectangle = MatchRectangle;
-type CodeblockRectangle = MatchRectangle;
+type AnnotationIconRectangle = LogicalFrame;
+type CodeblockRectangle = LogicalFrame;
 
 impl DocsGenerationTask {
     pub fn new(

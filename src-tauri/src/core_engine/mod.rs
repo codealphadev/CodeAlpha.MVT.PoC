@@ -1,6 +1,6 @@
 pub use code_document::*;
 pub use core_engine::CoreEngine;
-pub use rules::utils::*;
+pub use utils::*;
 
 mod code_document;
 mod core_engine;

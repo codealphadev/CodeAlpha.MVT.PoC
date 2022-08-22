@@ -5,10 +5,11 @@ use crate::{
     core_engine::{
         rules::{
             rule_match::RuleMatchProps,
-            utils::{ax_utils::get_text_range_of_line, text_types::TextRange, types::MatchRange},
+            utils::{ax_utils::get_text_range_of_line, types::MatchRange},
             RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
         },
         utils::XcodeText,
+        TextRange,
     },
 };
 

@@ -13,7 +13,7 @@ use core_foundation::{
 use core_graphics_types::geometry::CGSize;
 use rdev::{simulate, EventType};
 
-use crate::core_engine::text_types::TextRange;
+use crate::core_engine::TextRange;
 
 static _EDITOR_NAME: &str = "Xcode";
 

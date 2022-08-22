@@ -3,10 +3,7 @@
 use differ::Differ;
 use tree_sitter::InputEdit;
 
-use crate::core_engine::{
-    rules::{TextPosition, TextRange},
-    utils::XcodeText,
-};
+use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum DiffType {
