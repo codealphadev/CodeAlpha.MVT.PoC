@@ -263,9 +263,9 @@ pub fn _window_ui_element_from_hash(pid: pid_t, hash: usize) -> Result<AXUIEleme
 
 /// Method takes the AXUIElement of the editor's textarea and returns its size without the scrollbars
 pub fn derive_xcode_textarea_dimensions(
-    child_element: &AXUIElement,
+    textarea_ui_element: &AXUIElement,
 ) -> Result<(tauri::LogicalPosition<f64>, tauri::LogicalSize<f64>), Error> {
-    let scrollarea_element = child_element.attribute(&AXAttribute::parent())?;
+    let scrollarea_element = textarea_ui_element.attribute(&AXAttribute::parent())?;
 
     // Get Size and Origin of AXScrollArea
     let scrollarea_pos_ax_value = scrollarea_element.attribute(&AXAttribute::position())?;

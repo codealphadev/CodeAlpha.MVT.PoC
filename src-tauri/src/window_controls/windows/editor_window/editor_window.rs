@@ -233,6 +233,49 @@ impl EditorWindow {
         Some(())
     }
 
+    pub fn update_textarea_dimensions(&mut self, textarea_global: LogicalFrame) -> Option<()> {
+        // Transform the textarea's origin to local coordinates.
+        let textarea = LogicalFrame {
+            origin: Self::transform_global_position_to_local_position(
+                self.window_position,
+                textarea_global.origin,
+                None,
+            ),
+            size: textarea_global.size,
+        };
+
+        let mut change_of_origin = None;
+        let mut change_of_size = None;
+        if let (Some(textarea_pos_old), Some(textarea_size_old)) =
+            (self.textarea_position, self.textarea_size)
+        {
+            let textarea_pos_old_global = Self::transform_local_position_to_global_position(
+                self.window_position,
+                textarea_pos_old,
+            );
+
+            change_of_origin = Some(LogicalSize {
+                width: textarea_global.origin.x - textarea_pos_old_global.x,
+                height: textarea_global.origin.y - textarea_pos_old_global.y,
+            });
+
+            change_of_size = Some(LogicalSize {
+                width: textarea.size.width - textarea_size_old.width,
+                height: textarea.size.height - textarea_size_old.height,
+            });
+        }
+
+        // Update the editor window's and textarea's dimensions.
+        self.set_textarea_dimensions(textarea.origin, textarea.size);
+        self.widget_position
+            .replace(Self::transform_global_position_to_local_position(
+                self.window_position,
+                self.get_updated_widget_position_global(change_of_origin?, change_of_size?)?,
+                None,
+            ));
+
+        Some(())
+    }
     pub fn update_focused_ui_element(
         &mut self,
         focused_ui_element: &FocusedUIElement,
@@ -299,7 +342,7 @@ impl EditorWindow {
     }
 
     fn get_updated_widget_position_global(
-        &mut self,
+        &self,
         diff_pos: LogicalSize,
         diff_size: LogicalSize,
     ) -> Option<LogicalPosition> {

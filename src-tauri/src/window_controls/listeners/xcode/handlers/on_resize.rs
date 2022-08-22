@@ -16,7 +16,7 @@ pub fn on_resize_editor_window(
     resize_msg: &EditorWindowResizedMessage,
 ) -> Option<()> {
     let window_manager = &mut window_manager.lock();
-    let editor_window_list = &mut window_manager.editor_windows().lock();
+    let editor_window_list = &mut window_manager.editor_windows().try_lock()?;
 
     let editor_window = editor_window_list.get_mut(&resize_msg.uielement_hash)?;
 
