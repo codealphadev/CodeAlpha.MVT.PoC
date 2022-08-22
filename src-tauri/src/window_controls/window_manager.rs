@@ -26,26 +26,17 @@ use super::{
 
 pub static HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS: u64 = 200;
 
-pub type Uuid = usize;
+pub type Uid = usize;
 
 #[derive(Debug)]
 pub struct WindowManager {
     app_handle: tauri::AppHandle,
 
     /// HashMap of open editor windows.
-    editor_windows: Arc<Mutex<HashMap<Uuid, EditorWindow>>>,
-
-    // WidgetWindow
-    _widget_window: Arc<Mutex<WidgetWindow>>,
-
-    // CodeOverlayWindow
-    _code_overlay_window: Arc<Mutex<CodeOverlayWindow>>,
-
-    // TrackingAreasManager
-    _tracking_areas_manager: Arc<Mutex<TrackingAreasManager>>,
+    editor_windows: Arc<Mutex<HashMap<Uid, EditorWindow>>>,
 
     /// Identitfier of the currently focused editor window. Is None until the first window was focused.
-    focused_editor_window: Arc<Mutex<Option<Uuid>>>,
+    focused_editor_window: Arc<Mutex<Option<Uid>>>,
 
     /// Boolean saying if the currently focused application is an editor window.
     is_editor_focused: bool,
@@ -83,14 +74,11 @@ impl WindowManager {
             is_editor_focused: false,
             focused_app_window: None,
             is_core_engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
-            _widget_window: widget_window,
-            _code_overlay_window: code_overlay_window,
-            _tracking_areas_manager: tracking_areas_manager,
             temporarily_hide_until: Arc::new(Mutex::new(std::time::Instant::now())),
         })
     }
 
-    pub fn editor_windows(&self) -> &Arc<Mutex<HashMap<Uuid, EditorWindow>>> {
+    pub fn editor_windows(&self) -> &Arc<Mutex<HashMap<Uid, EditorWindow>>> {
         &self.editor_windows
     }
 
@@ -107,7 +95,7 @@ impl WindowManager {
         });
     }
 
-    pub fn focused_editor_window(&self) -> Option<Uuid> {
+    pub fn focused_editor_window(&self) -> Option<Uid> {
         self.focused_editor_window.lock().clone()
     }
 
@@ -127,7 +115,7 @@ impl WindowManager {
         self.is_core_engine_active = is_core_engine_active;
     }
 
-    pub fn set_focused_editor_window(&mut self, editor_window_hash: Uuid) {
+    pub fn set_focused_editor_window(&mut self, editor_window_hash: Uid) {
         self.focused_editor_window
             .lock()
             .replace(editor_window_hash);
@@ -145,7 +133,7 @@ impl WindowManager {
     pub fn show_app_windows(
         &self,
         app_windows: Vec<AppWindow>,
-        editor_id: Option<Uuid>,
+        editor_id: Option<Uid>,
     ) -> Option<()> {
         // If no editor id is given, the app windows are being shown in relation to the currently
         // focused editor window.
@@ -232,16 +220,16 @@ impl WindowManager {
     }
 
     pub fn delayed_show_app_windows(
-        editor_windows_arc: &Arc<Mutex<HashMap<Uuid, EditorWindow>>>,
-        focused_editor_window_arc: &Arc<Mutex<Option<Uuid>>>,
+        editor_windows_arc: &Arc<Mutex<HashMap<Uid, EditorWindow>>>,
+        focused_editor_window_arc: &Arc<Mutex<Option<Uid>>>,
     ) -> Option<()> {
         // Attempt try_lock() and early return if this fails; prevents deadlocks from happening.
         let editor_windows = editor_windows_arc.try_lock()?;
 
         let focused_editor_window = focused_editor_window_arc.lock();
 
-        let editor_uuid = focused_editor_window.as_ref()?;
-        let editor_window = editor_windows.get(editor_uuid)?;
+        let editor_Uid = focused_editor_window.as_ref()?;
+        let editor_window = editor_windows.get(editor_Uid)?;
 
         let textarea_position = editor_window.textarea_position(true)?;
         let textarea_size = editor_window.textarea_size()?;
