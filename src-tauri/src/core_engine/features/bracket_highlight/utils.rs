@@ -10,12 +10,12 @@ use crate::core_engine::{
 
 fn code_block_kinds_with_declaration() -> Vec<&'static str> {
     vec![
+        "catch_block",
         "do_statement",
         "else_statement",
         "for_statement",
         "guard_statement",
         "if_statement",
-        // "switch_entry", // 'case' uses : instead of {
         "switch_statement",
         "while_statement",
     ]
