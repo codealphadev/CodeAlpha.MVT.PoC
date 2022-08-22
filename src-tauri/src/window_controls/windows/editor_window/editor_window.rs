@@ -83,7 +83,10 @@ impl EditorWindow {
 
     pub fn textarea_position(&self, as_global_position: bool) -> Option<LogicalPosition> {
         if as_global_position {
-            Some(self.transform_local_position_to_global_position(self.textarea_position?))
+            Some(Self::transform_local_position_to_global_position(
+                self.window_position,
+                self.textarea_position?,
+            ))
         } else {
             self.textarea_position
         }
@@ -95,7 +98,10 @@ impl EditorWindow {
 
     pub fn widget_position(&self, as_global_position: bool) -> Option<LogicalPosition> {
         if as_global_position {
-            Some(self.transform_local_position_to_global_position(self.widget_position?))
+            Some(Self::transform_local_position_to_global_position(
+                self.window_position,
+                self.widget_position?,
+            ))
         } else {
             Some(self.widget_position?)
         }
@@ -110,7 +116,10 @@ impl EditorWindow {
         self.textarea_size = Some(size);
 
         EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
-            origin: self.transform_local_position_to_global_position(position),
+            origin: Self::transform_local_position_to_global_position(
+                self.window_position,
+                position,
+            ),
             size,
         })
         .publish_to_tauri(&app_handle());
@@ -123,7 +132,8 @@ impl EditorWindow {
     ) -> Option<()> {
         // Transform the textarea's origin to local coordinates.
         let textarea = LogicalFrame {
-            origin: self.transform_global_position_to_local_position(
+            origin: Self::transform_global_position_to_local_position(
+                self.window_position,
                 textarea_global.origin,
                 Some(window.origin),
             ),
@@ -146,8 +156,10 @@ impl EditorWindow {
         if let (Some(textarea_pos_old), Some(textarea_size_old)) =
             (self.textarea_position, self.textarea_size)
         {
-            let textarea_pos_old_global =
-                self.transform_local_position_to_global_position(textarea_pos_old);
+            let textarea_pos_old_global = Self::transform_local_position_to_global_position(
+                self.window_position,
+                textarea_pos_old,
+            );
 
             change_of_origin = LogicalSize {
                 width: textarea_global.origin.x - textarea_pos_old_global.x,
@@ -169,7 +181,8 @@ impl EditorWindow {
         self.window_size = window.size;
         self.set_textarea_dimensions(textarea.origin, textarea.size);
         self.widget_position
-            .replace(self.transform_global_position_to_local_position(
+            .replace(Self::transform_global_position_to_local_position(
+                self.window_position,
                 widget_position_global_updated?,
                 Some(window.origin),
             ));
@@ -199,7 +212,8 @@ impl EditorWindow {
         self.window_position = window.origin;
         self.window_size = window.size;
         self.widget_position
-            .replace(self.transform_global_position_to_local_position(
+            .replace(Self::transform_global_position_to_local_position(
+                self.window_position,
                 widget_position_global_updated?,
                 Some(window.origin),
             ));
@@ -215,7 +229,11 @@ impl EditorWindow {
     ) {
         // Transforming the global position of the textarea to a local position.
         let textarea_position = if let Some(textarea_position) = textarea_position_global {
-            Some(self.transform_global_position_to_local_position(textarea_position, None))
+            Some(Self::transform_global_position_to_local_position(
+                self.window_position,
+                textarea_position,
+                None,
+            ))
         } else {
             None
         };
@@ -229,8 +247,11 @@ impl EditorWindow {
 
     pub fn update_widget_position(&mut self, widget_position_global: LogicalPosition) {
         // Transforming the global position of the widget to a local position.
-        let widget_position =
-            self.transform_global_position_to_local_position(widget_position_global, None);
+        let widget_position = Self::transform_global_position_to_local_position(
+            self.window_position,
+            widget_position_global,
+            None,
+        );
 
         self.widget_position = Some(widget_position);
 
@@ -296,7 +317,10 @@ impl EditorWindow {
             }
         }
 
-        Some(self.transform_local_position_to_global_position(*widget_pos))
+        Some(Self::transform_local_position_to_global_position(
+            self.window_position,
+            *widget_pos,
+        ))
     }
 
     pub fn get_monitor(&self, app_handle: &tauri::AppHandle) -> Option<LogicalFrame> {
@@ -318,7 +342,7 @@ impl EditorWindow {
                 &monitor.size().to_logical::<f64>(scale_factor),
             );
 
-            if let Some(intersection_area) = intersection_area(
+            if let Some(intersection_area) = Self::intersection_area(
                 LogicalFrame {
                     origin: position,
                     size,
@@ -352,13 +376,13 @@ impl EditorWindow {
     /// A global position is relative to the origin of the primary screen. A local position, in this context,
     /// is defined as a position relative to the top left corner of the editor window (=origin).
     fn transform_local_position_to_global_position(
-        &self,
+        local_origin: LogicalPosition,
         local_position: LogicalPosition,
     ) -> LogicalPosition {
         let mut global_position = local_position;
 
-        global_position.x += &self.window_position.x;
-        global_position.y += &self.window_position.y;
+        global_position.x += local_origin.x;
+        global_position.y += local_origin.y;
 
         return global_position;
     }
@@ -369,7 +393,7 @@ impl EditorWindow {
     /// In case the editor window origin is updated and we need to use this new value for the transformation _before_
     /// updating Self, this method can take this updated origin as optional argument.
     fn transform_global_position_to_local_position(
-        &self,
+        local_origin: LogicalPosition,
         global_position: LogicalPosition,
         updated_local_origin: Option<LogicalPosition>,
     ) -> LogicalPosition {
@@ -379,47 +403,47 @@ impl EditorWindow {
             local_position.x -= updated_local_origin.x;
             local_position.y -= updated_local_origin.y;
         } else {
-            local_position.x -= &self.window_position.x;
-            local_position.y -= &self.window_position.y;
+            local_position.x -= local_origin.x;
+            local_position.y -= local_origin.y;
         }
 
         return local_position;
     }
-}
 
-fn intersection_area(rect_a: LogicalFrame, rect_b: LogicalFrame) -> Option<f64> {
-    let (a_x_min, a_y_min, a_x_max, a_y_max) = (
-        rect_a.origin.x,
-        rect_a.origin.y,
-        rect_a.origin.x + rect_a.size.width,
-        rect_a.origin.y + rect_a.size.height,
-    );
+    fn intersection_area(rect_a: LogicalFrame, rect_b: LogicalFrame) -> Option<f64> {
+        let (a_x_min, a_y_min, a_x_max, a_y_max) = (
+            rect_a.origin.x,
+            rect_a.origin.y,
+            rect_a.origin.x + rect_a.size.width,
+            rect_a.origin.y + rect_a.size.height,
+        );
 
-    let (b_x_min, b_y_min, b_x_max, b_y_max) = (
-        rect_b.origin.x,
-        rect_b.origin.y,
-        rect_b.origin.x + rect_b.size.width,
-        rect_b.origin.y + rect_b.size.height,
-    );
+        let (b_x_min, b_y_min, b_x_max, b_y_max) = (
+            rect_b.origin.x,
+            rect_b.origin.y,
+            rect_b.origin.x + rect_b.size.width,
+            rect_b.origin.y + rect_b.size.height,
+        );
 
-    let x_min = f64::max(a_x_min, b_x_min);
-    let y_min = f64::max(a_y_min, b_y_min);
-    let x_max = f64::min(a_x_max, b_x_max);
-    let y_max = f64::min(a_y_max, b_y_max);
-    let width = x_max - x_min;
-    let height = y_max - y_min;
-    if width < 0.0 || height < 0.0 {
-        return None;
+        let x_min = f64::max(a_x_min, b_x_min);
+        let y_min = f64::max(a_y_min, b_y_min);
+        let x_max = f64::min(a_x_max, b_x_max);
+        let y_max = f64::min(a_y_max, b_y_max);
+        let width = x_max - x_min;
+        let height = y_max - y_min;
+        if width < 0.0 || height < 0.0 {
+            return None;
+        }
+
+        Some(width * height)
     }
-
-    Some(width * height)
 }
 
 #[cfg(test)]
 mod tests_editor_window {
     use crate::{
         utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
-        window_controls::windows::editor_window::editor_window::intersection_area,
+        window_controls::windows::editor_window::editor_window::EditorWindow,
     };
 
     #[test]
@@ -438,7 +462,7 @@ mod tests_editor_window {
                 height: 10.0,
             },
         };
-        let intersection = intersection_area(rect_a, rect_b);
+        let intersection = EditorWindow::intersection_area(rect_a, rect_b);
         assert_eq!(intersection, Some(25.0));
     }
 
@@ -458,7 +482,29 @@ mod tests_editor_window {
                 height: 10.0,
             },
         };
-        let intersection = intersection_area(rect_a, rect_b);
+        let intersection = EditorWindow::intersection_area(rect_a, rect_b);
         assert_eq!(intersection, None);
+    }
+
+    #[test]
+    fn test_transform_local_position_to_global_position() {
+        let local_origin = LogicalPosition { x: 5.0, y: 3.0 };
+        let local_position = LogicalPosition { x: 5.0, y: 5.0 };
+        let global_position =
+            EditorWindow::transform_local_position_to_global_position(local_origin, local_position);
+        assert_eq!(global_position, LogicalPosition { x: 10.0, y: 8.0 });
+    }
+
+    #[test]
+    fn test_transform_global_position_to_local_position() {
+        let local_origin = LogicalPosition { x: 10.2, y: 22.2 };
+        let global_position = LogicalPosition { x: -5.0, y: 5.0 };
+        let updated_local_origin = None;
+        let local_position = EditorWindow::transform_global_position_to_local_position(
+            local_origin,
+            global_position,
+            updated_local_origin,
+        );
+        assert_eq!(local_position, LogicalPosition { x: -15.2, y: -17.2 });
     }
 }
