@@ -317,7 +317,7 @@ impl EditorWindow {
             self.set_textarea_dimensions(position, size)
         }
         self.focused_ui_element = Some(focused_ui_element.clone());
-        self.check_and_update_dark_mode();
+        self.check_and_update_dark_mode().ok();
     }
 
     pub fn update_widget_position(&mut self, widget_position_global: LogicalPosition) {
