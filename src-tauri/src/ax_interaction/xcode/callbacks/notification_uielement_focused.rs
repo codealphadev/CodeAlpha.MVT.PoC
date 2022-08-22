@@ -14,7 +14,20 @@ pub fn notify_uielement_focused(
     uielement_element: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    let window_element = uielement_element.attribute(&AXAttribute::window())?;
+    let window_element = if let Ok(window) = uielement_element.attribute(&AXAttribute::window()) {
+        window
+    } else {
+        AXEventXcode::EditorUIElementFocused(EditorUIElementFocusedMessage {
+            window_id: None,
+            focused_ui_element: FocusedUIElement::Other,
+            textarea_position: None,
+            textarea_size: None,
+            ui_elem_hash: None,
+            pid: None,
+        })
+        .publish_to_tauri(&xcode_observer_state.app_handle);
+        return Ok(());
+    };
 
     // Find window_element in xcode_observer_state.window_list to get id
     let known_window = xcode_observer_state
@@ -26,12 +39,12 @@ pub fn notify_uielement_focused(
 
     if let Some(window) = known_window {
         let mut uielement_focused_msg = EditorUIElementFocusedMessage {
-            window_id: window.0,
+            window_id: Some(window.0),
             focused_ui_element: FocusedUIElement::Other,
             textarea_position: None,
             textarea_size: None,
-            ui_elem_hash: window.3,
-            pid: window.1.pid()?,
+            ui_elem_hash: Some(window.3),
+            pid: Some(window.1.pid()?),
         };
 
         let role = uielement_element.attribute(&AXAttribute::role())?;
