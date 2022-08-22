@@ -338,9 +338,9 @@ fn on_editor_window_destroyed(
 fn on_editor_focused_uielement_changed(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
     uielement_focus_changed_msg: &EditorUIElementFocusedMessage,
-) {
+) -> Option<()> {
     if uielement_focus_changed_msg.focused_ui_element != FocusedUIElement::Textarea {
-        return;
+        return None;
     }
 
     let core_engine = &mut *(match core_engine_arc.lock() {
@@ -357,63 +357,43 @@ fn on_editor_focused_uielement_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    let textarea_uielement =
-        if let Some(uielem) = get_textarea_uielement(uielement_focus_changed_msg.pid) {
-            uielem
-        } else {
-            return;
-        };
+    let textarea_uielement = get_textarea_uielement(uielement_focus_changed_msg.pid?)?;
 
     // Update rule properties
-    let content_str = if let Ok(content) = textarea_uielement.value() {
-        if let Some(content_str) = content.downcast::<CFString>() {
-            content_str.to_string()
-        } else {
-            return;
-        }
-    } else {
-        return;
-    };
-
-    let file_path = if let Ok(uielem) = textarea_uielement.window() {
-        if let Ok(file_path) = get_file_path_from_window(&uielem) {
-            Some(file_path)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    let selected_text_range =
-        if let Ok(selected_text_range) = get_selected_text_range(uielement_focus_changed_msg.pid) {
-            selected_text_range
-        } else {
-            None
-        };
+    let content_str = textarea_uielement
+        .value()
+        .ok()?
+        .downcast::<CFString>()?
+        .to_string();
 
     _ = check_if_code_doc_needs_to_be_created(
         &app_handle,
         code_documents,
         EditorWindowProps {
-            id: uielement_focus_changed_msg.window_id,
-            pid: uielement_focus_changed_msg.pid,
-            uielement_hash: uielement_focus_changed_msg.ui_elem_hash,
+            id: uielement_focus_changed_msg.window_id?,
+            pid: uielement_focus_changed_msg.pid?,
+            uielement_hash: uielement_focus_changed_msg.ui_elem_hash?,
         },
     );
 
-    if let Some(code_doc) = code_documents.get_mut(&uielement_focus_changed_msg.ui_elem_hash) {
-        code_doc.update_doc_properties(&content_str, &file_path);
-        if let Some(selected_text_range) = selected_text_range {
-            code_doc.set_selected_text_range(selected_text_range.index, selected_text_range.length);
-        }
+    let file_path = get_file_path_from_window(&textarea_uielement.window().ok()?).ok();
+    let selected_text_range = get_selected_text_range(uielement_focus_changed_msg.pid?).ok()?;
 
-        // Checking if the engine is active. If not, it returns.
-        if !core_engine_active_status {
-            return;
-        }
-        code_doc.process_rules();
-        code_doc.process_bracket_highlight();
-        code_doc.compute_rule_visualizations();
+    let code_doc = code_documents.get_mut(&uielement_focus_changed_msg.ui_elem_hash?)?;
+
+    code_doc.update_doc_properties(&content_str, &file_path);
+    if let Some(selected_text_range) = selected_text_range {
+        code_doc.set_selected_text_range(selected_text_range.index, selected_text_range.length);
     }
+
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine_active_status {
+        return None;
+    }
+
+    code_doc.process_rules();
+    code_doc.process_bracket_highlight();
+    code_doc.compute_rule_visualizations();
+
+    Some(())
 }

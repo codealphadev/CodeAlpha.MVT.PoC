@@ -14,10 +14,18 @@ pub fn on_editor_ui_element_focus_change(
 ) -> Option<()> {
     let window_manager = &mut window_manager.lock();
 
+    let ui_element_hash = if let Some(ui_elem_hash) = focus_msg.ui_elem_hash {
+        ui_elem_hash
+    } else {
+        window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
+        window_manager.set_focused_editor_window(None);
+        return None;
+    };
+
     {
         let editor_window_list = &mut window_manager.editor_windows().lock();
 
-        let editor_window = editor_window_list.get_mut(&focus_msg.ui_elem_hash)?;
+        let editor_window = editor_window_list.get_mut(&ui_element_hash)?;
         editor_window.update_focused_ui_element(
             &focus_msg.focused_ui_element,
             unpack_logical_position_tauri(focus_msg.textarea_position),
@@ -27,7 +35,7 @@ pub fn on_editor_ui_element_focus_change(
 
     let mut need_temporary_hide = false;
     if let Some(previously_focused_window_id) = window_manager.focused_editor_window() {
-        if previously_focused_window_id != focus_msg.ui_elem_hash {
+        if previously_focused_window_id != ui_element_hash {
             if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
                 // Need to temporarily hide our windows when the user switches between editor windows
                 // This gives our windows time to gracefully update their positions and sizes.
@@ -37,10 +45,8 @@ pub fn on_editor_ui_element_focus_change(
             }
         } else {
             if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-                window_manager.show_app_windows(
-                    AppWindow::shown_on_focus_gained(),
-                    Some(focus_msg.ui_elem_hash),
-                );
+                window_manager
+                    .show_app_windows(AppWindow::shown_on_focus_gained(), Some(ui_element_hash));
             } else {
                 window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
             }
@@ -48,15 +54,13 @@ pub fn on_editor_ui_element_focus_change(
     } else {
         // Case: app was started while focus was already on a valid editor textarea.
         if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-            window_manager.show_app_windows(
-                AppWindow::shown_on_focus_gained(),
-                Some(focus_msg.ui_elem_hash),
-            );
+            window_manager
+                .show_app_windows(AppWindow::shown_on_focus_gained(), Some(ui_element_hash));
         }
     }
 
     // Set which editor window is currently focused
-    window_manager.set_focused_editor_window(focus_msg.ui_elem_hash);
+    window_manager.set_focused_editor_window(Some(ui_element_hash));
 
     if need_temporary_hide {
         window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());

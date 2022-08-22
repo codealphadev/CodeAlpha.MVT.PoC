@@ -98,10 +98,8 @@ impl WindowManager {
         self.is_core_engine_active = is_core_engine_active;
     }
 
-    pub fn set_focused_editor_window(&mut self, editor_window_hash: Uid) {
-        self.focused_editor_window
-            .lock()
-            .replace(editor_window_hash);
+    pub fn set_focused_editor_window(&mut self, editor_window_hash: Option<Uid>) {
+        *self.focused_editor_window.lock() = editor_window_hash;
     }
 
     pub fn set_focused_app_window(&mut self, app_window: AppWindow) {
