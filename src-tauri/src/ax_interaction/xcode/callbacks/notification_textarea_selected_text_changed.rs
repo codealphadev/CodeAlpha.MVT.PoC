@@ -5,7 +5,7 @@ use crate::ax_interaction::{
     models::editor::EditorTextareaSelectedTextChangedMessage, AXEventXcode, XCodeObserverState,
 };
 
-pub fn notifiy_textarea_selected_text_changed(
+pub fn notify_textarea_selected_text_changed(
     uielement: &AXUIElement,
     uielement_textarea: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,

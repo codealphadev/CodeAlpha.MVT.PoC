@@ -5,7 +5,7 @@ use crate::ax_interaction::{
     models::editor::EditorTextareaScrolledMessage, AXEventXcode, XCodeObserverState,
 };
 
-pub fn notifiy_textarea_scrolled(
+pub fn notify_textarea_scrolled(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {

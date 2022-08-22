@@ -148,13 +148,6 @@ extern "C" {
         effectiveRange: *const CFRange,
     ) -> CFDictionaryRef;
 
-    pub fn CFAttributedStringGetAttribute(
-        aStr: CFAttributedStringRef,
-        loc: CFIndex,
-        attrName: CFStringRef,
-        effectiveRange: *const CFRange,
-    ) -> CGColorRef;
-
     pub fn CGColorGetComponents(color: CGColorRef) -> *const CGFloat;
 }
 

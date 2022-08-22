@@ -5,7 +5,7 @@ use crate::ax_interaction::{
     models::editor::EditorTextareaZoomedMessage, AXEventXcode, XCodeObserverState,
 };
 
-pub fn notifiy_textarea_zoomed(
+pub fn notify_textarea_zoomed(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
