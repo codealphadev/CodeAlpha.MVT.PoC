@@ -36,6 +36,9 @@ pub fn window_control_events_listener(widget_window: &Arc<Mutex<WidgetWindow>>) 
             EventWindowControls::CodeOverlayDimensionsUpdate(_) => {
                 // Do nothing here
             }
+            EventWindowControls::DarkModeUpdate(_) => {
+                // Do nothing here
+            }
         }
     });
 }

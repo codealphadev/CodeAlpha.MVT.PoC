@@ -9,6 +9,7 @@ use crate::{
 
 use super::models::{
     app_window::{HideAppWindowMessage, ShowAppWindowMessage},
+    dark_mode::DarkModeUpdateMessage,
     TrackingAreaClickedMessage, TrackingAreaEnteredMessage, TrackingAreaExitedMessage,
 };
 
@@ -22,6 +23,7 @@ pub enum EventWindowControls {
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
     CodeOverlayDimensionsUpdate(LogicalFrame),
+    DarkModeUpdate(DarkModeUpdateMessage),
 }
 
 impl EventWindowControls {
@@ -42,6 +44,7 @@ impl EventWindowControls {
             EventWindowControls::AppWindowHide(_) => publish_to_frontend = false,
             EventWindowControls::AppWindowShow(_) => publish_to_frontend = false,
             EventWindowControls::CodeOverlayDimensionsUpdate(_) => publish_to_frontend = true,
+            EventWindowControls::DarkModeUpdate(_) => publish_to_frontend = true,
         }
 
         // Emit to CodeOverlay window

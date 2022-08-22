@@ -14,11 +14,11 @@ use crate::{
         get_xcode_editor_content, send_event_mouse_wheel, set_selected_text_range,
         update_xcode_editor_content,
     },
-    core_engine::{
-        events::models::DarkModeUpdateMessage, rules::get_bounds_of_first_char_in_range,
-    },
+    core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
-    window_controls::config::AppWindow,
+    window_controls::{
+        config::AppWindow, models::dark_mode::DarkModeUpdateMessage, EventWindowControls,
+    },
 };
 use tauri::Manager;
 
@@ -134,16 +134,10 @@ impl CodeDocument {
     fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
         self.dark_mode = get_dark_mode(self.editor_window_props.pid).ok();
 
-        // Send to CodeOverlay window
-        if self.dark_mode.is_some() {
-            let _ = self.app_handle.emit_to(
-                &AppWindow::CodeOverlay.to_string(),
-                &ChannelList::DarkModeUpdate.to_string(),
-                DarkModeUpdateMessage {
-                    dark_mode: self.dark_mode.ok_or("dark mode is None".to_string())?,
-                },
-            );
-        }
+        EventWindowControls::DarkModeUpdate(DarkModeUpdateMessage {
+            dark_mode: self.dark_mode.ok_or("dark mode is None".to_string())?,
+        })
+        .publish_to_tauri(&self.app_handle);
         Ok(())
     }
 
