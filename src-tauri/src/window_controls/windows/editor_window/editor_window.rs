@@ -316,8 +316,8 @@ impl EditorWindow {
         if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
             self.set_textarea_dimensions(position, size)
         }
-
         self.focused_ui_element = Some(focused_ui_element.clone());
+        self.check_and_update_dark_mode();
     }
 
     pub fn update_widget_position(&mut self, widget_position_global: LogicalPosition) {
