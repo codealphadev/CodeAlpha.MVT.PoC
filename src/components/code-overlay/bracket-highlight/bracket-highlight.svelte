@@ -2,7 +2,7 @@
 	import { listen } from '@tauri-apps/api/event';
 	import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
-	import type { MatchRectangle } from '../../../../src-tauri/bindings/rules/utils/MatchRectangle';
+	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 	import { NeutralGrey } from '../../../theme';
 	import {
 		adjust_bracket_results_for_overlay,
@@ -11,12 +11,12 @@
 		compute_bracket_highlight_line_rect
 	} from './bracket_highlight';
 
-	export let code_overlay_rectangle: MatchRectangle | null;
+	export let code_overlay_rectangle: LogicalFrame | null;
 
-	let bracket_highlight_line_rectangle: MatchRectangle = null;
-	let bracket_highlight_box_rectangle_first: MatchRectangle = null;
-	let bracket_highlight_box_rectangle_last: MatchRectangle = null;
-	let bottom_elbow_rectangle: MatchRectangle = null;
+	let bracket_highlight_line_rectangle: LogicalFrame = null;
+	let bracket_highlight_box_rectangle_first: LogicalFrame = null;
+	let bracket_highlight_box_rectangle_last: LogicalFrame = null;
+	let bottom_elbow_rectangle: LogicalFrame = null;
 
 	const listenTauriEvents = async () => {
 		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
