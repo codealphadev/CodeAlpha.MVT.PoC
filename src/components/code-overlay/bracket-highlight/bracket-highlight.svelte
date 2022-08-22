@@ -3,7 +3,7 @@
 	import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { MatchRectangle } from '../../../../src-tauri/bindings/rules/utils/MatchRectangle';
-import { NeutralGrey } from '../../../theme';
+	import { NeutralGrey } from '../../../theme';
 	import {
 		adjust_bracket_results_for_overlay,
 		BORDER_WIDTH,

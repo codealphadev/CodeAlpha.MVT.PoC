@@ -29,7 +29,7 @@ impl WidgetWindow {
     pub fn new() -> Result<Self, tauri::Error> {
         let app_handle = app_handle();
 
-        // Create CodeOverlay Window at startup.
+        // Create Widget Window at startup.
         // If the window is already created, don't open it again.
         if app_handle
             .get_window(&AppWindow::Widget.to_string())
