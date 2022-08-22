@@ -182,7 +182,7 @@ pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
             std::ptr::null(),
         ))
     };
-    // Everything is fine up to now.
+
     let keys_and_value_ptrs = attributes_dict.get_keys_and_values();
     let mut background_color_ptr = None;
 
