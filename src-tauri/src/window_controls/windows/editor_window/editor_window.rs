@@ -2,9 +2,14 @@ use tauri::Manager;
 
 use crate::{
     app_handle,
-    ax_interaction::models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
+    ax_interaction::{
+        get_dark_mode,
+        models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
+    },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
-    window_controls::{config::AppWindow, events::EventWindowControls},
+    window_controls::{
+        config::AppWindow, events::EventWindowControls, models::dark_mode::DarkModeUpdateMessage,
+    },
 };
 
 #[derive(Debug)]
@@ -52,12 +57,15 @@ pub struct EditorWindow {
     /// but get updated each time the user moves the widget manually
     h_boundary: HorizontalBoundary,
     v_boundary: VerticalBoundary,
+
+    dark_mode: Option<bool>,
 }
 
 impl EditorWindow {
     pub fn new(created_msg: &EditorWindowCreatedMessage) -> Self {
-        Self {
+        let mut editor_window = Self {
             _id: created_msg.ui_elem_hash,
+            dark_mode: None,
             editor_name: created_msg.editor_name.clone(),
             pid: created_msg.pid,
             window_position: LogicalPosition::from_tauri_LogicalPosition(
@@ -70,7 +78,9 @@ impl EditorWindow {
             h_boundary: HorizontalBoundary::Right,
             v_boundary: VerticalBoundary::Bottom,
             widget_position: None,
-        }
+        };
+        editor_window.check_and_update_dark_mode().ok();
+        editor_window
     }
 
     pub fn pid(&self) -> i32 {
@@ -123,6 +133,16 @@ impl EditorWindow {
             size,
         })
         .publish_to_tauri(&app_handle());
+    }
+
+    pub fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
+        self.dark_mode = get_dark_mode(self.pid).ok();
+
+        EventWindowControls::DarkModeUpdate(DarkModeUpdateMessage {
+            dark_mode: self.dark_mode.ok_or("dark mode is None".to_string())?,
+        })
+        .publish_to_tauri(&app_handle());
+        Ok(())
     }
 
     pub fn update_window_and_textarea_dimensions(

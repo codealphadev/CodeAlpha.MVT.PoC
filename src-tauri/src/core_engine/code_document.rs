@@ -11,15 +11,12 @@ use super::{
 };
 use crate::{
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_dark_mode, get_textarea_uielement,
-        get_xcode_editor_content, send_event_mouse_wheel, set_selected_text_range,
-        update_xcode_editor_content,
+        derive_xcode_textarea_dimensions, get_textarea_uielement, get_xcode_editor_content,
+        send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
     },
     core_engine::rules::get_bounds_of_first_char_in_range,
     utils::messaging::ChannelList,
-    window_controls::{
-        config::AppWindow, models::dark_mode::DarkModeUpdateMessage, EventWindowControls,
-    },
+    window_controls::config::AppWindow,
 };
 use tauri::Manager;
 
@@ -58,8 +55,6 @@ pub struct CodeDocument {
 
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,
-
-    dark_mode: Option<bool>,
 }
 
 impl CodeDocument {
@@ -71,21 +66,17 @@ impl CodeDocument {
         let pid = editor_window_props.pid;
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
         DocsGenerator::start_listener_window_control_events(&app_handle, &docs_generator_arc);
-        // TODO: Log if dark mode detection is not working properly.
 
-        let mut created_doc: CodeDocument = CodeDocument {
+        CodeDocument {
             app_handle,
             rules: vec![],
             editor_window_props,
             text: None,
             file_path: None,
-            dark_mode: None,
             selected_text_range: None,
             bracket_highlight: BracketHighlight::new(editor_window_props_clone.pid),
             docs_generator: docs_generator_arc,
-        };
-        created_doc.check_and_update_dark_mode();
-        return created_doc;
+        }
     }
 
     pub fn update_doc_properties(
@@ -126,20 +117,6 @@ impl CodeDocument {
         for rule in &mut self.rules {
             rule.run();
         }
-    }
-
-    pub fn handle_gain_focus(&mut self) {
-        self.check_and_update_dark_mode();
-    }
-
-    fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
-        self.dark_mode = get_dark_mode(self.editor_window_props.pid).ok();
-
-        EventWindowControls::DarkModeUpdate(DarkModeUpdateMessage {
-            dark_mode: self.dark_mode.ok_or("dark mode is None".to_string())?,
-        })
-        .publish_to_tauri(&self.app_handle);
-        Ok(())
     }
 
     pub fn process_bracket_highlight(&mut self) {

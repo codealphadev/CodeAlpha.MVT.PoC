@@ -16,10 +16,11 @@ pub fn on_activate_editor_app(
     let mut is_textarea_focused = false;
     {
         let editor_window_list = &mut window_manager.editor_windows().lock();
-        let editor_window = editor_window_list.get(&window_manager.focused_editor_window()?)?;
+        let editor_window = editor_window_list.get_mut(&window_manager.focused_editor_window()?)?;
 
         if *editor_window.focused_ui_element()? == FocusedUIElement::Textarea {
             is_textarea_focused = true;
+            editor_window.check_and_update_dark_mode().ok();
         }
     }
 
