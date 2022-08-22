@@ -195,14 +195,12 @@ impl TrackingAreasManager {
             if Self::evaluate_event_subscriptions(event_type, &area.event_subscriptions) {
                 match event_type {
                     TrackingEventType::MouseEntered => {
-                        println!("Mouse entered tracking area: {:?}", area.id);
                         EventWindowControls::TrackingAreaEntered(TrackingAreaEnteredMessage {
                             id: area.id,
                         })
                         .publish_to_tauri(&self.app_handle);
                     }
                     TrackingEventType::MouseExited => {
-                        println!("Mouse exited tracking area: {:?}", area.id);
                         let duration_ms = if let Some(duration_ms) = *duration_in_area_ms {
                             duration_ms
                         } else {
@@ -219,7 +217,6 @@ impl TrackingAreasManager {
                         // We don't see a use case for this at the moment. Hovering is detecting by the entering message.
                     }
                     TrackingEventType::MouseClicked => {
-                        println!("Mouse clicked tracking area: {:?}", area.id);
                         let duration_ms = if let Some(duration_ms) = *duration_in_area_ms {
                             duration_ms
                         } else {

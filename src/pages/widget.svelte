@@ -41,25 +41,21 @@
 			// widget icon to the logo after some delay
 			switch (ruleExecutionState.event) {
 				case 'SwiftFormatFinished':
-					console.log('SwiftFormatFinished');
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, show_alternate_icon_duration);
 					break;
 				case 'DocsGenerationStarted':
-					console.log('DocsGenerationStarted');
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, processing_timeout);
 					break;
 				case 'DocsGenerationFinished':
-					console.log('DocsGenerationFinished');
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, show_alternate_icon_duration);
 					break;
 				default:
-					console.log('Default');
 					break;
 			}
 		});
