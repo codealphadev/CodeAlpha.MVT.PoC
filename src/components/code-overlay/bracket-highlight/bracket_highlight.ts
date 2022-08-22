@@ -58,6 +58,8 @@ export const compute_bracket_highlight_line_rect = (
 	let is_on_same_line =
 		first_line_rect && last_line_rect && first_line_rect.origin.y === last_line_rect.origin.y;
 
+	let bottom_line_rectangle = null;
+
 	let line_rectangle = null;
 	if (is_on_same_line) {
 		line_rectangle = {
@@ -134,31 +136,29 @@ export const compute_bracket_highlight_line_rect = (
 				}
 			};
 		}
-	}
 
-	let bottom_line_rectangle = null;
-
-	if (elbow) {
-		let elbow_x = elbow.origin_x_left_most ? LEFT_MOST_LINE_X : elbow.origin_x;
-		line_rectangle.origin.x = elbow_x;
-		line_rectangle.size.width = first_line_rect.origin.x - elbow_x + BORDER_WIDTH * 2;
-		if (last_line_rect) {
-			bottom_line_rectangle = {
-				origin: {
-					x: elbow_x,
-					y: last_line_rect.origin.y + last_line_rect.size.height - BORDER_WIDTH * 2
-				},
-				size: {
-					width: last_line_rect.origin.x + BORDER_WIDTH * 2 - elbow_x,
-					height: 0
-				}
-			};
+		if (elbow) {
+			let elbow_x = elbow.origin_x_left_most ? LEFT_MOST_LINE_X : elbow.origin_x;
+			line_rectangle.origin.x = elbow_x;
+			line_rectangle.size.width = first_line_rect.origin.x - elbow_x + BORDER_WIDTH * 2;
+			if (last_line_rect) {
+				bottom_line_rectangle = {
+					origin: {
+						x: elbow_x,
+						y: last_line_rect.origin.y + last_line_rect.size.height - BORDER_WIDTH * 2
+					},
+					size: {
+						width: last_line_rect.origin.x + BORDER_WIDTH * 2 - elbow_x,
+						height: 0
+					}
+				};
+			}
 		}
-	}
 
-	if (elbow && elbow.bottom_line_top && last_line_rect) {
-		bottom_line_rectangle.origin.y = last_line_rect.origin.y + BORDER_WIDTH;
-		line_rectangle.size.height -= last_line_rect.size.height - BORDER_WIDTH * 2;
+		if (elbow && elbow.bottom_line_top && last_line_rect) {
+			bottom_line_rectangle.origin.y = last_line_rect.origin.y + BORDER_WIDTH;
+			line_rectangle.size.height -= last_line_rect.size.height - BORDER_WIDTH * 2;
+		}
 	}
 
 	return [line_rectangle, bottom_line_rectangle];
