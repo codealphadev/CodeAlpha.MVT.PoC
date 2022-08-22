@@ -15,12 +15,12 @@ export const compute_bracket_highlight_box_rects = (
 		const first_rect = bracket_highlight_boxes.first.rectangle;
 		first_box_rect = {
 			origin: {
-				x: first_rect.origin.x + BORDER_WIDTH,
-				y: first_rect.origin.y + BORDER_WIDTH
+				x: first_rect.origin.x,
+				y: first_rect.origin.y
 			},
 			size: {
-				width: first_rect.size.width - BORDER_WIDTH * 2,
-				height: first_rect.size.height - BORDER_WIDTH * 2
+				width: first_rect.size.width,
+				height: first_rect.size.height
 			}
 		};
 	}
@@ -30,12 +30,12 @@ export const compute_bracket_highlight_box_rects = (
 		const last_rect = bracket_highlight_boxes.last.rectangle;
 		last_box_rect = {
 			origin: {
-				x: last_rect.origin.x + BORDER_WIDTH,
-				y: last_rect.origin.y + BORDER_WIDTH
+				x: last_rect.origin.x,
+				y: last_rect.origin.y
 			},
 			size: {
-				width: last_rect.size.width - BORDER_WIDTH * 2,
-				height: last_rect.size.height - BORDER_WIDTH * 2
+				width: last_rect.size.width,
+				height: last_rect.size.height
 			}
 		};
 	}
@@ -64,15 +64,11 @@ export const compute_bracket_highlight_line_rect = (
 	if (is_on_same_line) {
 		line_rectangle = {
 			origin: {
-				x: first_line_rect.origin.x + first_line_rect.size.width - BORDER_WIDTH,
-				y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH * 2
+				x: first_line_rect.origin.x + first_line_rect.size.width,
+				y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH
 			},
 			size: {
-				width:
-					last_line_rect.origin.x -
-					first_line_rect.origin.x -
-					first_line_rect.size.width +
-					BORDER_WIDTH * 3,
+				width: last_line_rect.origin.x - first_line_rect.origin.x - first_line_rect.size.width,
 				height: 0
 			}
 		};
@@ -83,14 +79,10 @@ export const compute_bracket_highlight_line_rect = (
 				line_rectangle = {
 					origin: {
 						x: LEFT_MOST_LINE_X,
-						y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH * 2
+						y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH
 					},
 					size: {
-						width:
-							first_line_rect.origin.x -
-							LEFT_MOST_LINE_X +
-							first_line_rect.size.width -
-							BORDER_WIDTH * 2,
+						width: first_line_rect.origin.x - LEFT_MOST_LINE_X + first_line_rect.size.width,
 						height: outerSize.height - first_line_rect.origin.y + first_line_rect.size.height
 					}
 				};
@@ -111,27 +103,27 @@ export const compute_bracket_highlight_line_rect = (
 			// Only last bracket visible
 			line_rectangle = {
 				origin: {
-					x: last_line_rect.origin.x + BORDER_WIDTH,
+					x: last_line_rect.origin.x,
 					y: 0
 				},
 				size: {
 					width: 0,
-					height: last_line_rect.origin.y + BORDER_WIDTH
+					height: last_line_rect.origin.y + last_line_rect.size.height
 				}
 			};
 		} else if (first_line_rect && last_line_rect) {
 			// Both brackets visible
 			line_rectangle = {
 				origin: {
-					x: last_line_rect.origin.x + BORDER_WIDTH,
-					y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH * 2
+					x: last_line_rect.origin.x,
+					y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH
 				},
 				size: {
 					width:
 						first_line_rect.origin.x -
 						last_line_rect.origin.x +
 						last_line_rect.size.width -
-						BORDER_WIDTH * 2,
+						BORDER_WIDTH,
 					height: last_line_rect.origin.y - first_line_rect.origin.y + BORDER_WIDTH
 				}
 			};
@@ -140,15 +132,16 @@ export const compute_bracket_highlight_line_rect = (
 		if (elbow) {
 			let elbow_x = elbow.origin_x_left_most ? LEFT_MOST_LINE_X : elbow.origin_x;
 			line_rectangle.origin.x = elbow_x;
-			line_rectangle.size.width = first_line_rect.origin.x - elbow_x + BORDER_WIDTH * 2;
+			line_rectangle.size.width =
+				first_line_rect.origin.x + first_line_rect.size.width - elbow_x - BORDER_WIDTH;
 			if (last_line_rect) {
 				bottom_line_rectangle = {
 					origin: {
 						x: elbow_x,
-						y: last_line_rect.origin.y + last_line_rect.size.height - BORDER_WIDTH * 2
+						y: last_line_rect.origin.y + last_line_rect.size.height - BORDER_WIDTH
 					},
 					size: {
-						width: last_line_rect.origin.x + BORDER_WIDTH * 2 - elbow_x,
+						width: last_line_rect.origin.x + last_line_rect.size.width - elbow_x,
 						height: 0
 					}
 				};
@@ -156,8 +149,8 @@ export const compute_bracket_highlight_line_rect = (
 		}
 
 		if (elbow && elbow.bottom_line_top && last_line_rect) {
-			bottom_line_rectangle.origin.y = last_line_rect.origin.y + BORDER_WIDTH;
-			line_rectangle.size.height -= last_line_rect.size.height - BORDER_WIDTH * 2;
+			bottom_line_rectangle.origin.y = last_line_rect.origin.y;
+			line_rectangle.size.height -= last_line_rect.size.height;
 		}
 	}
 
