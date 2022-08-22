@@ -23,7 +23,7 @@ use crate::ax_interaction::{
 };
 
 use super::{
-    notification_key_press_save, notifiy_app_activated, notifiy_app_deactivated,
+    notification_key_press_save, notify_app_activated, notify_app_deactivated,
     notify_uielement_focused, notify_value_changed, notify_window_moved, notify_window_resized,
 };
 
@@ -68,17 +68,17 @@ pub unsafe extern "C" fn callback_xcode_notifications(
         kAXApplicationActivatedNotification => {
             let _ = notify_window_created(&element, &mut (*context));
             let _ = notify_window_destroyed(&element, &mut (*context));
-            let _ = notifiy_app_activated(&element, &mut (*context));
+            let _ = notify_app_activated(&element, &mut (*context));
         }
         kAXApplicationDeactivatedNotification => {
-            let _ = notifiy_app_deactivated(&element, &mut (*context));
+            let _ = notify_app_deactivated(&element, &mut (*context));
             let _ = notify_window_destroyed(&element, &mut (*context));
         }
         kAXApplicationHiddenNotification => {
-            let _ = notifiy_app_deactivated(&element, &mut (*context));
+            let _ = notify_app_deactivated(&element, &mut (*context));
         }
         kAXApplicationShownNotification => {
-            let _ = notifiy_app_activated(&element, &mut (*context));
+            let _ = notify_app_activated(&element, &mut (*context));
         }
         kAXWindowMovedNotification => {
             let _ = notify_window_moved(&element, &mut (*context));

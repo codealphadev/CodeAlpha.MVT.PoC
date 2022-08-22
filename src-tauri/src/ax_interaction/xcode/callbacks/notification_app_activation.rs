@@ -7,7 +7,7 @@ use crate::ax_interaction::{
 
 /// Notify Tauri that XCode has been activated, which means focus has moved to XCode from a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
-pub fn notifiy_app_activated(
+pub fn notify_app_activated(
     app_element: &AXUIElement,
     xcode_observer_state: &XCodeObserverState,
 ) -> Result<(), Error> {
@@ -32,7 +32,7 @@ pub fn notifiy_app_activated(
 
 /// Notify Tauri that XCode has been deactivated, which means focus has moved away from XCode to a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
-pub fn notifiy_app_deactivated(
+pub fn notify_app_deactivated(
     app_element: &AXUIElement,
     xcode_observer_state: &XCodeObserverState,
 ) -> Result<(), Error> {
