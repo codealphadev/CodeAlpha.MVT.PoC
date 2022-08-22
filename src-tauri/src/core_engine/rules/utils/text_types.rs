@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::core_engine::utils::XcodeText;
+use crate::core_engine::utils::{XcodeChar, XcodeText};
 
 /// A position in a multi-line text document, in terms of rows and columns.
 /// Rows and columns are zero-based.
@@ -351,6 +351,14 @@ impl TextRange {
             None
         }
     }
+
+    pub fn includes_index(&self, index: usize) -> bool {
+        if self.length == 0 {
+            return index == self.index;
+        } else {
+            return index >= self.index && index < self.index + self.length;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -505,6 +513,20 @@ mod tests_TextRange {
         assert_eq!(end_pos.row, 3);
         assert_eq!(end_pos.column, 3);
     }
+
+    #[test]
+    fn test_TextRange_includes_index() {
+        let range = TextRange::new(3, 5);
+        assert!(range.includes_index(3));
+        assert!(range.includes_index(7));
+    }
+
+    #[test]
+    fn test_TextRange_includes_index_false() {
+        let range = TextRange::new(3, 5);
+        assert!(!range.includes_index(2));
+        assert!(!range.includes_index(8));
+    }
 }
 
 pub fn StartEndIndex_from_StartEndTextPosition(
@@ -643,7 +665,7 @@ mod tests_TextConversions {
 pub fn get_index_of_next_row(index: usize, text: &XcodeText) -> Option<usize> {
     let mut i = 0;
     for c in text[index..].to_vec() {
-        if c == 10 {
+        if c == '\n' as XcodeChar {
             return Some(index + i + 1);
         }
         i += 1;

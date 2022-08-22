@@ -29,6 +29,13 @@ pub fn calc_rectangles_and_line_matches(
     {
         if let Some(current_line_range) = get_text_range_of_line(line_number, &textarea_ui_element)
         {
+            // Check if the current line range is within the match range.
+            if !current_line_range.includes_index(current_match_index)
+                || !match_range.range.includes_index(current_match_index)
+            {
+                break;
+            }
+
             let matched_char_range = TextRange {
                 index: current_match_index,
                 length: std::cmp::min(
@@ -38,7 +45,6 @@ pub fn calc_rectangles_and_line_matches(
             };
 
             let mut substr = XcodeText::new_empty();
-            // let mut matched_str_char_iter = match_range.string.char_indices();
             for (i, c) in match_range.string.iter().enumerate() {
                 if i >= matched_char_range.index - match_range.range.index
                     && i < (matched_char_range.index - match_range.range.index)
