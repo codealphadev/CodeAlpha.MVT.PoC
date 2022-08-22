@@ -4,11 +4,10 @@ use ts_rs::TS;
 use crate::{
     ax_interaction::get_textarea_uielement,
     core_engine::{
-        ax_utils::get_bounds_of_TextRange,
-        rules::{get_index_of_next_row, TextPosition, TextRange},
+        rules::{get_bounds_of_TextRange, get_index_of_next_row, MatchRectangle},
         syntax_tree::SwiftSyntaxTree,
-        types::MatchRectangle,
         utils::XcodeText,
+        TextPosition, TextRange,
     },
 };
 

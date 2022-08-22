@@ -6,7 +6,7 @@ use tauri::{ClipboardManager, Error};
 
 use crate::{
     ax_interaction::{get_selected_text_range, set_selected_text_range},
-    core_engine::text_types::TextRange,
+    core_engine::TextRange,
 };
 
 /// A function that pastes the clipboard content into the textarea of the Xcode editor.
@@ -41,7 +41,7 @@ pub fn paste_clipboard_text(
 
     if let Some(text) = preserve_old_clipboard {
         tauri::async_runtime::spawn(async move {
-            use std::{time};
+            use std::time;
             let delay = time::Duration::from_millis(150);
             tokio::time::sleep(delay).await;
 

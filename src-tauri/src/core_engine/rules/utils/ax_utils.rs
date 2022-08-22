@@ -6,12 +6,11 @@ use std::convert::TryFrom;
 
 use crate::{
     ax_interaction::derive_xcode_textarea_dimensions,
-    core_engine::utils::XcodeText,
+    core_engine::utils::{TextRange, XcodeText},
     utils::geometry::{LogicalPosition, LogicalSize},
 };
 
 use super::{
-    text_types::TextRange,
     types::{LineMatch, MatchRange},
     MatchRectangle,
 };

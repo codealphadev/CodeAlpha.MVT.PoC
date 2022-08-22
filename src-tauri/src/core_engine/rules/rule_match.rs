@@ -2,9 +2,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::ax_interaction::get_textarea_uielement;
-use crate::core_engine::ax_utils::calc_rectangles_and_line_matches;
 
-use super::{LineMatch, RuleMatchCategory, RuleName};
+use super::{calc_rectangles_and_line_matches, LineMatch, RuleMatchCategory, RuleName};
 
 use super::utils::types::{MatchRange, MatchRectangle};
 
