@@ -28,7 +28,6 @@ pub fn register_listener_xcode(core_engine: &Arc<Mutex<CoreEngine>>) {
     let core_engine_move_copy = core_engine.clone();
     app_handle().listen_global(ChannelList::AXEventXcode.to_string(), move |msg| {
         let axevent_xcode: AXEventXcode = serde_json::from_str(&msg.payload().unwrap()).unwrap();
-
         match axevent_xcode {
             AXEventXcode::EditorWindowMoved(msg) => {
                 on_editor_window_moved(&core_engine_move_copy, &msg);

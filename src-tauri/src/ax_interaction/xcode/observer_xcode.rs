@@ -43,12 +43,6 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
 
 pub fn register_observer_xcode() -> Result<(), Error> {
     if is_new_xcode_observer_registration_required()? {
-        // Cleanup old observers
-        if let Some((_, observer)) = remove_registered_ax_observer(ObserverType::XCode) {
-            observer.stop();
-        }
-
-        // Create new observer
         std::thread::spawn(|| {
             // The Xcode application is still starting up, we need to wait before registering its AX observer.
             // We observed that even though the registration is supposetly successful, the observer is not yet registered.
@@ -104,6 +98,11 @@ fn is_new_xcode_observer_registration_required() -> Result<bool, Error> {
 // This function is called to create a new observer and add the notifications to it.
 // The list of notifications is managed at the top of the file in a static variable.
 fn create_observer_and_add_notifications() -> Result<(), Error> {
+    // 0. Remove old AXObservers
+    if let Some((_, observer)) = remove_registered_ax_observer(ObserverType::XCode) {
+        observer.stop();
+    }
+
     let xcode_pid = AXUIElement::application_with_bundle(EDITOR_XCODE_BUNDLE_ID)?.pid()?;
 
     // 1. Create AXObserver

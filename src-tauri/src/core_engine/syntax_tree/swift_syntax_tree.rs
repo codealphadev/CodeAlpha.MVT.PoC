@@ -267,7 +267,7 @@ mod tests_SwiftSyntaxTree {
             TextPosition { row: 0, column: 0 }
         );
         assert_eq!(
-          XcodeText::treesitter_point_to_position(&root_node.end_position()),
+            XcodeText::treesitter_point_to_position(&root_node.end_position()),
             TextPosition { row: 1, column: 0 }
         );
     }

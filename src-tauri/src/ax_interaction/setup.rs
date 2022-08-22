@@ -10,7 +10,7 @@ use super::{
 
 static LOOP_TIME_IN_MS: u64 = 500;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum ObserverType {
     App,
     XCode,
