@@ -211,6 +211,18 @@ impl EditorWindow {
         // Update the editor window's and textarea's dimensions.
         self.window_position = window.origin;
         self.window_size = window.size;
+
+        // Notify the frontend about the updated position of the editor window to allow
+        // it to correctly render code annotations.
+        EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
+            origin: Self::transform_local_position_to_global_position(
+                self.window_position,
+                self.textarea_position?,
+            ),
+            size: self.textarea_size?,
+        })
+        .publish_to_tauri(&app_handle());
+
         self.widget_position
             .replace(Self::transform_global_position_to_local_position(
                 self.window_position,
