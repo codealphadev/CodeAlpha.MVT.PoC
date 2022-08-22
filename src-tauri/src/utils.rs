@@ -161,7 +161,6 @@ pub mod messaging {
         EventUserInteractions,
         EventWindowControls,
         EventDocsGeneration,
-        DarkModeUpdate,
         RuleResults,
     }
     impl fmt::Display for ChannelList {
@@ -176,7 +175,6 @@ pub mod messaging {
                 ChannelList::EventUserInteractions => write!(f, "EventUserInteractions"),
                 ChannelList::EventWindowControls => write!(f, "EventWindowControls"),
                 ChannelList::EventDocsGeneration => write!(f, "EventDocsGeneration"),
-                ChannelList::DarkModeUpdate => write!(f, "DarkModeUpdate"),
                 ChannelList::RuleResults => write!(f, "RuleResults"),
             }
         }

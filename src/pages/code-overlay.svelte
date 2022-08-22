@@ -7,7 +7,7 @@
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
 	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
 	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
-	import type { DarkModeUpdateMessage} from '../../src-tauri/bindings/dark_mode_update/DarkModeUpdateMessage'
+
 	import { getContext } from 'svelte';
 	const { setTheme } = getContext("theme");
 
@@ -16,24 +16,19 @@
 	let code_overlay_rectangle: LogicalFrame | null = null;
 	let code_annotation: CodeAnnotation | undefined = undefined;
 
-
-	const listenDarkModeEvents = async () => {
-		let DarkModeUpdateChannel: ChannelList = 'DarkModeUpdate'
-		await listen(DarkModeUpdateChannel, (event) => {
-			const payload = event.payload as DarkModeUpdateMessage;
-			setTheme(payload.dark_mode ? 'dark' : 'light');	 //TODO: Type safety
-		})
-	}
-
 	const listenWindowChannels = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
-		await listen(WindowControlsChannel, (event) => {
-			const event_window_controls = JSON.parse(event.payload as string) as EventWindowControls;
+		await listen(WindowControlsChannel, (e) => {
+			const {event, payload} = JSON.parse(e.payload as string) as EventWindowControls;
 
-			switch (event_window_controls.event) {
+			switch (event) {
 				case 'CodeOverlayDimensionsUpdate':
-					code_overlay_rectangle = event_window_controls.payload as unknown as LogicalFrame;
+					code_overlay_rectangle = payload;
 					break;
+				case 'DarkModeUpdate':
+					setTheme(payload.dark_mode ? 'dark' : 'light');
+					break;
+				
 				default:
 					break;
 			}
@@ -62,8 +57,6 @@
 
 	listenCodeAnnotations();
 	listenWindowChannels();
-	listenDarkModeEvents();
-
 </script>
 
 {#if code_overlay_rectangle}

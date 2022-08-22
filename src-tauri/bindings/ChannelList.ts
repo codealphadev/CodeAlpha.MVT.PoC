@@ -10,5 +10,4 @@ export type ChannelList =
   | "EventUserInteractions"
   | "EventWindowControls"
   | "EventDocsGeneration"
-  | "DarkModeUpdate"
   | "RuleResults";

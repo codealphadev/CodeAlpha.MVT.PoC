@@ -161,14 +161,14 @@ extern "C" {
 pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
     // TODO: Better error typing
     if is_focused_uielement_of_app_xcode_editor_field(pid)
-        .map_err(|x| "Cannot get focused ui_element")?
+        .map_err(|_| "Cannot get focused ui_element")?
         == false
     {
         return Err("We are not focused on the Xcode editor");
     }
 
     let editor_element =
-        focused_uielement_of_app(pid).map_err(|e| "Could not get editor element")?;
+        focused_uielement_of_app(pid).map_err(|_| "Could not get editor element")?;
 
     let range = CFRange {
         location: 0,
@@ -178,9 +178,9 @@ pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
     let str: CFAttributedString = editor_element
         .parameterized_attribute(
             &AXAttribute::attributed_string_for_range(),
-            &AXValue::from_CFRange(range).map_err(|x| "Could not create CFRange")?,
+            &AXValue::from_CFRange(range).map_err(|_| "Could not create CFRange")?,
         )
-        .map_err(|e| "Could not get attributed string")?;
+        .map_err(|_| "Could not get attributed string")?;
 
     let attributes_dict: CFDictionary = unsafe {
         CFDictionary::wrap_under_create_rule(CFAttributedStringGetAttributes(
@@ -211,7 +211,7 @@ pub fn get_dark_mode(pid: pid_t) -> Result<bool, &'static str> {
     let [r, g, b, _]: [_; 4] = unsafe {
         std::slice::from_raw_parts(components as *const CGFloat, 4)
             .try_into()
-            .map_err(|x| "Could not convert components to array")?
+            .map_err(|_| "Could not convert components to array")?
     };
 
     let lightness = (r + g + b) / 3.0;
