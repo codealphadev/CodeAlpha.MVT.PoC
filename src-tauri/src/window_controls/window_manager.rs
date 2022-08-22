@@ -38,14 +38,8 @@ pub struct WindowManager {
     /// Identitfier of the currently focused editor window. Is None until the first window was focused.
     focused_editor_window: Arc<Mutex<Option<Uid>>>,
 
-    /// Boolean saying if the currently focused application is an editor window.
-    is_editor_focused: bool,
-
     /// Identitfier of the currently focused app window. Is None until the first window was focused.
     focused_app_window: Option<AppWindow>,
-
-    /// Boolean saying if the currently focused application is our app.
-    is_app_focused: bool,
 
     /// Boolean stating if the the core engine is active.
     is_core_engine_active: bool,
@@ -70,8 +64,6 @@ impl WindowManager {
             app_handle: app_handle(),
             editor_windows: Arc::new(Mutex::new(HashMap::new())),
             focused_editor_window: Arc::new(Mutex::new(None)),
-            is_app_focused: false,
-            is_editor_focused: false,
             focused_app_window: None,
             is_core_engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
             temporarily_hide_until: Arc::new(Mutex::new(std::time::Instant::now())),
@@ -89,7 +81,6 @@ impl WindowManager {
                 true
             } else {
                 self.focused_editor_window.lock().take();
-                self.is_editor_focused = false;
                 false
             }
         });
@@ -97,14 +88,6 @@ impl WindowManager {
 
     pub fn focused_editor_window(&self) -> Option<Uid> {
         self.focused_editor_window.lock().clone()
-    }
-
-    pub fn set_is_editor_focused(&mut self, is_editor_focused: bool) {
-        self.is_editor_focused = is_editor_focused;
-    }
-
-    pub fn set_is_app_focused(&mut self, is_app_focused: bool) {
-        self.is_app_focused = is_app_focused;
     }
 
     pub fn is_core_engine_active(&self) -> bool {

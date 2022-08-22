@@ -10,8 +10,6 @@ pub fn on_activated_app(
 ) {
     let mut window_manager = window_manager.lock();
 
-    window_manager.set_is_app_focused(true);
-
     if let Some(focused_app_window) = activated_msg.focused_app_window {
         window_manager.set_focused_app_window(focused_app_window);
     }

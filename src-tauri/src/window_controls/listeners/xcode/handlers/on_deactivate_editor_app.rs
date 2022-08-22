@@ -13,9 +13,7 @@ pub fn on_deactivate_editor_app(
     window_manager: &Arc<Mutex<WindowManager>>,
     _deactivated_msg: &EditorAppDeactivatedMessage,
 ) {
-    let mut window_manager = window_manager.lock();
-
-    window_manager.set_is_editor_focused(false);
+    let window_manager = window_manager.lock();
 
     if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {

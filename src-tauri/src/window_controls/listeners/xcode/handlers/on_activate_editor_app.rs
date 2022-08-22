@@ -11,8 +11,7 @@ pub fn on_activate_editor_app(
     window_manager: &Arc<Mutex<WindowManager>>,
     _activated_msg: &EditorAppActivatedMessage,
 ) -> Option<()> {
-    let mut window_manager = window_manager.lock();
-    window_manager.set_is_editor_focused(true);
+    let window_manager = window_manager.lock();
 
     let mut is_textarea_focused = false;
     {
