@@ -9,7 +9,7 @@
 		compute_bracket_highlight_box_rects,
 		compute_bracket_highlight_line_rect
 	} from './bracket_highlight';
-	import {colors} from '../../../themes'
+	import { colors } from '../../../themes';
 
 	export let code_overlay_rectangle: LogicalFrame | null;
 
@@ -47,49 +47,50 @@
 	};
 
 	listenTauriEvents();
+
+	const round_value = (value: number, precision: number): number => {
+		const factor = Math.pow(10, precision || 0);
+		return Math.round(value * factor) / factor;
+	};
 </script>
 
 {#if bracket_highlight_line_rectangle !== null}
 	<div
-		style="position: absolute; top: {Math.round(
-			bracket_highlight_line_rectangle.origin.y
-		)}px; left: {Math.round(bracket_highlight_line_rectangle.origin.x)}px; width: {Math.round(
-			bracket_highlight_line_rectangle.size.width
-		)}px;height: {Math.round(
-			bracket_highlight_line_rectangle.size.height
-		)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: {colors.inactive}; border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
+		style="position: absolute; 
+		top: {round_value(bracket_highlight_line_rectangle.origin.y, 2)}px; 
+		left: {round_value(bracket_highlight_line_rectangle.origin.x, 1)}px; 
+		width: {round_value(bracket_highlight_line_rectangle.size.width, 2)}px;
+		height: {round_value(bracket_highlight_line_rectangle.size.height, 2)}px; 
+		border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: {colors.inactive}; border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
 	/>
 {/if}
 {#if bracket_highlight_box_rectangle_first !== null}
 	<div
-		style="position: absolute; top: {Math.round(
-			bracket_highlight_box_rectangle_first.origin.y
-		)}px; left: {Math.round(bracket_highlight_box_rectangle_first.origin.x)}px; width: {Math.round(
-			bracket_highlight_box_rectangle_first.size.width
-		)}px;height: {Math.round(
-			bracket_highlight_box_rectangle_first.size.height
-		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
+		style="position: absolute; 
+		top: {round_value(bracket_highlight_box_rectangle_first.origin.y, 2)}px; 
+		left: {round_value(bracket_highlight_box_rectangle_first.origin.x, 2)}px; 
+		width: {round_value(bracket_highlight_box_rectangle_first.size.width, 2)}px;
+		height: {round_value(bracket_highlight_box_rectangle_first.size.height, 2)}px; 
+		border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 	/>
 {/if}
 {#if bracket_highlight_box_rectangle_last !== null}
 	<div
-		style="position: absolute; top: {Math.round(
-			bracket_highlight_box_rectangle_last.origin.y
-		)}px; left: {Math.round(bracket_highlight_box_rectangle_last.origin.x)}px; width: {Math.round(
-			bracket_highlight_box_rectangle_last.size.width
-		)}px;height: {Math.round(
-			bracket_highlight_box_rectangle_last.size.height
-		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
+		style="position: absolute; 
+		top: {round_value(bracket_highlight_box_rectangle_last.origin.y, 2)}px; 
+		left: {round_value(bracket_highlight_box_rectangle_last.origin.x, 2)}px; 
+		width: {round_value(bracket_highlight_box_rectangle_last.size.width, 2)}px;
+		height: {round_value(bracket_highlight_box_rectangle_last.size.height, 2)}px; 
+		border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 	/>
 {/if}
 {#if bottom_elbow_rectangle !== null}
 	<div
-		style="position: absolute; top: {Math.round(
-			bottom_elbow_rectangle.origin.y
-		)}px; left: {Math.round(bottom_elbow_rectangle.origin.x)}px; width: {Math.round(
-			bottom_elbow_rectangle.size.width
-		)}px;height: {Math.round(
-			bottom_elbow_rectangle.size.height
-		)}px; border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
+		style="position: absolute; 
+		top: {round_value(bottom_elbow_rectangle.origin.y, 2)}px; 
+		left: {round_value(bottom_elbow_rectangle.origin.x, 1) / 10}px; 
+		width: {round_value(bottom_elbow_rectangle.size.width, 2) / 10}px;
+		height: {round_value(bottom_elbow_rectangle.size.height, 2)}px; 
+		border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 	/>
 {/if}

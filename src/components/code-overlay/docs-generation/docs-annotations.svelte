@@ -72,32 +72,32 @@
 
 	listenToTrackingAreaEvents();
 	listenToDocsGenerationEvents();
+
+	const round_value = (value: number, precision: number): number => {
+		const factor = Math.pow(10, precision || 0);
+		return Math.round(value * factor) / factor;
+	};
 </script>
 
 {#if code_overlay_position !== null && annotation.annotation_icon !== null}
 	<div
-		style="position: absolute; top: {Math.round(
-			annotation.annotation_icon.origin.y - code_overlay_position.y
-		)}px; left: {Math.round(
-			annotation.annotation_icon.origin.x - code_overlay_position.x
-		)}px; width: {Math.round(annotation.annotation_icon.size.width)}px;height: {Math.round(
-			annotation.annotation_icon.size.height
-		)}px;"
+		style="position: absolute; 
+		top: {round_value(annotation.annotation_icon.origin.y - code_overlay_position.y, 2)}px; 
+		left: {round_value(annotation.annotation_icon.origin.x - code_overlay_position.x, 2)}px; 
+		width: {round_value(annotation.annotation_icon.size.width, 2)}px; 
+		height: {round_value(annotation.annotation_icon.size.height, 2)}px;"
 	>
 		<AnnotationIcon {is_hovered} {is_processing} />
-		
 	</div>
 {/if}
 
-{#if code_overlay_position !== null && annotation.annotation_codeblock !== null }
+{#if code_overlay_position !== null && annotation.annotation_codeblock !== null}
 	<div
-		style="position: absolute; top: {Math.round(
-			annotation.annotation_codeblock.origin.y - code_overlay_position.y
-		)}px; left: {Math.round(
-			annotation.annotation_codeblock.origin.x - code_overlay_position.x
-		)}px; width: {Math.round(annotation.annotation_codeblock.size.width)}px;height: {Math.round(
-			annotation.annotation_codeblock.size.height
-		)}px;"
+		style="position: absolute; 
+		top: {round_value(annotation.annotation_codeblock.origin.y - code_overlay_position.y, 2)}px; 
+		left: {round_value(annotation.annotation_codeblock.origin.x - code_overlay_position.x, 2)}px; 
+		width: {round_value(annotation.annotation_codeblock.size.width, 2)}px; 
+		height: {round_value(annotation.annotation_codeblock.size.height, 2)}px;"
 	>
 		<AnnotationLine
 			visible={is_hovered || is_processing}
