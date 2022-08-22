@@ -50,6 +50,10 @@ pub fn register_observer_xcode() -> Result<(), Error> {
 
         // Create new observer
         std::thread::spawn(|| {
+            // The Xcode application is still starting up, we need to wait before registering its AX observer.
+            // We observed that even though the registration is supposetly successful, the observer is not yet registered.
+            // We found that waiting for 2 seconds is enough.
+            std::thread::sleep(std::time::Duration::from_millis(2000));
             _ = create_observer_and_add_notifications();
         });
     }
@@ -61,14 +65,25 @@ pub fn register_observer_xcode() -> Result<(), Error> {
 // checking if the XCode's AXUIElement has changed.
 fn is_new_xcode_observer_registration_required() -> Result<bool, Error> {
     // Determine pid of xcode
-    let xcode_pid = AXUIElement::application_with_bundle(EDITOR_XCODE_BUNDLE_ID)?.pid()?;
+    let is_xcode_running = AXUIElement::application_with_bundle(EDITOR_XCODE_BUNDLE_ID).is_ok();
+    if is_xcode_running {
+        let xcode_pid = AXUIElement::application_with_bundle(EDITOR_XCODE_BUNDLE_ID)?.pid()?;
 
-    if let Some((pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
-        if pid == xcode_pid {
-            // Case: The registered observer for Xcode has the correct pid.
-            return Ok(false);
+        if let Some((pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
+            if pid == xcode_pid {
+                // Case: The registered observer for Xcode has the correct pid.
+                Ok(false)
+            } else {
+                // Case: The registered observer for Xcode has the wrong pid.
+                Ok(true)
+            }
         } else {
-            // Case: XCode was just closed
+            // Case: No registered observer for Xcode.
+            Ok(true)
+        }
+    } else {
+        // Case: XCode was just closed
+        if let Some((pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
             AXEventXcode::EditorAppClosed(EditorAppClosedMessage {
                 editor_name: "Xcode".to_string(),
                 pid: pid.try_into().unwrap(),
@@ -76,9 +91,14 @@ fn is_new_xcode_observer_registration_required() -> Result<bool, Error> {
             })
             .publish_to_tauri(&app_handle());
         }
-    }
 
-    Ok(true)
+        // Cleanup old observers
+        if let Some((_, observer)) = remove_registered_ax_observer(ObserverType::XCode) {
+            observer.stop();
+        }
+
+        Ok(false)
+    }
 }
 
 // This function is called to create a new observer and add the notifications to it.
