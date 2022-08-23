@@ -175,52 +175,46 @@ impl DocsGenerationTask {
         Ok(())
     }
 
-    pub fn update_code_annotation_position(&mut self, text: &XcodeText) -> bool {
-        if self.tracking_area.is_none() {
-            return false;
-        };
+    pub fn update_code_annotation_position(
+        &mut self,
+        text: &XcodeText,
+    ) -> Result<(), &'static str> {
+        let mut tracking_area_copy = self.tracking_area.clone().ok_or("No tracking area")?;
+
         if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
             self.calculate_annotation_bounds(text)
         {
-            let tracking_area = if let Some(tracking_area) = &mut self.tracking_area {
-                tracking_area
+            tracking_area_copy.rectangles = if let Some(annotation_rect) = annotation_rect_opt {
+                vec![annotation_rect]
             } else {
-                return false;
+                vec![]
             };
 
-            if let Some(annotation_rect) = annotation_rect_opt {
-                tracking_area.rectangles = vec![annotation_rect];
-            } else {
-                tracking_area.rectangles = vec![];
-            };
-
-            EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
+            EventTrackingArea::Update(vec![tracking_area_copy.clone()])
+                .publish_to_tauri(&app_handle());
 
             // Publish annotation_rect and codeblock_rect to frontend
             EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
-                id: tracking_area.id,
+                id: tracking_area_copy.id,
                 annotation_icon: annotation_rect_opt,
                 annotation_codeblock: codeblock_rect_opt,
             })
             .publish_to_tauri(&app_handle());
-
-            true
         } else {
             // Remove the tracking area
-            EventTrackingArea::Remove(vec![self.tracking_area.as_ref().unwrap().id])
-                .publish_to_tauri(&app_handle());
-            self.tracking_area = None;
+            EventTrackingArea::Remove(vec![tracking_area_copy.id]).publish_to_tauri(&app_handle());
             let mut task_state = (self.task_state).lock().unwrap();
             *task_state = DocsGenerationTaskState::Canceled;
 
             // Remove the annotation from the frontend
             EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage {
-                id: self.tracking_area.as_ref().unwrap().id,
+                id: tracking_area_copy.id,
             })
             .publish_to_tauri(&app_handle());
 
-            false
+            self.tracking_area = None;
         }
+        Ok(())
     }
 
     /// It calculates the bounds of the annotation icon and the codeblock rectangle
