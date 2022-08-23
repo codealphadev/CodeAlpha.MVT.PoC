@@ -127,7 +127,9 @@ impl DocsGenerator {
     pub fn update_visualization(&mut self) {
         if let Some(text_content) = self.text_content.as_ref() {
             if let Some(docs_gen_task) = &mut self.docs_generation_task {
-                docs_gen_task.update_code_annotation_position(text_content);
+                docs_gen_task
+                    .update_code_annotation_position(text_content)
+                    .ok();
             }
         }
     }
