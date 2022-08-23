@@ -9,6 +9,7 @@ use crate::{
         utils::XcodeText,
         TextPosition, TextRange,
     },
+    utils::geometry::{LogicalFrame, LogicalPosition},
 };
 
 use super::utils::{
@@ -20,7 +21,7 @@ use super::utils::{
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/bracket_highlight/")]
 pub struct BracketHighlightElbow {
-    origin_x: Option<f64>,
+    origin: Option<LogicalPosition>,
     origin_x_left_most: bool,
     bottom_line_top: bool,
 }
@@ -30,7 +31,7 @@ pub struct BracketHighlightElbow {
 pub struct BracketHighlightBracket {
     text_range: TextRange,
     text_position: TextPosition,
-    rectangle: MatchRectangle,
+    rectangle: LogicalFrame,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -54,7 +55,10 @@ impl BracketHighlightBracketPair {
             first = Some(BracketHighlightBracket {
                 text_range: first_range,
                 text_position: first_text_position,
-                rectangle: first_rectangle,
+                rectangle: LogicalFrame {
+                    origin: first_rectangle.origin,
+                    size: first_rectangle.size,
+                },
             });
         }
 
@@ -63,7 +67,10 @@ impl BracketHighlightBracketPair {
             last = Some(BracketHighlightBracket {
                 text_range: last_range,
                 text_position: last_text_position,
-                rectangle: last_rectangle,
+                rectangle: LogicalFrame {
+                    origin: last_rectangle.origin,
+                    size: last_rectangle.size,
+                },
             });
         }
 
@@ -241,7 +248,7 @@ impl BracketHighlight {
         );
 
         // Check if elbow is needed
-        let mut elbow_origin_x = None;
+        let mut elbow_origin = None;
         let mut elbow_origin_x_left_most = false;
         let mut elbow = None;
 
@@ -271,12 +278,18 @@ impl BracketHighlight {
                     ) {
                         if line_pair_last.rectangle.origin.x > elbow_match_rectangle.origin.x {
                             // Closing bracket is further to the right than the elbow point
-                            elbow_origin_x = Some(elbow_match_rectangle.origin.x);
+                            elbow_origin = Some(LogicalPosition {
+                                x: elbow_match_rectangle.origin.x,
+                                y: elbow_match_rectangle.origin.y,
+                            });
                         }
                         if let Some(first_line_rectangle) = first_line_rectangle {
                             if first_line_rectangle.origin.x < elbow_match_rectangle.origin.x {
                                 // Opening bracket is further to the left than the elbow point
-                                elbow_origin_x = Some(first_line_rectangle.origin.x);
+                                elbow_origin = Some(LogicalPosition {
+                                    x: first_line_rectangle.origin.x,
+                                    y: first_line_rectangle.origin.y,
+                                })
                             }
                         }
                     }
@@ -326,13 +339,13 @@ impl BracketHighlight {
 
         if elbow_origin_x_left_most {
             elbow = Some(BracketHighlightElbow {
-                origin_x: None,
+                origin: None,
                 bottom_line_top: elbow_bottom_line_top,
                 origin_x_left_most: true,
             });
-        } else if let Some(elbow_origin_x) = elbow_origin_x {
+        } else if let Some(elbow_origin) = elbow_origin {
             elbow = Some(BracketHighlightElbow {
-                origin_x: Some(elbow_origin_x),
+                origin: Some(elbow_origin),
                 bottom_line_top: elbow_bottom_line_top,
                 origin_x_left_most: false,
             });
