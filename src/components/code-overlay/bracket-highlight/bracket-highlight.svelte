@@ -34,8 +34,8 @@
 			// Calculate the line rectangle
 			if (code_overlay_rectangle) {
 				line_rectangle = compute_bracket_highlight_line_rect(
-					opening_bracket_box_highlight,
-					closing_bracket_box_highlight,
+					bracket_highlights.lines.first ? bracket_highlights.lines.first.rectangle : null,
+					bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
 					code_overlay_rectangle
 				);
 
@@ -43,7 +43,7 @@
 				if (bracket_highlights.elbow) {
 					[line_rectangle, elbow_rectangle] = correct_highlight_rectangles_with_elbow_point(
 						line_rectangle,
-						closing_bracket_box_highlight,
+						bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
 						code_overlay_rectangle,
 						bracket_highlights.elbow.origin,
 						bracket_highlights.elbow.origin_x_left_most,
@@ -52,7 +52,7 @@
 				} else {
 					[line_rectangle, elbow_rectangle] = correct_highlight_rectangles_with_elbow_point(
 						line_rectangle,
-						closing_bracket_box_highlight,
+						bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
 						code_overlay_rectangle,
 						line_rectangle.origin,
 						false,
