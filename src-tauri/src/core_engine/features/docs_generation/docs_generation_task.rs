@@ -280,16 +280,15 @@ impl DocsGenerationTask {
             } else {
                 textarea_origin.y + textarea_size.height
             };
-            dbg!(codeblock_top, codeblock_bottom);
 
             let char_width = if let Some(first_char_bounds) = first_char_bounds_opt {
                 first_char_bounds.size.height / 1.5
             } else if let Some(last_char_bounds) = last_char_bounds_opt {
                 last_char_bounds.size.height / 1.5
             } else {
-                12.0
-            }; // TODO: What if neither char is present?
-            dbg!(char_width);
+                12.0 // Fallback - should be rare
+            };
+
             let codeblock_bounds = Some(LogicalFrame {
                 origin: LogicalPosition {
                     x: textarea_origin.x,
