@@ -11,9 +11,9 @@
 {#if visible}
 	<div
 		class="annotation-line"
-		style="width: {ANNOTATION_LINE_WIDTH_PCT}%; top: 100%; left: {50 -
+		style="width: {ANNOTATION_LINE_WIDTH_PCT}%; top: 0%; left: {50 -
 			ANNOTATION_LINE_WIDTH_PCT /
-				2}%; height: {height}px; position: absolute; background-color: {background_color};"
+				2}%; height: 100%; position: absolute; background-color: {background_color};"
 	/>
 {/if}
 

@@ -6,7 +6,7 @@
 	import IconSwiftFormat from '../components/widget/icons/icon-swift-format.svelte';
 	import IconDocsGen from '../components/widget/icons/icon-docs-gen.svelte';
 	import IconLogoGreyscale from '../components/widget/icons/icon-logo-greyscale.svelte';
-	import { listen, Event } from '@tauri-apps/api/event';
+	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { EventRuleExecutionState } from '../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import WidgetProcessing from '../components/widget/widget-processing.svelte';
@@ -29,7 +29,7 @@
 		}
 	};
 
-	appWindow.listen('tauri://move', async ({ event, payload }) => {
+	appWindow.listen('tauri://move', async () => {
 		ghostClickAlreadyHappened = false;
 	});
 
