@@ -1,194 +1,170 @@
-import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
-import type { LogicalSize } from '../../../../src-tauri/bindings/geometry/LogicalSize';
-import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
-import type { BracketHighlightBracketPair } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightBracketPair';
 import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
-import type { MatchRectangle } from '../../../../src-tauri/bindings/rules/utils/MatchRectangle';
+import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 
 export const BORDER_WIDTH = 1;
 const LEFT_MOST_LINE_X = 16;
 
-export const compute_bracket_highlight_box_rects = (
-	bracket_highlight_boxes: BracketHighlightBracketPair
-): [LogicalFrame | null, LogicalFrame | null] => {
-	let first_box_rect = bracket_highlight_boxes.first
-		? bracket_highlight_boxes.first.rectangle
-		: null;
-	let last_box_rect = bracket_highlight_boxes.last ? bracket_highlight_boxes.last.rectangle : null;
-
-	return [first_box_rect, last_box_rect];
-};
-
 export const compute_bracket_highlight_line_rect = (
-	bracket_results: BracketHighlightResults,
-	outerSize: LogicalSize
-): [LogicalFrame | null, LogicalFrame | null] => {
-	let lines_pair = bracket_results.lines;
+	opening_bracket: LogicalFrame | null,
+	closing_bracket: LogicalFrame | null,
+	codeoverlay_rect: LogicalFrame
+): LogicalFrame => {
+	let line_rectangle: LogicalFrame = line_rect_if_no_brackets_visible(codeoverlay_rect);
 
-	let first_line_rect = lines_pair.first ? lines_pair.first.rectangle : null;
-	let last_line_rect = lines_pair.last ? lines_pair.last.rectangle : null;
-	let elbow = bracket_results.elbow;
-
-	// Check if last and first bracket are visible
-	let is_last_bracket_visible = !!lines_pair.last;
-	let is_on_same_line =
-		first_line_rect && last_line_rect && first_line_rect.origin.y === last_line_rect.origin.y;
-
-	let bottom_line_rectangle = null;
-
-	let line_rectangle = null;
-	if (is_on_same_line && first_line_rect && last_line_rect) {
-		line_rectangle = {
-			origin: {
-				x: first_line_rect.origin.x + first_line_rect.size.width,
-				y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH
-			},
-			size: {
-				width:
-					last_line_rect.origin.x -
-					first_line_rect.origin.x -
-					first_line_rect.size.width +
-					BORDER_WIDTH,
-				height: 0
-			}
-		};
-	} else {
-		if (!is_last_bracket_visible) {
-			if (lines_pair.first && first_line_rect) {
-				// Only first bracket is visible
-				line_rectangle = {
-					origin: {
-						x: LEFT_MOST_LINE_X,
-						y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH
-					},
-					size: {
-						width: first_line_rect.origin.x - LEFT_MOST_LINE_X + first_line_rect.size.width,
-						height: outerSize.height - first_line_rect.origin.y + first_line_rect.size.height
-					}
-				};
-			} else {
-				// no brackets visible
-				line_rectangle = {
-					origin: {
-						x: LEFT_MOST_LINE_X,
-						y: 0
-					},
-					size: {
-						width: 0,
-						height: outerSize.height
-					}
-				};
-			}
-		} else if (!lines_pair.first && last_line_rect) {
-			// Only last bracket visible
-			line_rectangle = {
-				origin: {
-					x: last_line_rect.origin.x,
-					y: 0
-				},
-				size: {
-					width: 0,
-					height: last_line_rect.origin.y + last_line_rect.size.height
-				}
-			};
-		} else if (first_line_rect && last_line_rect) {
-			// Both brackets visible
-			line_rectangle = {
-				origin: {
-					x: last_line_rect.origin.x,
-					y: first_line_rect.origin.y + first_line_rect.size.height - BORDER_WIDTH
-				},
-				size: {
-					width: first_line_rect.origin.x - last_line_rect.origin.x + BORDER_WIDTH,
-					height: last_line_rect.origin.y - first_line_rect.origin.y + BORDER_WIDTH
-				}
-			};
-		}
-
-		if (elbow && line_rectangle && first_line_rect) {
-			// Add bottom elbow line
-			let elbow_x = !elbow.origin_x_left_most && elbow.origin_x ? elbow.origin_x : LEFT_MOST_LINE_X;
-			line_rectangle.origin.x = elbow_x;
-			line_rectangle.size.width =
-				first_line_rect.origin.x + first_line_rect.size.width - elbow_x - BORDER_WIDTH;
-			if (last_line_rect) {
-				bottom_line_rectangle = {
-					origin: {
-						x: elbow_x,
-						y: last_line_rect.origin.y + last_line_rect.size.height - BORDER_WIDTH
-					},
-					size: {
-						width: last_line_rect.origin.x + last_line_rect.size.width - elbow_x,
-						height: 0
-					}
-				};
-			}
-		}
-
-		if (
-			elbow &&
-			elbow.bottom_line_top &&
-			last_line_rect &&
-			line_rectangle &&
-			bottom_line_rectangle
-		) {
-			// Adjust bottom elbow line to the top of the last line
-			bottom_line_rectangle.origin.y = last_line_rect.origin.y;
-			line_rectangle.size.height -= last_line_rect.size.height;
-		}
+	// If both brackets are on the same line, drawing a rectangle between the opening and closing brackets.
+	if (opening_bracket && closing_bracket && opening_bracket.origin.y === closing_bracket.origin.y) {
+		line_rectangle = line_rect_if_both_brackets_on_same_line(opening_bracket, closing_bracket);
 	}
 
-	return [line_rectangle, bottom_line_rectangle];
+	// Only first bracket is visible
+	else if (opening_bracket && !closing_bracket) {
+		line_rectangle = line_rect_if_only_opening_bracket_visible(opening_bracket, codeoverlay_rect);
+	}
+
+	// Only second bracket is visible
+	else if (!opening_bracket && closing_bracket) {
+		line_rectangle = line_rect_if_only_closing_bracket_visible(closing_bracket, codeoverlay_rect);
+	}
+
+	// Both brackets are visible
+	else if (opening_bracket && closing_bracket) {
+		line_rectangle = line_rect_if_both_brackets_visible(opening_bracket, closing_bracket);
+	}
+
+	return line_rectangle;
 };
 
-export const adjust_bracket_results_for_overlay = (
-	bracket_results: BracketHighlightResults,
-	outerPosition: LogicalPosition
-): BracketHighlightResults | null => {
-	if (!bracket_results) {
-		return null;
-	}
-	if (bracket_results.lines.first) {
-		bracket_results.lines.first.rectangle = adjust_rectangle(
-			bracket_results.lines.first.rectangle,
-			outerPosition
-		);
-	}
-	if (bracket_results.lines.last) {
-		bracket_results.lines.last.rectangle = adjust_rectangle(
-			bracket_results.lines.last.rectangle,
-			outerPosition
-		);
-	}
-	if (bracket_results.boxes.first) {
-		bracket_results.boxes.first.rectangle = adjust_rectangle(
-			bracket_results.boxes.first.rectangle,
-			outerPosition
-		);
-	}
-	if (bracket_results.boxes.last) {
-		bracket_results.boxes.last.rectangle = adjust_rectangle(
-			bracket_results.boxes.last.rectangle,
-			outerPosition
-		);
-	}
-
-	if (bracket_results.elbow && bracket_results.elbow.origin_x) {
-		bracket_results.elbow.origin_x = bracket_results.elbow.origin_x - outerPosition.x;
-	}
-
-	return bracket_results;
-};
-
-const adjust_rectangle = (
-	rectangle: LogicalFrame,
-	outerPosition: LogicalPosition
-): MatchRectangle => {
+const line_rect_if_both_brackets_on_same_line = (
+	opening_bracket: LogicalFrame,
+	closing_bracket: LogicalFrame
+): LogicalFrame => {
 	return {
 		origin: {
-			x: rectangle.origin.x - outerPosition.x,
-			y: rectangle.origin.y - outerPosition.y
+			x: opening_bracket.origin.x + opening_bracket.size.width,
+			y: opening_bracket.origin.y + opening_bracket.size.height - BORDER_WIDTH
 		},
-		size: rectangle.size
+		size: {
+			width: Math.max(
+				0,
+				closing_bracket.origin.x - opening_bracket.origin.x - opening_bracket.size.width
+			),
+			height: 0
+		}
 	};
+};
+
+const line_rect_if_only_opening_bracket_visible = (
+	opening_bracket: LogicalFrame,
+	codeoverlay_rect: LogicalFrame
+): LogicalFrame => {
+	return {
+		origin: {
+			x: Math.min(opening_bracket.origin.x, codeoverlay_rect.origin.x + LEFT_MOST_LINE_X),
+			y: opening_bracket.origin.y + opening_bracket.size.height /*- BORDER_WIDTH*/
+		},
+		size: {
+			width: Math.max(
+				0,
+				opening_bracket.origin.x - codeoverlay_rect.origin.x + LEFT_MOST_LINE_X
+			) /* - BORDER_WIDTH */,
+			height: Math.max(
+				0,
+				codeoverlay_rect.origin.y +
+					codeoverlay_rect.size.height -
+					opening_bracket.origin.y /*+ BORDER_WIDTH*/
+			)
+		}
+	};
+};
+
+const line_rect_if_only_closing_bracket_visible = (
+	closing_bracket: LogicalFrame,
+	codeoverlay_rect: LogicalFrame
+): LogicalFrame => {
+	return {
+		origin: {
+			x: closing_bracket.origin.x,
+			y: codeoverlay_rect.origin.y
+		},
+		size: {
+			width: 0,
+			height: Math.max(0, closing_bracket.origin.y - codeoverlay_rect.origin.y)
+		}
+	};
+};
+
+const line_rect_if_no_brackets_visible = (codeoverlay_rect: LogicalFrame): LogicalFrame => {
+	return {
+		origin: {
+			x: codeoverlay_rect.origin.x + LEFT_MOST_LINE_X,
+			y: codeoverlay_rect.origin.y
+		},
+		size: {
+			width: 0,
+			height: codeoverlay_rect.size.height
+		}
+	};
+};
+
+const line_rect_if_both_brackets_visible = (
+	opening_bracket: LogicalFrame,
+	closing_bracket: LogicalFrame
+): LogicalFrame => {
+	return {
+		origin: {
+			x: Math.min(opening_bracket.origin.x, closing_bracket.origin.x),
+			y: opening_bracket.origin.y + opening_bracket.size.height - BORDER_WIDTH
+		},
+		size: {
+			width: Math.max(0, opening_bracket.origin.x - closing_bracket.origin.x),
+			height: closing_bracket.origin.y - opening_bracket.origin.y
+		}
+	};
+};
+
+export const correct_highlight_rectangles_with_elbow_point = (
+	line_rectangle: LogicalFrame,
+	closing_bracket: LogicalFrame | null,
+	codeoverlay_rect: LogicalFrame,
+	elbow_origin: LogicalPosition | null,
+	elbow_origin_x_left_most: boolean,
+	bottom_line_top: boolean
+): [LogicalFrame, LogicalFrame] => {
+	// If 'origin_x_left_most' is false, 'origin' is always Some() -> backend logic
+	const updated_elbow_origin = elbow_origin_x_left_most
+		? { x: codeoverlay_rect.origin.x + LEFT_MOST_LINE_X, y: 0 }
+		: elbow_origin!;
+
+	// Update the line_rectangle size to include the diff between elbow_x and the line_rectangle origin_x
+	line_rectangle.size.width += Math.max(0, line_rectangle.origin.x - updated_elbow_origin.x);
+	line_rectangle.size.height = Math.max(0, updated_elbow_origin.y - line_rectangle.origin.y);
+
+	// Update the line_rectangle origin to the elbow_x
+	line_rectangle.origin.x = updated_elbow_origin.x;
+
+	let elbow_rectangle: LogicalFrame = {
+		origin: {
+			x: updated_elbow_origin.x,
+			y: line_rectangle.origin.y + line_rectangle.size.height
+		},
+		size: {
+			width: closing_bracket ? Math.max(0, closing_bracket.origin.x - updated_elbow_origin.x) : 0,
+			height: closing_bracket
+				? Math.max(
+						0,
+						closing_bracket.origin.y - (line_rectangle.origin.y + line_rectangle.size.height)
+				  )
+				: codeoverlay_rect.origin.y + codeoverlay_rect.size.height - updated_elbow_origin.y
+		}
+	};
+
+	// Special case: we need to draw the bottom line at height of the closing_bracket's bottom left corner
+	// instead of the closing_bracket's top left corner
+	if (!bottom_line_top) {
+		elbow_rectangle.size.height += closing_bracket ? closing_bracket.size.height : 0;
+	} else {
+		elbow_rectangle.size.height += BORDER_WIDTH;
+	}
+
+	return [line_rectangle, elbow_rectangle];
 };
