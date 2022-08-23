@@ -9,6 +9,7 @@
 		compute_bracket_highlight_box_rects,
 		compute_bracket_highlight_line_rect
 	} from './bracket_highlight';
+	import {colors} from '../../../themes'
 
 	export let code_overlay_rectangle: LogicalFrame | null;
 
@@ -56,7 +57,7 @@
 			bracket_highlight_line_rectangle.size.width
 		)}px;height: {Math.round(
 			bracket_highlight_line_rectangle.size.height
-		)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: var(--theme-inactive); border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
+		)}px; border-style: solid; border-top-width: {BORDER_WIDTH}px; border-color: {colors.inactive}; border-left-width: {BORDER_WIDTH}px; border-right-width: 0; border-bottom-width: 0;"
 	/>
 {/if}
 {#if bracket_highlight_box_rectangle_first !== null}
@@ -67,7 +68,7 @@
 			bracket_highlight_box_rectangle_first.size.width
 		)}px;height: {Math.round(
 			bracket_highlight_box_rectangle_first.size.height
-		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: var(--theme-inactive);"
+		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 	/>
 {/if}
 {#if bracket_highlight_box_rectangle_last !== null}
@@ -78,7 +79,7 @@
 			bracket_highlight_box_rectangle_last.size.width
 		)}px;height: {Math.round(
 			bracket_highlight_box_rectangle_last.size.height
-		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: var(--theme-inactive);"
+		)}px; border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 	/>
 {/if}
 {#if bottom_elbow_rectangle !== null}
@@ -89,6 +90,6 @@
 			bottom_elbow_rectangle.size.width
 		)}px;height: {Math.round(
 			bottom_elbow_rectangle.size.height
-		)}px; border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: var(--theme-inactive);"
+		)}px; border-bottom-style: solid; border-bottom-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 	/>
 {/if}

@@ -2,8 +2,8 @@
     import { setContext, onMount } from "svelte";
     import { writable } from "svelte/store";
 
-    import { themes, ThemeName} from "./themes"
-
+    import { themes, ThemeName, colorNames, mapColorNameToCssVarString} from "./themes"
+    
     let _currentTheme: ThemeName = 'light';
   
     // set up Theme store, holding current theme object
@@ -18,21 +18,20 @@
         _currentTheme = theme;
 
         theme_store.update(t => ({ ...t, ...themes[_currentTheme] }));
-        setRootColors(_currentTheme);
+        setRootCssVars(_currentTheme);
       }
     });
   
     onMount(() => {
-      setRootColors(_currentTheme);
+      setRootCssVars(_currentTheme);
     });
   
-    // sets CSS vars for easy use in components
-    // ex: var(--theme-background)
-    const setRootColors = (themeName: ThemeName) => {
+    const setRootCssVars = (themeName: ThemeName) => {
         const theme = themes[themeName];
-      for (let [prop, color] of Object.entries(theme.colors)) {
-        let varString = `--theme-${prop}`;
-        document.documentElement.style.setProperty(varString, color);
+      for (const colorName of colorNames) {
+        const cssVar = mapColorNameToCssVarString(colorName);
+        const color = theme.colors[colorName];
+        document.documentElement.style.setProperty(cssVar, color);
       }
       document.documentElement.style.setProperty("--theme-name", themeName);
     };

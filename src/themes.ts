@@ -1,13 +1,16 @@
 const CodeAlphaOrange = '#fc7456';
+
+export type ThemeName = 'light' | 'dark';
+export const colorNames = ['primary', 'secondary', 'inactive', 'contrast'] as const;
+
+
+export type ColorName = typeof colorNames[number];
 export interface Theme {
 	colors: {
-		primary: string;
-		secondary: string;
-		inactive: string;
-		contrast: string;
+		[key in ColorName]: string;
 	};
 }
-export type ThemeName = 'light' | 'dark';
+
 export const themes: { [name in ThemeName]: Theme } = {
 	light: {
 		colors: {
@@ -26,3 +29,10 @@ export const themes: { [name in ThemeName]: Theme } = {
 		}
 	}
 };
+
+export function mapColorNameToCssVarString(colorName: ColorName) {
+	return `--theme-${colorName}`
+  }
+
+export const colors = colorNames.reduce((curr, colorName) => ({...curr, [colorName]: `var(${mapColorNameToCssVarString(colorName)})`}), {} as {[colorName in ColorName]: string});
+
