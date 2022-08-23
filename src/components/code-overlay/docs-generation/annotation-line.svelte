@@ -1,11 +1,12 @@
 <script lang="ts">
+import { colors } from "../../../themes";
+
+
 	export let visible = false;
 	export let highlighted = false;
 	const ANNOTATION_LINE_WIDTH_PCT = 10;
 
-	export let height = 0;
-
-	$: background_color = highlighted ? "var(--theme-primary)" : "var(--theme-inactive)";
+	$: background_color = highlighted ? colors.primary : colors.inactive;
 </script>
 
 {#if visible}

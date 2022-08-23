@@ -1,4 +1,6 @@
 <script lang="ts">
+import { colors } from '../../../themes';
+
 
 import WidgetProcessing from '../../widget/widget-processing.svelte';
 
@@ -44,7 +46,7 @@ export let is_processing = false;
 			viewBox="0 0 12 12"
 		>
 			<path
-				fill=var(--theme-secondary)
+				fill={colors.secondary}
 				fill-rule="evenodd"
 				d="M3.74 3.402a2.591 2.591 0 0 1 1.832.451l.012.008 1.834 1.433L9.04 4.046A3.5 3.5 0 0 0 6.117 2.47c-.916 0-1.751.353-2.376.933Zm4.605 2.616 2.15-1.654-.203-.418a4.646 4.646 0 0 0-4.175-2.617C3.547 1.33 1.469 3.423 1.469 6c0 2.577 2.078 4.67 4.648 4.67a4.645 4.645 0 0 0 4.151-2.569l.21-.417-2.133-1.666Zm-.932.717L5.646 8.093l-.002.002a2.592 2.592 0 0 1-1.903.503c.625.58 1.46.933 2.376.933a3.5 3.5 0 0 0 2.9-1.543L7.413 6.735Zm-.927-.724L4.907 4.777a1.453 1.453 0 0 0-.83-.258c-.808 0-1.47.66-1.47 1.481 0 .82.662 1.48 1.47 1.48.33 0 .634-.108.88-.293l1.53-1.176Z"
 				clip-rule="evenodd"
@@ -52,6 +54,6 @@ export let is_processing = false;
 		</svg>
 	{/if}
 {:else}
-	<WidgetProcessing color="var(--theme-contrast)" />
+	<WidgetProcessing color={colors.contrast} />
 {/if}
 </div>
