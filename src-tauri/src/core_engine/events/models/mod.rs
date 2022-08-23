@@ -1,5 +1,5 @@
-pub use code_annotation::CodeAnnotationMessage;
 pub use code_annotation::RemoveCodeAnnotationMessage;
+pub use code_annotation::UpdateCodeAnnotationMessage;
 
 pub use core_activation_status::CoreActivationStatusMessage;
 pub use docs_generated::DocsGeneratedMessage;

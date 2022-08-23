@@ -410,7 +410,12 @@ pub fn get_bounds_of_CFRange(range: &CFRange, textarea_ui_element: &AXUIElement)
         .parameterized_attribute(&AXAttribute::bounds_for_range(), &axval_from_cfrange)
     {
         // Convert AXValue into valid CGRect
-        return Some(bounds_as_axval.get_value::<CGRect>().unwrap());
+        let result = bounds_as_axval.get_value::<CGRect>().unwrap();
+        // If off screen, it returns 0.0, 0.0 for size; treat this as no match
+        if result.size.width == 0.0 && result.size.height == 0.0 {
+            return None;
+        }
+        return Some(result);
     }
 
     None

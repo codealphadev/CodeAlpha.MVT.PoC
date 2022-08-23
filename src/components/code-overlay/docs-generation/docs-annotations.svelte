@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
-	import type { CodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/CodeAnnotationMessage';
+	import type { UpdateCodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/UpdateCodeAnnotationMessage';
 	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
@@ -11,7 +11,7 @@
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
 
-	export let annotation: CodeAnnotationMessage;
+	export let annotation: UpdateCodeAnnotationMessage;
 	export let code_overlay_position: LogicalPosition | null;
 
 	let is_hovered = false;
@@ -74,7 +74,7 @@
 	listenToDocsGenerationEvents();
 </script>
 
-{#if annotation.annotation_codeblock !== null && code_overlay_position !== null && annotation.annotation_icon !== null}
+{#if code_overlay_position !== null && annotation.annotation_icon !== null}
 	<div
 		style="position: absolute; top: {Math.round(
 			annotation.annotation_icon.origin.y - code_overlay_position.y
@@ -85,11 +85,23 @@
 		)}px;"
 	>
 		<AnnotationIcon {is_hovered} {is_processing} />
+		
+	</div>
+{/if}
+
+{#if code_overlay_position !== null && annotation.annotation_codeblock !== null }
+	<div
+		style="position: absolute; top: {Math.round(
+			annotation.annotation_codeblock.origin.y - code_overlay_position.y
+		)}px; left: {Math.round(
+			annotation.annotation_codeblock.origin.x - code_overlay_position.x
+		)}px; width: {Math.round(annotation.annotation_codeblock.size.width)}px;height: {Math.round(
+			annotation.annotation_codeblock.size.height
+		)}px;"
+	>
 		<AnnotationLine
 			visible={is_hovered || is_processing}
 			highlighted={is_hovered && !is_processing}
-			height={annotation.annotation_codeblock.size.height -
-				annotation.annotation_icon.size.height}
 		/>
 	</div>
 {/if}
