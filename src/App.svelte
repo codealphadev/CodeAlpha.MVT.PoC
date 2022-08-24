@@ -11,7 +11,7 @@
 			<Widget />
 		</Route>
 
-		<Route path="/codeoverlay">
+		<Route path="/overlay">
 			<CodeOverlay />
 		</Route>
 	</Router>

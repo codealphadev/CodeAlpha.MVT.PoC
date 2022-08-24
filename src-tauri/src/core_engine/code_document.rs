@@ -124,7 +124,7 @@ impl CodeDocument {
 
         // Send to CodeOverlay window
         let _ = self.app_handle.emit_to(
-            &AppWindow::Settings.to_string(),
+            &AppWindow::Overlay.to_string(),
             &ChannelList::BracketHighlightResults.to_string(),
             &self.bracket_highlight.get_results(),
         );
@@ -153,7 +153,7 @@ impl CodeDocument {
         }
         // Send to CodeOverlay window
         let _ = self.app_handle.emit_to(
-            &AppWindow::Settings.to_string(),
+            &AppWindow::Overlay.to_string(),
             &ChannelList::RuleResults.to_string(),
             &rule_results,
         );

@@ -6,12 +6,12 @@ use tauri::Manager;
 use crate::{
     app_handle,
     utils::messaging::ChannelList,
-    window_controls::{events::EventWindowControls, windows::CodeOverlayWindow},
+    window_controls::{events::EventWindowControls, windows::OverlayWindow},
 };
 
 use super::handlers::{on_hide_app_window, on_show_app_window};
 
-pub fn window_control_events_listener(code_overlay_window: &Arc<Mutex<CodeOverlayWindow>>) {
+pub fn window_control_events_listener(code_overlay_window: &Arc<Mutex<OverlayWindow>>) {
     let code_overlay_window_move_copy = (code_overlay_window).clone();
     app_handle().listen_global(ChannelList::EventWindowControls.to_string(), move |msg| {
         let event_window_controls: EventWindowControls =

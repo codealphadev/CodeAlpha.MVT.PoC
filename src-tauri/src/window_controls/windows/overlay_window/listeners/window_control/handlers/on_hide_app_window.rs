@@ -3,14 +3,14 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::window_controls::{
-    config::AppWindow, events::models::app_window::HideAppWindowMessage, windows::SettingsWindow,
+    config::AppWindow, events::models::app_window::HideAppWindowMessage, windows::OverlayWindow,
 };
 
 pub fn on_hide_app_window(
-    settings_window: &Arc<Mutex<SettingsWindow>>,
+    settings_window: &Arc<Mutex<OverlayWindow>>,
     hide_msg: &HideAppWindowMessage,
 ) -> Option<()> {
-    if hide_msg.app_windows.contains(&AppWindow::Settings) {
+    if hide_msg.app_windows.contains(&AppWindow::Overlay) {
         let settings_window = settings_window.lock();
 
         if settings_window.hide().is_none() {

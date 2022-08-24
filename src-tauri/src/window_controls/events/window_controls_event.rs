@@ -50,7 +50,7 @@ impl EventWindowControls {
         // Emit to CodeOverlay window
         if publish_to_frontend {
             _ = app_handle.emit_to(
-                &AppWindow::Settings.to_string(),
+                &AppWindow::Overlay.to_string(),
                 event_name.as_str(),
                 Some(serde_json::to_string(self).unwrap()),
             );
