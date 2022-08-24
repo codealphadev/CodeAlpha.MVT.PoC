@@ -23,6 +23,14 @@
 		await listen(BracketHighlightChannel, (event) => {
 			const bracket_highlights = event.payload as BracketHighlightResults;
 
+			if (bracket_highlights == null) {
+				opening_bracket_box_highlight = null;
+				closing_bracket_box_highlight = null;
+				line_rectangle = reset_highlight_rectangle();
+				elbow_rectangle = reset_highlight_rectangle();
+				return;
+			}
+
 			opening_bracket_box_highlight = bracket_highlights.boxes.first
 				? bracket_highlights.boxes.first.rectangle
 				: null;
