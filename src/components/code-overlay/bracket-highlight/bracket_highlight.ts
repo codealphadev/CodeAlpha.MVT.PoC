@@ -60,18 +60,13 @@ const line_rect_if_only_opening_bracket_visible = (
 	return {
 		origin: {
 			x: Math.min(opening_bracket.origin.x, codeoverlay_rect.origin.x + LEFT_MOST_LINE_X),
-			y: opening_bracket.origin.y + opening_bracket.size.height /*- BORDER_WIDTH*/
+			y: opening_bracket.origin.y + opening_bracket.size.height - BORDER_WIDTH
 		},
 		size: {
-			width: Math.max(
-				0,
-				opening_bracket.origin.x - codeoverlay_rect.origin.x + LEFT_MOST_LINE_X
-			) /* - BORDER_WIDTH */,
+			width: Math.max(0, opening_bracket.origin.x - (codeoverlay_rect.origin.x + LEFT_MOST_LINE_X)),
 			height: Math.max(
 				0,
-				codeoverlay_rect.origin.y +
-					codeoverlay_rect.size.height -
-					opening_bracket.origin.y /*+ BORDER_WIDTH*/
+				codeoverlay_rect.origin.y + codeoverlay_rect.size.height - opening_bracket.origin.y
 			)
 		}
 	};
