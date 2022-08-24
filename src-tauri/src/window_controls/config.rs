@@ -22,23 +22,44 @@ impl std::fmt::Display for AppWindow {
 
 impl AppWindow {
     pub fn hidden_on_core_engine_inactive() -> Vec<AppWindow> {
-        vec![AppWindow::CodeOverlay, AppWindow::Repair]
+        vec![
+            AppWindow::CodeOverlay,
+            AppWindow::Settings,
+            AppWindow::Repair,
+        ]
     }
 
     pub fn hidden_on_focus_lost() -> Vec<AppWindow> {
-        vec![AppWindow::Widget, AppWindow::CodeOverlay, AppWindow::Repair]
+        vec![
+            AppWindow::Widget,
+            AppWindow::CodeOverlay,
+            AppWindow::Settings,
+            AppWindow::Repair,
+        ]
     }
 
     pub fn hidden_on_scroll_event() -> Vec<AppWindow> {
-        vec![AppWindow::CodeOverlay, AppWindow::Repair]
+        vec![
+            AppWindow::CodeOverlay,
+            AppWindow::Settings,
+            AppWindow::Repair,
+        ]
     }
 
     pub fn shown_on_focus_gained() -> Vec<AppWindow> {
-        vec![AppWindow::Widget, AppWindow::CodeOverlay]
+        vec![
+            AppWindow::Widget,
+            AppWindow::CodeOverlay,
+            AppWindow::Settings,
+        ]
     }
 
     pub fn shown_on_core_engine_activated() -> Vec<AppWindow> {
-        vec![AppWindow::Widget, AppWindow::CodeOverlay]
+        vec![
+            AppWindow::Widget,
+            AppWindow::CodeOverlay,
+            AppWindow::Settings,
+        ]
     }
 }
 
@@ -48,7 +69,11 @@ pub mod default_properties {
     pub fn url(window: &AppWindow) -> String {
         match window {
             AppWindow::Settings => {
-                format!("{}{}", r"\", AppWindow::Settings.to_string().to_lowercase())
+                format!(
+                    "{}{}",
+                    r"\",
+                    AppWindow::CodeOverlay.to_string().to_lowercase()
+                )
             }
 
             AppWindow::Analytics => format!(
@@ -113,7 +138,7 @@ pub mod default_properties {
     }
     pub fn is_transparent(window: &AppWindow) -> bool {
         match window {
-            AppWindow::Settings => false,
+            AppWindow::Settings => true,
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
             AppWindow::Content => true,
@@ -124,7 +149,7 @@ pub mod default_properties {
 
     pub fn has_decorations(window: &AppWindow) -> bool {
         match window {
-            AppWindow::Settings => true,
+            AppWindow::Settings => false,
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
@@ -135,7 +160,7 @@ pub mod default_properties {
 
     pub fn is_visible(window: &AppWindow) -> bool {
         match window {
-            AppWindow::Settings => true,
+            AppWindow::Settings => false,
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
@@ -146,7 +171,7 @@ pub mod default_properties {
 
     pub fn is_always_on_top(window: &AppWindow) -> bool {
         match window {
-            AppWindow::Settings => false,
+            AppWindow::Settings => true,
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
             AppWindow::Content => true,

@@ -323,7 +323,7 @@ impl TrackingAreasManager {
 }
 
 fn check_code_overlay_visible() -> bool {
-    if let Some(window) = app_handle().get_window(&AppWindow::CodeOverlay.to_string()) {
+    if let Some(window) = app_handle().get_window(&AppWindow::Settings.to_string()) {
         if let Ok(visible) = window.is_visible() {
             if visible {
                 return true;
@@ -338,7 +338,7 @@ fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> Option<bo
     use strum::IntoEnumIterator;
 
     for app_window in AppWindow::iter() {
-        if app_window == AppWindow::CodeOverlay {
+        if app_window == AppWindow::Settings {
             continue;
         }
 

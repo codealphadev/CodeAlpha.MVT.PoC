@@ -29,7 +29,7 @@ impl EventDocsGeneration {
 
         // Emit to frontend
         _ = app_handle.emit_to(
-            &AppWindow::CodeOverlay.to_string(),
+            &AppWindow::Settings.to_string(),
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );

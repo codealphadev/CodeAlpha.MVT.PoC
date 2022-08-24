@@ -20,7 +20,7 @@ use super::{
         EventWindowControls,
     },
     listeners::{app_listener, user_interaction_listener, xcode_listener},
-    windows::{CodeOverlayWindow, EditorWindow, WidgetWindow},
+    windows::{CodeOverlayWindow, EditorWindow, SettingsWindow, WidgetWindow},
     TrackingAreasManager,
 };
 
@@ -54,8 +54,11 @@ impl WindowManager {
         let widget_window = Arc::new(Mutex::new(WidgetWindow::new()?));
         WidgetWindow::start_event_listeners(&widget_window);
 
-        let code_overlay_window = Arc::new(Mutex::new(CodeOverlayWindow::new()?));
-        CodeOverlayWindow::start_event_listeners(&code_overlay_window);
+        // let code_overlay_window = Arc::new(Mutex::new(CodeOverlayWindow::new()?));
+        // CodeOverlayWindow::start_event_listeners(&code_overlay_window);
+
+        let settings_window = Arc::new(Mutex::new(SettingsWindow::new()?));
+        SettingsWindow::start_event_listeners(&settings_window);
 
         let tracking_areas_manager = Arc::new(Mutex::new(TrackingAreasManager::new()));
         TrackingAreasManager::start_event_listeners(&tracking_areas_manager);
