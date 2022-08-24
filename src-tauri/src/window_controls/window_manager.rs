@@ -175,6 +175,7 @@ impl WindowManager {
         let editor_windows_move_copy = self.editor_windows.clone();
         let focused_editor_window_move_copy = self.focused_editor_window.clone();
         let temporarily_hide_move_copy = self.temporarily_hide_until.clone();
+        let is_core_engine_active_move_copy = self.is_core_engine_active;
 
         std::thread::spawn(move || {
             loop {
@@ -191,6 +192,7 @@ impl WindowManager {
                     Self::delayed_show_app_windows(
                         &editor_windows_move_copy,
                         &focused_editor_window_move_copy,
+                        is_core_engine_active_move_copy,
                     );
                     break;
                 }
@@ -203,6 +205,7 @@ impl WindowManager {
     pub fn delayed_show_app_windows(
         editor_windows_arc: &Arc<Mutex<HashMap<Uid, EditorWindow>>>,
         focused_editor_window_arc: &Arc<Mutex<Option<Uid>>>,
+        is_core_engine_active: bool,
     ) -> Option<()> {
         // Attempt try_lock() and early return if this fails; prevents deadlocks from happening.
         let editor_windows = editor_windows_arc.try_lock()?;
@@ -215,8 +218,15 @@ impl WindowManager {
         let textarea_position = editor_window.textarea_position(true)?;
         let textarea_size = editor_window.textarea_size()?;
 
+        let app_windows_shown;
+        if is_core_engine_active {
+            app_windows_shown = AppWindow::shown_on_focus_gained();
+        } else {
+            app_windows_shown = vec![AppWindow::Widget];
+        }
+
         EventWindowControls::AppWindowShow(ShowAppWindowMessage {
-            app_windows: AppWindow::shown_on_focus_gained(),
+            app_windows: app_windows_shown,
             editor_textarea: LogicalFrame {
                 origin: textarea_position,
                 size: textarea_size,
