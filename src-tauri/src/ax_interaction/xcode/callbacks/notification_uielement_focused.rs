@@ -2,9 +2,10 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
+    get_code_section_frame,
     models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
     xcode::XCodeObserverState,
-    AXEventXcode,
+    AXEventXcode, GetVia,
 };
 
 /// Notify Tauri that an new uielement in an editor window has been focused
@@ -56,21 +57,30 @@ pub fn notify_uielement_focused(
         }
 
         if role.to_string() == "AXTextArea" {
-            let (position, size) = derive_xcode_textarea_dimensions(uielement_element)?;
+            if let Ok(code_section_frame) = get_code_section_frame(GetVia::Current) {
+                // Update EditorWindowResizedMessage
 
-            uielement_focused_msg.focused_ui_element = FocusedUIElement::Textarea;
-            uielement_focused_msg.textarea_position = Some(position);
-            uielement_focused_msg.textarea_size = Some(size);
+                uielement_focused_msg.focused_ui_element = FocusedUIElement::Textarea;
+                uielement_focused_msg.textarea_position =
+                    Some(code_section_frame.origin.as_tauri_LogicalPosition());
+                uielement_focused_msg.textarea_size =
+                    Some(code_section_frame.size.as_tauri_LogicalSize());
 
-            // update the window's textarea size
-            let new_tuple = (window.0, window.1.clone(), Some(size), window.3);
+                // update the window's textarea size
+                let new_tuple = (
+                    window.0,
+                    window.1.clone(),
+                    Some(code_section_frame.size.as_tauri_LogicalSize()),
+                    window.3,
+                );
 
-            // Remove item window_list
-            xcode_observer_state
-                .window_list
-                .retain(|vec_elem| vec_elem.0 != new_tuple.0);
+                // Remove item window_list
+                xcode_observer_state
+                    .window_list
+                    .retain(|vec_elem| vec_elem.0 != new_tuple.0);
 
-            xcode_observer_state.window_list.push(new_tuple);
+                xcode_observer_state.window_list.push(new_tuple);
+            }
         }
 
         AXEventXcode::EditorUIElementFocused(uielement_focused_msg)

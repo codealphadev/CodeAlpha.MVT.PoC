@@ -2,11 +2,12 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use core_foundation::base::{CFHash, TCFType};
 use thiserror::Error;
 
+#[derive(Clone, Debug)]
 pub enum GetVia {
+    Current,
     Hash(usize),
     Pid(i32),
     UIElem(AXUIElement),
-    Current,
 }
 
 #[derive(Error, Debug)]
@@ -15,16 +16,12 @@ pub enum XcodeError {
     AXCallFailed(i32),
     #[error("AX resource not found.")]
     AXResourceNotFound,
-    #[error("The focused application is not Xcode.")]
-    FocusedAppNotXcode,
     #[error("The focused window is not an Xcode editor window.")]
     FocusedWindowNotXcode,
     #[error("The focused UI element not an editor textarea.")]
     FocusedUIElemNotTextarea,
     #[error("No open Xcode editor windows found with this hash.")]
     WindowHashUnknown,
-    #[error("Xcode is not running with this pid.")]
-    PidNotXcode,
 }
 
 impl XcodeError {
