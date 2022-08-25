@@ -82,8 +82,8 @@
 {#if code_overlay_position !== null && annotation.annotation_icon !== null}
 	<div
 		style="position: absolute; 
-		top: {round_value(annotation.annotation_icon.origin.y - code_overlay_position.y, 2)}px; 
-		left: {round_value(annotation.annotation_icon.origin.x - code_overlay_position.x, 2)}px; 
+		top: {round_value(annotation.annotation_icon.origin.y, 2)}px; 
+		left: {round_value(annotation.annotation_icon.origin.x, 2)}px; 
 		width: {round_value(annotation.annotation_icon.size.width, 2)}px; 
 		height: {round_value(annotation.annotation_icon.size.height, 2)}px;"
 	>
@@ -94,8 +94,8 @@
 {#if code_overlay_position !== null && annotation.annotation_codeblock !== null}
 	<div
 		style="position: absolute; 
-		top: {round_value(annotation.annotation_codeblock.origin.y - code_overlay_position.y, 2)}px; 
-		left: {round_value(annotation.annotation_codeblock.origin.x - code_overlay_position.x, 2)}px; 
+		top: {round_value(annotation.annotation_codeblock.origin.y, 2)}px; 
+		left: {round_value(annotation.annotation_codeblock.origin.x, 2)}px; 
 		width: {round_value(annotation.annotation_codeblock.size.width, 2)}px; 
 		height: {round_value(annotation.annotation_codeblock.size.height, 2)}px;"
 	>

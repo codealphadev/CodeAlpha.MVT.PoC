@@ -63,6 +63,7 @@ mod tests_mintlify {
     use super::_get_mintlify_documentation;
 
     #[test]
+    #[ignore]
     fn test_get_mintlify_documentation() {
         let resp = _get_mintlify_documentation(
             &"print(\"Hello World\")".to_string(),
@@ -72,6 +73,7 @@ mod tests_mintlify {
     }
 
     #[test]
+    #[ignore]
     fn test_get_mintlify_documentation_without_context() {
         let resp = _get_mintlify_documentation(&"print(\"Hello World\")".to_string(), None);
         assert!(resp.is_some());

@@ -3,12 +3,16 @@ use tauri::Manager;
 use crate::{
     app_handle,
     ax_interaction::{
-        get_dark_mode,
+        focused_uielement_of_app, get_dark_mode, get_textarea_frame,
         models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::AppWindow, events::EventWindowControls, models::dark_mode::DarkModeUpdateMessage,
+        config::AppWindow,
+        events::EventWindowControls,
+        models::{
+            dark_mode::DarkModeUpdateMessage, editor_window::CodeOverlayDimensionsUpdateMessage,
+        },
     },
 };
 
@@ -124,13 +128,18 @@ impl EditorWindow {
     fn set_textarea_dimensions(&mut self, position: LogicalPosition, size: LogicalSize) {
         self.textarea_position = Some(position);
         self.textarea_size = Some(size);
+        let textarea_uielement = focused_uielement_of_app(self.pid).unwrap(); // TODO: handle error and streamline
 
-        EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
-            origin: Self::transform_local_position_to_global_position(
-                self.window_position,
-                position,
-            ),
-            size,
+        let code_doc_rect = get_textarea_frame(&textarea_uielement).unwrap();
+        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
+            code_document_rect: code_doc_rect,
+            code_viewport_rect: LogicalFrame {
+                origin: Self::transform_local_position_to_global_position(
+                    self.window_position,
+                    position,
+                ),
+                size,
+            },
         })
         .publish_to_tauri(&app_handle());
     }
@@ -232,14 +241,21 @@ impl EditorWindow {
         self.window_position = window.origin;
         self.window_size = window.size;
 
+        let textarea_uielement = focused_uielement_of_app(self.pid).unwrap(); // TODO: handle error and streamline
+
+        let code_doc_rect = get_textarea_frame(&textarea_uielement).unwrap();
+
         // Notify the frontend about the updated position of the editor window to allow
         // it to correctly render code annotations.
-        EventWindowControls::CodeOverlayDimensionsUpdate(LogicalFrame {
-            origin: Self::transform_local_position_to_global_position(
-                self.window_position,
-                self.textarea_position?,
-            ),
-            size: self.textarea_size?,
+        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
+            code_document_rect: code_doc_rect,
+            code_viewport_rect: LogicalFrame {
+                origin: Self::transform_local_position_to_global_position(
+                    self.window_position,
+                    self.textarea_position?,
+                ),
+                size: self.textarea_size?,
+            },
         })
         .publish_to_tauri(&app_handle());
 

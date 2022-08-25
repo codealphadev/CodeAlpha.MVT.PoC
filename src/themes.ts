@@ -15,7 +15,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 		colors: {
 			primary: CodeAlphaOrange,
 			secondary: '#555555',
-			inactive: '#cccccc80',
+			inactive: '#bbbbbb80',
 			contrast: '#000000'
 		}
 	},

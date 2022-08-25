@@ -10,7 +10,8 @@ use tauri::Manager;
 use crate::{
     app_handle,
     ax_interaction::{
-        get_file_path_from_window, get_selected_text_range, get_textarea_uielement,
+        currently_focused_window, generate_axui_element_hash, get_file_path_from_window,
+        get_selected_text_range, get_textarea_uielement,
         models::editor::{
             EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
             EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
@@ -175,7 +176,7 @@ fn on_editor_textarea_content_changed(
 
 fn on_editor_textarea_scrolled(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
-    scrolled_msg: &EditorTextareaScrolledMessage,
+    _: &EditorTextareaScrolledMessage,
 ) {
     let core_engine = &mut *(match core_engine_arc.lock() {
         Ok(guard) => guard,
@@ -192,10 +193,13 @@ fn on_editor_textarea_scrolled(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    if let Some(code_doc) = code_documents.get_mut(&scrolled_msg.uielement_hash) {
-        code_doc.compute_rule_visualizations();
-        code_doc.process_bracket_highlight();
-        code_doc.update_docs_gen_annotation_visualization();
+    if let Ok(focused_window) = currently_focused_window() {
+        let hash = generate_axui_element_hash(&focused_window);
+        if let Some(code_doc) = code_documents.get_mut(&hash) {
+            code_doc.compute_rule_visualizations();
+            code_doc.process_bracket_highlight();
+            code_doc.update_docs_gen_annotation_visualization();
+        }
     }
 }
 

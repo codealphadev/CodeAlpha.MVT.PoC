@@ -1,8 +1,10 @@
 import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
-
+import { convert_global_frame_to_local_frame, convert_global_position_to_local_position } from '../../../utils';
+import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 export const BORDER_WIDTH = 1;
-const LEFT_MOST_LINE_X = 16;
+const LEFT_MOST_LINE_X = 16 + 55;
+
 
 export const compute_bracket_highlight_line_rect = (
 	opening_bracket: LogicalFrame | null,
@@ -127,7 +129,7 @@ export const correct_highlight_rectangles_with_elbow_point = (
 ): [LogicalFrame, LogicalFrame] => {
 	// If 'origin_x_left_most' is false, 'origin' is always Some() -> backend logic
 	const updated_elbow_origin = elbow_origin_x_left_most
-		? { x: codeoverlay_rect.origin.x + LEFT_MOST_LINE_X, y: 0 }
+		? { x: LEFT_MOST_LINE_X, y: 0 }
 		: elbow_origin!;
 
 	// Update the line_rectangle size to include the diff between elbow_x and the line_rectangle origin_x
@@ -163,3 +165,21 @@ export const correct_highlight_rectangles_with_elbow_point = (
 
 	return [line_rectangle, elbow_rectangle];
 };
+
+export function map_BracketHighlightResults_to_local(payload: BracketHighlightResults, code_document_rectangle: LogicalFrame): BracketHighlightResults {
+	return {
+		lines: {
+			first: payload.lines.first ? {...payload.lines.first, rectangle: convert_global_frame_to_local_frame(payload.lines.first.rectangle, code_document_rectangle)} : null,
+			last: payload.lines.last ? {...payload.lines.last, rectangle: convert_global_frame_to_local_frame(payload.lines.last.rectangle, code_document_rectangle)} : null,
+		},
+		boxes: {
+			first: payload.boxes.first ? {...payload.boxes.first, rectangle: convert_global_frame_to_local_frame(payload.boxes.first.rectangle, code_document_rectangle)} : null,
+			last: payload.boxes.last ? {...payload.boxes.last, rectangle: convert_global_frame_to_local_frame(payload.boxes.last.rectangle, code_document_rectangle)} : null,
+		},
+		elbow: payload.elbow ? {
+			...payload.elbow,
+			origin: payload.elbow.origin ? convert_global_position_to_local_position(payload.elbow.origin, code_document_rectangle) : null,
+		}: null
+	}
+
+}

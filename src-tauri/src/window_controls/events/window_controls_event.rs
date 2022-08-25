@@ -2,14 +2,12 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use ts_rs::TS;
 
-use crate::{
-    utils::{geometry::LogicalFrame, messaging::ChannelList},
-    window_controls::config::AppWindow,
-};
+use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
 use super::models::{
     app_window::{HideAppWindowMessage, ShowAppWindowMessage},
     dark_mode::DarkModeUpdateMessage,
+    editor_window::CodeOverlayDimensionsUpdateMessage,
     TrackingAreaClickedMessage, TrackingAreaEnteredMessage, TrackingAreaExitedMessage,
 };
 
@@ -22,7 +20,7 @@ pub enum EventWindowControls {
     TrackingAreaExited(TrackingAreaExitedMessage),
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
-    CodeOverlayDimensionsUpdate(LogicalFrame),
+    CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage),
     DarkModeUpdate(DarkModeUpdateMessage),
 }
 
