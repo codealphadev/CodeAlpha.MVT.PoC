@@ -2,7 +2,7 @@ use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
-    models::editor::EditorTextareaZoomedMessage, AXEventXcode, XCodeObserverState,
+    models::editor::EditorTextareaZoomedMessage, xcode::XCodeObserverState, AXEventXcode,
 };
 
 pub fn notify_textarea_zoomed(

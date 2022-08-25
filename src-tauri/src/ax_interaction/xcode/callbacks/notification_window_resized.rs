@@ -4,8 +4,7 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    derive_xcode_textarea_dimensions, models::editor::EditorWindowResizedMessage, AXEventXcode,
-    XCodeObserverState,
+    models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState, AXEventXcode,
 };
 
 /// Notify Tauri that an editor window has been resized

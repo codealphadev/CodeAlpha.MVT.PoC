@@ -3,6 +3,7 @@ use core_graphics::event::{
     CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
     EventField,
 };
+use rdev::{simulate, EventType};
 
 use crate::{
     app_handle,
@@ -165,4 +166,23 @@ fn notification_mouse_click_event(event_type: CGEventType, event: &CGEvent) {
         })
         .publish_to_tauri(&app_handle());
     }
+}
+
+pub fn send_event_mouse_wheel(delta: tauri::LogicalSize<f64>) -> Result<bool, XcodeError> {
+    if is_focused_uielement_xcode_editor_textarea()? {
+        let event_type = EventType::Wheel {
+            delta_x: delta.width as i64,
+            delta_y: delta.height as i64,
+        };
+
+        match simulate(&event_type) {
+            Ok(()) => {
+                return Ok(true);
+            }
+            Err(_) => {
+                println!("We could not send {:?}", event_type);
+            }
+        }
+    }
+    Ok(false)
 }

@@ -39,6 +39,9 @@ pub fn window_control_events_listener(code_overlay_window: &Arc<Mutex<CodeOverla
             EventWindowControls::DarkModeUpdate(_) => {
                 // Do Nothing here
             }
+            EventWindowControls::ViewportPropertiesUpdate(_) => {
+                // Do Nothing here
+            }
         }
     });
 }

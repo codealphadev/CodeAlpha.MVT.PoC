@@ -2,7 +2,8 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::ax_interaction::{
     models::editor::{EditorAppActivatedMessage, EditorAppDeactivatedMessage},
-    AXEventXcode, XCodeObserverState,
+    xcode::XCodeObserverState,
+    AXEventXcode,
 };
 
 /// Notify Tauri that XCode has been activated, which means focus has moved to XCode from a different application.

@@ -1,7 +1,7 @@
 use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::{
-    ax_interaction::{models::app::AppWindowFocusedMessage, AXEventApp, AppObserverState},
+    ax_interaction::{app::AppObserverState, models::app::AppWindowFocusedMessage, AXEventApp},
     window_controls::config::{default_properties, AppWindow},
 };
 

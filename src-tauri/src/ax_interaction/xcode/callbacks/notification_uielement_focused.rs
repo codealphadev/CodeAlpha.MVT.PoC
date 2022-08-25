@@ -2,9 +2,9 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
-    derive_xcode_textarea_dimensions,
     models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
-    AXEventXcode, XCodeObserverState,
+    xcode::XCodeObserverState,
+    AXEventXcode,
 };
 
 /// Notify Tauri that an new uielement in an editor window has been focused

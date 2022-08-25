@@ -3,8 +3,8 @@ use tauri::api::process::{Command, CommandEvent};
 
 use crate::{
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement, send_event_mouse_wheel,
-        set_selected_text_range, update_xcode_editor_content,
+        get_textarea_uielement, send_event_mouse_wheel, set_selected_text_range,
+        set_textarea_content, GetVia,
     },
     core_engine::{
         events::EventRuleExecutionState, rules::get_bounds_of_first_char_in_range,
@@ -36,7 +36,7 @@ pub fn format_swift(
 
         // Get position of selected text
         let mut scroll_delta = None;
-        if let Some(editor_textarea_ui_element) = get_textarea_uielement(pid) {
+        if let Ok(editor_textarea_ui_element) = get_textarea_uielement(GetVia::Pid(pid)) {
             // Get the dimensions of the textarea viewport
             if let Ok(textarea_viewport) =
                 derive_xcode_textarea_dimensions(&editor_textarea_ui_element)
@@ -61,7 +61,7 @@ pub fn format_swift(
                 return;
             };
 
-        if let Ok(_) = update_xcode_editor_content(pid, &formatted_content_string) {
+        if let Ok(_) = set_textarea_content(&formatted_content_string, GetVia::Pid(pid)) {
         } else {
             return;
         };
@@ -69,16 +69,22 @@ pub fn format_swift(
         // Restore cursor position
         // At this point we only place the curser a the exact same ROW | COL as before the formatting.
         if let Ok(_) = set_selected_text_range(
-            pid,
-            get_new_cursor_index(&old_text_move, &new_text, selected_text_range_move.index),
-            selected_text_range_move.length,
+            &TextRange {
+                index: get_new_cursor_index(
+                    &old_text_move,
+                    &new_text,
+                    selected_text_range_move.index,
+                ),
+                length: selected_text_range_move.length,
+            },
+            GetVia::Pid(pid),
         ) {}
 
         // Scroll to the same position as before the formatting
         if let Some(scroll_delta) = scroll_delta {
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-                if let Ok(true) = send_event_mouse_wheel(pid, scroll_delta) {}
+                if let Ok(true) = send_event_mouse_wheel(scroll_delta) {}
             });
         }
 

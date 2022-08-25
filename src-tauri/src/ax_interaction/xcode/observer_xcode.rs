@@ -19,9 +19,20 @@ use crate::{
             get_registered_ax_observer, remove_registered_ax_observer,
             store_registered_ax_observer, ObserverType,
         },
-        AXEventXcode, XCodeObserverState,
+        AXEventXcode,
     },
 };
+
+#[derive(Debug, Clone)]
+pub struct XCodeObserverState {
+    pub app_handle: tauri::AppHandle,
+    pub window_list: Vec<(
+        uuid::Uuid,
+        AXUIElement,
+        Option<tauri::LogicalSize<f64>>,
+        usize,
+    )>,
+}
 
 static EDITOR_XCODE_BUNDLE_ID: &str = "com.apple.dt.Xcode";
 

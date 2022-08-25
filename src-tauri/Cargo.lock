@@ -27,6 +27,7 @@ dependencies = [
  "strum 0.24.1",
  "tauri",
  "tauri-build",
+ "thiserror",
  "tokio",
  "tree-sitter",
  "tree-sitter-swift",

@@ -5,7 +5,7 @@ use enigo::{Enigo, Key, KeyboardControllable};
 use tauri::{ClipboardManager, Error};
 
 use crate::{
-    ax_interaction::{get_selected_text_range, set_selected_text_range},
+    ax_interaction::{get_selected_text_range, set_selected_text_range, GetVia},
     core_engine::TextRange,
 };
 
@@ -83,28 +83,21 @@ pub fn replace_range_with_clipboard_text(
     let mut preserved_cursor_position: Option<TextRange> = None;
 
     if restore_cursor {
-        if let Ok(range_option) = get_selected_text_range(pid) {
-            if let Some(range) = range_option {
-                preserved_cursor_position = Some(range);
-            } else {
-                // Case: the focused ui element is not the code editor's textarea
-                return;
-            }
+        if let Ok(range) = get_selected_text_range(GetVia::Pid(pid)) {
+            preserved_cursor_position = Some(range);
         } else {
             // Case: an error was thrown while attempting to obtain the cursor position
             return;
         };
     }
 
-    if let Ok(success) = set_selected_text_range(pid, range.index, range.length) {
-        if success {
-            let _ = paste_clipboard_text(&app_handle, pid, text, true);
-        }
+    if set_selected_text_range(&range, GetVia::Pid(pid)).is_ok() {
+        let _ = paste_clipboard_text(&app_handle, pid, text, true);
     }
 
     if restore_cursor {
         if let Some(range) = preserved_cursor_position {
-            let _ = set_selected_text_range(pid, range.index, range.length);
+            let _ = set_selected_text_range(&range, GetVia::Pid(pid));
         }
     }
 }

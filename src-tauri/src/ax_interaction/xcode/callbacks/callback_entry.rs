@@ -18,8 +18,10 @@ use core_foundation::{
 
 use crate::ax_interaction::{
     generate_axui_element_hash,
-    xcode::callbacks::{notify_window_created, notify_window_destroyed},
-    XCodeObserverState,
+    xcode::{
+        callbacks::{notify_window_created, notify_window_destroyed},
+        XCodeObserverState,
+    },
 };
 
 use super::{

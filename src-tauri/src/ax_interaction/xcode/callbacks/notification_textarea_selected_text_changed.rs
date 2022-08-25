@@ -2,7 +2,8 @@ use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, CFRange, TCFType};
 
 use crate::ax_interaction::{
-    models::editor::EditorTextareaSelectedTextChangedMessage, AXEventXcode, XCodeObserverState,
+    models::editor::EditorTextareaSelectedTextChangedMessage, xcode::XCodeObserverState,
+    AXEventXcode,
 };
 
 pub fn notify_textarea_selected_text_changed(

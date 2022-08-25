@@ -10,11 +10,13 @@ use core_foundation::runloop::CFRunLoop;
 
 use crate::{
     app_handle,
-    ax_interaction::{
-        setup::{store_registered_ax_observer, ObserverType},
-        AppObserverState,
-    },
+    ax_interaction::setup::{store_registered_ax_observer, ObserverType},
 };
+
+#[derive(Debug, Clone)]
+pub struct AppObserverState {
+    pub app_handle: tauri::AppHandle,
+}
 
 use super::callback_app_notifications;
 

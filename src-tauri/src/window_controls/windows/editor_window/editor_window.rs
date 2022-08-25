@@ -145,7 +145,7 @@ impl EditorWindow {
     }
 
     pub fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
-        self.dark_mode = get_dark_mode(self.pid).ok();
+        self.dark_mode = get_dark_mode().ok();
 
         EventWindowControls::DarkModeUpdate(DarkModeUpdateMessage {
             dark_mode: self.dark_mode.ok_or("dark mode is None".to_string())?,

@@ -3,8 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::{
     app_handle,
     ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement,
-        xcode::actions::replace_range_with_clipboard_text,
+        get_textarea_uielement, xcode::actions::replace_range_with_clipboard_text, GetVia,
     },
     core_engine::{
         events::{
@@ -225,7 +224,7 @@ impl DocsGenerationTask {
         text: &XcodeText,
     ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), &'static str> {
         // 1. Get textarea dimensions
-        let textarea_ui_element = if let Some(elem) = get_textarea_uielement(self.pid) {
+        let textarea_ui_element = if let Ok(elem) = get_textarea_uielement(GetVia::Pid(self.pid)) {
             elem
         } else {
             return Err("Could not find textarea ui element");

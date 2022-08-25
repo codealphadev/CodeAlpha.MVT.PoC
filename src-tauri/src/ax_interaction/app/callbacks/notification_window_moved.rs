@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use cocoa::appkit::CGPoint;
 
 use crate::{
-    ax_interaction::{models::app::AppWindowMovedMessage, AXEventApp, AppObserverState},
+    ax_interaction::{app::AppObserverState, models::app::AppWindowMovedMessage, AXEventApp},
     window_controls::config::{default_properties, AppWindow},
 };
 

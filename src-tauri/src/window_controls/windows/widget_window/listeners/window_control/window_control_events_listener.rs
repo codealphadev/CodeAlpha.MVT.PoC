@@ -39,6 +39,9 @@ pub fn window_control_events_listener(widget_window: &Arc<Mutex<WidgetWindow>>) 
             EventWindowControls::DarkModeUpdate(_) => {
                 // Do nothing here
             }
+            EventWindowControls::ViewportPropertiesUpdate(_) => {
+                // Do Nothing here
+            }
         }
     });
 }
