@@ -1,21 +1,13 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    events::EventRuleExecutionState,
-    features::BracketHighlight,
-    features::DocsGenerator,
-    formatter::format_swift_file,
+    features::{format_swift, BracketHighlight, DocsGenerator},
     rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps},
     utils::XcodeText,
-    TextPosition, TextRange,
+    TextRange,
 };
 use crate::{
-    ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement, get_xcode_editor_content,
-        send_event_mouse_wheel, set_selected_text_range, update_xcode_editor_content,
-    },
-    core_engine::rules::get_bounds_of_first_char_in_range,
-    utils::messaging::ChannelList,
+    ax_interaction::get_xcode_editor_content, utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
 use tauri::Manager;
@@ -200,70 +192,13 @@ impl CodeDocument {
             } else {
                 return;
             };
-        let formatted_content = if let Some(formatted_content) = format_swift_file(file_path) {
-            formatted_content
-        } else {
-            return;
-        };
-
-        if formatted_content == *old_text {
-            return;
-        }
-
-        // Get position of selected text
-        let mut scroll_delta = None;
-        if let Some(editor_textarea_ui_element) =
-            get_textarea_uielement(self.editor_window_props.pid)
-        {
-            // Get the dimensions of the textarea viewport
-            if let Ok(textarea_viewport) =
-                derive_xcode_textarea_dimensions(&editor_textarea_ui_element)
-            {
-                if let Some(bounds_of_selected_text) = get_bounds_of_first_char_in_range(
-                    &selected_text_range,
-                    &editor_textarea_ui_element,
-                ) {
-                    scroll_delta = Some(tauri::LogicalSize {
-                        width: textarea_viewport.0.x - bounds_of_selected_text.origin.x,
-                        height: bounds_of_selected_text.origin.y - textarea_viewport.0.y,
-                    });
-                }
-            }
-        }
-
-        // Update content
-        let formatted_content_string =
-            if let Ok(formatted_content_string) = String::from_utf16(&formatted_content) {
-                formatted_content_string
-            } else {
-                return;
-            };
-        if let Ok(_) =
-            update_xcode_editor_content(self.editor_window_props.pid, &formatted_content_string)
-        {
-        } else {
-            return;
-        };
-
-        // Restore cursor position
-        // At this point we only place the curser a the exact same ROW | COL as before the formatting.
-        if let Ok(_) = set_selected_text_range(
+        format_swift(
+            &file_path,
+            &old_text,
+            &selected_text_range,
             self.editor_window_props.pid,
-            get_new_cursor_index(&old_text, &formatted_content, selected_text_range.index),
-            selected_text_range.length,
-        ) {}
-
-        // Scroll to the same position as before the formatting
-        let pid_move_copy = self.editor_window_props.pid;
-        if let Some(scroll_delta) = scroll_delta {
-            tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-                if let Ok(true) = send_event_mouse_wheel(pid_move_copy, scroll_delta) {}
-            });
-        }
-
-        // Notifiy the frontend that the file has been formatted successfully
-        EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&self.app_handle);
+            &self.app_handle,
+        );
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {
@@ -301,19 +236,4 @@ impl CodeDocument {
             true
         }
     }
-}
-
-fn get_new_cursor_index(
-    old_content: &XcodeText,
-    formatted_content: &XcodeText,
-    index: usize,
-) -> usize {
-    let mut new_index = formatted_content.len();
-    if let Some(text_position) = TextPosition::from_TextIndex(old_content, index) {
-        if let Some(text_index) = text_position.as_TextIndex_stay_on_line(formatted_content, true) {
-            new_index = text_index;
-        }
-    }
-
-    new_index
 }

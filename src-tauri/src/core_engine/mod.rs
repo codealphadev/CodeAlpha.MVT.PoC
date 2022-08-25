@@ -6,7 +6,6 @@ mod code_document;
 mod core_engine;
 pub mod events;
 mod features;
-mod formatter;
 mod listeners;
 mod rules;
 mod syntax_tree;
