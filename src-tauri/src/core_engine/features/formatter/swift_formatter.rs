@@ -27,6 +27,7 @@ pub fn format_swift(
         let new_text = if let Some(formatted_content) = format_file(&file_path_move).await {
             XcodeText::from_str(&formatted_content)
         } else {
+            EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle_move);
             return;
         };
 
