@@ -23,10 +23,10 @@ pub mod geometry {
             Self { x: pos.x, y: pos.y }
         }
 
-        pub fn from_CGRect(rect: &CGRect) -> Self {
+        pub fn from_CGPoint(point: &CGPoint) -> Self {
             Self {
-                x: rect.origin.x,
-                y: rect.origin.y,
+                x: point.x,
+                y: point.y,
             }
         }
 
@@ -62,10 +62,10 @@ pub mod geometry {
             }
         }
 
-        pub fn from_CGRect(rect: &CGRect) -> Self {
+        pub fn from_CGSize(size: &CGSize) -> Self {
             Self {
-                width: rect.size.width,
-                height: rect.size.height,
+                width: size.width,
+                height: size.height,
             }
         }
 
@@ -98,8 +98,8 @@ pub mod geometry {
 
         pub fn from_CGRect(rect: &CGRect) -> Self {
             Self {
-                origin: LogicalPosition::from_CGRect(rect),
-                size: LogicalSize::from_CGRect(rect),
+                origin: LogicalPosition::from_CGPoint(&rect.origin),
+                size: LogicalSize::from_CGSize(&rect.size),
             }
         }
 
