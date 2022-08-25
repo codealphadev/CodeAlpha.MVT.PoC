@@ -182,6 +182,10 @@ pub fn only_whitespace_on_line_until_position(
     text: &XcodeText,
 ) -> Option<bool> {
     let rows = &text.rows;
+    if rows.len() == 0 {
+        return None;
+    }
+
     if rows.len() - 1 < position.row {
         return None;
     }
@@ -337,6 +341,15 @@ mod tests {
                 0,
                 None,
             );
+        }
+
+        #[test]
+        fn empty_text() {
+            let result = only_whitespace_on_line_until_position(
+                TextPosition { row: 10, column: 5 },
+                &XcodeText::new_empty(),
+            );
+            assert_eq!(result, None);
         }
     }
 
