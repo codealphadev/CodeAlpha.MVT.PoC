@@ -14,7 +14,7 @@ use core_foundation::{
     string::{CFString, CFStringRef},
 };
 
-use crate::ax_interaction::AppObserverState;
+use crate::ax_interaction::app::AppObserverState;
 
 use super::{
     notifiy_app_activated, notifiy_app_deactivated, notify_uielement_focused,

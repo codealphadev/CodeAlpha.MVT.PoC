@@ -2,8 +2,9 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::{
     ax_interaction::{
+        app::AppObserverState,
         models::app::{AppUIElementFocusedMessage, FocusedAppUIElement},
-        AXEventApp, AppObserverState,
+        AXEventApp,
     },
     window_controls::config::{default_properties, AppWindow},
 };

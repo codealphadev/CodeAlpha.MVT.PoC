@@ -15,7 +15,7 @@ pub fn on_deactivate_editor_app(
 ) {
     let window_manager = window_manager.lock();
 
-    if let Some(is_focused_app_our_app) = is_currently_focused_app_our_app() {
+    if let Ok(is_focused_app_our_app) = is_currently_focused_app_our_app() {
         if !is_focused_app_our_app {
             window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
         }

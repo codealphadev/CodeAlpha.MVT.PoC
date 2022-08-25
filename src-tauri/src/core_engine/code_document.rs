@@ -7,7 +7,8 @@ use super::{
     TextRange,
 };
 use crate::{
-    ax_interaction::get_xcode_editor_content, utils::messaging::ChannelList,
+    ax_interaction::{get_textarea_content, GetVia},
+    utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
 use tauri::Manager;
@@ -168,8 +169,8 @@ impl CodeDocument {
             .update_selected_text_range(&text_range);
 
         // Check if content changed, if so, process bracket highlight
-        if let (Ok(Some(content_text)), Some(text)) = (
-            get_xcode_editor_content(self.editor_window_props.pid),
+        if let (Ok(content_text), Some(text)) = (
+            get_textarea_content(GetVia::Pid(self.editor_window_props.pid)),
             self.text.as_ref(),
         ) {
             let content_text_u16 = &XcodeText::from_str(&content_text);

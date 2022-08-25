@@ -3,10 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement,
-        models::editor::EditorWindowResizedMessage,
-    },
+    ax_interaction::{get_textarea_uielement, models::editor::EditorWindowResizedMessage, GetVia},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{config::AppWindow, WindowManager},
 };
@@ -24,7 +21,7 @@ pub fn on_resize_editor_window(
     let mut textarea_size = resize_msg.textarea_size;
 
     // If the textarea dimensions are not set, attempt to derive them from the textarea element.
-    if let Some(elem) = get_textarea_uielement(editor_window.pid()) {
+    if let Ok(elem) = get_textarea_uielement(GetVia::Pid(editor_window.pid())) {
         if let Ok((position, size)) = derive_xcode_textarea_dimensions(&elem) {
             textarea_position = Some(position);
             textarea_size = Some(size);

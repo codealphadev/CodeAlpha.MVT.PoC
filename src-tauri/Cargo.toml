@@ -25,6 +25,7 @@ differ = { version = "1.0.2", features = ["use_serde"] }
 reqwest = { version = "0.11", features = ["json"] }
 parking_lot = {version = "0.12.1", features = ["deadlock_detection"] }
 unicode-segmentation = "1.9.0"
+thiserror = "1.0.32"
 
 # macOS dependencies (crucial for Accessibility features to work)
 core-foundation = "0.9.3"

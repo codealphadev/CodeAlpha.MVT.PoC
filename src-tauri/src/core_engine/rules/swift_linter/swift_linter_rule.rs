@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use crate::{
-    ax_interaction::get_textarea_uielement,
+    ax_interaction::{get_textarea_uielement, GetVia},
     core_engine::{
         rules::{
             rule_match::RuleMatchProps,
@@ -59,12 +59,13 @@ impl RuleBase for SwiftLinterRule {
             return self.rule_results();
         }
 
-        let textarea_uielement =
-            if let Some(textarea_uielement) = get_textarea_uielement(self.editor_app_pid) {
-                textarea_uielement
-            } else {
-                return None;
-            };
+        let textarea_uielement = if let Ok(textarea_uielement) =
+            get_textarea_uielement(GetVia::Pid(self.editor_app_pid))
+        {
+            textarea_uielement
+        } else {
+            return None;
+        };
 
         // Process all found linter results
         if let Some(linter_results) = self.lint_swift_file() {

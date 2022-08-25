@@ -4,7 +4,7 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    models::editor::EditorWindowMovedMessage, AXEventXcode, XCodeObserverState,
+    models::editor::EditorWindowMovedMessage, xcode::XCodeObserverState, AXEventXcode,
 };
 
 /// Notify Tauri that an editor window has been moved

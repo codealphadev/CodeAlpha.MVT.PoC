@@ -1,8 +1,9 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 
 use crate::ax_interaction::{
-    get_textarea_uielement, xcode::callbacks::notify_textarea_selected_text_changed,
-    XCodeObserverState,
+    get_textarea_uielement,
+    xcode::{callbacks::notify_textarea_selected_text_changed, XCodeObserverState},
+    GetVia,
 };
 
 use super::{
@@ -25,9 +26,9 @@ pub fn notify_value_changed(
             Ok(())
         }
         "AXStaticText" => {
-            let uielement_textarea = get_textarea_uielement(uielement.pid()?);
+            let uielement_textarea = get_textarea_uielement(GetVia::Pid(uielement.pid()?));
 
-            if let Some(uielement_textarea) = uielement_textarea {
+            if let Ok(uielement_textarea) = uielement_textarea {
                 notify_textarea_selected_text_changed(
                     &uielement,
                     &uielement_textarea,

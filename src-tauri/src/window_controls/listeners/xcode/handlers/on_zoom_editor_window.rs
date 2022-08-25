@@ -3,10 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::{
-        derive_xcode_textarea_dimensions, get_textarea_uielement,
-        models::editor::EditorTextareaZoomedMessage,
-    },
+    ax_interaction::{get_textarea_uielement, models::editor::EditorTextareaZoomedMessage, GetVia},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{config::AppWindow, WindowManager},
 };
@@ -20,8 +17,10 @@ pub fn on_zoom_editor_window(
 
     let editor_window = editor_window_list.get_mut(&zoom_msg.uielement_hash)?;
 
-    let textarea =
-        derive_xcode_textarea_dimensions(&get_textarea_uielement(editor_window.pid())?).ok()?;
+    let textarea = derive_xcode_textarea_dimensions(&get_textarea_uielement(GetVia::Pid(
+        editor_window.pid(),
+    ))?)
+    .ok()?;
 
     editor_window.update_textarea_dimensions(LogicalFrame {
         origin: LogicalPosition {

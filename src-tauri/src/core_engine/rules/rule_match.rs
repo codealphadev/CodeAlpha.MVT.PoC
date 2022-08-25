@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::ax_interaction::get_textarea_uielement;
+use crate::ax_interaction::{get_textarea_uielement, GetVia};
 
 use super::{calc_rectangles_and_line_matches, LineMatch, RuleMatchCategory, RuleName};
 
@@ -58,7 +58,7 @@ impl RuleMatch {
     }
 
     pub fn update_rectangles(&mut self, editor_app_pid: i32) {
-        if let Some(textarea_ui_element) = get_textarea_uielement(editor_app_pid) {
+        if let Some(textarea_ui_element) = get_textarea_uielement(GetVia::Pid(editor_app_pid)) {
             let (rule_match_rectangles, line_matches) =
                 calc_rectangles_and_line_matches(&self.match_range, &textarea_ui_element);
 

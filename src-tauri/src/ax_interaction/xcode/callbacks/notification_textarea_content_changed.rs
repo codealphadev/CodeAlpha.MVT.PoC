@@ -6,8 +6,8 @@ use core_foundation::{
 };
 
 use crate::ax_interaction::{
-    get_file_path_from_window, models::editor::EditorTextareaContentChangedMessage, AXEventXcode,
-    XCodeObserverState,
+    get_textarea_file_path, models::editor::EditorTextareaContentChangedMessage,
+    xcode::XCodeObserverState, AXEventXcode, GetVia,
 };
 
 /// It checks if the `AXUIElement`'s role is a `AXScrollBar` or a `AXTextArea` and if it is, it sends a
@@ -41,7 +41,7 @@ pub fn notify_textarea_content_changed(
         let content = uielement.value()?;
         let content_str = content.downcast::<CFString>();
 
-        let file_path = if let Ok(file_path) = get_file_path_from_window(&window.1) {
+        let file_path = if let Ok(file_path) = get_textarea_file_path(GetVia::UIElem(window.1)) {
             Some(file_path)
         } else {
             None

@@ -1,4 +1,5 @@
 pub use events::*;
+pub use observer_device_events::send_event_mouse_wheel;
 pub use setup::setup_observers;
 pub use utils::*;
 

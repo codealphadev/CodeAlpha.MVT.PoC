@@ -4,8 +4,9 @@ use tauri::Manager;
 
 use crate::{
     ax_interaction::{
+        app::AppObserverState,
         models::app::{AppActivatedMessage, AppDeactivatedMessage},
-        AXEventApp, AppObserverState,
+        AXEventApp,
     },
     window_controls::config::AppWindow,
 };

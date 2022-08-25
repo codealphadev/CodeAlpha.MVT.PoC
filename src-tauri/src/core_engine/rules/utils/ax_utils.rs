@@ -5,7 +5,6 @@ use core_graphics_types::geometry::{CGRect, CGSize};
 use std::convert::TryFrom;
 
 use crate::{
-    ax_interaction::derive_xcode_textarea_dimensions,
     core_engine::utils::{TextRange, XcodeText},
     utils::geometry::{LogicalPosition, LogicalSize},
 };

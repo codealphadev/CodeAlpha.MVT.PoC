@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    ax_interaction::get_textarea_uielement,
+    ax_interaction::{get_textarea_uielement, GetVia},
     core_engine::{
         rules::{get_bounds_of_TextRange, get_index_of_next_row, MatchRectangle},
         syntax_tree::SwiftSyntaxTree,
@@ -121,10 +121,10 @@ impl BracketHighlight {
 
     pub fn generate_results(&mut self) {
         let (selected_text_range, text_content, textarea_ui_element) =
-            if let (Some(selected_text_range), Some(text_content), Some(textarea_ui_element)) = (
+            if let (Some(selected_text_range), Some(text_content), Ok(textarea_ui_element)) = (
                 self.selected_text_range,
                 self.text_content.as_ref(),
-                get_textarea_uielement(self.window_pid),
+                get_textarea_uielement(GetVia::Pid(self.window_pid)),
             ) {
                 (selected_text_range, text_content, textarea_ui_element)
             } else {

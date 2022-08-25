@@ -3,15 +3,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use accessibility::AXUIElementAttributes;
-use core_foundation::string::CFString;
 use tauri::Manager;
 
 use crate::{
     app_handle,
     ax_interaction::{
-        currently_focused_window, generate_axui_element_hash, get_file_path_from_window,
-        get_selected_text_range, get_textarea_uielement,
+        get_selected_text_range, get_textarea_content, get_textarea_file_path,
         models::editor::{
             EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
             EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
@@ -19,7 +16,7 @@ use crate::{
             EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
             FocusedUIElement, ModifierKey,
         },
-        AXEventXcode,
+        AXEventXcode, GetVia,
     },
     core_engine::{core_engine::UIElementHash, CodeDocument, CoreEngine, EditorWindowProps},
     utils::messaging::ChannelList,
@@ -360,14 +357,10 @@ fn on_editor_focused_uielement_changed(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    let textarea_uielement = get_textarea_uielement(uielement_focus_changed_msg.pid?)?;
+    let pid = uielement_focus_changed_msg.pid?;
 
     // Update rule properties
-    let content_str = textarea_uielement
-        .value()
-        .ok()?
-        .downcast::<CFString>()?
-        .to_string();
+    let content_str = get_textarea_content(GetVia::Pid(pid)).ok()?;
 
     _ = check_if_code_doc_needs_to_be_created(
         &app_handle,
@@ -379,8 +372,8 @@ fn on_editor_focused_uielement_changed(
         },
     );
 
-    let file_path = get_file_path_from_window(&textarea_uielement.window().ok()?).ok();
-    let selected_text_range = get_selected_text_range(uielement_focus_changed_msg.pid?).ok()?;
+    let file_path = get_textarea_file_path(GetVia::Pid(pid)).ok();
+    let selected_text_range = get_selected_text_range(GetVia::Pid(pid)).ok();
 
     let code_doc = code_documents.get_mut(&uielement_focus_changed_msg.ui_elem_hash?)?;
 

@@ -65,10 +65,10 @@ fn main() {
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
             let handle_move_copy = app.handle().clone();
-            let ax_apis_enabled_at_start = ax_interaction::application_is_trusted();
+            let ax_apis_enabled_at_start = ax_interaction::is_application_trusted();
             tauri::async_runtime::spawn(async move {
                 loop {
-                    if ax_interaction::application_is_trusted_with_prompt() {
+                    if ax_interaction::is_application_trusted_with_prompt() {
                         // In case AX apis were not enabled at program start, restart the app to
                         // ensure the AX observers are properly registered.
                         if !ax_apis_enabled_at_start {
