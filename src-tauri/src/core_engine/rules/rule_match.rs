@@ -58,7 +58,7 @@ impl RuleMatch {
     }
 
     pub fn update_rectangles(&mut self, editor_app_pid: i32) {
-        if let Some(textarea_ui_element) = get_textarea_uielement(GetVia::Pid(editor_app_pid)) {
+        if let Ok(textarea_ui_element) = get_textarea_uielement(GetVia::Pid(editor_app_pid)) {
             let (rule_match_rectangles, line_matches) =
                 calc_rectangles_and_line_matches(&self.match_range, &textarea_ui_element);
 

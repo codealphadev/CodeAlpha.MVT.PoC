@@ -4,7 +4,8 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState, AXEventXcode,
+    get_code_section_frame, models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState,
+    AXEventXcode, GetVia,
 };
 
 /// Notify Tauri that an editor window has been resized
@@ -110,11 +111,11 @@ fn derive_resize_parameters_from_scrollbar(
 
     assert_eq!(role.to_string(), "AXScrollBar");
 
-    let (position, size) = derive_xcode_textarea_dimensions(scrollbar_element)?;
-
-    // Update EditorWindowResizedMessage
-    resize_msg.textarea_position = Some(position);
-    resize_msg.textarea_size = Some(size);
+    if let Ok(code_section_frame) = get_code_section_frame(GetVia::Current) {
+        // Update EditorWindowResizedMessage
+        resize_msg.textarea_position = Some(code_section_frame.origin.as_tauri_LogicalPosition());
+        resize_msg.textarea_size = Some(code_section_frame.size.as_tauri_LogicalSize());
+    }
 
     Ok(())
 }

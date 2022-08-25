@@ -5,6 +5,7 @@ use core_graphics_types::geometry::{CGRect, CGSize};
 use std::convert::TryFrom;
 
 use crate::{
+    ax_interaction::{get_code_section_frame, GetVia},
     core_engine::utils::{TextRange, XcodeText},
     utils::geometry::{LogicalPosition, LogicalSize},
 };
@@ -121,24 +122,23 @@ pub fn calc_match_rects_for_wrapped_range(
         get_bounds_of_last_char_in_range(&match_range, &textarea_ui_element),
     ) {
         // Determine editor textarea's horizontal extent
-        if let Ok((editor_origin, editor_size)) =
-            derive_xcode_textarea_dimensions(&textarea_ui_element)
-        {
+        if let Ok(viewport_frame) = get_code_section_frame(GetVia::Current) {
             let first_line_rect = CGRect {
                 origin: first_char_bounds.origin,
                 size: CGSize {
-                    width: editor_origin.x + editor_size.width - first_char_bounds.origin.x,
+                    width: viewport_frame.origin.x + viewport_frame.size.width
+                        - first_char_bounds.origin.x,
                     height: first_char_bounds.size.height,
                 },
             };
 
             let last_line_rect = CGRect {
                 origin: CGPoint {
-                    x: editor_origin.x,
+                    x: viewport_frame.origin.x,
                     y: last_char_bounds.origin.y,
                 },
                 size: CGSize {
-                    width: last_char_bounds.origin.x - editor_origin.x
+                    width: last_char_bounds.origin.x - viewport_frame.origin.x
                         + last_char_bounds.size.width,
                     height: last_char_bounds.size.height,
                 },
@@ -171,12 +171,12 @@ pub fn calc_match_rects_for_wrapped_range(
                     for i in 1..larger_than_two - 1 {
                         let inbetween_line_rect = CGRect {
                             origin: CGPoint {
-                                x: editor_origin.x,
+                                x: viewport_frame.origin.x,
                                 y: first_char_bounds.origin.y
                                     + first_char_bounds.size.height * i as f64,
                             },
                             size: CGSize {
-                                width: editor_size.width,
+                                width: viewport_frame.size.width,
                                 height: first_char_bounds.size.height,
                             },
                         };
@@ -355,8 +355,8 @@ pub fn get_text_range_of_line(
 /// A MatchRectangle
 pub fn get_MatchRect_from_CGRect(cgrect: &CGRect) -> MatchRectangle {
     MatchRectangle {
-        origin: LogicalPosition::from_CGRect(cgrect),
-        size: LogicalSize::from_CGRect(cgrect),
+        origin: LogicalPosition::from_CGPoint(&cgrect.origin),
+        size: LogicalSize::from_CGSize(&cgrect.size),
     }
 }
 
