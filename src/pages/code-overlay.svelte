@@ -9,13 +9,17 @@
 
 	import { getContext } from 'svelte';
 	import type { UpdateCodeAnnotationMessage } from '../../src-tauri/bindings/features/docs_generation/UpdateCodeAnnotationMessage';
+	import { convert_global_frame_to_local_frame } from '../utils';
 	
 	const { setTheme } = getContext("theme");
 
 	type CodeAnnotation = UpdateCodeAnnotationMessage;
 
-	let code_overlay_rectangle: LogicalFrame | null = null;
+	let code_viewport_rectangle: LogicalFrame | null = null;
+	let code_document_rectangle: LogicalFrame | null = null;
+
 	let code_annotation: CodeAnnotation | undefined = undefined;
+
 
 	const listenWindowChannels = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
@@ -24,7 +28,8 @@
 
 			switch (event) {
 				case 'CodeOverlayDimensionsUpdate':
-					code_overlay_rectangle = payload;
+					code_viewport_rectangle = payload.code_viewport_rect;
+					code_document_rectangle = payload.code_document_rect;
 					break;
 				case 'DarkModeUpdate':
 					setTheme(payload.dark_mode ? 'dark' : 'light');
@@ -36,6 +41,17 @@
 		});
 	}
 
+	function mapUpdateCodeAnnotationPayloadToCodeAnnotation(payload: UpdateCodeAnnotationMessage): CodeAnnotation | undefined {
+		if (!code_document_rectangle) {
+			return undefined;
+		}
+		return {
+			id: payload.id,
+			annotation_icon: payload.annotation_icon ? convert_global_frame_to_local_frame(payload.annotation_icon, code_document_rectangle) : null,
+			annotation_codeblock: payload.annotation_codeblock ? convert_global_frame_to_local_frame(payload.annotation_codeblock, code_document_rectangle) : null
+		}
+	
+	}
 	const listenCodeAnnotations = async () => {
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
@@ -43,7 +59,7 @@
 			const {payload, event: event_type} = JSON.parse(event.payload as string) as EventDocsGeneration;
 			switch (event_type) {
 				case 'UpdateCodeAnnotation':
-					code_annotation = payload;
+					code_annotation = mapUpdateCodeAnnotationPayloadToCodeAnnotation(payload);
 					break;
 				case 'RemoveCodeAnnotation':
 					if (code_annotation?.id === payload.id) {
@@ -58,21 +74,31 @@
 
 	listenCodeAnnotations();
 	listenWindowChannels();
+
 </script>
 
-{#if code_overlay_rectangle}
+{#if code_viewport_rectangle && code_document_rectangle}
 	<div
-		style="height: {code_overlay_rectangle.size
-			.height}px; outline-style: solid; outline-width: 1px; outline-color: rgba(0,255,0,0.0);"
+		style="height: {code_viewport_rectangle.size
+			.height}px;width: {code_viewport_rectangle.size.width}px;
+		 outline-style: solid; outline-width: 1px; outline-color: rgba(0,255,0,0.0);"
 		class="h-full w-full overflow-hidden relative"
-		id="overlay"
 	>
-		<BracketHighlight {code_overlay_rectangle} />
-		{#if code_annotation}
-			<DocsAnnotations
-				annotation={code_annotation}
-				code_overlay_position={code_overlay_rectangle.origin}
-			/>
-		{/if}
+		<div
+			style="
+			height: {code_document_rectangle.size.height}px;
+			width: {code_document_rectangle.size.width}px;
+			top: {code_document_rectangle.origin.y - code_viewport_rectangle.origin.y}px; 
+			left:{code_document_rectangle.origin.x - code_viewport_rectangle.origin.x}px; position: relative"
+			class="h-full w-full overflow-hidden relative"
+		>
+			<BracketHighlight code_document_rectangle={code_document_rectangle} />
+			{#if code_annotation}
+				<DocsAnnotations
+					annotation={code_annotation}
+					code_overlay_position={code_document_rectangle.origin}
+				/>
+			{/if}
+		</div>
 	</div>
 {/if}

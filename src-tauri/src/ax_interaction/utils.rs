@@ -12,15 +12,18 @@ use core_foundation::{
     mach_port::CFIndex,
     string::{CFString, CFStringRef},
 };
-use core_graphics::{geometry::CGSize, sys::CGColorRef};
+use core_graphics::{
+    geometry::{CGRect, CGSize},
+    sys::CGColorRef,
+};
 use rdev::{simulate, EventType};
 
-use crate::core_engine::TextRange;
+use crate::{core_engine::TextRange, utils::geometry::LogicalFrame};
 
 static _EDITOR_NAME: &str = "Xcode";
 
 // Method to get the focused AXUIElement's top-level window
-pub fn _currently_focused_app() -> Result<AXUIElement, Error> {
+pub fn currently_focused_app() -> Result<AXUIElement, Error> {
     let system_wide_element = AXUIElement::system_wide();
     let focused_ui_element = system_wide_element.attribute(&AXAttribute::focused_uielement())?;
     let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
@@ -41,7 +44,7 @@ pub fn currently_focused_window() -> Result<AXUIElement, Error> {
 }
 
 pub fn _is_currently_focused_app_editor() -> Option<bool> {
-    if let Ok(focused_app) = _currently_focused_app() {
+    if let Ok(focused_app) = currently_focused_app() {
         if let Ok(app_title) = focused_app.attribute(&AXAttribute::title()) {
             if app_title == _EDITOR_NAME {
                 return Some(true);
@@ -248,14 +251,11 @@ pub fn get_selected_text_range(pid: pid_t) -> Result<Option<TextRange>, Error> {
 
 pub fn is_focused_uielement_of_app_xcode_editor_field(app_pid: pid_t) -> Result<bool, Error> {
     let focused_ui_element = focused_uielement_of_app(app_pid)?;
-    // let focused_window = focused_ui_element.attribute(&AXAttribute::top_level_ui_element())?;
-    // let parent = focused_window.attribute(&AXAttribute::parent())?;
-    // let title = parent.attribute(&AXAttribute::title())?;
 
-    let role = focused_ui_element.attribute(&AXAttribute::role())?;
-
-    if role == "AXTextArea" {
-        Ok(true)
+    if focused_ui_element.role()? == "AXTextArea" {
+        let found_textarea_is_editor_textarea =
+            focused_ui_element.description()?.to_string() == "Source Editor";
+        return Ok(found_textarea_is_editor_textarea);
     } else {
         Ok(false)
     }
@@ -331,6 +331,13 @@ pub fn _window_ui_element_from_hash(pid: pid_t, hash: usize) -> Result<AXUIEleme
     }
 
     Err(Error::Ax(kAXErrorNoValue))
+}
+
+pub fn get_textarea_frame(textarea_uielement: &AXUIElement) -> Result<LogicalFrame, Error> {
+    let frame = textarea_uielement
+        .attribute(&AXAttribute::frame())?
+        .get_value::<CGRect>()?;
+    Ok(LogicalFrame::from_CGRect(&frame))
 }
 
 /// Method takes the AXUIElement of the editor's textarea and returns its size without the scrollbars

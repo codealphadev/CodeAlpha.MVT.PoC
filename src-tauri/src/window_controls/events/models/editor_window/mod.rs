@@ -1,0 +1,3 @@
+pub use code_overlay_dimensions_update::CodeOverlayDimensionsUpdateMessage;
+
+mod code_overlay_dimensions_update;

@@ -29,10 +29,6 @@ impl AppWindow {
         vec![AppWindow::Widget, AppWindow::CodeOverlay, AppWindow::Repair]
     }
 
-    pub fn hidden_on_scroll_event() -> Vec<AppWindow> {
-        vec![AppWindow::CodeOverlay, AppWindow::Repair]
-    }
-
     pub fn shown_on_focus_gained() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay]
     }
