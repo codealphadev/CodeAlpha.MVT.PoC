@@ -9,6 +9,7 @@ use crate::utils::messaging::ChannelList;
 #[serde(tag = "event", content = "payload")]
 pub enum EventRuleExecutionState {
     SwiftFormatFinished(),
+    SwiftFormatFailed(),
     DocsGenerationStarted(),
     DocsGenerationFinished(),
 }

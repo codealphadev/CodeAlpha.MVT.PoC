@@ -2,5 +2,6 @@
 
 export type EventRuleExecutionState =
   | { event: "SwiftFormatFinished"; payload: null }
+  | { event: "SwiftFormatFailed"; payload: null }
   | { event: "DocsGenerationStarted"; payload: null }
   | { event: "DocsGenerationFinished"; payload: null };

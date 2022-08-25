@@ -3,7 +3,6 @@
 	import { appWindow } from '@tauri-apps/api/window';
 	import WidgetBackground from '../components/widget/widget-background.svelte';
 	import IconLogo from '../components/widget/icons/icon-logo.svelte';
-	import IconSwiftFormat from '../components/widget/icons/icon-swift-format.svelte';
 	import IconDocsGen from '../components/widget/icons/icon-docs-gen.svelte';
 	import IconLogoGreyscale from '../components/widget/icons/icon-logo-greyscale.svelte';
 	import { listen } from '@tauri-apps/api/event';
@@ -12,6 +11,7 @@
 	import WidgetProcessing from '../components/widget/widget-processing.svelte';
 	import WidgetBackgroundGreyscale from '../components/widget/widget-background-greyscale.svelte';
 	import { fade } from 'svelte/transition';
+	import SwiftFormat from '../components/widget/swift-format.svelte';
 
 	let app_active = true;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
@@ -41,6 +41,11 @@
 			// widget icon to the logo after some delay
 			switch (ruleExecutionState.event) {
 				case 'SwiftFormatFinished':
+					setTimeout(async () => {
+						ruleExecutionState = null;
+					}, show_alternate_icon_duration);
+					break;
+				case 'SwiftFormatFailed':
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, show_alternate_icon_duration);
@@ -82,9 +87,9 @@
 					<div in:fade={{ duration: 200 }}>
 						<IconLogoGreyscale />
 					</div>
-				{:else if ruleExecutionState != null && ruleExecutionState.event === 'SwiftFormatFinished'}
+				{:else if ruleExecutionState != null && (ruleExecutionState.event === 'SwiftFormatFinished' || ruleExecutionState.event === 'SwiftFormatFailed')}
 					<div in:fade={{ duration: 200 }}>
-						<IconSwiftFormat />
+						<SwiftFormat event={ruleExecutionState.event} />
 					</div>
 				{:else if ruleExecutionState != null && ruleExecutionState.event === 'DocsGenerationFinished'}
 					<div in:fade={{ duration: 200 }}>
