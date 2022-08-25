@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
-	import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
+	import type { BracketHighlightResults } from '../../../../src-tauri/bindings/features/bracket_highlighting/BracketHighlightResults';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 	import {

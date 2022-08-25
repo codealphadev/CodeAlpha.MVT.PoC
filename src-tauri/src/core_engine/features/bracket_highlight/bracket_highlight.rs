@@ -19,7 +19,7 @@ use super::utils::{
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/bracket_highlight/")]
+#[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightElbow {
     origin: Option<LogicalPosition>,
     origin_x_left_most: bool,
@@ -27,7 +27,7 @@ pub struct BracketHighlightElbow {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/bracket_highlight/")]
+#[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightBracket {
     text_range: TextRange,
     text_position: TextPosition,
@@ -35,7 +35,7 @@ pub struct BracketHighlightBracket {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/bracket_highlight/")]
+#[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightBracketPair {
     first: Option<BracketHighlightBracket>,
     last: Option<BracketHighlightBracket>,
@@ -79,7 +79,7 @@ impl BracketHighlightBracketPair {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/bracket_highlight/")]
+#[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightResults {
     lines: BracketHighlightBracketPair,
     elbow: Option<BracketHighlightElbow>,
