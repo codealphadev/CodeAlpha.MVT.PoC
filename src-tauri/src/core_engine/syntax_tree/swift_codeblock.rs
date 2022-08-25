@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use tree_sitter::Node;
 
-use crate::core_engine::utils::{TextPosition, XcodeText, TextRange};
+use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
 pub type Err = ();
 
@@ -27,7 +27,7 @@ impl FromStr for SwiftCodeBlockType {
             "if_statement" => Ok(SwiftCodeBlockType::If),
             "else_statement" => Ok(SwiftCodeBlockType::Else),
             "class_body" => Ok(SwiftCodeBlockType::Class),
-            "function_body" => Ok(SwiftCodeBlockType::Function),
+            "function_declaration" => Ok(SwiftCodeBlockType::Function),
             "switch_statement" => Ok(SwiftCodeBlockType::Switch),
             "while_statement" => Ok(SwiftCodeBlockType::While),
             "do_statement" => Ok(SwiftCodeBlockType::Do),
