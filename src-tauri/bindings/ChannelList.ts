@@ -10,4 +10,5 @@ export type ChannelList =
   | "EventUserInteractions"
   | "EventWindowControls"
   | "EventDocsGeneration"
-  | "RuleResults";
+  | "RuleResults"
+  | "EventViewport";
