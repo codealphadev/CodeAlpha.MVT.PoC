@@ -41,20 +41,8 @@ pub fn notify_textarea_scrolled(
         .publish_to_tauri(&xcode_observer_state.app_handle);
 
         // Publish an updated viewport properties message
-        let viewport_properties =
-            get_viewport_properties(&GetVia::Current).map_err(|_| Error::NotFound);
-        let code_document_frame_properties = get_code_document_frame_properties(&GetVia::Current);
-
-        if let (Ok(viewport_properties), Ok(code_document_frame_properties)) =
-            (viewport_properties, code_document_frame_properties)
-        {
-            EventViewport::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
-                viewport_properties: Some(viewport_properties),
-                code_document_frame_properties: Some(code_document_frame_properties),
-            });
-        } else {
-            println!("SCROLL: Error getting viewport properties");
-        }
+        EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
+            .publish_to_tauri(&xcode_observer_state.app_handle);
     }
     Ok(())
 }

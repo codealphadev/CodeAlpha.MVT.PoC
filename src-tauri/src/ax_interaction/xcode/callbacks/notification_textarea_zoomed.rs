@@ -3,6 +3,7 @@ use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
     models::editor::EditorTextareaZoomedMessage, xcode::XCodeObserverState, AXEventXcode,
+    EventViewport, GetVia,
 };
 
 pub fn notify_textarea_zoomed(
@@ -27,6 +28,10 @@ pub fn notify_textarea_zoomed(
             uielement_hash: window.3,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
+
+        // Publish an updated viewport properties message
+        EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
+            .publish_to_tauri(&xcode_observer_state.app_handle);
     }
 
     Ok(())

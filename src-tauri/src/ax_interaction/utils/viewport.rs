@@ -1,6 +1,6 @@
 use accessibility::{AXAttribute, AXUIElement};
-use cocoa::appkit::CGPoint;
 use core_foundation::array::CFArray;
+use core_graphics::geometry::CGRect;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -107,11 +107,11 @@ fn get_text_offset_px(get_via: &GetVia) -> Result<f64, XcodeError> {
     let visible_character_range =
         ax_attribute(&textarea_uielement, AXAttribute::visible_character_range())?;
 
-    if let Ok(character_range_bounds) = textarea_uielement
+    if let Ok(character_range_bounds_axval) = textarea_uielement
         .parameterized_attribute(&AXAttribute::bounds_for_range(), &visible_character_range)
     {
-        if let Ok(bounds) = character_range_bounds.get_value::<CGPoint>() {
-            let text_offset_px = bounds.x - code_document_frame.origin.x;
+        if let Ok(character_range_bounds) = character_range_bounds_axval.get_value::<CGRect>() {
+            let text_offset_px = character_range_bounds.origin.x - code_document_frame.origin.x;
             if text_offset_px < 0.0 {
                 return Err(XcodeError::ImplausibleDimensions);
             } else {
@@ -119,6 +119,8 @@ fn get_text_offset_px(get_via: &GetVia) -> Result<f64, XcodeError> {
             }
         }
     }
+
+    println!("Could not get text offset");
 
     Err(XcodeError::AXResourceNotFound)
 }
