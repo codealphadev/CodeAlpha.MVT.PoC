@@ -6,3 +6,15 @@ export interface BracketHighlightElbow {
   origin_x_left_most: boolean;
   bottom_line_top: boolean;
 }
+
+
+lines{
+  start : LogicalFrame,
+  end: LogicalFrame
+  elbow: Option<Elbow>,
+}
+
+enum Elbow {
+  LeftMost,
+  Position(LogicalPosition)
+}

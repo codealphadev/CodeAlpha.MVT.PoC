@@ -122,6 +122,8 @@ pub fn get_match_range_of_first_and_last_char_in_node(
         get_node_start_index(&node, &text),
         get_node_end_index(&node, &text),
     ) {
+        todo!(); // TODO: why are all these ranges length 1? We don't need to return a range here, just a position
+
         let mut first_option = MatchRange::from_text_and_range(
             text,
             TextRange {
