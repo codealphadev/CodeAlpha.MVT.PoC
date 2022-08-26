@@ -12,7 +12,7 @@ pub enum CoreEngineTrigger {
 }
 
 pub enum Feature<'a> {
-    BracketHighlighting(BracketHighlight),
+    BracketHighlighting(BracketHighlight<'a>),
     DocsGeneration(DocsGenerator),
     Formatter(SwiftFormatter<'a>),
 }
@@ -30,7 +30,7 @@ pub trait FeatureBase {
     fn update_visualization(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError>;
 }
 
-impl FeatureBase for Feature<'_> {
+impl<'a> FeatureBase for Feature<'a> {
     fn compute(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError> {
         match self {
             Feature::BracketHighlighting(feature) => Ok(()),
