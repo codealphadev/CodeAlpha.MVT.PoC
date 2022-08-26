@@ -60,7 +60,7 @@ impl RuleBase for SwiftLinterRule {
         }
 
         let textarea_uielement = if let Ok(textarea_uielement) =
-            get_textarea_uielement(GetVia::Pid(self.editor_app_pid))
+            get_textarea_uielement(&GetVia::Pid(self.editor_app_pid))
         {
             textarea_uielement
         } else {

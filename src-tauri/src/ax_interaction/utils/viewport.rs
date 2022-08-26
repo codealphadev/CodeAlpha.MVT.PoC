@@ -1,99 +1,192 @@
-use accessibility::AXAttribute;
+use accessibility::{AXAttribute, AXUIElement};
 use cocoa::appkit::CGPoint;
-use core_graphics::geometry::CGSize;
+use core_foundation::array::CFArray;
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize};
 
-use super::{ax_helpers::ax_attribute, get_textarea_uielement, GetVia, XcodeError};
+use super::{
+    ax_helpers::ax_attribute, get_textarea_uielement, internal::get_uielement_frame, GetVia,
+    XcodeError,
+};
 
-pub fn get_viewport_frame(get_via: GetVia) -> Result<LogicalFrame, XcodeError> {
-    let textarea_uielement = get_textarea_uielement(get_via)?;
-
-    let scrollarea_element = ax_attribute(&textarea_uielement, AXAttribute::parent())?;
-
-    // Get Size and Origin of AXScrollArea
-    let scrollarea_pos_ax_value = ax_attribute(&scrollarea_element, AXAttribute::position())?;
-    let scrollarea_size_ax_value = ax_attribute(&scrollarea_element, AXAttribute::size())?;
-
-    if let (Ok(scrollarea_origin), Ok(scrollarea_size)) = (
-        scrollarea_pos_ax_value.get_value::<CGPoint>(),
-        scrollarea_size_ax_value.get_value::<CGSize>(),
-    ) {
-        Ok(LogicalFrame {
-            origin: LogicalPosition::from_CGPoint(&scrollarea_origin),
-            size: LogicalSize::from_CGSize(&scrollarea_size),
-        })
-    } else {
-        Err(XcodeError::AXResourceNotFound)
-    }
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/macOS_specific/xcode/")]
+pub struct ViewportProperties {
+    pub dimensions: LogicalFrame,
+    pub annotation_section: LogicalFrame,
+    pub code_section: LogicalFrame,
 }
 
-pub fn get_code_section_frame(get_via: GetVia) -> Result<LogicalFrame, XcodeError> {
-    let viewport_frame = get_viewport_frame(get_via.clone())?;
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/macOS_specific/xcode/")]
+pub struct CodeDocumentFrameProperties {
+    pub dimensions: LogicalFrame,
+    pub text_offset: f64,
+}
 
-    let textarea_uielement = get_textarea_uielement(get_via.clone())?;
-    let scrollarea_element = ax_attribute(&textarea_uielement, AXAttribute::parent())?;
+pub fn get_code_document_frame_properties(
+    get_via: &GetVia,
+) -> Result<CodeDocumentFrameProperties, XcodeError> {
+    let code_document_uielement = get_textarea_uielement(get_via)?;
+    let code_document_frame = get_uielement_frame(&code_document_uielement)?;
+    let text_offset = get_text_offset_px(&get_via)?;
+
+    Ok(CodeDocumentFrameProperties {
+        dimensions: code_document_frame,
+        text_offset,
+    })
+}
+
+pub fn get_viewport_properties(get_via: &GetVia) -> Result<ViewportProperties, XcodeError> {
+    let viewport_uielement = get_viewport_uielement(get_via)?;
+    let annotation_section = get_annotation_section_frame(&get_via)?;
+    let code_section = get_code_section_frame(&get_via)?;
+    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
+
+    Ok(ViewportProperties {
+        dimensions: viewport_frame,
+        annotation_section,
+        code_section,
+    })
+}
+
+pub fn get_annotation_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> {
+    let viewport_uielement = get_viewport_uielement(get_via)?;
+
+    let text_offset = get_text_offset_px(get_via)?;
+    let gutter_offset = get_gutter_offset_px(&viewport_uielement)?;
+
+    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
+
+    Ok(LogicalFrame {
+        origin: LogicalPosition {
+            x: viewport_frame.origin.x + gutter_offset,
+            y: viewport_frame.origin.y,
+        },
+        size: LogicalSize {
+            width: text_offset - gutter_offset,
+            height: viewport_frame.size.height,
+        },
+    })
+}
+
+pub fn get_code_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> {
+    let viewport_uielement = get_viewport_uielement(get_via)?;
+
+    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
 
     // Get all children
-    let children_elements = ax_attribute(&scrollarea_element, AXAttribute::children())?;
+    let children_elements = ax_attribute(&viewport_uielement, AXAttribute::children())?;
 
-    let mut updated_width = viewport_frame.size.width;
-    let mut updated_origin_x = viewport_frame.origin.x;
+    let minimap_frame = get_viewport_minimap_frame(&children_elements)?;
+    let gutter_frame = get_viewport_gutter_frame(&children_elements)?;
+    let gutter_change_frame = get_viewport_gutter_change_frame(&children_elements)?;
 
-    let mut source_editor_gutter_size = None;
-    for child in &children_elements {
-        if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
-            let identifier_list: [&str; 3] = [
-                "Source Editor Change Gutter",
-                "Source Editor Gutter",
-                "Source Editor Minimap",
-            ];
+    Ok(LogicalFrame {
+        origin: LogicalPosition {
+            x: viewport_frame.origin.x + gutter_frame.size.width + gutter_change_frame.size.width,
+            y: viewport_frame.origin.y,
+        },
+        size: LogicalSize {
+            width: viewport_frame.size.width
+                - gutter_frame.size.width
+                - gutter_change_frame.size.width
+                - minimap_frame.size.width,
+            height: viewport_frame.size.height,
+        },
+    })
+}
 
-            if identifier_list.contains(&identifier.to_string().as_str()) {
-                updated_width -= ax_attribute(&child, AXAttribute::size())?
-                    .get_value::<CGSize>()
-                    .map_err(|_| XcodeError::AXResourceNotFound)?
-                    .width;
+fn get_text_offset_px(get_via: &GetVia) -> Result<f64, XcodeError> {
+    let textarea_uielement = get_textarea_uielement(get_via)?;
 
-                if identifier.to_string() != "Source Editor Minimap" {
-                    updated_origin_x += ax_attribute(&child, AXAttribute::size())?
-                        .get_value::<CGSize>()
-                        .map_err(|_| XcodeError::AXResourceNotFound)?
-                        .width;
-                }
+    let code_document_frame = get_uielement_frame(&textarea_uielement)?;
 
-                if identifier.to_string() == "Source Editor Gutter" {
-                    source_editor_gutter_size = Some(
-                        ax_attribute(&child, AXAttribute::size())?
-                            .get_value::<CGSize>()
-                            .map_err(|_| XcodeError::AXResourceNotFound)?
-                            .width,
-                    )
-                }
+    let visible_character_range =
+        ax_attribute(&textarea_uielement, AXAttribute::visible_character_range())?;
+
+    if let Ok(character_range_bounds) = textarea_uielement
+        .parameterized_attribute(&AXAttribute::bounds_for_range(), &visible_character_range)
+    {
+        if let Ok(bounds) = character_range_bounds.get_value::<CGPoint>() {
+            let text_offset_px = bounds.x - code_document_frame.origin.x;
+            if text_offset_px < 0.0 {
+                return Err(XcodeError::ImplausibleDimensions);
+            } else {
+                return Ok(text_offset_px);
             }
         }
     }
 
-    // Update EditorWindowResizedMessage
-    let mut position = LogicalPosition {
-        x: updated_origin_x,
-        y: viewport_frame.origin.y,
-    };
+    Err(XcodeError::AXResourceNotFound)
+}
 
-    let mut size = LogicalSize {
-        width: updated_width,
-        height: viewport_frame.size.height,
-    };
+fn get_gutter_offset_px(viewport_uielement: &AXUIElement) -> Result<f64, XcodeError> {
+    let viewport_children = ax_attribute(&viewport_uielement, AXAttribute::children())?;
+    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
 
-    // We make the textarea a little bit bigger so our annotations have more space to draw on
+    let gutter_frame = get_viewport_gutter_frame(&viewport_children)?;
+    let change_gutter_frame = get_viewport_gutter_change_frame(&viewport_children)?;
+
     let correction_width_factor = 0.105;
-    if let Some(gutter_size) = source_editor_gutter_size {
-        position.x -= gutter_size * correction_width_factor;
-        size.width += gutter_size * correction_width_factor;
+
+    Ok(viewport_frame.origin.x
+        + correction_width_factor * gutter_frame.size.width
+        + change_gutter_frame.size.width)
+}
+
+fn get_viewport_uielement(get_via: &GetVia) -> Result<AXUIElement, XcodeError> {
+    let textarea_uielement = get_textarea_uielement(get_via)?;
+
+    ax_attribute(&textarea_uielement, AXAttribute::parent())
+}
+
+fn get_viewport_minimap_frame(
+    viewport_children: &CFArray<AXUIElement>,
+) -> Result<LogicalFrame, XcodeError> {
+    // Get all children
+
+    for child in viewport_children {
+        if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
+            if identifier.to_string().as_str() == "Source Editor Minimap" {
+                return get_uielement_frame(&child);
+            }
+        }
     }
 
-    return Ok(LogicalFrame {
-        origin: position,
-        size,
-    });
+    Err(XcodeError::AXResourceNotFound)
+}
+
+fn get_viewport_gutter_frame(
+    viewport_children: &CFArray<AXUIElement>,
+) -> Result<LogicalFrame, XcodeError> {
+    // Get all children
+
+    for child in viewport_children {
+        if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
+            if identifier.to_string().as_str() == "Source Editor Gutter" {
+                return get_uielement_frame(&child);
+            }
+        }
+    }
+
+    Err(XcodeError::AXResourceNotFound)
+}
+
+fn get_viewport_gutter_change_frame(
+    viewport_children: &CFArray<AXUIElement>,
+) -> Result<LogicalFrame, XcodeError> {
+    // Get all children
+
+    for child in viewport_children {
+        if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
+            if identifier.to_string().as_str() == "Source Editor Change Gutter" {
+                return get_uielement_frame(&child);
+            }
+        }
+    }
+
+    Err(XcodeError::AXResourceNotFound)
 }

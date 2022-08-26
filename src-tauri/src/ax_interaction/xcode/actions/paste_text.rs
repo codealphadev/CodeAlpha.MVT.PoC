@@ -83,7 +83,7 @@ pub fn replace_range_with_clipboard_text(
     let mut preserved_cursor_position: Option<TextRange> = None;
 
     if restore_cursor {
-        if let Ok(range) = get_selected_text_range(GetVia::Pid(pid)) {
+        if let Ok(range) = get_selected_text_range(&GetVia::Pid(pid)) {
             preserved_cursor_position = Some(range);
         } else {
             // Case: an error was thrown while attempting to obtain the cursor position
@@ -91,13 +91,13 @@ pub fn replace_range_with_clipboard_text(
         };
     }
 
-    if set_selected_text_range(&range, GetVia::Pid(pid)).is_ok() {
+    if set_selected_text_range(&range, &GetVia::Pid(pid)).is_ok() {
         let _ = paste_clipboard_text(&app_handle, pid, text, true);
     }
 
     if restore_cursor {
         if let Some(range) = preserved_cursor_position {
-            let _ = set_selected_text_range(&range, GetVia::Pid(pid));
+            let _ = set_selected_text_range(&range, &GetVia::Pid(pid));
         }
     }
 }

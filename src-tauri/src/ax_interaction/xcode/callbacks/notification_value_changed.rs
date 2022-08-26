@@ -26,7 +26,7 @@ pub fn notify_value_changed(
             Ok(())
         }
         "AXStaticText" => {
-            let uielement_textarea = get_textarea_uielement(GetVia::Pid(uielement.pid()?));
+            let uielement_textarea = get_textarea_uielement(&GetVia::Pid(uielement.pid()?));
 
             if let Ok(uielement_textarea) = uielement_textarea {
                 notify_textarea_selected_text_changed(

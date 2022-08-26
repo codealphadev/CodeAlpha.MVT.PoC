@@ -170,7 +170,7 @@ impl CodeDocument {
 
         // Check if content changed, if so, process bracket highlight
         if let (Ok(content_text), Some(text)) = (
-            get_textarea_content(GetVia::Pid(self.editor_window_props.pid)),
+            get_textarea_content(&GetVia::Pid(self.editor_window_props.pid)),
             self.text.as_ref(),
         ) {
             let content_text_u16 = &XcodeText::from_str(&content_text);

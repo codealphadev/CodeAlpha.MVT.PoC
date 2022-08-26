@@ -36,9 +36,9 @@ pub fn format_swift(
 
         // Get position of selected text
         let mut scroll_delta = None;
-        if let Ok(editor_textarea_ui_element) = get_textarea_uielement(GetVia::Pid(pid)) {
+        if let Ok(editor_textarea_ui_element) = get_textarea_uielement(&GetVia::Pid(pid)) {
             // Get the dimensions of the textarea viewport
-            if let Ok(code_section_frame) = get_code_section_frame(GetVia::Current) {
+            if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Current) {
                 if let Some(bounds_of_selected_text) = get_bounds_of_first_char_in_range(
                     &selected_text_range_move,
                     &editor_textarea_ui_element,
@@ -59,7 +59,7 @@ pub fn format_swift(
                 return;
             };
 
-        if let Ok(_) = set_textarea_content(&formatted_content_string, GetVia::Pid(pid)) {
+        if let Ok(_) = set_textarea_content(&formatted_content_string, &GetVia::Pid(pid)) {
         } else {
             return;
         };
@@ -75,7 +75,7 @@ pub fn format_swift(
                 ),
                 length: selected_text_range_move.length,
             },
-            GetVia::Pid(pid),
+            &GetVia::Pid(pid),
         ) {}
 
         // Scroll to the same position as before the formatting

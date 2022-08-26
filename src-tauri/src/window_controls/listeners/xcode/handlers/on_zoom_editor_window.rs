@@ -17,7 +17,7 @@ pub fn on_zoom_editor_window(
 
     let editor_window = editor_window_list.get_mut(&zoom_msg.uielement_hash)?;
 
-    let code_section_frame = get_code_section_frame(GetVia::Pid(editor_window.pid())).ok()?;
+    let code_section_frame = get_code_section_frame(&GetVia::Pid(editor_window.pid())).ok()?;
 
     editor_window.update_textarea_dimensions(LogicalFrame {
         origin: LogicalPosition {
