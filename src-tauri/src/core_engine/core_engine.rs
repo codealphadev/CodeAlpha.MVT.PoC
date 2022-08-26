@@ -12,19 +12,19 @@ use super::{
 
 pub type UIElementHash = usize;
 
-pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<UIElementHash, CodeDocument>>>;
+pub type CodeDocumentsArcMutex<'a> = Arc<Mutex<HashMap<UIElementHash, CodeDocument<'a>>>>;
 
-pub struct CoreEngine {
+pub struct CoreEngine<'a> {
     pub app_handle: tauri::AppHandle,
 
     /// List of open code documents.
-    code_documents: CodeDocumentsArcMutex,
+    code_documents: CodeDocumentsArcMutex<'a>,
 
     /// Identifier indicating if the app is currently active and supposed to give suggestions
     engine_active: bool,
 }
 
-impl CoreEngine {
+impl CoreEngine<'_> {
     pub fn new() -> Self {
         Self {
             app_handle: app_handle(),

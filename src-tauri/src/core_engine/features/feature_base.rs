@@ -11,16 +11,16 @@ pub enum CoreEngineTrigger {
     OnVisibleTextRangeChange,
 }
 
-pub enum Feature {
+pub enum Feature<'a> {
     BracketHighlighting(BracketHighlight),
     DocsGeneration(DocsGenerator),
-    Formatter(SwiftFormatter),
+    Formatter(SwiftFormatter<'a>),
 }
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum FeatureError {
     #[error("Feature could not compute.")]
-    ComputeUnsuccessful,
+    ComputeUnsuccessful(),
     #[error("Feature could not update visualization.")]
     UpdateVisualizationUnsuccessful,
 }
@@ -30,7 +30,7 @@ pub trait FeatureBase {
     fn update_visualization(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError>;
 }
 
-impl FeatureBase for Feature {
+impl FeatureBase for Feature<'_> {
     fn compute(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError> {
         match self {
             Feature::BracketHighlighting(feature) => Ok(()),
