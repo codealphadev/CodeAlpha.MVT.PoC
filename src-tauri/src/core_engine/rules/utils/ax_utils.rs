@@ -5,7 +5,7 @@ use core_graphics_types::geometry::{CGRect, CGSize};
 use std::convert::TryFrom;
 
 use crate::{
-    ax_interaction::{get_code_section_frame, GetVia},
+    ax_interaction::{get_viewport_frame, GetVia},
     core_engine::utils::{TextRange, XcodeText},
     utils::geometry::{LogicalPosition, LogicalSize},
 };
@@ -122,7 +122,7 @@ pub fn calc_match_rects_for_wrapped_range(
         get_bounds_of_last_char_in_range(&match_range, &textarea_ui_element),
     ) {
         // Determine editor textarea's horizontal extent
-        if let Ok(viewport_frame) = get_code_section_frame(&GetVia::Current) {
+        if let Ok(viewport_frame) = get_viewport_frame(&GetVia::Current) {
             let first_line_rect = CGRect {
                 origin: first_char_bounds.origin,
                 size: CGSize {

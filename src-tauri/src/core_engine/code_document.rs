@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     ax_interaction::{get_textarea_content, GetVia},
-    utils::messaging::ChannelList,
+    utils::{geometry::LogicalFrame, messaging::ChannelList},
     window_controls::config::AppWindow,
 };
 use tauri::Manager;
@@ -23,6 +23,10 @@ pub struct EditorWindowProps {
 
     /// The process identifier for the window's editor application.
     pub pid: i32,
+
+    pub viewport_frame: LogicalFrame,
+
+    pub visible_text_range: TextRange,
 }
 
 pub struct CodeDocument {
@@ -53,9 +57,8 @@ pub struct CodeDocument {
 impl CodeDocument {
     pub fn new(
         app_handle: tauri::AppHandle,
-        editor_window_props: EditorWindowProps,
+        editor_window_props: &EditorWindowProps,
     ) -> CodeDocument {
-        let editor_window_props_clone = editor_window_props.clone();
         let pid = editor_window_props.pid;
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
         DocsGenerator::start_listener_window_control_events(&app_handle, &docs_generator_arc);
@@ -63,13 +66,17 @@ impl CodeDocument {
         CodeDocument {
             app_handle,
             rules: vec![],
-            editor_window_props,
+            editor_window_props: editor_window_props.clone(),
             text: None,
             file_path: None,
             selected_text_range: None,
-            bracket_highlight: BracketHighlight::new(editor_window_props_clone.pid),
+            bracket_highlight: BracketHighlight::new(editor_window_props.pid),
             docs_generator: docs_generator_arc,
         }
+    }
+
+    pub fn update_editor_window_viewport(&mut self, viewport_frame: LogicalFrame) {
+        self.editor_window_props.viewport_frame = viewport_frame;
     }
 
     pub fn update_doc_properties(
