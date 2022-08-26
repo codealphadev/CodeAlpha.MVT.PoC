@@ -3,8 +3,10 @@ use tauri::Manager;
 use crate::{
     app_handle,
     ax_interaction::{
-        focused_uielement_of_app, get_dark_mode, get_textarea_frame,
+        get_dark_mode, get_textarea_uielement,
+        internal::get_uielement_frame,
         models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
+        GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
@@ -128,20 +130,26 @@ impl EditorWindow {
     fn set_textarea_dimensions(&mut self, position: LogicalPosition, size: LogicalSize) {
         self.textarea_position = Some(position);
         self.textarea_size = Some(size);
-        let textarea_uielement = focused_uielement_of_app(self.pid).unwrap(); // TODO: handle error and streamline
 
-        let code_doc_rect = get_textarea_frame(&textarea_uielement).unwrap();
-        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
-            code_document_rect: code_doc_rect,
-            code_viewport_rect: Some(LogicalFrame {
-                origin: Self::transform_local_position_to_global_position(
-                    self.window_position,
-                    position,
-                ),
-                size,
-            }),
-        })
-        .publish_to_tauri(&app_handle());
+        let code_document_uielement = get_textarea_uielement(&GetVia::Pid(self.pid));
+        if let Ok(code_doc_uielement) = code_document_uielement {
+            let code_document_frame = get_uielement_frame(&code_doc_uielement);
+            if let Ok(code_document_frame) = code_document_frame {
+                EventWindowControls::CodeOverlayDimensionsUpdate(
+                    CodeOverlayDimensionsUpdateMessage {
+                        code_document_rect: code_document_frame,
+                        code_viewport_rect: Some(LogicalFrame {
+                            origin: Self::transform_local_position_to_global_position(
+                                self.window_position,
+                                position,
+                            ),
+                            size,
+                        }),
+                    },
+                )
+                .publish_to_tauri(&app_handle());
+            }
+        }
     }
 
     pub fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
@@ -152,16 +160,6 @@ impl EditorWindow {
         })
         .publish_to_tauri(&app_handle());
         Ok(())
-    }
-
-    pub fn update_code_document_frame(code_document: LogicalFrame) -> Option<()> {
-        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
-            code_viewport_rect: None,
-            code_document_rect: code_document,
-        })
-        .publish_to_tauri(&app_handle());
-
-        Some(())
     }
 
     pub fn update_window_and_textarea_dimensions(
@@ -251,23 +249,27 @@ impl EditorWindow {
         self.window_position = window.origin;
         self.window_size = window.size;
 
-        let textarea_uielement = focused_uielement_of_app(self.pid).unwrap(); // TODO: handle error and streamline
-
-        let code_doc_rect = get_textarea_frame(&textarea_uielement).unwrap();
-
         // Notify the frontend about the updated position of the editor window to allow
         // it to correctly render code annotations.
-        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
-            code_document_rect: code_doc_rect,
-            code_viewport_rect: Some(LogicalFrame {
-                origin: Self::transform_local_position_to_global_position(
-                    self.window_position,
-                    self.textarea_position?,
-                ),
-                size: self.textarea_size?,
-            }),
-        })
-        .publish_to_tauri(&app_handle());
+        let code_document_uielement = get_textarea_uielement(&GetVia::Pid(self.pid));
+        if let Ok(code_doc_uielement) = code_document_uielement {
+            let code_document_frame = get_uielement_frame(&code_doc_uielement);
+            if let Ok(code_document_frame) = code_document_frame {
+                EventWindowControls::CodeOverlayDimensionsUpdate(
+                    CodeOverlayDimensionsUpdateMessage {
+                        code_document_rect: code_document_frame,
+                        code_viewport_rect: Some(LogicalFrame {
+                            origin: Self::transform_local_position_to_global_position(
+                                self.window_position,
+                                self.textarea_position?,
+                            ),
+                            size: self.textarea_size?,
+                        }),
+                    },
+                )
+                .publish_to_tauri(&app_handle());
+            }
+        }
 
         self.widget_position
             .replace(Self::transform_global_position_to_local_position(

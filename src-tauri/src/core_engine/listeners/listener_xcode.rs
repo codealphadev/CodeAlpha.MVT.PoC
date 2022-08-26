@@ -8,7 +8,7 @@ use tauri::Manager;
 use crate::{
     app_handle,
     ax_interaction::{
-        get_selected_text_range, get_textarea_content, get_textarea_file_path,
+        get_focused_window, get_selected_text_range, get_textarea_content, get_textarea_file_path,
         models::editor::{
             EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
             EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
@@ -190,9 +190,8 @@ fn on_editor_textarea_scrolled(
         Err(poisoned) => poisoned.into_inner(),
     });
 
-    if let Ok(focused_window) = currently_focused_window() {
-        let hash = generate_axui_element_hash(&focused_window);
-        if let Some(code_doc) = code_documents.get_mut(&hash) {
+    if let Ok(focused_window) = get_focused_window() {
+        if let Some(code_doc) = code_documents.get_mut(&focused_window) {
             code_doc.compute_rule_visualizations();
             code_doc.process_bracket_highlight();
             code_doc.update_docs_gen_annotation_visualization();

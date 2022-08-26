@@ -14,7 +14,11 @@ use crate::{
     },
 };
 
-use super::{currently_focused_ui_element, generate_axui_element_hash, get_textarea_frame};
+use super::{
+    generate_axui_element_hash, get_textarea_uielement,
+    internal::{get_focused_uielement, get_uielement_frame},
+    GetVia,
+};
 lazy_static! {
     static ref CORRECTION_EVENT_PUBLISHING_TIME: Mutex<Option<Instant>> = Mutex::new(None);
 }
@@ -79,17 +83,18 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
 
 fn execute_publishing_event(text_editor_hash: usize) -> Option<()> {
     // Check if text editor is still focused
-    let current_hash = generate_axui_element_hash(&currently_focused_ui_element().ok()?);
+    let current_hash = generate_axui_element_hash(&get_focused_uielement(&GetVia::Current).ok()?);
 
     if text_editor_hash == current_hash {
         // This is the window that is currently focused.
         // We do not need to publish the correction event.
-        let document_frame = get_textarea_frame(&currently_focused_ui_element().ok()?).ok()?;
+        let code_document_uielement = get_textarea_uielement(&GetVia::Current).ok()?;
+        let code_document_frame = get_uielement_frame(&code_document_uielement).ok()?;
 
         // Fast-track method instead of calling editor_windows.update_code_document_frame()
         EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
             code_viewport_rect: None,
-            code_document_rect: document_frame,
+            code_document_rect: code_document_frame,
         })
         .publish_to_tauri(&app_handle());
         return Some(());
