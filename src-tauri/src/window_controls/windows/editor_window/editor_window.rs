@@ -133,13 +133,13 @@ impl EditorWindow {
         let code_doc_rect = get_textarea_frame(&textarea_uielement).unwrap();
         EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
             code_document_rect: code_doc_rect,
-            code_viewport_rect: LogicalFrame {
+            code_viewport_rect: Some(LogicalFrame {
                 origin: Self::transform_local_position_to_global_position(
                     self.window_position,
                     position,
                 ),
                 size,
-            },
+            }),
         })
         .publish_to_tauri(&app_handle());
     }
@@ -152,6 +152,16 @@ impl EditorWindow {
         })
         .publish_to_tauri(&app_handle());
         Ok(())
+    }
+
+    pub fn update_code_document_frame(code_document: LogicalFrame) -> Option<()> {
+        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
+            code_viewport_rect: None,
+            code_document_rect: code_document,
+        })
+        .publish_to_tauri(&app_handle());
+
+        Some(())
     }
 
     pub fn update_window_and_textarea_dimensions(
@@ -249,13 +259,13 @@ impl EditorWindow {
         // it to correctly render code annotations.
         EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
             code_document_rect: code_doc_rect,
-            code_viewport_rect: LogicalFrame {
+            code_viewport_rect: Some(LogicalFrame {
                 origin: Self::transform_local_position_to_global_position(
                     self.window_position,
                     self.textarea_position?,
                 ),
                 size: self.textarea_size?,
-            },
+            }),
         })
         .publish_to_tauri(&app_handle());
 

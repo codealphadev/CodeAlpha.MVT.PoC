@@ -43,6 +43,12 @@ pub fn currently_focused_window() -> Result<AXUIElement, Error> {
     Ok(focused_window)
 }
 
+pub fn currently_focused_ui_element() -> Result<AXUIElement, Error> {
+    let system_wide_element = AXUIElement::system_wide();
+    let focused_ui_element = system_wide_element.attribute(&AXAttribute::focused_uielement())?;
+    Ok(focused_ui_element)
+}
+
 pub fn _is_currently_focused_app_editor() -> Option<bool> {
     if let Ok(focused_app) = currently_focused_app() {
         if let Ok(app_title) = focused_app.attribute(&AXAttribute::title()) {

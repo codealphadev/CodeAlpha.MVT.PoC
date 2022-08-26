@@ -2,6 +2,6 @@
 import type { LogicalFrame } from "../geometry/LogicalFrame";
 
 export interface CodeOverlayDimensionsUpdateMessage {
-  code_viewport_rect: LogicalFrame;
+  code_viewport_rect: LogicalFrame | null;
   code_document_rect: LogicalFrame;
 }

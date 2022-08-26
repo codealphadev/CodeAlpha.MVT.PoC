@@ -28,7 +28,9 @@
 
 			switch (event) {
 				case 'CodeOverlayDimensionsUpdate':
-					code_viewport_rectangle = payload.code_viewport_rect;
+					if (payload.code_viewport_rect) {
+						code_viewport_rectangle = payload.code_viewport_rect;
+					}
 					code_document_rectangle = payload.code_document_rect;
 					break;
 				case 'DarkModeUpdate':
