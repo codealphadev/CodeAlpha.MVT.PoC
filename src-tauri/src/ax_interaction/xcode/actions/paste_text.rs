@@ -1,7 +1,6 @@
 use accessibility::{AXUIElement, AXUIElementAttributes};
 use accessibility_sys::pid_t;
 use core_foundation::string::CFString;
-use enigo::{Enigo, Key, KeyboardControllable};
 use tauri::{ClipboardManager, Error};
 
 use crate::{
@@ -33,7 +32,12 @@ pub fn paste_clipboard_text(
     let preserve_old_clipboard = clipboard.read_text()?;
 
     if let Some(text) = text {
-        clipboard.write_text(text)?;
+        let text_to_paste = if add_linebreak_with_enter {
+            format!("{}\n", text)
+        } else {
+            text.clone()
+        };
+        clipboard.write_text(text_to_paste)?;
     }
 
     let app_ui_element = AXUIElement::application(pid);
@@ -47,12 +51,6 @@ pub fn paste_clipboard_text(
 
             let _ = clipboard.write_text(text);
         });
-    }
-
-    // Press the ENTER key
-    if add_linebreak_with_enter {
-        let mut enigo = Enigo::new();
-        enigo.key_down(Key::Return);
     }
 
     Ok(())
