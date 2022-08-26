@@ -30,21 +30,6 @@ pub fn notify_textarea_scrolled(
         });
 
     if let Some(window) = &mut known_window {
-        // TODO: Move to window controls? Or avoid extra event? Probably best to move.
-        let textarea_uielement = focused_uielement_of_app(uielement.pid().unwrap())
-            .ok()
-            .unwrap(); // TODO: handle error and streamline
-        let code_doc_rect = get_textarea_frame(&textarea_uielement).ok().unwrap();
-        let view_doc_rect = derive_xcode_textarea_dimensions(&textarea_uielement).unwrap();
-
-        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
-            code_viewport_rect: LogicalFrame {
-                origin: LogicalPosition::from_tauri_LogicalPosition(&view_doc_rect.0),
-                size: LogicalSize::from_tauri_LogicalSize(&view_doc_rect.1),
-            },
-            code_document_rect: code_doc_rect,
-        })
-        .publish_to_tauri(&app_handle());
         AXEventXcode::EditorTextareaScrolled(EditorTextareaScrolledMessage {
             id: window.0,
             uielement_hash: window.3,
