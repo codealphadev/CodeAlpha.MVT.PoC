@@ -9,12 +9,12 @@
 	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
 	import type { TrackingAreaEnteredMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaEnteredMessage';
 	import type { TrackingAreaExitedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaExitedMessage';
-	import { convert_global_frame_to_local_frame } from '../../../utils';
+	import { convert_global_frame_to_local} from '../../../utils';
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
 	
 	
-	export let code_document_origin: LogicalPosition;
+	export let code_document_global: LogicalPosition;
 	
 	type CodeAnnotation = UpdateCodeAnnotationMessage;
 	let annotation: CodeAnnotation | undefined;
@@ -28,8 +28,8 @@
 	function mapUpdateCodeAnnotationPayloadToCodeAnnotation(payload: UpdateCodeAnnotationMessage): CodeAnnotation | undefined {
 		return {
 			id: payload.id,
-			annotation_icon: payload.annotation_icon ? convert_global_frame_to_local_frame(payload.annotation_icon, code_document_origin) : null,
-			annotation_codeblock: payload.annotation_codeblock ? convert_global_frame_to_local_frame(payload.annotation_codeblock, code_document_origin) : null
+			annotation_icon: payload.annotation_icon ? convert_global_frame_to_local(payload.annotation_icon, code_document_global) : null,
+			annotation_codeblock: payload.annotation_codeblock ? convert_global_frame_to_local(payload.annotation_codeblock, code_document_global) : null
 		}
 	
 	}

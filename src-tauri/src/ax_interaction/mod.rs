@@ -10,4 +10,3 @@ pub mod xcode;
 mod events;
 pub mod fast_track_code_editor_scroll;
 mod observer_device_events;
-mod update_code_document_dimensions;

@@ -3,6 +3,8 @@
 	import type { BracketHighlightResults } from '../../../../src-tauri/bindings/features/bracket_highlighting/BracketHighlightResults';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
+	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
+	import type { LogicalSize } from '../../../../src-tauri/bindings/geometry/LogicalSize';
 	import {
 		BORDER_WIDTH,
 		compute_bracket_highlight_line_rect,
@@ -11,7 +13,8 @@
 	} from './bracket_highlight';
 	import { colors } from '../../../themes';
 	
-	export let code_document_rectangle: LogicalFrame;
+	export let code_document_global: LogicalPosition;
+	export let code_document_height: LogicalSize['height'];
 
 	let line_rectangle = reset_highlight_rectangle();
 	let elbow_rectangle = reset_highlight_rectangle();
@@ -31,7 +34,7 @@
 				elbow_rectangle = reset_highlight_rectangle();
 				return;
 			}
-			const bracket_highlights = map_BracketHighlightResults_to_local(payload, code_document_rectangle.origin);
+			const bracket_highlights = map_BracketHighlightResults_to_local(payload, code_document_global);
 
 			opening_bracket_box_highlight = bracket_highlights.boxes.first
 				? bracket_highlights.boxes.first.rectangle
@@ -45,7 +48,7 @@
 			line_rectangle = compute_bracket_highlight_line_rect(
 				bracket_highlights.lines.first ? bracket_highlights.lines.first.rectangle : null,
 				bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
-				code_document_rectangle.size.height
+				code_document_height
 			);
 
 			// Calculate the elbow rectangle
@@ -53,7 +56,7 @@
 				[line_rectangle, elbow_rectangle] = correct_highlight_rectangles_with_elbow_point(
 					line_rectangle,
 					bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
-					code_document_rectangle.size.height,
+					code_document_height,
 					bracket_highlights.elbow.origin,
 					bracket_highlights.elbow.origin_x_left_most,
 					bracket_highlights.elbow.bottom_line_top
@@ -62,7 +65,7 @@
 				[line_rectangle, elbow_rectangle] = correct_highlight_rectangles_with_elbow_point(
 					line_rectangle,
 					bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
-					code_document_rectangle.size.height,
+					code_document_height,
 					line_rectangle.origin,
 					false,
 					true
@@ -102,7 +105,7 @@
 		border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 	/>
 {/if}
-{#if closing_bracket_box_highlight !== null && code_document_rectangle !== null}
+{#if closing_bracket_box_highlight !== null && code_document_global !== null}
 	<div
 		style="position: absolute; 
 		top: {round_value(closing_bracket_box_highlight.origin.y, 2)}px; 

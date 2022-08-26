@@ -1,6 +1,6 @@
 import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
-import { convert_global_frame_to_local_frame, convert_global_position_to_local_position } from '../../../utils';
+import { convert_global_frame_to_local, convert_global_position_to_local } from '../../../utils';
 import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 import type { LogicalSize } from '@tauri-apps/api/window';
 export const BORDER_WIDTH = 1;
@@ -169,16 +169,16 @@ export const correct_highlight_rectangles_with_elbow_point = (
 export function map_BracketHighlightResults_to_local(payload: BracketHighlightResults, document_rectangle_position: LogicalPosition): BracketHighlightResults {
 	return {
 		lines: {
-			first: payload.lines.first ? {...payload.lines.first, rectangle: convert_global_frame_to_local_frame(payload.lines.first.rectangle, document_rectangle_position)} : null,
-			last: payload.lines.last ? {...payload.lines.last, rectangle: convert_global_frame_to_local_frame(payload.lines.last.rectangle, document_rectangle_position)} : null,
+			first: payload.lines.first ? {...payload.lines.first, rectangle: convert_global_frame_to_local(payload.lines.first.rectangle, document_rectangle_position)} : null,
+			last: payload.lines.last ? {...payload.lines.last, rectangle: convert_global_frame_to_local(payload.lines.last.rectangle, document_rectangle_position)} : null,
 		},
 		boxes: {
-			first: payload.boxes.first ? {...payload.boxes.first, rectangle: convert_global_frame_to_local_frame(payload.boxes.first.rectangle, document_rectangle_position)} : null,
-			last: payload.boxes.last ? {...payload.boxes.last, rectangle: convert_global_frame_to_local_frame(payload.boxes.last.rectangle, document_rectangle_position)} : null,
+			first: payload.boxes.first ? {...payload.boxes.first, rectangle: convert_global_frame_to_local(payload.boxes.first.rectangle, document_rectangle_position)} : null,
+			last: payload.boxes.last ? {...payload.boxes.last, rectangle: convert_global_frame_to_local(payload.boxes.last.rectangle, document_rectangle_position)} : null,
 		},
 		elbow: payload.elbow ? {
 			...payload.elbow,
-			origin: payload.elbow.origin ? convert_global_position_to_local_position(payload.elbow.origin, document_rectangle_position) : null,
+			origin: payload.elbow.origin ? convert_global_position_to_local(payload.elbow.origin, document_rectangle_position) : null,
 		}: null
 	}
 
