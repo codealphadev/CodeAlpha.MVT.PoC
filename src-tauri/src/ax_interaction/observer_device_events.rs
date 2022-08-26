@@ -8,7 +8,7 @@ use rdev::{simulate, EventType};
 use crate::{
     app_handle,
     ax_interaction::{models::input_device::MouseMovedMessage, EventInputDevice},
-    utils::geometry::LogicalPosition,
+    utils::geometry::{LogicalPosition, LogicalSize},
 };
 
 use super::{
@@ -168,7 +168,7 @@ fn notification_mouse_click_event(event_type: CGEventType, event: &CGEvent) {
     }
 }
 
-pub fn send_event_mouse_wheel(delta: tauri::LogicalSize<f64>) -> Result<bool, XcodeError> {
+pub fn send_event_mouse_wheel(delta: LogicalSize) -> Result<bool, XcodeError> {
     if is_focused_uielement_xcode_editor_textarea()? {
         let event_type = EventType::Wheel {
             delta_x: delta.width as i64,

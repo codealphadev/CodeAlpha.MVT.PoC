@@ -1,6 +1,7 @@
 pub use bracket_highlight::BracketHighlight;
 pub use docs_generation::DocsGenerator;
-pub use formatter::format_swift;
+pub use feature_base::*;
+pub use formatter::SwiftFormatter;
 
 mod bracket_highlight;
 mod docs_generation;
