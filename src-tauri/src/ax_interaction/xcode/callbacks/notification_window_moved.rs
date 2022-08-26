@@ -4,7 +4,9 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    models::editor::EditorWindowMovedMessage, AXEventXcode, XCodeObserverState,
+    models::editor::EditorWindowMovedMessage,
+    update_code_document_dimensions::update_code_document_dimensions, AXEventXcode,
+    XCodeObserverState,
 };
 
 /// Notify Tauri that an editor window has been moved
@@ -32,6 +34,8 @@ pub fn notify_window_moved(
 
         let origin = pos_ax_value.get_value::<CGPoint>()?;
         let size = size_ax_value.get_value::<CGSize>()?;
+
+        update_code_document_dimensions(&window_element, &xcode_observer_state.app_handle).ok();
 
         // Publish to Tauri
         let msg = EditorWindowMovedMessage {

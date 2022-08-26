@@ -24,7 +24,7 @@
 		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
 		await listen(BracketHighlightChannel, (event) => {
 			const bracket_highlights = map_BracketHighlightResults_to_local(event.payload as BracketHighlightResults, code_document_rectangle);
-
+			console.log(bracket_highlights)
 			if (bracket_highlights == null) {
 				opening_bracket_box_highlight = null;
 				closing_bracket_box_highlight = null;
@@ -45,7 +45,7 @@
 			line_rectangle = compute_bracket_highlight_line_rect(
 				bracket_highlights.lines.first ? bracket_highlights.lines.first.rectangle : null,
 				bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
-				code_document_rectangle
+				code_document_rectangle.size.height
 			);
 
 			// Calculate the elbow rectangle
@@ -53,7 +53,7 @@
 				[line_rectangle, elbow_rectangle] = correct_highlight_rectangles_with_elbow_point(
 					line_rectangle,
 					bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
-					code_document_rectangle,
+					code_document_rectangle.size.height,
 					bracket_highlights.elbow.origin,
 					bracket_highlights.elbow.origin_x_left_most,
 					bracket_highlights.elbow.bottom_line_top
@@ -62,7 +62,7 @@
 				[line_rectangle, elbow_rectangle] = correct_highlight_rectangles_with_elbow_point(
 					line_rectangle,
 					bracket_highlights.lines.last ? bracket_highlights.lines.last.rectangle : null,
-					code_document_rectangle,
+					code_document_rectangle.size.height,
 					line_rectangle.origin,
 					false,
 					true

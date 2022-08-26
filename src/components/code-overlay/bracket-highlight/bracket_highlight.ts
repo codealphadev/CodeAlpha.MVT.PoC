@@ -2,6 +2,7 @@ import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/Logic
 import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 import { convert_global_frame_to_local_frame, convert_global_position_to_local_position } from '../../../utils';
 import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
+import type { LogicalSize } from '@tauri-apps/api/window';
 export const BORDER_WIDTH = 1;
 const LEFT_MOST_LINE_X = 16 + 55;
 
@@ -9,9 +10,9 @@ const LEFT_MOST_LINE_X = 16 + 55;
 export const compute_bracket_highlight_line_rect = (
 	opening_bracket: LogicalFrame | null,
 	closing_bracket: LogicalFrame | null,
-	codeoverlay_rect: LogicalFrame
+	codeoverlay_rect_height: LogicalSize['height']
 ): LogicalFrame => {
-	let line_rectangle: LogicalFrame = line_rect_if_no_brackets_visible(codeoverlay_rect);
+	let line_rectangle: LogicalFrame = line_rect_if_no_brackets_visible(codeoverlay_rect_height);
 
 	// If both brackets are on the same line, drawing a rectangle between the opening and closing brackets.
 	if (opening_bracket && closing_bracket && opening_bracket.origin.y === closing_bracket.origin.y) {
@@ -20,12 +21,12 @@ export const compute_bracket_highlight_line_rect = (
 
 	// Only first bracket is visible
 	else if (opening_bracket && !closing_bracket) {
-		line_rectangle = line_rect_if_only_opening_bracket_visible(opening_bracket, codeoverlay_rect);
+		line_rectangle = line_rect_if_only_opening_bracket_visible(opening_bracket, codeoverlay_rect_height);
 	}
 
 	// Only second bracket is visible
 	else if (!opening_bracket && closing_bracket) {
-		line_rectangle = line_rect_if_only_closing_bracket_visible(closing_bracket, codeoverlay_rect);
+		line_rectangle = line_rect_if_only_closing_bracket_visible(closing_bracket);
 	}
 
 	// Both brackets are visible
@@ -57,18 +58,18 @@ const line_rect_if_both_brackets_on_same_line = (
 
 const line_rect_if_only_opening_bracket_visible = (
 	opening_bracket: LogicalFrame,
-	codeoverlay_rect: LogicalFrame
+	codeoverlay_rect_height: LogicalSize['height']
 ): LogicalFrame => {
 	return {
 		origin: {
-			x: Math.min(opening_bracket.origin.x, codeoverlay_rect.origin.x + LEFT_MOST_LINE_X),
+			x: Math.min(opening_bracket.origin.x,  LEFT_MOST_LINE_X),
 			y: opening_bracket.origin.y + opening_bracket.size.height - BORDER_WIDTH
 		},
 		size: {
-			width: Math.max(0, opening_bracket.origin.x - (codeoverlay_rect.origin.x + LEFT_MOST_LINE_X)),
+			width: Math.max(0, opening_bracket.origin.x - ( LEFT_MOST_LINE_X)),
 			height: Math.max(
 				0,
-				codeoverlay_rect.origin.y + codeoverlay_rect.size.height - opening_bracket.origin.y
+				codeoverlay_rect_height - opening_bracket.origin.y
 			)
 		}
 	};
@@ -76,29 +77,28 @@ const line_rect_if_only_opening_bracket_visible = (
 
 const line_rect_if_only_closing_bracket_visible = (
 	closing_bracket: LogicalFrame,
-	codeoverlay_rect: LogicalFrame
 ): LogicalFrame => {
 	return {
 		origin: {
 			x: closing_bracket.origin.x,
-			y: codeoverlay_rect.origin.y
+			y: 0
 		},
 		size: {
 			width: 0,
-			height: Math.max(0, closing_bracket.origin.y - codeoverlay_rect.origin.y)
+			height: Math.max(0, closing_bracket.origin.y)
 		}
 	};
 };
 
-const line_rect_if_no_brackets_visible = (codeoverlay_rect: LogicalFrame): LogicalFrame => {
+const line_rect_if_no_brackets_visible = (code_document_frame_height: LogicalSize['height']): LogicalFrame => {
 	return {
 		origin: {
-			x: codeoverlay_rect.origin.x + LEFT_MOST_LINE_X,
-			y: codeoverlay_rect.origin.y
+			x: LEFT_MOST_LINE_X,
+			y: 0
 		},
 		size: {
 			width: 0,
-			height: codeoverlay_rect.size.height
+			height: code_document_frame_height
 		}
 	};
 };
@@ -122,7 +122,7 @@ const line_rect_if_both_brackets_visible = (
 export const correct_highlight_rectangles_with_elbow_point = (
 	line_rectangle: LogicalFrame,
 	closing_bracket: LogicalFrame | null,
-	codeoverlay_rect: LogicalFrame,
+	codeoverlay_rect_height: LogicalSize['height'],
 	elbow_origin: LogicalPosition | null,
 	elbow_origin_x_left_most: boolean,
 	bottom_line_top: boolean
@@ -151,7 +151,7 @@ export const correct_highlight_rectangles_with_elbow_point = (
 						0,
 						closing_bracket.origin.y - (line_rectangle.origin.y + line_rectangle.size.height)
 				  )
-				: codeoverlay_rect.origin.y + codeoverlay_rect.size.height - updated_elbow_origin.y
+				: codeoverlay_rect_height - updated_elbow_origin.y
 		}
 	};
 
