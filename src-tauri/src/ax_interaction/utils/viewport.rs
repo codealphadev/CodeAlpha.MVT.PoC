@@ -40,33 +40,44 @@ pub fn get_code_document_frame_properties(
 }
 
 pub fn get_viewport_properties(get_via: &GetVia) -> Result<ViewportProperties, XcodeError> {
-    let viewport_uielement = get_viewport_uielement(get_via)?;
     let annotation_section = get_annotation_section_frame(&get_via)?;
     let code_section = get_code_section_frame(&get_via)?;
-    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
+
+    let diff_origin_x = code_section.origin.x - annotation_section.origin.x;
 
     Ok(ViewportProperties {
-        dimensions: viewport_frame,
+        dimensions: LogicalFrame {
+            origin: annotation_section.origin,
+            size: LogicalSize {
+                width: diff_origin_x + code_section.size.width,
+                height: annotation_section.size.height,
+            },
+        },
         annotation_section,
         code_section,
     })
+}
+
+pub fn get_viewport_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> {
+    let viewport_properties = get_viewport_properties(get_via)?;
+    Ok(viewport_properties.dimensions)
 }
 
 pub fn get_annotation_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> {
     let viewport_uielement = get_viewport_uielement(get_via)?;
 
     let text_offset = get_text_offset_px(get_via)?;
-    let gutter_offset = get_gutter_offset_px(&viewport_uielement)?;
+    let annotation_origin_x_offset = get_annotation_origin_x_offset_px(&viewport_uielement)?;
 
     let viewport_frame = get_uielement_frame(&viewport_uielement)?;
 
     Ok(LogicalFrame {
         origin: LogicalPosition {
-            x: viewport_frame.origin.x + gutter_offset,
+            x: viewport_frame.origin.x + annotation_origin_x_offset,
             y: viewport_frame.origin.y,
         },
         size: LogicalSize {
-            width: text_offset - gutter_offset,
+            width: text_offset - annotation_origin_x_offset,
             height: viewport_frame.size.height,
         },
     })
@@ -136,18 +147,17 @@ fn get_text_offset_px(get_via: &GetVia) -> Result<f64, XcodeError> {
     Err(XcodeError::AXResourceNotFound)
 }
 
-fn get_gutter_offset_px(viewport_uielement: &AXUIElement) -> Result<f64, XcodeError> {
+fn get_annotation_origin_x_offset_px(viewport_uielement: &AXUIElement) -> Result<f64, XcodeError> {
     let viewport_children = ax_attribute(&viewport_uielement, AXAttribute::children())?;
-    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
 
     let gutter_frame = get_viewport_gutter_frame(&viewport_children)?;
     let change_gutter_frame = get_viewport_gutter_change_frame(&viewport_children)?;
 
+    // We make the textarea a little bit bigger so our annotations have more space to draw on
     let correction_width_factor = 0.105;
 
-    Ok(viewport_frame.origin.x
-        + correction_width_factor * gutter_frame.size.width
-        + change_gutter_frame.size.width)
+    Ok(gutter_frame.size.width + change_gutter_frame.size.width
+        - (correction_width_factor * gutter_frame.size.width))
 }
 
 fn get_viewport_uielement(get_via: &GetVia) -> Result<AXUIElement, XcodeError> {
