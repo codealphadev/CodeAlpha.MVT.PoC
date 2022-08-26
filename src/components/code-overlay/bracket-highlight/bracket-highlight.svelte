@@ -23,15 +23,15 @@
 	const listenTauriEvents = async () => {
 		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
 		await listen(BracketHighlightChannel, (event) => {
-			const bracket_highlights = map_BracketHighlightResults_to_local(event.payload as BracketHighlightResults, code_document_rectangle.origin);
-			console.log(bracket_highlights)
-			if (bracket_highlights == null) {
+			const payload = event.payload as BracketHighlightResults | null;
+			if (payload == null) {
 				opening_bracket_box_highlight = null;
 				closing_bracket_box_highlight = null;
 				line_rectangle = reset_highlight_rectangle();
 				elbow_rectangle = reset_highlight_rectangle();
 				return;
 			}
+			const bracket_highlights = map_BracketHighlightResults_to_local(payload, code_document_rectangle.origin);
 
 			opening_bracket_box_highlight = bracket_highlights.boxes.first
 				? bracket_highlights.boxes.first.rectangle
