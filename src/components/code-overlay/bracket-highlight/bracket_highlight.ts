@@ -166,19 +166,19 @@ export const correct_highlight_rectangles_with_elbow_point = (
 	return [line_rectangle, elbow_rectangle];
 };
 
-export function map_BracketHighlightResults_to_local(payload: BracketHighlightResults, code_document_rectangle: LogicalFrame): BracketHighlightResults {
+export function map_BracketHighlightResults_to_local(payload: BracketHighlightResults, document_rectangle_position: LogicalPosition): BracketHighlightResults {
 	return {
 		lines: {
-			first: payload.lines.first ? {...payload.lines.first, rectangle: convert_global_frame_to_local_frame(payload.lines.first.rectangle, code_document_rectangle)} : null,
-			last: payload.lines.last ? {...payload.lines.last, rectangle: convert_global_frame_to_local_frame(payload.lines.last.rectangle, code_document_rectangle)} : null,
+			first: payload.lines.first ? {...payload.lines.first, rectangle: convert_global_frame_to_local_frame(payload.lines.first.rectangle, document_rectangle_position)} : null,
+			last: payload.lines.last ? {...payload.lines.last, rectangle: convert_global_frame_to_local_frame(payload.lines.last.rectangle, document_rectangle_position)} : null,
 		},
 		boxes: {
-			first: payload.boxes.first ? {...payload.boxes.first, rectangle: convert_global_frame_to_local_frame(payload.boxes.first.rectangle, code_document_rectangle)} : null,
-			last: payload.boxes.last ? {...payload.boxes.last, rectangle: convert_global_frame_to_local_frame(payload.boxes.last.rectangle, code_document_rectangle)} : null,
+			first: payload.boxes.first ? {...payload.boxes.first, rectangle: convert_global_frame_to_local_frame(payload.boxes.first.rectangle, document_rectangle_position)} : null,
+			last: payload.boxes.last ? {...payload.boxes.last, rectangle: convert_global_frame_to_local_frame(payload.boxes.last.rectangle, document_rectangle_position)} : null,
 		},
 		elbow: payload.elbow ? {
 			...payload.elbow,
-			origin: payload.elbow.origin ? convert_global_position_to_local_position(payload.elbow.origin, code_document_rectangle) : null,
+			origin: payload.elbow.origin ? convert_global_position_to_local_position(payload.elbow.origin, document_rectangle_position) : null,
 		}: null
 	}
 

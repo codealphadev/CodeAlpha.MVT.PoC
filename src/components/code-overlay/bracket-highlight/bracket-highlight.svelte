@@ -23,7 +23,7 @@
 	const listenTauriEvents = async () => {
 		let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
 		await listen(BracketHighlightChannel, (event) => {
-			const bracket_highlights = map_BracketHighlightResults_to_local(event.payload as BracketHighlightResults, code_document_rectangle);
+			const bracket_highlights = map_BracketHighlightResults_to_local(event.payload as BracketHighlightResults, code_document_rectangle.origin);
 			console.log(bracket_highlights)
 			if (bracket_highlights == null) {
 				opening_bracket_box_highlight = null;
