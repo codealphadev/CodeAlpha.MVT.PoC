@@ -3,19 +3,14 @@
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { EventDocsGeneration } from '../../../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
 	import type { UpdateCodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/UpdateCodeAnnotationMessage';
-	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
 	import type { TrackingAreaEnteredMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaEnteredMessage';
 	import type { TrackingAreaExitedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaExitedMessage';
-	import { convert_global_frame_to_local} from '../../../utils';
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
-	
-	
-	export let code_document_global: LogicalPosition;
-	
+		
 	type CodeAnnotation = UpdateCodeAnnotationMessage;
 	let annotation: CodeAnnotation | undefined;
 
@@ -25,14 +20,6 @@
 	let processing_timeout = 15000; // ms
 
 
-	function mapUpdateCodeAnnotationPayloadToCodeAnnotation(payload: UpdateCodeAnnotationMessage): CodeAnnotation | undefined {
-		return {
-			id: payload.id,
-			annotation_icon: payload.annotation_icon ? convert_global_frame_to_local(payload.annotation_icon, code_document_global) : null,
-			annotation_codeblock: payload.annotation_codeblock ? convert_global_frame_to_local(payload.annotation_codeblock, code_document_global) : null
-		}
-	
-	}
 	const listenToCodeAnnotationEvents = async () => {
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
@@ -40,7 +27,7 @@
 			const {payload, event: event_type} = JSON.parse(event.payload as string) as EventDocsGeneration;
 			switch (event_type) {
 				case 'UpdateCodeAnnotation':
-					annotation = mapUpdateCodeAnnotationPayloadToCodeAnnotation(payload);
+					annotation = payload;
 					break;
 				case 'RemoveCodeAnnotation':
 					if (annotation?.id === payload.id) {

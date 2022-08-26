@@ -1,7 +1,5 @@
 import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
-import { convert_global_frame_to_local, convert_global_position_to_local } from '../../../utils';
-import type { BracketHighlightResults } from '../../../../src-tauri/bindings/bracket_highlight/BracketHighlightResults';
 import type { LogicalSize } from '@tauri-apps/api/window';
 export const BORDER_WIDTH = 1;
 const LEFT_MOST_LINE_X = 16 + 55;
@@ -165,21 +163,3 @@ export const correct_highlight_rectangles_with_elbow_point = (
 
 	return [line_rectangle, elbow_rectangle];
 };
-
-export function map_BracketHighlightResults_to_local(payload: BracketHighlightResults, document_rectangle_position: LogicalPosition): BracketHighlightResults {
-	return {
-		lines: {
-			first: payload.lines.first ? {...payload.lines.first, rectangle: convert_global_frame_to_local(payload.lines.first.rectangle, document_rectangle_position)} : null,
-			last: payload.lines.last ? {...payload.lines.last, rectangle: convert_global_frame_to_local(payload.lines.last.rectangle, document_rectangle_position)} : null,
-		},
-		boxes: {
-			first: payload.boxes.first ? {...payload.boxes.first, rectangle: convert_global_frame_to_local(payload.boxes.first.rectangle, document_rectangle_position)} : null,
-			last: payload.boxes.last ? {...payload.boxes.last, rectangle: convert_global_frame_to_local(payload.boxes.last.rectangle, document_rectangle_position)} : null,
-		},
-		elbow: payload.elbow ? {
-			...payload.elbow,
-			origin: payload.elbow.origin ? convert_global_position_to_local(payload.elbow.origin, document_rectangle_position) : null,
-		}: null
-	}
-
-}
