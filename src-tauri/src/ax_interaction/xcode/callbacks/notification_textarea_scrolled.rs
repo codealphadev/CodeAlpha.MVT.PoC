@@ -3,13 +3,9 @@ use core_foundation::base::{CFEqual, TCFType};
 
 use crate::{
     ax_interaction::{
-        get_code_document_frame_properties, get_textarea_uielement, get_viewport_properties,
-        internal::get_uielement_frame,
-        models::{
-            editor::EditorTextareaScrolledMessage, viewport::ViewportPropertiesUpdateMessage,
-        },
-        xcode::XCodeObserverState,
-        AXEventXcode, EventViewport, GetVia,
+        get_textarea_uielement, internal::get_uielement_frame,
+        models::editor::EditorTextareaScrolledMessage, xcode::XCodeObserverState, AXEventXcode,
+        EventViewport, GetVia,
     },
     window_controls::{
         models::editor_window::CodeOverlayDimensionsUpdateMessage, EventWindowControls,

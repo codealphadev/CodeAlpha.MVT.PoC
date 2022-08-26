@@ -20,7 +20,7 @@ pub enum EventWindowControls {
     TrackingAreaExited(TrackingAreaExitedMessage),
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
-    CodeOverlayDimensionsUpdate(LogicalFrame),
+    CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage),
     DarkModeUpdate(DarkModeUpdateMessage),
 }
 

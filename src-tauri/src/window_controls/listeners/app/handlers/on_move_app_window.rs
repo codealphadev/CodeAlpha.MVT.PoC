@@ -3,12 +3,8 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::{
-        currently_focused_ui_element, get_textarea_frame, models::app::AppWindowMovedMessage,
-    },
-    utils::geometry::LogicalPosition,
-    window_controls::config::AppWindow,
-    window_controls::{windows::EditorWindow, WindowManager},
+    ax_interaction::models::app::AppWindowMovedMessage, utils::geometry::LogicalPosition,
+    window_controls::config::AppWindow, window_controls::WindowManager,
 };
 
 pub fn on_move_app_window(
@@ -27,9 +23,6 @@ pub fn on_move_app_window(
                 x: move_msg.window_position.x,
                 y: move_msg.window_position.y,
             });
-        let document_frame = get_textarea_frame(&currently_focused_ui_element().ok()?).ok()?;
-
-        EditorWindow::update_code_document_frame(document_frame);
     }
 
     Some(())

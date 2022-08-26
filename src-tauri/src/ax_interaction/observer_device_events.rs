@@ -12,11 +12,13 @@ use crate::{
 };
 
 use super::{
-    currently_focused_app, currently_focused_ui_element,
     fast_track_code_editor_scroll::fast_track_handle_text_editor_mousewheel_scroll,
-    generate_axui_element_hash, is_focused_uielement_of_app_xcode_editor_field,
+    generate_axui_element_hash,
+    internal::get_focused_uielement,
+    is_focused_uielement_xcode_editor_textarea,
     models::input_device::{ClickType, MouseButton, MouseClickMessage},
     setup::{get_registered_ax_observer, ObserverType},
+    GetVia, XcodeError,
 };
 
 pub fn subscribe_mouse_events() {
@@ -76,13 +78,11 @@ fn notification_mousewheel_event() -> Option<()> {
     // Check if we need to send a notification that a valid text editor field was scrolled.
     if let Some((editor_pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
         // 1. Is focused app a valid editor?
-        if editor_pid == currently_focused_app().ok()?.pid().ok()? {
+        let focused_ui_element = get_focused_uielement(&GetVia::Current).ok()?;
+        if editor_pid == focused_ui_element.pid().ok()? {
             // 2. Is focused app a valid text editor field?
-            if is_focused_uielement_of_app_xcode_editor_field(editor_pid).ok()? {
-                // 3. Is the mouse cursor within the text editor field while scrolling?
-                // TODO
-                let text_editor_hash =
-                    generate_axui_element_hash(&currently_focused_ui_element().ok()?);
+            if is_focused_uielement_xcode_editor_textarea().ok()? {
+                let text_editor_hash = generate_axui_element_hash(&focused_ui_element);
                 fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash);
             }
         }
