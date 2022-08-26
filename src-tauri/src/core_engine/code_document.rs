@@ -26,6 +26,7 @@ pub struct EditorWindowProps {
 
     pub viewport_frame: LogicalFrame,
 
+    // Range of the code document for which we can get bounds using the AX API
     pub visible_text_range: TextRange,
 }
 
@@ -73,6 +74,22 @@ impl CodeDocument {
             bracket_highlight: BracketHighlight::new(editor_window_props.pid),
             docs_generator: docs_generator_arc,
         }
+    }
+
+    pub fn editor_window_props(&self) -> &EditorWindowProps {
+        &self.editor_window_props
+    }
+
+    pub fn text_content(&self) -> &Option<XcodeText> {
+        &self.text
+    }
+
+    pub fn file_path(&self) -> &Option<String> {
+        &self.file_path
+    }
+
+    pub fn selected_text_range(&self) -> &Option<TextRange> {
+        &self.selected_text_range
     }
 
     pub fn update_editor_window_viewport(&mut self, viewport_frame: LogicalFrame) {
@@ -200,6 +217,7 @@ impl CodeDocument {
             } else {
                 return;
             };
+
         format_swift(
             &file_path,
             &old_text,
