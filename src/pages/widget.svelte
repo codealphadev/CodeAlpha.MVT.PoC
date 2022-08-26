@@ -64,7 +64,7 @@
 	listenTauriEvents();
 </script>
 
-<div class="relative">
+<div class="relative overflow-hidden w-full h-full">
 	{#if app_active === false}
 		<WidgetBackgroundGreyscale />
 	{:else}
