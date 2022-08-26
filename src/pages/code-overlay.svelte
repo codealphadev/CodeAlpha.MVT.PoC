@@ -7,13 +7,10 @@
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 
 	import { getContext } from 'svelte';
-	import {  convert_local_position_to_global, convert_global_position_to_local } from '../utils';
 	
 	const { setTheme } = getContext("theme");
 
-
-	let code_viewport_global: LogicalFrame | null = null; // needs to be global (FOR NOW) because docs annotations and pair bracket etc. use global coordinates in the events.
-	let code_document_local: LogicalFrame | null = null; // Relative to viewport
+	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
 
 	const listenWindowChannels = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
@@ -22,15 +19,7 @@
 
 			switch (event) {
 				case 'CodeOverlayDimensionsUpdate':
-					if (payload.code_viewport_rect) {
-						code_viewport_global = payload.code_viewport_rect;
-					}
-					if (code_viewport_global) {
-						code_document_local = {
-							size: payload.code_document_rect.size,
-							origin: convert_global_position_to_local(payload.code_document_rect.origin, code_viewport_global.origin)
-						}
-					}
+						code_document_rect = payload.code_document_rect;
 					break;
 				case 'DarkModeUpdate':
 					setTheme(payload.dark_mode ? 'dark' : 'light');
@@ -46,25 +35,22 @@
 
 </script>
 
-{#if code_viewport_global && code_document_local}
+{#if code_document_rect}
 	<div
-		style="height: {code_viewport_global.size
-			.height}px;width: {code_viewport_global.size.width}px;
-		 outline-style: solid; outline-width: 1px; outline-color: rgba(0,255,0,0.0);"
+		style="height: 100%; width: 100%;
+			outline-style: solid; outline-width: 1px; outline-color: rgba(0,255,0,0.0);"
 		class="h-full w-full overflow-hidden relative"
 	>
 		<div
 			style="
-			height: {code_document_local.size.height}px;
-			width: {code_document_local.size.width}px;
-			top: {code_document_local.origin.y }px; 
-			left:{code_document_local.origin.x}px; position: relative"
+			height: {code_document_rect.size.height}px;
+			width: {code_document_rect.size.width}px;
+			top: {code_document_rect.origin.y }px; 
+			left:{code_document_rect.origin.x}px; position: relative"
 			class="h-full w-full overflow-hidden relative"
 		>
-			<BracketHighlight code_document_height={code_document_local.size.height} code_document_global={convert_local_position_to_global(code_document_local.origin, code_viewport_global.origin)} />
-			<DocsAnnotations
-				code_document_global={convert_local_position_to_global(code_document_local.origin, code_viewport_global.origin)}
-			/>
+			<BracketHighlight code_document_rect={code_document_rect} />
+			<DocsAnnotations/>
 		</div>
 	</div>
 {/if}
