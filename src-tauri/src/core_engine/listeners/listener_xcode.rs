@@ -19,7 +19,9 @@ use crate::{
         },
         AXEventXcode, GetVia,
     },
-    core_engine::{core_engine::UIElementHash, CodeDocument, CoreEngine, EditorWindowProps},
+    core_engine::{
+        core_engine::UIElementHash, CodeDocument, CoreEngine, EditorWindowProps, TextRange,
+    },
     utils::messaging::ChannelList,
 };
 
@@ -81,21 +83,13 @@ fn on_editor_shortcut_pressed(
         return;
     }
 
-    match msg.modifier {
-        ModifierKey::Cmd => match msg.key.as_str() {
-            "S" => {
-                let code_documents = &mut *(match core_engine.code_documents().lock() {
-                    Ok(guard) => guard,
-                    Err(poisoned) => poisoned.into_inner(),
-                });
+    let code_documents = &mut *(match core_engine.code_documents().lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    });
 
-                if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
-                    code_doc.on_save();
-                }
-            }
-            _ => {}
-        },
-        _ => {}
+    if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
+        code_doc.on_save(&msg);
     }
 }
 
@@ -116,7 +110,6 @@ fn on_editor_textarea_selected_text_changed(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
-        code_doc.update_editor_window_viewport(get_viewport_frame(&GetVia::Current).ok()?);
         code_doc.set_selected_text_range(msg.index, msg.length);
         code_doc.process_bracket_highlight();
         code_doc.compute_rule_visualizations();
@@ -165,7 +158,6 @@ fn on_editor_textarea_content_changed(
             return;
         }
 
-        code_doc.update_editor_window_viewport(get_viewport_frame(&GetVia::Current).ok()?);
         code_doc.process_bracket_highlight();
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();
@@ -277,8 +269,6 @@ fn on_editor_window_moved(
     });
 
     if let Some(code_doc) = code_documents.get_mut(&moved_msg.uielement_hash) {
-        code_doc.update_editor_window_viewport(get_viewport_frame(&GetVia::Current).ok()?);
-
         // code_doc.compute_rule_visualizations();
         // code_doc.process_bracket_highlight();
         // code_doc.update_docs_gen_annotation_visualization();
@@ -314,6 +304,7 @@ fn check_if_code_doc_needs_to_be_created(
             uielement_hash: editor_window_hash,
             viewport_frame: get_viewport_frame(&GetVia::Pid(editor_pid))
                 .expect("Could not get viewport frame."),
+            visible_text_range: TextRange::new(0, 0),
         },
     );
 

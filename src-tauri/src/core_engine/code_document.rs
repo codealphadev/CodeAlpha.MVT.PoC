@@ -1,13 +1,15 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    features::{format_swift, BracketHighlight, DocsGenerator},
+    features::{
+        BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, SwiftFormatter,
+    },
     rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps},
     utils::XcodeText,
     TextRange,
 };
 use crate::{
-    ax_interaction::{get_textarea_content, GetVia},
+    ax_interaction::{get_textarea_content, models::editor::EditorShortcutPressedMessage, GetVia},
     utils::{geometry::LogicalFrame, messaging::ChannelList},
     window_controls::config::AppWindow,
 };
@@ -30,7 +32,7 @@ pub struct EditorWindowProps {
     pub visible_text_range: TextRange,
 }
 
-pub struct CodeDocument {
+pub struct CodeDocument<'a> {
     pub app_handle: tauri::AppHandle,
 
     /// Properties of the editor window that contains this code document.
@@ -53,27 +55,38 @@ pub struct CodeDocument {
 
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,
+
+    features: Vec<Feature<'a>>,
 }
 
-impl CodeDocument {
-    pub fn new(
-        app_handle: tauri::AppHandle,
-        editor_window_props: &EditorWindowProps,
-    ) -> CodeDocument {
+impl CodeDocument<'_> {
+    pub fn new(app_handle: tauri::AppHandle, editor_window_props: &EditorWindowProps) -> Self {
         let pid = editor_window_props.pid;
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
         DocsGenerator::start_listener_window_control_events(&app_handle, &docs_generator_arc);
 
-        CodeDocument {
+        let mut code_document = Self {
             app_handle,
             rules: vec![],
+            features: vec![],
             editor_window_props: editor_window_props.clone(),
             text: None,
             file_path: None,
             selected_text_range: None,
             bracket_highlight: BracketHighlight::new(editor_window_props.pid),
             docs_generator: docs_generator_arc,
-        }
+        };
+
+        // Initialize
+        code_document.init_features();
+
+        code_document
+    }
+
+    pub fn init_features(&mut self) {
+        self.features
+            .push(Feature::Formatter(SwiftFormatter::new(&self)));
+        ();
     }
 
     pub fn editor_window_props(&self) -> &EditorWindowProps {
@@ -206,25 +219,10 @@ impl CodeDocument {
         }
     }
 
-    pub fn on_save(&mut self) {
-        let (old_text, file_path, selected_text_range) =
-            if let (Some(text), Some(file_path), Some(selected_text_range)) = (
-                &self.text,
-                self.file_path.clone(),
-                self.selected_text_range.clone(),
-            ) {
-                (text, file_path, selected_text_range)
-            } else {
-                return;
-            };
-
-        format_swift(
-            &file_path,
-            &old_text,
-            &selected_text_range,
-            self.editor_window_props.pid,
-            &self.app_handle,
-        );
+    pub fn on_save(&mut self, shortcut: &EditorShortcutPressedMessage) {
+        for feature in &mut self.features {
+            feature.compute(&CoreEngineTrigger::OnShortcutPressed(shortcut.clone()));
+        }
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {
