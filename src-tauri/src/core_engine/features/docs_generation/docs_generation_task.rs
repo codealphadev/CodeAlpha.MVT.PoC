@@ -225,14 +225,14 @@ impl DocsGenerationTask {
         text: &XcodeText,
     ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), &'static str> {
         // 1. Get textarea dimensions
-        let textarea_ui_element = if let Ok(elem) = get_textarea_uielement(GetVia::Pid(self.pid)) {
+        let textarea_ui_element = if let Ok(elem) = get_textarea_uielement(&GetVia::Pid(self.pid)) {
             elem
         } else {
             return Err("Could not find textarea ui element");
         };
 
         let (textarea_origin, textarea_size) =
-            if let Ok(code_section_frame) = get_code_section_frame(GetVia::Current) {
+            if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Current) {
                 (code_section_frame.origin, code_section_frame.size)
             } else {
                 return Err("Could not derive textarea dimensions");

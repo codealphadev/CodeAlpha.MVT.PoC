@@ -2,10 +2,13 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
-    get_code_section_frame,
-    models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
+    get_code_document_frame_properties, get_code_section_frame, get_viewport_properties,
+    models::{
+        editor::{EditorUIElementFocusedMessage, FocusedUIElement},
+        viewport::ViewportPropertiesUpdateMessage,
+    },
     xcode::XCodeObserverState,
-    AXEventXcode, GetVia,
+    AXEventXcode, EventViewport, GetVia,
 };
 
 /// Notify Tauri that an new uielement in an editor window has been focused
@@ -57,7 +60,24 @@ pub fn notify_uielement_focused(
         }
 
         if role.to_string() == "AXTextArea" {
-            if let Ok(code_section_frame) = get_code_section_frame(GetVia::Current) {
+            // Publish an updated viewport properties message
+            let viewport_properties =
+                get_viewport_properties(&GetVia::Current).map_err(|_| Error::NotFound);
+            let code_document_frame_properties =
+                get_code_document_frame_properties(&GetVia::Current);
+
+            if let (Ok(viewport_properties), Ok(code_document_frame_properties)) =
+                (viewport_properties, code_document_frame_properties)
+            {
+                EventViewport::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
+                    viewport_properties: Some(viewport_properties),
+                    code_document_frame_properties: Some(code_document_frame_properties),
+                });
+            } else {
+                println!("FOCUS CHANGE: Error getting viewport properties");
+            }
+
+            if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Current) {
                 // Update EditorWindowResizedMessage
 
                 uielement_focused_msg.focused_ui_element = FocusedUIElement::Textarea;

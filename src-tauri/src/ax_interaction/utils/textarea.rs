@@ -8,7 +8,7 @@ use super::{
     GetVia, XcodeError,
 };
 
-pub fn get_textarea_uielement(get_via: GetVia) -> Result<AXUIElement, XcodeError> {
+pub fn get_textarea_uielement(get_via: &GetVia) -> Result<AXUIElement, XcodeError> {
     let focused_uielement = get_focused_uielement(get_via)?;
 
     if is_uielement_xcode_editor_textarea(&focused_uielement)? {
@@ -18,7 +18,7 @@ pub fn get_textarea_uielement(get_via: GetVia) -> Result<AXUIElement, XcodeError
     }
 }
 
-pub fn get_textarea_content(get_via: GetVia) -> Result<String, XcodeError> {
+pub fn get_textarea_content(get_via: &GetVia) -> Result<String, XcodeError> {
     let textarea_uielement = get_textarea_uielement(get_via)?;
 
     let content = ax_attribute(&textarea_uielement, AXAttribute::value())?;
@@ -31,7 +31,7 @@ pub fn get_textarea_content(get_via: GetVia) -> Result<String, XcodeError> {
     }
 }
 
-pub fn set_textarea_content(content: &String, get_via: GetVia) -> Result<(), XcodeError> {
+pub fn set_textarea_content(content: &String, get_via: &GetVia) -> Result<(), XcodeError> {
     let textarea_uielement = get_textarea_uielement(get_via)?;
 
     let content_cf_str: CFString = content.as_str().into();
@@ -43,7 +43,7 @@ pub fn set_textarea_content(content: &String, get_via: GetVia) -> Result<(), Xco
     )
 }
 
-pub fn get_textarea_file_path(get_via: GetVia) -> Result<String, XcodeError> {
+pub fn get_textarea_file_path(get_via: &GetVia) -> Result<String, XcodeError> {
     let textarea_uielement = get_textarea_uielement(get_via)?;
     let window_uielement = ax_attribute(&textarea_uielement, AXAttribute::window())?;
 

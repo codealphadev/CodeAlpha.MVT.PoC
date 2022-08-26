@@ -124,7 +124,7 @@ impl BracketHighlight {
             if let (Some(selected_text_range), Some(text_content), Ok(textarea_ui_element)) = (
                 self.selected_text_range,
                 self.text_content.as_ref(),
-                get_textarea_uielement(GetVia::Pid(self.window_pid)),
+                get_textarea_uielement(&GetVia::Pid(self.window_pid)),
             ) {
                 (selected_text_range, text_content, textarea_ui_element)
             } else {

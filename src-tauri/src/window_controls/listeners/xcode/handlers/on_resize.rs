@@ -21,7 +21,7 @@ pub fn on_resize_editor_window(
     let mut textarea_size = resize_msg.textarea_size;
 
     // If the textarea dimensions are not set, attempt to derive them from the textarea element.
-    if let Ok(code_section_frame) = get_code_section_frame(GetVia::Pid(editor_window.pid())) {
+    if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Pid(editor_window.pid())) {
         textarea_position = Some(code_section_frame.origin.as_tauri_LogicalPosition());
         textarea_size = Some(code_section_frame.size.as_tauri_LogicalSize());
     };

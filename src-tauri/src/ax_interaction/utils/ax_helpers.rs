@@ -10,7 +10,7 @@ pub enum GetVia {
     UIElem(AXUIElement),
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum XcodeError {
     #[error("Calling macOS AX API failed: {0}.")]
     AXCallFailed(i32),
@@ -22,6 +22,8 @@ pub enum XcodeError {
     FocusedUIElemNotTextarea,
     #[error("No open Xcode editor windows found with this hash.")]
     WindowHashUnknown,
+    #[error("Implausible dimensions computation, e.g. a result turning out negative when it's not supposed to be.")]
+    ImplausibleDimensions,
 }
 
 impl XcodeError {

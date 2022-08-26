@@ -162,6 +162,7 @@ pub mod messaging {
         EventWindowControls,
         EventDocsGeneration,
         RuleResults,
+        EventViewport,
     }
     impl fmt::Display for ChannelList {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -176,6 +177,7 @@ pub mod messaging {
                 ChannelList::EventWindowControls => write!(f, "EventWindowControls"),
                 ChannelList::EventDocsGeneration => write!(f, "EventDocsGeneration"),
                 ChannelList::RuleResults => write!(f, "RuleResults"),
+                ChannelList::EventViewport => write!(f, "EventViewport"),
             }
         }
     }

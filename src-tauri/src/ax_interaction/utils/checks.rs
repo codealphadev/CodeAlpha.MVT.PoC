@@ -12,7 +12,7 @@ use super::{ax_helpers::ax_attribute, internal::get_focused_uielement, GetVia, X
 
 pub fn is_focused_uielement_xcode_editor_textarea() -> Result<bool, XcodeError> {
     if let Some((pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
-        let uielement = get_focused_uielement(GetVia::Pid(pid))?;
+        let uielement = get_focused_uielement(&GetVia::Pid(pid))?;
 
         is_uielement_xcode_editor_textarea(&uielement)
     } else {
@@ -31,7 +31,7 @@ pub fn is_uielement_xcode_editor_textarea(uielement: &AXUIElement) -> Result<boo
 }
 
 pub fn is_currently_focused_app_our_app() -> Result<bool, XcodeError> {
-    let focused_uielement = get_focused_uielement(GetVia::Current)?;
+    let focused_uielement = get_focused_uielement(&GetVia::Current)?;
 
     if let Some((app_pid, _)) = get_registered_ax_observer(ObserverType::App) {
         match focused_uielement.pid() {

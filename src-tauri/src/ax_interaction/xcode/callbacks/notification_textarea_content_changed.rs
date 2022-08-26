@@ -41,7 +41,7 @@ pub fn notify_textarea_content_changed(
         let content = uielement.value()?;
         let content_str = content.downcast::<CFString>();
 
-        let file_path = if let Ok(file_path) = get_textarea_file_path(GetVia::Hash(window.3)) {
+        let file_path = if let Ok(file_path) = get_textarea_file_path(&GetVia::Hash(window.3)) {
             Some(file_path)
         } else {
             None

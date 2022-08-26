@@ -4,8 +4,10 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    get_code_section_frame, models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState,
-    AXEventXcode, GetVia,
+    get_code_document_frame_properties, get_code_section_frame, get_viewport_properties,
+    models::{editor::EditorWindowResizedMessage, viewport::ViewportPropertiesUpdateMessage},
+    xcode::XCodeObserverState,
+    AXEventXcode, EventViewport, GetVia,
 };
 
 /// Notify Tauri that an editor window has been resized
@@ -59,6 +61,23 @@ pub fn notify_window_resized(
         };
 
         if "AXScrollBar" == ui_element.role()? {
+            // Publish an updated viewport properties message
+            let viewport_properties =
+                get_viewport_properties(&GetVia::Current).map_err(|_| Error::NotFound);
+            let code_document_frame_properties =
+                get_code_document_frame_properties(&GetVia::Current);
+
+            if let (Ok(viewport_properties), Ok(code_document_frame_properties)) =
+                (viewport_properties, code_document_frame_properties)
+            {
+                EventViewport::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
+                    viewport_properties: Some(viewport_properties),
+                    code_document_frame_properties: Some(code_document_frame_properties),
+                });
+            } else {
+                println!("RESIZE: Error getting viewport properties");
+            }
+
             // Determine editor textarea dimensions
             // For now at least, ignore errors and still continue with control flow.
             let _ = derive_resize_parameters_from_scrollbar(&mut resize_msg, ui_element);
@@ -80,7 +99,7 @@ pub fn notify_window_resized(
                 window.3,
             );
 
-            // Remove item window_list
+            // Update item window_list
             xcode_observer_state
                 .window_list
                 .retain(|vec_elem| vec_elem.0 != new_tuple.0);
@@ -111,7 +130,7 @@ fn derive_resize_parameters_from_scrollbar(
 
     assert_eq!(role.to_string(), "AXScrollBar");
 
-    if let Ok(code_section_frame) = get_code_section_frame(GetVia::Current) {
+    if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Current) {
         // Update EditorWindowResizedMessage
         resize_msg.textarea_position = Some(code_section_frame.origin.as_tauri_LogicalPosition());
         resize_msg.textarea_size = Some(code_section_frame.size.as_tauri_LogicalSize());

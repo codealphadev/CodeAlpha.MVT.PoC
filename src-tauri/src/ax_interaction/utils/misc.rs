@@ -19,7 +19,7 @@ use super::{
 };
 
 pub fn get_focused_window() -> Result<usize, XcodeError> {
-    let focused_uielement = get_focused_uielement(GetVia::Current)?;
+    let focused_uielement = get_focused_uielement(&GetVia::Current)?;
 
     if let Ok(window_uielement) = ax_attribute(&focused_uielement, AXAttribute::window()) {
         Ok(generate_axui_element_hash(&window_uielement))
@@ -28,7 +28,7 @@ pub fn get_focused_window() -> Result<usize, XcodeError> {
     }
 }
 
-pub fn get_selected_text_range(get_via: GetVia) -> Result<TextRange, XcodeError> {
+pub fn get_selected_text_range(get_via: &GetVia) -> Result<TextRange, XcodeError> {
     let textarea_uielement = get_textarea_uielement(get_via)?;
 
     let selected_text_range_ax_value =
@@ -43,7 +43,7 @@ pub fn get_selected_text_range(get_via: GetVia) -> Result<TextRange, XcodeError>
     }
 }
 
-pub fn set_selected_text_range(text_range: &TextRange, get_via: GetVia) -> Result<(), XcodeError> {
+pub fn set_selected_text_range(text_range: &TextRange, get_via: &GetVia) -> Result<(), XcodeError> {
     let textarea_uielement = get_textarea_uielement(get_via)?;
 
     textarea_uielement
@@ -59,8 +59,8 @@ pub fn set_selected_text_range(text_range: &TextRange, get_via: GetVia) -> Resul
 }
 
 pub fn get_dark_mode() -> Result<bool, &'static str> {
-    let textarea_uielement =
-        get_textarea_uielement(GetVia::Current).map_err(|_| "Could not get textarea ui_element")?;
+    let textarea_uielement = get_textarea_uielement(&GetVia::Current)
+        .map_err(|_| "Could not get textarea ui_element")?;
 
     let range = CFRange {
         location: 0,

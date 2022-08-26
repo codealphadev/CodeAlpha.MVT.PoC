@@ -9,7 +9,6 @@ use super::models::{
     dark_mode::DarkModeUpdateMessage,
     editor_window::CodeOverlayDimensionsUpdateMessage,
     TrackingAreaClickedMessage, TrackingAreaEnteredMessage, TrackingAreaExitedMessage,
-    ViewportPropertiesUpdateMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
@@ -22,7 +21,6 @@ pub enum EventWindowControls {
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
     CodeOverlayDimensionsUpdate(LogicalFrame),
-    ViewportPropertiesUpdate(ViewportPropertiesUpdateMessage),
     DarkModeUpdate(DarkModeUpdateMessage),
 }
 
@@ -45,7 +43,6 @@ impl EventWindowControls {
             EventWindowControls::AppWindowShow(_) => publish_to_frontend = false,
             EventWindowControls::CodeOverlayDimensionsUpdate(_) => publish_to_frontend = true,
             EventWindowControls::DarkModeUpdate(_) => publish_to_frontend = true,
-            EventWindowControls::ViewportPropertiesUpdate(_) => publish_to_frontend = true,
         }
 
         // Emit to CodeOverlay window

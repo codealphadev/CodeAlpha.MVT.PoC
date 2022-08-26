@@ -65,7 +65,7 @@ pub fn notify_window_created(
                 ));
 
                 // Attempt to send an additional notification_uielement_focused
-                if let Ok(element) = get_focused_uielement(GetVia::Pid(pid)) {
+                if let Ok(element) = get_focused_uielement(&GetVia::Pid(pid)) {
                     let _ = notify_uielement_focused(&element, xcode_observer_state);
                 }
             }

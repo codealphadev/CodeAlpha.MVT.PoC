@@ -4,7 +4,10 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    models::editor::EditorWindowMovedMessage, xcode::XCodeObserverState, AXEventXcode,
+    get_code_document_frame_properties, get_viewport_properties,
+    models::{editor::EditorWindowMovedMessage, viewport::ViewportPropertiesUpdateMessage},
+    xcode::XCodeObserverState,
+    AXEventXcode, EventViewport, GetVia,
 };
 
 /// Notify Tauri that an editor window has been moved
@@ -48,6 +51,22 @@ pub fn notify_window_moved(
         };
 
         AXEventXcode::EditorWindowMoved(msg).publish_to_tauri(&xcode_observer_state.app_handle);
+
+        // Publish an updated viewport properties message
+        let viewport_properties =
+            get_viewport_properties(&GetVia::Current).map_err(|_| Error::NotFound);
+        let code_document_frame_properties = get_code_document_frame_properties(&GetVia::Current);
+
+        if let (Ok(viewport_properties), Ok(code_document_frame_properties)) =
+            (viewport_properties, code_document_frame_properties)
+        {
+            EventViewport::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
+                viewport_properties: Some(viewport_properties),
+                code_document_frame_properties: Some(code_document_frame_properties),
+            });
+        } else {
+            println!("MOVE: Error getting viewport properties");
+        }
     }
 
     Ok(())
