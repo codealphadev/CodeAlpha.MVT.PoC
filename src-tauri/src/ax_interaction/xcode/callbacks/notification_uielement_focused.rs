@@ -4,6 +4,7 @@ use core_foundation::base::{CFEqual, TCFType};
 use crate::ax_interaction::{
     derive_xcode_textarea_dimensions,
     models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
+    update_code_document_dimensions::update_code_document_dimensions,
     AXEventXcode, XCodeObserverState,
 };
 
@@ -46,6 +47,7 @@ pub fn notify_uielement_focused(
             ui_elem_hash: Some(window.3),
             pid: Some(window.1.pid()?),
         };
+        update_code_document_dimensions(&window_element, &xcode_observer_state.app_handle).ok();
 
         let role = uielement_element.attribute(&AXAttribute::role())?;
 

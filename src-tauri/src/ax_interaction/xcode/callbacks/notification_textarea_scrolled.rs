@@ -1,16 +1,10 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
-use crate::{
-    app_handle,
-    ax_interaction::{
-        derive_xcode_textarea_dimensions, focused_uielement_of_app, get_textarea_frame,
-        models::editor::EditorTextareaScrolledMessage, AXEventXcode, XCodeObserverState,
-    },
-    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
-    window_controls::{
-        models::editor_window::CodeOverlayDimensionsUpdateMessage, EventWindowControls,
-    },
+use crate::ax_interaction::{
+    models::editor::EditorTextareaScrolledMessage,
+    update_code_document_dimensions::update_code_document_dimensions, AXEventXcode,
+    XCodeObserverState,
 };
 
 pub fn notify_textarea_scrolled(
@@ -30,6 +24,7 @@ pub fn notify_textarea_scrolled(
         });
 
     if let Some(window) = &mut known_window {
+        update_code_document_dimensions(&window_element, &xcode_observer_state.app_handle).ok();
         AXEventXcode::EditorTextareaScrolled(EditorTextareaScrolledMessage {
             id: window.0,
             uielement_hash: window.3,
