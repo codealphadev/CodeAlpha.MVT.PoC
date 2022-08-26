@@ -5,11 +5,12 @@ use super::{
         BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, SwiftFormatter,
     },
     rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps},
+    syntax_tree::SwiftSyntaxTree,
     utils::XcodeText,
     TextRange,
 };
 use crate::{
-    ax_interaction::{get_textarea_content, models::editor::EditorShortcutPressedMessage, GetVia},
+    ax_interaction::models::editor::EditorShortcutPressedMessage,
     utils::{geometry::LogicalFrame, messaging::ChannelList},
     window_controls::config::AppWindow,
 };
@@ -51,7 +52,7 @@ pub struct CodeDocument<'a> {
 
     selected_text_range: Option<TextRange>,
 
-    bracket_highlight: BracketHighlight<'a>,
+    swift_syntax_tree: SwiftSyntaxTree,
 
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,
@@ -73,20 +74,21 @@ impl CodeDocument<'_> {
             text: None,
             file_path: None,
             selected_text_range: None,
-            bracket_highlight: BracketHighlight::new(editor_window_props.pid),
+            swift_syntax_tree: SwiftSyntaxTree::new(),
             docs_generator: docs_generator_arc,
         };
 
-        // Initialize
         code_document.init_features();
 
         code_document
     }
 
     pub fn init_features(&mut self) {
-        self.features
-            .push(Feature::Formatter(SwiftFormatter::new(&self)));
-        ();
+        self.features = [
+            Feature::Formatter(SwiftFormatter::new(&self)),
+            Feature::BracketHighlighting(BracketHighlight::new(&self)),
+        ]
+        .to_vec();
     }
 
     pub fn editor_window_props(&self) -> &EditorWindowProps {
@@ -123,7 +125,7 @@ impl CodeDocument<'_> {
             return;
         }
 
-        self.text = Some(new_content.clone());
+        self.text = Some(new_content);
         self.file_path = file_path.clone();
 
         // Update Rule Properties
@@ -137,9 +139,9 @@ impl CodeDocument<'_> {
             }
         }
 
-        // Update text content in features
-        self.bracket_highlight.update_content(&new_content);
+        let parsed_successfully = self.swift_syntax_tree.parse(&new_content);
 
+        // Update text content in features
         (*self.docs_generator.lock().unwrap()).update_content(&new_content);
     }
 
@@ -149,27 +151,12 @@ impl CodeDocument<'_> {
         }
     }
 
-    pub fn process_bracket_highlight(&mut self) {
-        self.bracket_highlight.generate_results();
-
-        // Send to CodeOverlay window
-        let _ = self.app_handle.emit_to(
-            &AppWindow::CodeOverlay.to_string(),
-            &ChannelList::BracketHighlightResults.to_string(),
-            &self.bracket_highlight.get_results(),
-        );
-    }
-
     pub fn update_docs_gen_annotation_visualization(&mut self) {
         (*self.docs_generator.lock().unwrap()).update_visualization();
     }
 
     pub fn deactivate_features(&mut self) {
         (*self.docs_generator.lock().unwrap()).clear_docs_generation_tasks();
-    }
-
-    pub fn activate_features(&mut self) {
-        // Nothing yet
     }
 
     pub fn compute_rule_visualizations(&mut self) {
@@ -202,20 +189,8 @@ impl CodeDocument<'_> {
 
         (*self.docs_generator.lock().unwrap()).update_selected_text_range(&text_range);
 
-        self.bracket_highlight
-            .update_selected_text_range(&text_range);
-
-        // Check if content changed, if so, process bracket highlight
-        if let (Ok(content_text), Some(text)) = (
-            get_textarea_content(&GetVia::Pid(self.editor_window_props.pid)),
-            self.text.as_ref(),
-        ) {
-            let content_text_u16 = &XcodeText::from_str(&content_text);
-            if content_text_u16 != text {
-                let new_content_u16 = content_text_u16;
-                self.bracket_highlight.update_content(new_content_u16);
-                self.process_bracket_highlight();
-            }
+        for feature in &mut self.features {
+            feature.compute(&CoreEngineTrigger::OnTextSelectionChange);
         }
     }
 
