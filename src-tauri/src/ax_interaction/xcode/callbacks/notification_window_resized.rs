@@ -4,8 +4,7 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    derive_xcode_textarea_dimensions, models::editor::EditorWindowResizedMessage,
-    update_code_document_dimensions::update_code_document_dimensions, AXEventXcode,
+    derive_xcode_textarea_dimensions, models::editor::EditorWindowResizedMessage, AXEventXcode,
     XCodeObserverState,
 };
 
@@ -58,7 +57,6 @@ pub fn notify_window_resized(
             textarea_size: None,
             uielement_hash: window.3,
         };
-        update_code_document_dimensions(&window_element, &xcode_observer_state.app_handle).ok();
 
         if "AXScrollBar" == ui_element.role()? {
             // Determine editor textarea dimensions

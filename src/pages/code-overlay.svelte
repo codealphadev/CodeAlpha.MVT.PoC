@@ -7,13 +7,13 @@
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 
 	import { getContext } from 'svelte';
+	import {  convert_local_position_to_global, convert_global_position_to_local } from '../utils';
 	
 	const { setTheme } = getContext("theme");
 
 
-	let code_viewport_rectangle: LogicalFrame | null = null;
-	let code_document_rectangle: LogicalFrame | null = null;
-
+	let code_viewport_global: LogicalFrame | null = null; // needs to be global (FOR NOW) because docs annotations and pair bracket etc. use global coordinates in the events.
+	let code_document_local: LogicalFrame | null = null; // Relative to viewport
 
 	const listenWindowChannels = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
@@ -23,9 +23,14 @@
 			switch (event) {
 				case 'CodeOverlayDimensionsUpdate':
 					if (payload.code_viewport_rect) {
-						code_viewport_rectangle = payload.code_viewport_rect;
+						code_viewport_global = payload.code_viewport_rect;
 					}
-					code_document_rectangle = payload.code_document_rect;
+					if (code_viewport_global) {
+						code_document_local = {
+							size: payload.code_document_rect.size,
+							origin: convert_global_position_to_local(payload.code_document_rect.origin, code_viewport_global.origin)
+						}
+					}
 					break;
 				case 'DarkModeUpdate':
 					setTheme(payload.dark_mode ? 'dark' : 'light');
@@ -41,24 +46,24 @@
 
 </script>
 
-{#if code_viewport_rectangle && code_document_rectangle}
+{#if code_viewport_global && code_document_local}
 	<div
-		style="height: {code_viewport_rectangle.size
-			.height}px;width: {code_viewport_rectangle.size.width}px;
+		style="height: {code_viewport_global.size
+			.height}px;width: {code_viewport_global.size.width}px;
 		 outline-style: solid; outline-width: 1px; outline-color: rgba(0,255,0,0.0);"
 		class="h-full w-full overflow-hidden relative"
 	>
 		<div
 			style="
-			height: {code_document_rectangle.size.height}px;
-			width: {code_document_rectangle.size.width}px;
-			top: {code_document_rectangle.origin.y - code_viewport_rectangle.origin.y}px; 
-			left:{code_document_rectangle.origin.x - code_viewport_rectangle.origin.x}px; position: relative"
+			height: {code_document_local.size.height}px;
+			width: {code_document_local.size.width}px;
+			top: {code_document_local.origin.y }px; 
+			left:{code_document_local.origin.x}px; position: relative"
 			class="h-full w-full overflow-hidden relative"
 		>
-			<BracketHighlight code_document_rectangle={code_document_rectangle} />
+			<BracketHighlight code_document_height={code_document_local.size.height} code_document_global={convert_local_position_to_global(code_document_local.origin, code_viewport_global.origin)} />
 			<DocsAnnotations
-				code_document_origin={code_document_rectangle.origin}
+				code_document_global={convert_local_position_to_global(code_document_local.origin, code_viewport_global.origin)}
 			/>
 		</div>
 	</div>
