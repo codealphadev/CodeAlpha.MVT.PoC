@@ -4,9 +4,7 @@ use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
 use crate::ax_interaction::{
-    get_code_document_frame_properties, get_code_section_frame, get_viewport_properties,
-    models::{editor::EditorWindowResizedMessage, viewport::ViewportPropertiesUpdateMessage},
-    xcode::XCodeObserverState,
+    get_code_section_frame, models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState,
     AXEventXcode, EventViewport, GetVia,
 };
 
@@ -62,22 +60,8 @@ pub fn notify_window_resized(
 
         if "AXScrollBar" == ui_element.role()? {
             // Publish an updated viewport properties message
-            let viewport_properties =
-                get_viewport_properties(&GetVia::Current).map_err(|_| Error::NotFound);
-            let code_document_frame_properties =
-                get_code_document_frame_properties(&GetVia::Current);
-
-            if let (Ok(viewport_properties), Ok(code_document_frame_properties)) =
-                (viewport_properties, code_document_frame_properties)
-            {
-                EventViewport::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
-                    viewport_properties: Some(viewport_properties),
-                    code_document_frame_properties: Some(code_document_frame_properties),
-                });
-            } else {
-                println!("RESIZE: Error getting viewport properties");
-            }
-
+            EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
+                .publish_to_tauri(&xcode_observer_state.app_handle);
             // Determine editor textarea dimensions
             // For now at least, ignore errors and still continue with control flow.
             let _ = derive_resize_parameters_from_scrollbar(&mut resize_msg, ui_element);

@@ -3,7 +3,11 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
-use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
+use crate::{
+    ax_interaction::{get_code_document_frame_properties, get_viewport_properties, GetVia},
+    utils::messaging::ChannelList,
+    window_controls::config::AppWindow,
+};
 
 use super::models::viewport::ViewportPropertiesUpdateMessage;
 
@@ -37,5 +41,21 @@ impl EventViewport {
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );
+    }
+
+    pub fn new_xcode_viewport_update(get_via: &GetVia) -> Self {
+        let viewport_properties = match get_viewport_properties(&get_via) {
+            Ok(properties) => Some(properties),
+            Err(_) => None,
+        };
+        let code_document_frame_properties = match get_code_document_frame_properties(&get_via) {
+            Ok(properties) => Some(properties),
+            Err(_) => None,
+        };
+
+        Self::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
+            viewport_properties,
+            code_document_frame_properties,
+        })
     }
 }
