@@ -1,5 +1,4 @@
 use tree_sitter::Node;
-use ts_rs::TS;
 
 use crate::{
     core_engine::{
@@ -7,9 +6,10 @@ use crate::{
         rules::{get_bounds_of_TextRange, get_index_of_next_row, MatchRange},
         syntax_tree::SwiftSyntaxTree,
         utils::XcodeText,
-        CodeDocument, TextPosition, TextRange,
+        CodeDocument, CodeDocument, TextPosition, TextRange,
     },
-    utils::geometry::LogicalPosition,
+    utils::{geometry::LogicalPosition, messaging::ChannelList},
+    window_controls::config::AppWindow,
 };
 
 use super::{
@@ -51,14 +51,11 @@ impl<'a> FeatureBase for BracketHighlight<'a> {
             .as_ref()
             .ok_or(BracketHighlightError::InsufficientContext)?;
 
-        let swift_syntax_tree: &SwiftSyntaxTree =
-            self.code_document
-                .swift_syntax_tree()
-                .as_ref()
-                .ok_or(BracketHighlightError::InsufficientContext)?;
-
-        let code_block_node =
-            get_code_block_treesitter_node(swift_syntax_tree, selected_text_range, text_content)?;
+        let code_block_node = get_code_block_treesitter_node(
+            self.code_document.swift_syntax_tree,
+            selected_text_range,
+            text_content,
+        )?;
 
         let (box_positions, box_match_range) =
             get_start_end_positions_and_range(code_block_node, text_content, selected_text_range);
@@ -238,6 +235,8 @@ impl<'a> FeatureBase for BracketHighlight<'a> {
             elbow,
             boxes: box_pair,
         });
+
+        self.publish_visualization();
         Ok(())
     }
 }
@@ -249,6 +248,16 @@ impl<'a> BracketHighlight<'a> {
             code_document,
             visualization_results: None,
         }
+    }
+
+    fn publish_visualization(&self) {
+        // TODO: Use proper event syntax
+        todo!();
+        let _ = self.app_handle.emit_to(
+            &AppWindow::CodeOverlay.to_string(),
+            &ChannelList::BracketHighlightResults.to_string(),
+            &self.visualization_results,
+        );
     }
 }
 fn should_compute(trigger: &CoreEngineTrigger) -> bool {
@@ -280,23 +289,11 @@ struct BracketHighlightComputeResults {
     line_match_range: MatchRange,
 }
 
-/*
-    pub fn update_content(&mut self, text_content: &XcodeText) {
-        if self.swift_syntax_tree.parse(text_content) {
-            self.text_content = Some(text_content.to_owned());
-        }
-    }
-
-    pub fn update_selected_text_range(&mut self, selected_text_range: &TextRange) {
-        self.selected_text_range = Some(selected_text_range.to_owned());
-    }
-*/
-
-fn get_code_block_treesitter_node<'a>(
-    syntax_tree: &'a SwiftSyntaxTree,
-    selected_text_range: &'a TextRange,
-    text_content: &'a XcodeText,
-) -> Result<Option<Node<'a>>, BracketHighlightError> {
+fn get_code_block_treesitter_node(
+    syntax_tree: &SwiftSyntaxTree,
+    selected_text_range: &TextRange,
+    text_content: &XcodeText,
+) -> Result<Option<Node>, BracketHighlightError> {
     let selected_node = match syntax_tree.get_selected_code_node(&selected_text_range) {
         None => return Ok(None),
         Some(node) => node,
