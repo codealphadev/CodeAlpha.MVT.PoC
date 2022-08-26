@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::ax_interaction::{
-    get_code_section_frame,
+    get_viewport_frame,
     models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
     xcode::XCodeObserverState,
     AXEventXcode, EventViewport, GetVia,
@@ -61,7 +61,7 @@ pub fn notify_uielement_focused(
             EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
                 .publish_to_tauri(&xcode_observer_state.app_handle);
 
-            if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Current) {
+            if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
                 // Update EditorWindowResizedMessage
 
                 uielement_focused_msg.focused_ui_element = FocusedUIElement::Textarea;

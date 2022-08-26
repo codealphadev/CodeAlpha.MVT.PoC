@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::{
     app_handle,
     ax_interaction::{
-        get_code_section_frame, get_textarea_uielement,
+        get_textarea_uielement, get_viewport_frame,
         xcode::actions::replace_range_with_clipboard_text, GetVia,
     },
     core_engine::{
@@ -232,7 +232,7 @@ impl DocsGenerationTask {
         };
 
         let (textarea_origin, textarea_size) =
-            if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Current) {
+            if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
                 (code_section_frame.origin, code_section_frame.size)
             } else {
                 return Err("Could not derive textarea dimensions");

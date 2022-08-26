@@ -3,7 +3,7 @@ use tauri::api::process::{Command, CommandEvent};
 
 use crate::{
     ax_interaction::{
-        get_code_section_frame, get_textarea_uielement, send_event_mouse_wheel,
+        get_textarea_uielement, get_viewport_frame, send_event_mouse_wheel,
         set_selected_text_range, set_textarea_content, GetVia,
     },
     core_engine::{
@@ -11,6 +11,8 @@ use crate::{
         utils::XcodeText, TextPosition, TextRange,
     },
 };
+
+pub struct SwiftFormatter {}
 
 pub fn format_swift(
     file_path: &String,
@@ -38,7 +40,7 @@ pub fn format_swift(
         let mut scroll_delta = None;
         if let Ok(editor_textarea_ui_element) = get_textarea_uielement(&GetVia::Pid(pid)) {
             // Get the dimensions of the textarea viewport
-            if let Ok(code_section_frame) = get_code_section_frame(&GetVia::Current) {
+            if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
                 if let Some(bounds_of_selected_text) = get_bounds_of_first_char_in_range(
                     &selected_text_range_move,
                     &editor_textarea_ui_element,
