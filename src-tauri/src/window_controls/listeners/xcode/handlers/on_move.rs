@@ -13,7 +13,8 @@ pub fn on_move_editor_window(
     moved_msg: &EditorWindowMovedMessage,
 ) -> Option<()> {
     let window_manager = &mut window_manager.lock();
-    let editor_window_list = &mut window_manager.editor_windows().lock();
+    // If deadlock, discard message. TODO: Rethink logic.
+    let editor_window_list = &mut window_manager.editor_windows().try_lock()?;
 
     let editor_window = editor_window_list.get_mut(&moved_msg.uielement_hash)?;
 
