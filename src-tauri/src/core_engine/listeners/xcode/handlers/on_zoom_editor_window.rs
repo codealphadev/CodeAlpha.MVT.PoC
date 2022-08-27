@@ -3,8 +3,8 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::{get_viewport_frame, models::editor::EditorTextareaZoomedMessage, GetVia},
     core_engine::CoreEngine,
+    platform::macos::{get_viewport_frame, models::editor::EditorTextareaZoomedMessage, GetVia},
 };
 
 pub fn on_editor_textarea_zoomed(

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::models::editor::EditorWindowDestroyedMessage, core_engine::CoreEngine,
+    core_engine::CoreEngine, platform::macos::models::editor::EditorWindowDestroyedMessage,
 };
 
 pub fn on_editor_window_destroyed(

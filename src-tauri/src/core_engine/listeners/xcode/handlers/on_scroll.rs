@@ -3,8 +3,8 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::{get_focused_window, models::editor::EditorTextareaScrolledMessage},
     core_engine::CoreEngine,
+    platform::macos::{get_focused_window, models::editor::EditorTextareaScrolledMessage},
 };
 
 pub fn on_editor_textarea_scrolled(

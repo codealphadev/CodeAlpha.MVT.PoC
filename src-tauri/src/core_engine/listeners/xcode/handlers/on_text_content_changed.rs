@@ -3,10 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::{
+    core_engine::{core_engine::WindowUid, CodeDocument, CoreEngine, EditorWindowProps, TextRange},
+    platform::macos::{
         get_viewport_frame, models::editor::EditorTextareaContentChangedMessage, GetVia,
     },
-    core_engine::{core_engine::WindowUid, CodeDocument, CoreEngine, EditorWindowProps, TextRange},
 };
 
 pub fn on_text_content_changed(

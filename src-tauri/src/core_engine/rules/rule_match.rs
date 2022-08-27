@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    ax_interaction::{calc_rectangles_and_line_matches, GetVia},
+    platform::macos::{calc_rectangles_and_line_matches, GetVia},
     utils::{
         geometry::LogicalFrame,
         rule_types::{LineMatch, MatchRange},

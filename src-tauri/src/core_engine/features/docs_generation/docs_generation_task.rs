@@ -5,10 +5,6 @@ use parking_lot::Mutex;
 
 use crate::{
     app_handle,
-    ax_interaction::{
-        get_bounds_for_TextRange, get_viewport_frame,
-        xcode::actions::replace_range_with_clipboard_text, GetVia,
-    },
     core_engine::{
         events::{
             models::{
@@ -19,6 +15,10 @@ use crate::{
         features::docs_generation::mintlify_documentation,
         utils::XcodeText,
         TextPosition, TextRange,
+    },
+    platform::macos::{
+        get_bounds_for_TextRange, get_viewport_frame,
+        xcode::actions::replace_range_with_clipboard_text, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{

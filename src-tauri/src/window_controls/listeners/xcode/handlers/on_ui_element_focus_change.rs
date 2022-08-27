@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
+    platform::macos::models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
     utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::{config::AppWindow, WindowManager},
 };

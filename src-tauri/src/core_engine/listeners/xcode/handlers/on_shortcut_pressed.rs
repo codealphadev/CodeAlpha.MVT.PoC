@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::models::editor::EditorShortcutPressedMessage, core_engine::CoreEngine,
+    core_engine::CoreEngine, platform::macos::models::editor::EditorShortcutPressedMessage,
 };
 
 pub fn on_editor_shortcut_pressed(

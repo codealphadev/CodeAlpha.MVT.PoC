@@ -2,12 +2,12 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 
 use crate::{
-    ax_interaction::{
+    core_engine::CoreEngine,
+    platform::macos::{
         get_selected_text_range, get_textarea_content, get_textarea_file_path, get_viewport_frame,
         models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
         GetVia,
     },
-    core_engine::CoreEngine,
 };
 
 use super::check_if_code_doc_needs_to_be_created;
