@@ -15,7 +15,7 @@ use crate::{
             EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
             EditorTextareaZoomedMessage, EditorUIElementFocusedMessage,
             EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
-            FocusedUIElement, ModifierKey,
+            FocusedUIElement,
         },
         AXEventXcode, GetVia,
     },

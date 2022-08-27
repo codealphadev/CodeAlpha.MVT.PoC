@@ -1,17 +1,16 @@
-use anyhow::Context;
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
 
 use crate::{
     app_handle,
     ax_interaction::{
-        get_textarea_uielement, internal::get_uielement_frame, models::editor::ModifierKey,
-        send_event_mouse_wheel, set_selected_text_range, set_textarea_content, GetVia,
+        get_bounds_for_TextRange, get_textarea_uielement, internal::get_uielement_frame,
+        models::editor::ModifierKey, send_event_mouse_wheel, set_selected_text_range,
+        set_textarea_content, GetVia,
     },
     core_engine::{
         events::EventRuleExecutionState,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
-        rules::get_bounds_of_first_char_in_range,
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
@@ -30,16 +29,18 @@ pub enum SwiftFormatError {
     SidecarFailure(String),
     #[error("SwiftFormat failed. Empty result returned.")]
     EmptyContentResult,
-    #[error("Something went wrong when executing this feature.")]
+    #[error("Something went wrong when executing this SwiftFormatter.")]
     GenericError(#[source] anyhow::Error),
 }
 
-pub struct SwiftFormatter<'a> {
-    code_doc_ref: &'a CodeDocument<'a>,
-}
+pub struct SwiftFormatter {}
 
-impl FeatureBase for SwiftFormatter<'_> {
-    fn compute(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError> {
+impl FeatureBase for SwiftFormatter {
+    fn compute(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
         match trigger {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
@@ -56,15 +57,19 @@ impl FeatureBase for SwiftFormatter<'_> {
         Ok(())
     }
 
-    fn update_visualization(&mut self, _trigger: &CoreEngineTrigger) -> Result<(), FeatureError> {
+    fn update_visualization(
+        &mut self,
+        _code_document: &CodeDocument,
+        _trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
         // SwiftFormatter is not running on update_visualization step.
         Ok(())
     }
 }
 
-impl<'a> SwiftFormatter<'a> {
-    pub fn new(code_doc_ref: &'a CodeDocument) -> Self {
-        Self { code_doc_ref }
+impl SwiftFormatter {
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn format(&self) -> Result<(), SwiftFormatError> {
@@ -124,7 +129,7 @@ impl<'a> SwiftFormatter<'a> {
             );
 
             // 5. Scroll to the same position as before the formatting
-            if let Some(scroll_delta) = scroll_delta {
+            if let Ok(scroll_delta) = scroll_delta {
                 tokio::time::sleep(std::time::Duration::from_millis(20)).await;
                 send_event_mouse_wheel(scroll_delta);
             }
@@ -136,22 +141,31 @@ impl<'a> SwiftFormatter<'a> {
         Ok(())
     }
 
-    fn scroll_dist_after_formatting(selected_text_range: &TextRange) -> Option<LogicalSize> {
-        let mut scroll_delta = None;
-        if let Ok(textarea_uielement) = get_textarea_uielement(&GetVia::Current) {
-            if let Ok(textarea_frame) = get_uielement_frame(&textarea_uielement) {
-                if let Some(bounds_of_selected_text) =
-                    get_bounds_of_first_char_in_range(&selected_text_range, &textarea_uielement)
-                {
-                    scroll_delta = Some(LogicalSize {
-                        width: textarea_frame.origin.x - bounds_of_selected_text.origin.x,
-                        height: bounds_of_selected_text.origin.y - textarea_frame.origin.y,
-                    });
-                }
+    fn scroll_dist_after_formatting(
+        selected_text_range: &TextRange,
+    ) -> Result<LogicalSize, SwiftFormatError> {
+        if let Ok(textarea_frame) = get_uielement_frame(
+            &get_textarea_uielement(&GetVia::Current)
+                .map_err(|err| SwiftFormatError::GenericError(err.into()))?,
+        ) {
+            if let Ok(bounds_of_selected_text) = get_bounds_for_TextRange(
+                &selected_text_range.first_char_as_TextRange().ok_or(
+                    SwiftFormatError::GenericError(anyhow::Error::msg(
+                        "Could not get first char as TextRange",
+                    )),
+                )?,
+                &GetVia::Current,
+            ) {
+                return Ok(LogicalSize {
+                    width: textarea_frame.origin.x - bounds_of_selected_text.origin.x,
+                    height: bounds_of_selected_text.origin.y - textarea_frame.origin.y,
+                });
             }
         }
 
-        scroll_delta
+        Err(SwiftFormatError::GenericError(anyhow::Error::msg(
+            "Could not get first char as TextRange",
+        )))
     }
 
     async fn format_file(file_path: &String) -> Result<String, SwiftFormatError> {

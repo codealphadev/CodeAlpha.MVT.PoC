@@ -1,14 +1,9 @@
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
 use ts_rs::TS;
 
 use crate::{
-    core_engine::{rules::MatchRectangle, TextPosition, TextRange},
-    utils::{
-        geometry::{LogicalFrame, LogicalPosition},
-        messaging::ChannelList,
-    },
-    window_controls::config::AppWindow,
+    core_engine::{TextPosition, TextRange},
+    utils::geometry::{LogicalFrame, LogicalPosition},
 };
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
@@ -21,25 +16,25 @@ pub struct BracketHighlightElbow {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightBracket {
-    text_range: TextRange,
-    text_position: TextPosition,
-    rectangle: LogicalFrame,
+    pub text_range: TextRange,
+    pub text_position: TextPosition,
+    pub rectangle: LogicalFrame,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightBracketPair {
-    first: Option<BracketHighlightBracket>,
-    last: Option<BracketHighlightBracket>,
+    pub first: Option<BracketHighlightBracket>,
+    pub last: Option<BracketHighlightBracket>,
 }
 
 impl BracketHighlightBracketPair {
     pub fn new(
         first_range: TextRange,
-        first_rectangle: Option<MatchRectangle>,
+        first_rectangle: Option<LogicalFrame>,
         first_text_position: TextPosition,
         last_range: TextRange,
-        last_rectangle: Option<MatchRectangle>,
+        last_rectangle: Option<LogicalFrame>,
         last_text_position: TextPosition,
     ) -> Self {
         let mut first = None;

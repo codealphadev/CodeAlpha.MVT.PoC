@@ -1,14 +1,14 @@
-use accessibility::AXUIElement;
 use tree_sitter::Node;
 
-use crate::core_engine::{
-    rules::{
-        calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped,
-        MatchRange, MatchRectangle,
+use crate::{
+    ax_interaction::{
+        calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped, GetVia,
     },
-    utils::XcodeText,
-    TextPosition, TextRange,
+    core_engine::{utils::XcodeText, TextPosition, TextRange},
+    utils::{geometry::LogicalFrame, rule_types::MatchRange},
 };
+
+use super::BracketHighlightError;
 
 fn code_block_kinds_with_declaration() -> Vec<&'static str> {
     vec![
@@ -25,13 +25,15 @@ fn code_block_kinds_with_declaration() -> Vec<&'static str> {
 
 pub fn rectangles_from_match_range(
     range: &MatchRange,
-    textarea_ui_element: &AXUIElement,
-) -> Option<MatchRectangle> {
-    let (rectangles, _) = calc_rectangles_and_line_matches(range, &textarea_ui_element);
+    textarea_element_hash: usize,
+) -> Result<LogicalFrame, BracketHighlightError> {
+    let (rectangles, _) =
+        calc_rectangles_and_line_matches(range, &GetVia::Hash(textarea_element_hash))
+            .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
     if rectangles.len() == 1 {
-        Some(rectangles[0].clone())
+        Ok(rectangles[0].clone())
     } else {
-        None
+        Err(BracketHighlightError::ComputingRectFromMatchRangeFailed)
     }
 }
 
@@ -39,7 +41,7 @@ pub fn length_to_code_block_body_start(
     node: &Node,
     text: &XcodeText,
     selected_text_index: usize,
-) -> Option<(usize, bool)> {
+) -> Result<(usize, bool), BracketHighlightError> {
     let mut is_selected_text_in_declaration = false;
     if code_block_kinds_with_declaration().contains(&node.kind()) {
         if let (Some(first_index), Some(last_index)) = (
@@ -55,13 +57,14 @@ pub fn length_to_code_block_body_start(
                     {
                         is_selected_text_in_declaration = true;
                     }
-                    return Some((additional_index, is_selected_text_in_declaration));
+                    return Ok((additional_index, is_selected_text_in_declaration));
                 }
                 additional_index += 1;
             }
         }
     }
-    None
+
+    Err(BracketHighlightError::UnsupportedCodeblock)
 }
 
 pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Option<Node> {
@@ -110,6 +113,7 @@ pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Opti
             break;
         }
     }
+
     parent_node
 }
 
@@ -117,7 +121,7 @@ pub fn get_match_range_of_first_and_last_char_in_node(
     node: &Node,
     text: &XcodeText,
     selected_text_index: usize,
-) -> Option<(MatchRange, MatchRange)> {
+) -> Result<(MatchRange, MatchRange), BracketHighlightError> {
     if let (Some(first_index), Some(last_index)) = (
         get_node_start_index(&node, &text),
         get_node_end_index(&node, &text),
@@ -139,7 +143,7 @@ pub fn get_match_range_of_first_and_last_char_in_node(
             },
         );
 
-        if let Some(additional_length) =
+        if let Ok(additional_length) =
             length_to_code_block_body_start(node, text, selected_text_index)
         {
             first_option = MatchRange::from_text_and_range(
@@ -152,25 +156,33 @@ pub fn get_match_range_of_first_and_last_char_in_node(
         }
 
         if let (Some(first), Some(last)) = (first_option, last_option) {
-            return Some((first, last));
+            return Ok((first, last));
         }
     }
-    None
+
+    Err(BracketHighlightError::GenericError(anyhow::Error::msg(
+        "needs to be defined",
+    )))
 }
 
 pub fn rectanges_of_wrapped_line(
     row: usize,
     content: &XcodeText,
-    textarea_ui_element: AXUIElement,
-) -> Vec<MatchRectangle> {
-    if let Some(is_wrapped) = is_text_of_line_wrapped(row, &textarea_ui_element) {
+    textarea_element_hash: usize,
+) -> Vec<LogicalFrame> {
+    if let Ok(is_wrapped) = is_text_of_line_wrapped(row, &GetVia::Hash(textarea_element_hash)) {
         if is_wrapped.0 {
             // line is wrapped
-            if let Some(text_range) = get_text_range_of_line(row, &textarea_ui_element) {
+            if let Ok(text_range) =
+                get_text_range_of_line(row, &GetVia::Hash(textarea_element_hash))
+            {
                 if let Some(match_range) = MatchRange::from_text_and_range(&content, text_range) {
-                    let (rectangles, _) =
-                        calc_rectangles_and_line_matches(&match_range, &textarea_ui_element);
-                    return rectangles;
+                    if let Ok((rectangles, _)) = calc_rectangles_and_line_matches(
+                        &match_range,
+                        &GetVia::Hash(textarea_element_hash),
+                    ) {
+                        return rectangles;
+                    }
                 }
             }
         }

@@ -4,7 +4,7 @@ use super::{
     features::{
         BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, SwiftFormatter,
     },
-    rules::{RuleBase, RuleResults, RuleType, SwiftLinterProps},
+    rules::{rule_base::RuleResults, RuleBase, RuleType, SwiftLinterProps},
     syntax_tree::SwiftSyntaxTree,
     utils::XcodeText,
     TextRange,
@@ -33,7 +33,7 @@ pub struct EditorWindowProps {
     pub visible_text_range: TextRange,
 }
 
-pub struct CodeDocument<'a> {
+pub struct CodeDocument {
     pub app_handle: tauri::AppHandle,
 
     /// Properties of the editor window that contains this code document.
@@ -52,15 +52,15 @@ pub struct CodeDocument<'a> {
 
     selected_text_range: Option<TextRange>,
 
-    swift_syntax_tree: SwiftSyntaxTree,
+    syntax_tree: SwiftSyntaxTree,
 
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,
 
-    features: Vec<Feature<'a>>,
+    features: Vec<Feature>,
 }
 
-impl CodeDocument<'_> {
+impl CodeDocument {
     pub fn new(app_handle: tauri::AppHandle, editor_window_props: &EditorWindowProps) -> Self {
         let pid = editor_window_props.pid;
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
@@ -74,7 +74,7 @@ impl CodeDocument<'_> {
             text: None,
             file_path: None,
             selected_text_range: None,
-            swift_syntax_tree: SwiftSyntaxTree::new(),
+            syntax_tree: SwiftSyntaxTree::new(),
             docs_generator: docs_generator_arc,
         };
 
@@ -85,10 +85,14 @@ impl CodeDocument<'_> {
 
     pub fn init_features(&mut self) {
         self.features = [
-            Feature::Formatter(SwiftFormatter::new(&self)),
-            Feature::BracketHighlighting(BracketHighlight::new(&self)),
+            Feature::Formatter(SwiftFormatter::new()),
+            Feature::BracketHighlighting(BracketHighlight::new()),
         ]
         .to_vec();
+    }
+
+    pub fn syntax_tree(&self) -> &SwiftSyntaxTree {
+        &self.syntax_tree
     }
 
     pub fn editor_window_props(&self) -> &EditorWindowProps {
@@ -116,9 +120,9 @@ impl CodeDocument<'_> {
         new_content_string: &String,
         file_path: &Option<String>,
     ) {
-        let new_content = &XcodeText::from_str(new_content_string);
+        let new_content = XcodeText::from_str(new_content_string);
         let is_file_path_updated = self.is_file_path_updated(file_path);
-        let is_file_text_updated = self.is_file_text_updated(new_content);
+        let is_file_text_updated = self.is_file_text_updated(&new_content);
 
         if !is_file_path_updated && !is_file_text_updated {
             // Return early if the file path and text did not change
@@ -139,7 +143,7 @@ impl CodeDocument<'_> {
             }
         }
 
-        let parsed_successfully = self.swift_syntax_tree.parse(&new_content);
+        let parsed_successfully = self.syntax_tree.parse(&new_content);
 
         // Update text content in features
         (*self.docs_generator.lock().unwrap()).update_content(&new_content);

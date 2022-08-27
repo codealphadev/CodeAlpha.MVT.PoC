@@ -148,7 +148,7 @@ pub fn get_index_of_next_row(index: usize, text: &XcodeText) -> Option<usize> {
 
 #[cfg(test)]
 mod tests_Text {
-    use crate::core_engine::{rules::get_index_of_next_row, utils::XcodeText};
+    use crate::core_engine::{rules::get_index_of_next_row, XcodeText};
 
     #[test]
     fn test_index_of_next_row() {

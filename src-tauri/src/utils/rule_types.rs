@@ -1,30 +1,12 @@
+#![allow(unused)]
+
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    core_engine::rules::RuleMatch,
-    core_engine::{
-        rules::swift_linter::LintLevel,
-        utils::{TextRange, XcodeText},
-    },
-    utils::geometry::{LogicalPosition, LogicalSize},
+    core_engine::{TextRange, XcodeText},
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
 };
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/rules/")]
-pub enum RuleName {
-    BracketHighlight,
-    SearchAndReplace,
-    SwiftLinter,
-    None,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/rules/")]
-pub struct RuleResults {
-    pub rule: RuleName,
-    pub results: Vec<RuleMatch>,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
@@ -33,7 +15,7 @@ pub struct MatchRectangle {
     pub size: LogicalSize,
 }
 
-pub type LineMatch = (MatchRange, Vec<MatchRectangle>);
+pub type LineMatch = (MatchRange, Vec<LogicalFrame>);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/utils/")]
@@ -57,7 +39,7 @@ impl MatchRange {
 #[cfg(test)]
 mod tests_MatchRange {
 
-    use crate::core_engine::utils::{TextRange, XcodeText};
+    use crate::core_engine::{TextRange, XcodeText};
 
     use super::MatchRange;
 
@@ -92,24 +74,5 @@ mod tests_MatchRange {
             },
         );
         assert_eq!(match_range_out_of_range, None);
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/rules/utils/")]
-pub enum RuleMatchCategory {
-    Error,
-    Warning,
-    BracketHighlightLineFirst,
-    BracketHighlightLineLast,
-    None,
-}
-
-impl RuleMatchCategory {
-    pub fn from_lint_level(lint_level: LintLevel) -> RuleMatchCategory {
-        match lint_level {
-            LintLevel::Error => RuleMatchCategory::Error,
-            LintLevel::Warning => RuleMatchCategory::Warning,
-        }
     }
 }

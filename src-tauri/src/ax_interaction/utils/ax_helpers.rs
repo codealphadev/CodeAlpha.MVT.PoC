@@ -19,10 +19,14 @@ pub enum XcodeError {
     WindowHashUnknown,
     #[error("Implausible dimensions computation, e.g. a result turning out negative when it's not supposed to be.")]
     ImplausibleDimensions,
+    #[error("The computation for bounding rectangle failed due to the textrange not being fully contained within Xcode's visible text range.")]
+    NotContainedVisibleTextRange,
     #[error("Could not get the text content of the textarea.")]
     GettingTextContentFailed,
     #[error("Could not find the UI element.")]
     UIElementNotFound,
+    #[error("XcodeError: {0}.")]
+    CustomError(String),
     #[error("Calling macOS AX API failed.")]
     AXError(#[source] anyhow::Error),
 }
