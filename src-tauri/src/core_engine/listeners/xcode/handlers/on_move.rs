@@ -17,7 +17,7 @@ pub fn on_editor_window_moved(
 
     let code_documents = &mut core_engine.code_documents().lock();
 
-    if let Some(code_doc) = code_documents.get_mut(&moved_msg.uielement_hash) {
+    if let Some(code_doc) = code_documents.get_mut(&moved_msg.window_uid) {
         // TODO
     }
 }

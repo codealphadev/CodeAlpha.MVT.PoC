@@ -15,7 +15,7 @@ pub fn on_created_editor_window(
     let editor_window_list = &mut window_manager.editor_windows().lock();
 
     // Add the new editor window to the list of editor windows.
-    if editor_window_list.get(&created_msg.ui_elem_hash).is_none() {
-        editor_window_list.insert(created_msg.ui_elem_hash, EditorWindow::new(created_msg));
+    if editor_window_list.get(&created_msg.window_uid).is_none() {
+        editor_window_list.insert(created_msg.window_uid, EditorWindow::new(created_msg));
     }
 }

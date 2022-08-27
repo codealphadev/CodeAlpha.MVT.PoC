@@ -17,7 +17,7 @@ pub fn on_selected_text_changed(
 
     let code_documents = &mut core_engine.code_documents().lock();
 
-    if let Some(code_doc) = code_documents.get_mut(&msg.ui_elem_hash) {
+    if let Some(code_doc) = code_documents.get_mut(&msg.window_uid) {
         code_doc.set_selected_text_range(msg.index, msg.length);
     }
 

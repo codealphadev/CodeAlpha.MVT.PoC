@@ -30,12 +30,11 @@ pub fn on_editor_focused_uielement_changed(
 
     _ = check_if_code_doc_needs_to_be_created(
         code_documents,
-        uielement_focus_changed_msg.window_id?,
         uielement_focus_changed_msg.pid?,
-        uielement_focus_changed_msg.ui_elem_hash?,
+        uielement_focus_changed_msg.window_uid?,
     );
 
-    let code_doc = code_documents.get_mut(&uielement_focus_changed_msg.ui_elem_hash?)?;
+    let code_doc = code_documents.get_mut(&uielement_focus_changed_msg.window_uid?)?;
 
     // Update rule properties
     let content_str = get_textarea_content(&GetVia::Pid(pid)).ok()?;

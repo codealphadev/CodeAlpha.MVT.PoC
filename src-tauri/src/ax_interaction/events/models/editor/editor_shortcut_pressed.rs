@@ -15,8 +15,8 @@ pub enum ModifierKey {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EditorShortcutPressedMessage {
+    pub window_uid: usize,
     pub key: String,
     pub menu_item_title: String, // <-- expected to be "Save", unknown if it is different in other languages
     pub modifier: ModifierKey,
-    pub ui_elem_hash: usize,
 }

@@ -16,7 +16,7 @@ pub fn on_move_editor_window(
     // If deadlock, discard message. TODO: Rethink logic.
     let editor_window_list = &mut window_manager.editor_windows().try_lock()?;
 
-    let editor_window = editor_window_list.get_mut(&moved_msg.uielement_hash)?;
+    let editor_window = editor_window_list.get_mut(&moved_msg.window_uid)?;
 
     editor_window.update_window_dimensions(LogicalFrame {
         origin: LogicalPosition::from_tauri_LogicalPosition(&moved_msg.window_position),

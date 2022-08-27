@@ -15,7 +15,7 @@ pub fn on_zoom_editor_window(
     let window_manager = &mut window_manager.lock();
     let editor_window_list = &mut window_manager.editor_windows().try_lock()?;
 
-    let editor_window = editor_window_list.get_mut(&zoom_msg.uielement_hash)?;
+    let editor_window = editor_window_list.get_mut(&zoom_msg.window_uid)?;
 
     let code_section_frame = get_viewport_frame(&GetVia::Pid(editor_window.pid())).ok()?;
 

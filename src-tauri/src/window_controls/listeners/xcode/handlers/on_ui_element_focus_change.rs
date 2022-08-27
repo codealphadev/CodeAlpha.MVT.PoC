@@ -14,8 +14,8 @@ pub fn on_editor_ui_element_focus_change(
 ) -> Option<()> {
     let window_manager = &mut window_manager.lock();
 
-    let ui_element_hash = if let Some(ui_elem_hash) = focus_msg.ui_elem_hash {
-        ui_elem_hash
+    let ui_element_hash = if let Some(uid) = focus_msg.window_uid {
+        uid
     } else {
         window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
         window_manager.set_focused_editor_window(None);

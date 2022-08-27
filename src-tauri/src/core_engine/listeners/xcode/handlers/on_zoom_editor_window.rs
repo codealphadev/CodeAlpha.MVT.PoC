@@ -20,7 +20,7 @@ pub fn on_editor_textarea_zoomed(
 
     let code_documents = &mut core_engine.code_documents().lock();
 
-    if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.uielement_hash) {
+    if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.window_uid) {
         code_doc.update_editor_window_viewport(get_viewport_frame(&GetVia::Current).ok()?);
         code_doc.compute_rule_visualizations();
         code_doc.update_docs_gen_annotation_visualization();

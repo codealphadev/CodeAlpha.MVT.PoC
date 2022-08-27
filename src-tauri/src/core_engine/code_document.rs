@@ -20,11 +20,8 @@ use tauri::Manager;
 
 #[derive(Clone, Debug)]
 pub struct EditorWindowProps {
-    /// The unique identifier is generated the moment we 'detect' a previously unknown editor window.
-    pub id: uuid::Uuid,
-
     /// The reference to the AXUIElement of the editor window.
-    pub uielement_hash: usize,
+    pub window_uid: usize,
 
     /// The process identifier for the window's editor application.
     pub pid: i32,

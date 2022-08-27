@@ -15,5 +15,5 @@ pub fn on_destroyed_editor_window(
     let editor_window_list = &mut window_manager.editor_windows().lock();
 
     // Remove the new window from the list of editor windows.
-    _ = &editor_window_list.remove(&destroyed_msg.uielement_hash);
+    _ = &editor_window_list.remove(&destroyed_msg.window_uid);
 }
