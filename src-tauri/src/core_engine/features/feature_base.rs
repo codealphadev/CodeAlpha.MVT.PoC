@@ -40,6 +40,8 @@ pub trait FeatureBase {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError>;
+    fn activate(&mut self) -> Result<(), FeatureError>;
+    fn deactivate(&mut self) -> Result<(), FeatureError>;
 }
 
 impl FeatureBase for Feature {
@@ -49,9 +51,9 @@ impl FeatureBase for Feature {
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         match self {
-            Feature::BracketHighlighting(feature) => Ok(()),
-            Feature::DocsGeneration(feature) => Ok(()),
-            Feature::Formatter(feature) => Ok(()),
+            Feature::BracketHighlighting(feature) => feature.compute(code_document, trigger),
+            Feature::DocsGeneration(feature) => feature.compute(code_document, trigger),
+            Feature::Formatter(feature) => feature.compute(code_document, trigger),
         }
     }
 
@@ -61,9 +63,31 @@ impl FeatureBase for Feature {
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         match self {
-            Feature::BracketHighlighting(feature) => Ok(()),
-            Feature::DocsGeneration(feature) => Ok(()),
-            Feature::Formatter(feature) => Ok(()),
+            Feature::BracketHighlighting(feature) => {
+                feature.update_visualization(code_document, trigger)
+            }
+            Feature::DocsGeneration(feature) => {
+                feature.update_visualization(code_document, trigger)
+            }
+            Feature::Formatter(feature) => feature.update_visualization(code_document, trigger),
+        };
+
+        Ok(())
+    }
+
+    fn activate(&mut self) -> Result<(), FeatureError> {
+        match self {
+            Feature::BracketHighlighting(feature) => feature.activate(),
+            Feature::DocsGeneration(feature) => feature.activate(),
+            Feature::Formatter(feature) => feature.activate(),
+        }
+    }
+
+    fn deactivate(&mut self) -> Result<(), FeatureError> {
+        match self {
+            Feature::BracketHighlighting(feature) => feature.deactivate(),
+            Feature::DocsGeneration(feature) => feature.deactivate(),
+            Feature::Formatter(feature) => feature.deactivate(),
         }
     }
 }
