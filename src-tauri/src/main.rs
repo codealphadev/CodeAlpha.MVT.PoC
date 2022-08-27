@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use ax_interaction::setup_observers;
 use core_engine::CoreEngine;
-use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
+use parking_lot::Mutex;
+use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};

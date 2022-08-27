@@ -56,7 +56,7 @@ pub struct CodeDocument {
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,
 
-    features: Vec<Feature>,
+    features: [Feature; 2],
 }
 
 impl CodeDocument {
@@ -68,9 +68,12 @@ impl CodeDocument {
         let mut code_document = Self {
             app_handle: app_handle(),
             rules: vec![],
-            features: vec![],
+            features: [
+                Feature::Formatter(SwiftFormatter::new()),
+                Feature::BracketHighlighting(BracketHighlight::new()),
+            ],
             editor_window_props: editor_window_props.clone(),
-            text: None,
+            text,
             file_path: None,
             selected_text_range: None,
             syntax_tree: SwiftSyntaxTree::new(),
@@ -201,7 +204,10 @@ impl CodeDocument {
 
     pub fn on_save(&mut self, shortcut: &EditorShortcutPressedMessage) {
         for feature in &mut self.features {
-            feature.compute(&CoreEngineTrigger::OnShortcutPressed(shortcut.clone()));
+            feature.compute(
+                self,
+                &CoreEngineTrigger::OnShortcutPressed(shortcut.clone()),
+            );
         }
     }
 

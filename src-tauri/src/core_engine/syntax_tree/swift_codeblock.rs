@@ -1,10 +1,16 @@
+use anyhow::anyhow;
 use std::str::FromStr;
-
 use tree_sitter::Node;
 
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
-pub type Err = ();
+#[derive(thiserror::Error, Debug)]
+pub enum SwiftCodeblockError {
+    #[error("Initialization failed because node type is unsupported.")]
+    UnsupportedCodeblock,
+    #[error("Generic error.")]
+    GenericError(#[source] anyhow::Error),
+}
 
 pub enum SwiftCodeBlockType {
     For,
@@ -19,7 +25,7 @@ pub enum SwiftCodeBlockType {
 }
 
 impl FromStr for SwiftCodeBlockType {
-    type Err = ();
+    type Err = SwiftCodeblockError;
 
     fn from_str(input: &str) -> Result<SwiftCodeBlockType, Self::Err> {
         match input {
@@ -32,7 +38,7 @@ impl FromStr for SwiftCodeBlockType {
             "while_statement" => Ok(SwiftCodeBlockType::While),
             "do_statement" => Ok(SwiftCodeBlockType::Do),
             "guard_statement" => Ok(SwiftCodeBlockType::Guard),
-            _ => Err(()),
+            _ => Err(SwiftCodeblockError::UnsupportedCodeblock),
         }
     }
 }
@@ -44,7 +50,7 @@ pub struct SwiftCodeBlock<'a> {
 }
 
 impl<'a> SwiftCodeBlock<'a> {
-    pub fn new(node: Node<'a>, text: &XcodeText) -> Result<Self, Err> {
+    pub fn new(node: Node<'a>, text: &XcodeText) -> Result<Self, SwiftCodeblockError> {
         let codeblock_type = SwiftCodeBlockType::from_str(&node.kind())?;
 
         Ok(Self {
@@ -62,19 +68,21 @@ impl<'a> SwiftCodeBlock<'a> {
         TextPosition::from_TSPoint(&self.node.end_position())
     }
 
-    pub fn get_codeblock_text(&self) -> XcodeText {
+    pub fn get_codeblock_text(&self) -> Result<XcodeText, SwiftCodeblockError> {
         if let Some(code_block_range) = TextRange::from_StartEndTSPoint(
             &self.text,
             &self.node.start_position(),
             &self.node.end_position(),
         ) {
-            XcodeText::from_array(
+            Ok(XcodeText::from_array(
                 &self.text
                     [code_block_range.index..code_block_range.index + code_block_range.length],
-            )
+            ))
         } else {
-            println!("get_codeblock_text: TextRange::from_StartEndTSPoint failed");
-            return XcodeText::new_empty();
+            Err(SwiftCodeblockError::GenericError(anyhow!(
+                "get_codeblock_text: TextRange::from_StartEndTSPoint failed for: {:?}",
+                self.node
+            )))
         }
     }
 }
