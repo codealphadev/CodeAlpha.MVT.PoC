@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use ax_interaction::setup_observers;
 use core_engine::CoreEngine;
-use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
+use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
@@ -40,12 +40,22 @@ pub fn app_handle() -> tauri::AppHandle {
     app_handle.as_ref().unwrap().clone()
 }
 
-fn main() {
-    // Configure system tray
-    // here `"quit".to_string()` defines the menu item id, and the second parameter is the menu item label.
+fn construct_tray_menu() -> SystemTrayMenu {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let tray_menu = SystemTrayMenu::new().add_item(quit);
-    let system_tray = SystemTray::new().with_menu(tray_menu);
+    let check_ax_api = CustomMenuItem::new("check_ax_api".to_string(), "Settings...");
+
+    if !ax_interaction::is_application_trusted() {
+        SystemTrayMenu::new()
+            .add_item(check_ax_api)
+            .add_native_item(SystemTrayMenuItem::Separator)
+            .add_item(quit)
+    } else {
+        SystemTrayMenu::new().add_item(quit)
+    }
+}
+
+fn main() {
+    let system_tray = SystemTray::new().with_menu(construct_tray_menu());
 
     let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![cmd_toggle_app_activation])
@@ -64,18 +74,32 @@ fn main() {
             WindowManager::start_event_listeners(&window_manager);
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
-            let handle_move_copy = app.handle().clone();
             let ax_apis_enabled_at_start = ax_interaction::is_application_trusted();
             tauri::async_runtime::spawn(async move {
+                let mut popup_was_shown = false;
                 loop {
-                    if ax_interaction::is_application_trusted_with_prompt() {
+                    let api_enabled;
+                    if popup_was_shown {
+                        api_enabled = ax_interaction::is_application_trusted();
+                    } else {
+                        api_enabled = ax_interaction::is_application_trusted_with_prompt();
+                        popup_was_shown = true;
+                    }
+
+                    if api_enabled {
                         // In case AX apis were not enabled at program start, restart the app to
                         // ensure the AX observers are properly registered.
                         if !ax_apis_enabled_at_start {
-                            handle_move_copy.restart();
+                            app_handle().restart();
                         }
                     }
-                    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+
+                    if !api_enabled && ax_apis_enabled_at_start {
+                        // in this case the permissions were withdrawn at runtime, restart the app
+                        app_handle().restart();
+                    }
+
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 }
             });
 
@@ -89,6 +113,9 @@ fn main() {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 "quit" => {
                     std::process::exit(0);
+                }
+                "check_ax_api" => {
+                    ax_interaction::is_application_trusted_with_prompt();
                 }
                 _ => {}
             },
