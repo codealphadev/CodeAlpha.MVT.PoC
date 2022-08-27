@@ -2,6 +2,8 @@ use crate::ax_interaction::models::editor::EditorShortcutPressedMessage;
 
 use super::{formatter::SwiftFormatter, BracketHighlight, DocsGenerator};
 
+use std::error::Error;
+
 pub enum CoreEngineTrigger {
     OnShortcutPressed(EditorShortcutPressedMessage),
     OnTextContentChange,
@@ -17,12 +19,14 @@ pub enum Feature<'a> {
     Formatter(SwiftFormatter<'a>),
 }
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug)]
 pub enum FeatureError {
     #[error("Feature could not compute.")]
     ComputeUnsuccessful(),
     #[error("Feature could not update visualization.")]
     UpdateVisualizationUnsuccessful,
+    #[error("Something went wrong when executing this feature.")]
+    GenericError(#[source] anyhow::Error),
 }
 
 pub trait FeatureBase {

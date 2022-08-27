@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "accessibility",
  "accessibility-sys",
+ "anyhow",
  "cocoa 0.24.0",
  "colored",
  "core-foundation 0.9.3",

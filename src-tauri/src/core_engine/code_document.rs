@@ -51,7 +51,7 @@ pub struct CodeDocument<'a> {
 
     selected_text_range: Option<TextRange>,
 
-    bracket_highlight: BracketHighlight,
+    bracket_highlight: BracketHighlight<'a>,
 
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,

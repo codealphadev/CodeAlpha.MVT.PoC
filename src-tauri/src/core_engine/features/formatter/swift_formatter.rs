@@ -1,3 +1,4 @@
+use anyhow::Context;
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
 
@@ -17,20 +18,20 @@ use crate::{
     utils::geometry::LogicalSize,
 };
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug)]
 pub enum SwiftFormatError {
-    #[error("SwiftFormatError: Formatter failed.")]
+    #[error("Formatter failed.")]
     FormatFailed,
-    #[error("SwiftFormatError: Formatter could not run due to missing configuration.")]
+    #[error("Formatter could not run due to missing configuration.")]
     InsufficientContextForFormat,
-    #[error("SwiftFormatError: File does not exist: '{0}'")]
+    #[error("File does not exist: '{0}'")]
     FileNotExisting(String),
-    #[error("SwiftFormatError: Calling SwiftFormat Sidecar failed: '{0}'")]
+    #[error("Calling SwiftFormat Sidecar failed: '{0}'")]
     SidecarFailure(String),
-    #[error("SwiftFormatError: SwiftFormat failed. Empty result returned.")]
+    #[error("SwiftFormat failed. Empty result returned.")]
     EmptyContentResult,
-    #[error("SwiftFormatError: Foreign error: '{0}'")]
-    ForeignError(String),
+    #[error("Something went wrong when executing this feature.")]
+    GenericError(#[source] anyhow::Error),
 }
 
 pub struct SwiftFormatter<'a> {
@@ -101,7 +102,7 @@ impl<'a> SwiftFormatter<'a> {
 
             // 3. Update textarea content
             match set_textarea_content(&formatted_content, &GetVia::Current)
-                .map_err(|err| SwiftFormatError::ForeignError(err.to_string()))
+                .map_err(|err| SwiftFormatError::GenericError(err.into()))
             {
                 Ok(_) => {}
                 Err(err) => {
@@ -159,11 +160,7 @@ impl<'a> SwiftFormatter<'a> {
         }
 
         let (mut rx, _) = Command::new_sidecar("swiftformat")
-            .map_err(|_| {
-                SwiftFormatError::SidecarFailure(
-                    "failed to create `my-sidecar` binary command".to_string(),
-                )
-            })?
+            .map_err(|err| SwiftFormatError::GenericError(err.into()))?
             .args([
                 file_path.to_string(),
                 "--output".to_string(),
@@ -171,9 +168,7 @@ impl<'a> SwiftFormatter<'a> {
                 "--quiet".to_string(),
             ])
             .spawn()
-            .map_err(|err| {
-                SwiftFormatError::SidecarFailure(format!("SwiftFormat invocation failed: {}", err))
-            })?;
+            .map_err(|err| SwiftFormatError::GenericError(err.into()))?;
 
         let mut text_content = "".to_string();
         while let Some(event) = rx.recv().await {
