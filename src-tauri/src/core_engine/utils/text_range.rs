@@ -1,3 +1,4 @@
+use core_foundation::base::CFRange;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -86,11 +87,40 @@ impl TextRange {
         }
     }
 
+    pub fn as_CFRange(&self) -> CFRange {
+        CFRange {
+            location: self.index as isize,
+            length: self.length as isize,
+        }
+    }
+
     pub fn includes_index(&self, index: usize) -> bool {
         if self.length == 0 {
             return index == self.index;
         } else {
             return index >= self.index && index < self.index + self.length;
+        }
+    }
+
+    pub fn last_char_as_TextRange(&self) -> Option<TextRange> {
+        if self.length == 0 {
+            return None;
+        } else {
+            return Some(TextRange {
+                index: self.index + self.length - 1,
+                length: 1,
+            });
+        }
+    }
+
+    pub fn first_char_as_TextRange(&self) -> Option<TextRange> {
+        if self.length == 0 {
+            return None;
+        } else {
+            return Some(TextRange {
+                index: self.index,
+                length: 1,
+            });
         }
     }
 }
@@ -257,5 +287,53 @@ mod tests {
         let range = TextRange::new(3, 5);
         assert!(!range.includes_index(2));
         assert!(!range.includes_index(8));
+    }
+
+    #[test]
+    fn TextRange_get_last_char_as_TextRange() {
+        // Ranges not yielding last character
+        let range = TextRange::new(0, 0);
+        let last_char_range = range.last_char_as_TextRange();
+
+        assert_eq!(last_char_range.is_none(), true);
+
+        // ranges with length greater 1
+        let range = TextRange::new(3, 5);
+
+        let last_char_range = range.last_char_as_TextRange();
+
+        assert_eq!(last_char_range.is_some(), true);
+
+        assert_eq!(last_char_range.unwrap().index, 8);
+        assert_eq!(last_char_range.unwrap().length, 1);
+
+        // =====
+
+        let range = TextRange::new(1, 1);
+
+        let last_char_range = range.last_char_as_TextRange();
+
+        assert_eq!(last_char_range.is_some(), true);
+
+        assert_eq!(last_char_range.unwrap().index, 1);
+        assert_eq!(last_char_range.unwrap().length, 1);
+    }
+
+    #[test]
+    fn TextRange_get_first_char_as_TextRange() {
+        // Ranges not yielding first character
+        let range = TextRange::new(0, 0);
+        let first_char_range = range.first_char_as_TextRange();
+
+        assert_eq!(first_char_range.is_none(), true);
+        // ranges with length greater 1
+        let range = TextRange::new(3, 5);
+
+        let first_char_range = range.first_char_as_TextRange();
+
+        assert_eq!(first_char_range.is_some(), true);
+
+        assert_eq!(first_char_range.unwrap().index, 3);
+        assert_eq!(first_char_range.unwrap().length, 1);
     }
 }
