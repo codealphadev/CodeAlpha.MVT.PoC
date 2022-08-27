@@ -1,4 +1,5 @@
 pub use bracket_highlight::BracketHighlight;
+pub use bracket_highlight::BracketHighlightError;
 pub use docs_generation::DocsGenerator;
 pub use feature_base::*;
 pub use formatter::SwiftFormatter;

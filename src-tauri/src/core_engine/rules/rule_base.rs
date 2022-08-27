@@ -1,7 +1,45 @@
-use super::{RuleMatch, RuleName, RuleResults, SwiftLinterRule};
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+use super::{swift_linter::LintLevel, RuleMatch, SwiftLinterRule};
 
 pub enum RuleType {
     _SwiftLinter(SwiftLinterRule),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/rules/")]
+pub enum RuleName {
+    BracketHighlight,
+    SearchAndReplace,
+    SwiftLinter,
+    None,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/rules/")]
+pub struct RuleResults {
+    pub rule: RuleName,
+    pub results: Vec<RuleMatch>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/rules/utils/")]
+pub enum RuleMatchCategory {
+    Error,
+    Warning,
+    BracketHighlightLineFirst,
+    BracketHighlightLineLast,
+    None,
+}
+
+impl RuleMatchCategory {
+    pub fn from_lint_level(lint_level: LintLevel) -> RuleMatchCategory {
+        match lint_level {
+            LintLevel::Error => RuleMatchCategory::Error,
+            LintLevel::Warning => RuleMatchCategory::Warning,
+        }
+    }
 }
 
 pub trait RuleBase {

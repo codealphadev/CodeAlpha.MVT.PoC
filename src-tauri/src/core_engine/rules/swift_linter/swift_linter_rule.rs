@@ -1,16 +1,17 @@
 use std::process::Command;
 
 use crate::{
-    ax_interaction::{get_textarea_uielement, GetVia},
+    ax_interaction::{get_text_range_of_line, GetVia},
     core_engine::{
         rules::{
+            rule_base::{RuleMatchCategory, RuleName, RuleResults},
             rule_match::RuleMatchProps,
-            utils::{ax_utils::get_text_range_of_line, types::MatchRange},
-            RuleBase, RuleMatch, RuleMatchCategory, RuleName, RuleResults,
+            RuleBase, RuleMatch,
         },
         utils::XcodeText,
         TextRange,
     },
+    utils::rule_types::MatchRange,
 };
 
 use super::types::{LintAlert, LintLevel, LintResults};
@@ -59,21 +60,13 @@ impl RuleBase for SwiftLinterRule {
             return self.rule_results();
         }
 
-        let textarea_uielement = if let Ok(textarea_uielement) =
-            get_textarea_uielement(&GetVia::Pid(self.editor_app_pid))
-        {
-            textarea_uielement
-        } else {
-            return None;
-        };
-
         // Process all found linter results
         if let Some(linter_results) = self.lint_swift_file() {
             let mut rule_matches = Vec::new();
 
             for lint_alert in linter_results.lints.iter().enumerate() {
-                let char_range_for_line = if let Some(char_range_for_line) =
-                    get_text_range_of_line(lint_alert.1.line - 1, &textarea_uielement)
+                let char_range_for_line = if let Ok(char_range_for_line) =
+                    get_text_range_of_line(lint_alert.1.line - 1, &GetVia::Pid(self.editor_app_pid))
                 {
                     char_range_for_line
                 } else {

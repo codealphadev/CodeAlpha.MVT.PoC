@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::ax_interaction::{get_textarea_uielement, GetVia};
+use crate::{
+    ax_interaction::{calc_rectangles_and_line_matches, GetVia},
+    utils::{
+        geometry::LogicalFrame,
+        rule_types::{LineMatch, MatchRange},
+    },
+};
 
-use super::{calc_rectangles_and_line_matches, LineMatch, RuleMatchCategory, RuleName};
-
-use super::utils::types::{MatchRange, MatchRectangle};
+use super::rule_base::{RuleMatchCategory, RuleName};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/rules/")]
@@ -21,7 +25,7 @@ pub struct RuleMatch {
     id: uuid::Uuid,
     match_range: MatchRange,
     line_matches: Vec<LineMatch>,
-    rectangles: Vec<MatchRectangle>,
+    rectangles: Vec<LogicalFrame>,
     rule_name: RuleName,
     match_properties: RuleMatchProps,
 }
@@ -53,15 +57,14 @@ impl RuleMatch {
     }
 
     #[allow(unused)]
-    pub fn rectangles(&self) -> &Vec<MatchRectangle> {
+    pub fn rectangles(&self) -> &Vec<LogicalFrame> {
         &self.rectangles
     }
 
     pub fn update_rectangles(&mut self, editor_app_pid: i32) {
-        if let Ok(textarea_ui_element) = get_textarea_uielement(&GetVia::Pid(editor_app_pid)) {
-            let (rule_match_rectangles, line_matches) =
-                calc_rectangles_and_line_matches(&self.match_range, &textarea_ui_element);
-
+        if let Ok((rule_match_rectangles, line_matches)) =
+            calc_rectangles_and_line_matches(&self.match_range, &GetVia::Pid(editor_app_pid))
+        {
             self.rectangles = rule_match_rectangles;
             self.line_matches = line_matches;
         }

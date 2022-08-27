@@ -4,6 +4,7 @@ pub use ax_helpers::XcodeError;
 pub use checks::*;
 pub use misc::*;
 pub use textarea::*;
+pub use textarea_content::*;
 pub use viewport::*;
 
 mod ax_helpers;
@@ -11,4 +12,5 @@ mod checks;
 pub mod internal;
 mod misc;
 mod textarea;
+mod textarea_content;
 mod viewport;

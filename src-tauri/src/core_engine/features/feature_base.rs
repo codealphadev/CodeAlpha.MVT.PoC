@@ -1,8 +1,8 @@
-use crate::ax_interaction::models::editor::EditorShortcutPressedMessage;
+use crate::{
+    ax_interaction::models::editor::EditorShortcutPressedMessage, core_engine::CodeDocument,
+};
 
 use super::{formatter::SwiftFormatter, BracketHighlight, DocsGenerator};
-
-use std::error::Error;
 
 pub enum CoreEngineTrigger {
     OnShortcutPressed(EditorShortcutPressedMessage),
@@ -13,10 +13,10 @@ pub enum CoreEngineTrigger {
     OnVisibleTextRangeChange,
 }
 
-pub enum Feature<'a> {
-    BracketHighlighting(BracketHighlight<'a>),
+pub enum Feature {
+    BracketHighlighting(BracketHighlight),
     DocsGeneration(DocsGenerator),
-    Formatter(SwiftFormatter<'a>),
+    Formatter(SwiftFormatter),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -30,12 +30,24 @@ pub enum FeatureError {
 }
 
 pub trait FeatureBase {
-    fn compute(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError>;
-    fn update_visualization(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError>;
+    fn compute(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError>;
+    fn update_visualization(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError>;
 }
 
-impl<'a> FeatureBase for Feature<'a> {
-    fn compute(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError> {
+impl FeatureBase for Feature {
+    fn compute(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
         match self {
             Feature::BracketHighlighting(feature) => Ok(()),
             Feature::DocsGeneration(feature) => Ok(()),
@@ -43,7 +55,11 @@ impl<'a> FeatureBase for Feature<'a> {
         }
     }
 
-    fn update_visualization(&mut self, trigger: &CoreEngineTrigger) -> Result<(), FeatureError> {
+    fn update_visualization(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
         match self {
             Feature::BracketHighlighting(feature) => Ok(()),
             Feature::DocsGeneration(feature) => Ok(()),
