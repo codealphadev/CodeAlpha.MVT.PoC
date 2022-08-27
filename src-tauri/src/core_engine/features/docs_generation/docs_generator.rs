@@ -1,14 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::anyhow;
 use parking_lot::Mutex;
 use tauri::Manager;
 
 use crate::{
     core_engine::{
         core_engine::WindowUid,
+        features::{CoreEngineTrigger, FeatureBase, FeatureError},
         syntax_tree::{SwiftCodeBlock, SwiftSyntaxTree},
         utils::{XcodeChar, XcodeText},
-        TextPosition, TextRange,
+        CodeDocument, TextPosition, TextRange,
     },
     utils::messaging::ChannelList,
     window_controls::EventWindowControls,
@@ -26,6 +28,9 @@ pub enum DocsGenerationError {
     GenericError(#[source] anyhow::Error),
 }
 
+type DocsIndentation = usize;
+type DocsInsertionIndex = usize;
+
 pub struct DocsGenerator {
     swift_syntax_tree: SwiftSyntaxTree,
     text_content: Option<XcodeText>,
@@ -34,8 +39,67 @@ pub struct DocsGenerator {
     window_pid: i32,
 }
 
-type DocsIndentation = usize;
-type DocsInsertionIndex = usize;
+impl FeatureBase for DocsGenerator {
+    fn compute(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
+        match trigger {
+            CoreEngineTrigger::OnTextContentChange => self.update_content(
+                &code_document
+                    .text_content()
+                    .ok_or(FeatureError::GenericError(anyhow!(
+                        "CodeDoc text content missing"
+                    )))?,
+                code_document.editor_window_props().window_uid,
+            ),
+            CoreEngineTrigger::OnTextSelectionChange => self.update_selected_text_range(
+                &code_document
+                    .selected_text_range()
+                    .ok_or(FeatureError::GenericError(anyhow!(
+                        "CodeDoc selected text range missing"
+                    )))?,
+                code_document.editor_window_props().window_uid,
+            ),
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn update_visualization(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
+        let update_visualization = false;
+
+        match trigger {
+            CoreEngineTrigger::OnShortcutPressed(_) => {}
+            CoreEngineTrigger::OnTextContentChange => update_visualization = true,
+            CoreEngineTrigger::OnTextSelectionChange => update_visualization = true,
+            CoreEngineTrigger::OnViewportMove => {}
+            CoreEngineTrigger::OnViewportDimensionsChange => {}
+            CoreEngineTrigger::OnVisibleTextRangeChange => {}
+        }
+
+        if update_visualization {
+            if let Some(text_content) = code_document.text_content() {
+                if let Some(docs_gen_task) = self
+                    .docs_generation_task
+                    .get_mut(&code_document.editor_window_props().window_uid)
+                {
+                    return docs_gen_task
+                        .update_code_annotation_position(text_content)
+                        .map_err(|err| FeatureError::GenericError(err.into()));
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
 
 impl DocsGenerator {
     pub fn new(window_pid: i32) -> Self {
@@ -45,6 +109,40 @@ impl DocsGenerator {
             selected_text_range: None,
             docs_generation_task: HashMap::new(),
             window_pid,
+        }
+    }
+
+    pub fn update_content(&mut self, text_content: &XcodeText, window_uid: WindowUid) {
+        if self.swift_syntax_tree.parse(text_content) {
+            self.text_content = Some(text_content.to_owned());
+
+            // Create a new DocsGenerationTask if there is no task running.
+            // We create a new one because the text has changed and code annotation might need to be recomputed
+            if !self.is_docs_gen_task_running(&window_uid) {
+                if let Ok(new_task) = self.create_docs_gen_task(text_content) {
+                    self.docs_generation_task.insert(window_uid, new_task);
+                }
+            } else {
+                println!("DocsGenerator: update_content: docs generation task is running");
+            }
+        }
+    }
+
+    pub fn update_selected_text_range(
+        &mut self,
+        selected_text_range: &TextRange,
+        window_uid: WindowUid,
+    ) {
+        if let Some(text_content) = self.text_content {
+            self.selected_text_range = Some(selected_text_range.to_owned());
+
+            // Create a new DocsGenerationTask if there is no task running.
+            // We create a new one because the cursor might have moved into a new codeblock. In this case we need to create a new code annotation.
+            if !self.is_docs_gen_task_running(&window_uid) {
+                if let Ok(new_task) = self.create_docs_gen_task(&text_content) {
+                    self.docs_generation_task.insert(window_uid, new_task);
+                }
+            }
         }
     }
 
@@ -93,40 +191,6 @@ impl DocsGenerator {
         }
     }
 
-    pub fn update_content(&mut self, text_content: &XcodeText, window_uid: WindowUid) {
-        if self.swift_syntax_tree.parse(text_content) {
-            self.text_content = Some(text_content.to_owned());
-
-            // Create a new DocsGenerationTask if there is no task running.
-            // We create a new one because the text has changed and code annotation might need to be recomputed
-            if !self.is_docs_gen_task_running(&window_uid) {
-                if let Ok(new_task) = self.create_docs_gen_task(text_content) {
-                    self.docs_generation_task.insert(window_uid, new_task);
-                }
-            } else {
-                println!("DocsGenerator: update_content: docs generation task is running");
-            }
-        }
-    }
-
-    pub fn update_selected_text_range(
-        &mut self,
-        selected_text_range: &TextRange,
-        window_uid: WindowUid,
-    ) {
-        if let Some(text_content) = self.text_content {
-            self.selected_text_range = Some(selected_text_range.to_owned());
-
-            // Create a new DocsGenerationTask if there is no task running.
-            // We create a new one because the cursor might have moved into a new codeblock. In this case we need to create a new code annotation.
-            if !self.is_docs_gen_task_running(&window_uid) {
-                if let Ok(new_task) = self.create_docs_gen_task(&text_content) {
-                    self.docs_generation_task.insert(window_uid, new_task);
-                }
-            }
-        }
-    }
-
     fn compute_docs_insertion_point_and_indentation(
         &self,
         insertion_line: usize,
@@ -159,16 +223,6 @@ impl DocsGenerator {
         .ok_or(DocsGenerationError::MissingContext)?;
 
         Ok((docs_insertion_index, whitespaces))
-    }
-
-    pub fn update_visualization(&mut self, window_uid: &WindowUid) {
-        if let Some(text_content) = self.text_content.as_ref() {
-            if let Some(docs_gen_task) = self.docs_generation_task.get_mut(&window_uid) {
-                docs_gen_task
-                    .update_code_annotation_position(text_content)
-                    .ok();
-            }
-        }
     }
 
     pub fn start_listener_window_control_events(

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use parking_lot::Mutex;
 
 use crate::{
@@ -24,6 +25,8 @@ use crate::{
         EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };
+
+use super::docs_generator::DocsGenerationError;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DocsGenerationTaskState {
@@ -180,8 +183,13 @@ impl DocsGenerationTask {
     pub fn update_code_annotation_position(
         &mut self,
         text: &XcodeText,
-    ) -> Result<(), &'static str> {
-        let mut tracking_area_copy = self.tracking_area.clone().ok_or("No tracking area")?;
+    ) -> Result<(), DocsGenerationError> {
+        let mut tracking_area_copy =
+            self.tracking_area
+                .clone()
+                .ok_or(DocsGenerationError::GenericError(anyhow!(
+                    "No tracking area"
+                )))?;
 
         if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
             self.calculate_annotation_bounds(text)
