@@ -54,9 +54,16 @@ impl FeatureBase for BracketHighlight {
             }
         };
 
-        let code_block_node = match self.get_selected_code_block_node(code_document)? {
-            Some(node) => node,
-            None => {
+        let code_block_node = match self.get_selected_code_block_node(code_document) {
+            Ok(node) => {
+                if let Some(node) = node {
+                    node
+                } else {
+                    self.compute_results = None;
+                    return Ok(());
+                }
+            }
+            Err(_) => {
                 self.compute_results = None;
                 return Ok(());
             }
@@ -88,10 +95,13 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        let text_content = code_document
-            .text_content()
-            .as_ref()
-            .ok_or(BracketHighlightError::InsufficientContext)?;
+        let text_content =
+            code_document
+                .text_content()
+                .as_ref()
+                .ok_or(FeatureError::GenericError(
+                    BracketHighlightError::InsufficientContext.into(),
+                ))?;
 
         let textarea_element_hash = code_document.editor_window_props().uielement_hash;
 
@@ -100,9 +110,9 @@ impl FeatureBase for BracketHighlight {
             box_match_ranges,
             line_positions,
             line_match_ranges,
-        } = &self
-            .compute_results
-            .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
+        } = &self.compute_results.ok_or(FeatureError::GenericError(
+            BracketHighlightError::UpdatingVisualizationBeforeComputing.into(),
+        ))?;
 
         let (first_line_rectangle, last_line_rectangle, first_box_rectangle, last_box_rectangle) = (
             rectangles_from_match_range(&line_match_ranges.start, textarea_element_hash),
