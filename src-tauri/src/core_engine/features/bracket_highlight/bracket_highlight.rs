@@ -36,6 +36,11 @@ impl FeatureBase for BracketHighlight {
         if !should_compute(trigger) {
             return Ok(());
         }
+        let selected_text_range = self
+            .code_document
+            .selected_text_range()
+            .as_ref()
+            .ok_or(BracketHighlightError::InsufficientContext)?; // TODO: Return None? Which of these should be finished?
 
         let text_content =
             code_document

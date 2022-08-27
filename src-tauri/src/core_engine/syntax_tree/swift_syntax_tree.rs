@@ -10,6 +10,18 @@ use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
 use super::swift_codeblock::SwiftCodeBlock;
 
+#[derive(thiserror::Error, Debug)]
+pub enum SwiftSyntaxTreeError {
+    #[error("No treesitter node could be retreived with the given text range.")]
+    NoTreesitterNodeFound,
+    #[error("No valid codeblock could be derived from the provided text range.")]
+    NoValidCodeblockFound,
+    #[error("At this point, no valid tree is available.")]
+    NoTreeParsed,
+    #[error("Generic error.")]
+    GenericError(#[source] anyhow::Error),
+}
+
 pub struct SwiftSyntaxTree {
     tree_sitter_parser: Parser,
     tree_sitter_tree: Option<Tree>,
@@ -49,14 +61,17 @@ impl SwiftSyntaxTree {
         }
     }
 
-    pub fn get_selected_code_node(&self, selected_text_range: &TextRange) -> Option<Node> {
+    pub fn get_selected_code_node(
+        &self,
+        selected_text_range: &TextRange,
+    ) -> Result<Node, SwiftSyntaxTreeError> {
         if let (Some(syntax_tree), Some(text_content)) =
             (self.tree_sitter_tree.as_ref(), self.content.as_ref())
         {
             if let Some((start_position, _)) =
                 selected_text_range.as_StartEndTextPosition(text_content)
             {
-                let node = syntax_tree.root_node().named_descendant_for_point_range(
+                if let Some(node) = syntax_tree.root_node().named_descendant_for_point_range(
                     TextPosition {
                         row: start_position.row,
                         column: start_position.column,
@@ -67,36 +82,38 @@ impl SwiftSyntaxTree {
                         column: start_position.column,
                     }
                     .as_TSPoint(),
-                );
-
-                return node;
+                ) {
+                    return Ok(node);
+                } else {
+                    return Err(SwiftSyntaxTreeError::NoTreesitterNodeFound);
+                }
             }
         }
-        None
+
+        Err(SwiftSyntaxTreeError::NoTreeParsed)
     }
 
     pub fn get_selected_codeblock_node(
         &self,
         selected_text_range: &TextRange,
-    ) -> Option<SwiftCodeBlock> {
-        if let (Some(mut node), Some(content)) = (
-            self.get_selected_code_node(selected_text_range),
-            self.content.as_ref(),
-        ) {
-            loop {
-                if let Ok(codeblock_node) = SwiftCodeBlock::new(node, content) {
-                    return Some(codeblock_node);
-                }
+    ) -> Result<SwiftCodeBlock, SwiftSyntaxTreeError> {
+        let mut node = self.get_selected_code_node(selected_text_range)?;
+        let content = self
+            .content
+            .as_ref()
+            .ok_or(SwiftSyntaxTreeError::NoTreeParsed)?;
 
+        loop {
+            if let Ok(codeblock_node) = SwiftCodeBlock::new(node, content) {
+                return Ok(codeblock_node);
+            } else {
                 if let Some(parent) = node.parent() {
                     node = parent;
                 } else {
-                    break;
+                    SwiftSyntaxTreeError::NoValidCodeblockFound;
                 }
             }
         }
-
-        None
     }
 
     #[allow(dead_code)]
