@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use super::{
     features::{
@@ -10,10 +10,12 @@ use super::{
     TextRange,
 };
 use crate::{
+    app_handle,
     ax_interaction::models::editor::EditorShortcutPressedMessage,
     utils::{geometry::LogicalFrame, messaging::ChannelList},
     window_controls::config::AppWindow,
 };
+use parking_lot::Mutex;
 use tauri::Manager;
 
 #[derive(Clone, Debug)]
@@ -61,13 +63,13 @@ pub struct CodeDocument {
 }
 
 impl CodeDocument {
-    pub fn new(app_handle: tauri::AppHandle, editor_window_props: &EditorWindowProps) -> Self {
+    pub fn new(editor_window_props: &EditorWindowProps) -> Self {
         let pid = editor_window_props.pid;
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
-        DocsGenerator::start_listener_window_control_events(&app_handle, &docs_generator_arc);
+        DocsGenerator::start_listener_window_control_events(&app_handle(), &docs_generator_arc);
 
         let mut code_document = Self {
-            app_handle,
+            app_handle: app_handle(),
             rules: vec![],
             features: vec![],
             editor_window_props: editor_window_props.clone(),
@@ -146,7 +148,7 @@ impl CodeDocument {
         let parsed_successfully = self.syntax_tree.parse(&new_content);
 
         // Update text content in features
-        (*self.docs_generator.lock().unwrap()).update_content(&new_content);
+        self.docs_generator.lock().update_content(&new_content);
     }
 
     pub fn process_rules(&mut self) {
@@ -156,11 +158,11 @@ impl CodeDocument {
     }
 
     pub fn update_docs_gen_annotation_visualization(&mut self) {
-        (*self.docs_generator.lock().unwrap()).update_visualization();
+        self.docs_generator.lock().update_visualization();
     }
 
     pub fn deactivate_features(&mut self) {
-        (*self.docs_generator.lock().unwrap()).clear_docs_generation_tasks();
+        self.docs_generator.lock().clear_docs_generation_tasks();
     }
 
     pub fn compute_rule_visualizations(&mut self) {
@@ -191,7 +193,9 @@ impl CodeDocument {
         let text_range = TextRange { length, index };
         self.selected_text_range = Some(text_range);
 
-        (*self.docs_generator.lock().unwrap()).update_selected_text_range(&text_range);
+        self.docs_generator
+            .lock()
+            .update_selected_text_range(&text_range);
 
         for feature in &mut self.features {
             feature.compute(&CoreEngineTrigger::OnTextSelectionChange);

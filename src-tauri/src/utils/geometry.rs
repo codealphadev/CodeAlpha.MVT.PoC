@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use cocoa::appkit::CGPoint;
 use core_graphics::geometry::CGSize;
 use core_graphics_types::geometry::CGRect;

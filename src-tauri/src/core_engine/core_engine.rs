@@ -1,12 +1,11 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
+
+use parking_lot::Mutex;
 
 use crate::{app_handle, CORE_ENGINE_ACTIVE_AT_STARTUP};
 
 use super::{
-    listeners::{register_listener_user_interactions, register_listener_xcode},
+    listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     CodeDocument,
 };
 
@@ -44,10 +43,7 @@ impl CoreEngine {
     pub fn set_engine_active(&mut self, engine_active_status: bool) {
         self.engine_active = engine_active_status;
 
-        let code_documents = &mut *(match self.code_documents().lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        });
+        let code_documents = &mut self.code_documents().lock();
 
         if engine_active_status {
             // Activate features (currently nothing needs to be done)
@@ -60,7 +56,7 @@ impl CoreEngine {
     }
 
     pub fn start_core_engine_listeners(core_engine: &Arc<Mutex<CoreEngine>>) {
-        register_listener_xcode(&core_engine);
-        register_listener_user_interactions(&core_engine);
+        xcode_listener(&core_engine);
+        user_interaction_listener(&core_engine);
     }
 }

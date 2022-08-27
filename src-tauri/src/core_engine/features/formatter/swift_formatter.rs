@@ -45,7 +45,7 @@ impl FeatureBase for SwiftFormatter {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
                     "S" => {
-                        self.format();
+                        self.format(code_document);
                     }
                     _ => {}
                 },
@@ -72,21 +72,18 @@ impl SwiftFormatter {
         Self {}
     }
 
-    pub fn format(&self) -> Result<(), SwiftFormatError> {
-        let text_content = self
-            .code_doc_ref
+    pub fn format(&self, code_document: &CodeDocument) -> Result<(), SwiftFormatError> {
+        let text_content = code_document
             .text_content()
             .as_ref()
             .ok_or(SwiftFormatError::InsufficientContextForFormat)?
             .clone();
-        let text_file_path = self
-            .code_doc_ref
+        let text_file_path = code_document
             .file_path()
             .as_ref()
             .ok_or(SwiftFormatError::InsufficientContextForFormat)?
             .clone();
-        let selected_text_range = self
-            .code_doc_ref
+        let selected_text_range = code_document
             .selected_text_range()
             .as_ref()
             .ok_or(SwiftFormatError::InsufficientContextForFormat)?

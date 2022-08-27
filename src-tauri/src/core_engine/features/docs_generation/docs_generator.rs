@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use tauri::Manager;
 
 use crate::{
@@ -13,6 +14,12 @@ use crate::{
 };
 
 use super::docs_generation_task::DocsGenerationTask;
+
+#[derive(thiserror::Error, Debug)]
+pub enum DocsGenerationError {
+    #[error("Something went wrong when executing the DocsGenerator feature.")]
+    GenericError(#[source] anyhow::Error),
+}
 
 pub struct DocsGenerator {
     swift_syntax_tree: SwiftSyntaxTree,
@@ -138,27 +145,26 @@ impl DocsGenerator {
         app_handle: &tauri::AppHandle,
         docs_generator: &Arc<Mutex<Self>>,
     ) {
-        let docs_generator_move_copy = (docs_generator).clone();
-        app_handle.listen_global(ChannelList::EventWindowControls.to_string(), move |msg| {
-            let event_window_controls: EventWindowControls =
-                serde_json::from_str(&msg.payload().unwrap()).unwrap();
+        app_handle.listen_global(ChannelList::EventWindowControls.to_string(), {
+            let docs_generator = (docs_generator).clone();
+            |msg| {
+                let event_window_controls: EventWindowControls =
+                    serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
-            let docs_manager = &mut *(match docs_generator_move_copy.lock() {
-                Ok(guard) => guard,
-                Err(poisoned) => poisoned.into_inner(),
-            });
+                let docs_manager = docs_generator.lock();
 
-            match event_window_controls {
-                EventWindowControls::TrackingAreaClicked(msg) => {
-                    if let Some(docs_generation_task) = &mut docs_manager.docs_generation_task {
-                        if let Some(task_id) = docs_generation_task.id() {
-                            if msg.id == task_id {
-                                docs_generation_task.generate_documentation();
+                match event_window_controls {
+                    EventWindowControls::TrackingAreaClicked(msg) => {
+                        if let Some(docs_generation_task) = &mut docs_manager.docs_generation_task {
+                            if let Some(task_id) = docs_generation_task.id() {
+                                if msg.id == task_id {
+                                    docs_generation_task.generate_documentation();
+                                }
                             }
                         }
                     }
+                    _ => {}
                 }
-                _ => {}
             }
         });
     }

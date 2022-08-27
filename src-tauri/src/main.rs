@@ -4,7 +4,7 @@
     windows_subsystem = "windows"
 )]
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use ax_interaction::setup_observers;
 use core_engine::CoreEngine;

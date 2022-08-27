@@ -1,9 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use parking_lot::Mutex;
 
 use crate::{
     app_handle,
     ax_interaction::{
-        get_textarea_uielement, get_viewport_frame,
+        get_bounds_for_TextRange, get_viewport_frame,
         xcode::actions::replace_range_with_clipboard_text, GetVia,
     },
     core_engine::{
@@ -14,7 +16,6 @@ use crate::{
             EventDocsGeneration, EventRuleExecutionState,
         },
         features::docs_generation::mintlify_documentation,
-        rules::get_bounds_of_TextRange,
         utils::XcodeText,
         TextPosition, TextRange,
     },
@@ -66,7 +67,7 @@ impl DocsGenerationTask {
     }
 
     pub fn task_state(&self) -> DocsGenerationTaskState {
-        (*self.task_state.lock().unwrap()).clone()
+        (*self.task_state.lock()).clone()
     }
 
     pub fn id(&self) -> Option<uuid::Uuid> {
@@ -78,7 +79,7 @@ impl DocsGenerationTask {
     }
 
     fn is_frozen(&self) -> bool {
-        let task_state = (self.task_state).lock().unwrap();
+        let task_state = (self.task_state).lock();
 
         *task_state == DocsGenerationTaskState::Finished
             || *task_state == DocsGenerationTaskState::Canceled
@@ -86,7 +87,7 @@ impl DocsGenerationTask {
     }
 
     pub fn generate_documentation(&mut self) {
-        let mut task_state = (self.task_state).lock().unwrap();
+        let mut task_state = (self.task_state).lock();
         *task_state = DocsGenerationTaskState::Processing;
 
         EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
@@ -135,7 +136,7 @@ impl DocsGenerationTask {
                 // Notifiy the frontend that the file has been formatted successfully
                 EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
             }
-            (*task_state.lock().unwrap()) = DocsGenerationTaskState::Finished;
+            (*task_state.lock()) = DocsGenerationTaskState::Finished;
         });
     }
 
@@ -170,7 +171,7 @@ impl DocsGenerationTask {
         .publish_to_tauri(&app_handle());
 
         self.tracking_area = Some(tracking_area);
-        let mut task_state = (self.task_state).lock().unwrap();
+        let mut task_state = (self.task_state).lock();
         *task_state = DocsGenerationTaskState::Prepared;
 
         Ok(())
@@ -204,7 +205,7 @@ impl DocsGenerationTask {
         } else {
             // Remove the tracking area
             EventTrackingArea::Remove(vec![tracking_area_copy.id]).publish_to_tauri(&app_handle());
-            let mut task_state = (self.task_state).lock().unwrap();
+            let mut task_state = (self.task_state).lock();
             *task_state = DocsGenerationTaskState::Canceled;
 
             // Remove the annotation from the frontend
@@ -225,13 +226,6 @@ impl DocsGenerationTask {
         &self,
         text: &XcodeText,
     ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), &'static str> {
-        // 1. Get textarea dimensions
-        let textarea_ui_element = if let Ok(elem) = get_textarea_uielement(&GetVia::Pid(self.pid)) {
-            elem
-        } else {
-            return Err("Could not find textarea ui element");
-        };
-
         let (textarea_origin, textarea_size) =
             if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
                 (code_section_frame.origin, code_section_frame.size)
@@ -244,22 +238,22 @@ impl DocsGenerationTask {
             self.codeblock_first_char_pos.as_TextIndex(&text),
             self.codeblock_last_char_pos.as_TextIndex(&text),
         ) {
-            let first_char_bounds_opt = get_bounds_of_TextRange(
+            let first_char_bounds_opt = get_bounds_for_TextRange(
                 &TextRange {
                     index: first_char_text_pos,
                     length: 1,
                 },
-                &textarea_ui_element,
+                &GetVia::Pid(self.pid),
             );
 
-            let last_char_bounds_opt = get_bounds_of_TextRange(
+            let last_char_bounds_opt = get_bounds_for_TextRange(
                 &TextRange {
                     index: last_char_text_pos,
                     length: 1,
                 },
-                &textarea_ui_element,
+                &GetVia::Pid(self.pid),
             );
-            let codeblock_top = if let Some(first_char_bounds) = first_char_bounds_opt {
+            let codeblock_top = if let Ok(first_char_bounds) = first_char_bounds_opt {
                 f64::max(
                     textarea_origin.y,
                     first_char_bounds.origin.y + first_char_bounds.size.height,
@@ -267,7 +261,7 @@ impl DocsGenerationTask {
             } else {
                 textarea_origin.y
             };
-            let codeblock_bottom = if let Some(last_char_bounds) = last_char_bounds_opt {
+            let codeblock_bottom = if let Ok(last_char_bounds) = last_char_bounds_opt {
                 f64::min(
                     last_char_bounds.origin.y + last_char_bounds.size.height,
                     textarea_origin.y + textarea_size.height,
@@ -276,9 +270,9 @@ impl DocsGenerationTask {
                 textarea_origin.y + textarea_size.height
             };
 
-            let char_width = if let Some(first_char_bounds) = first_char_bounds_opt {
+            let char_width = if let Ok(first_char_bounds) = first_char_bounds_opt {
                 first_char_bounds.size.height / 1.5
-            } else if let Some(last_char_bounds) = last_char_bounds_opt {
+            } else if let Ok(last_char_bounds) = last_char_bounds_opt {
                 last_char_bounds.size.height / 1.5
             } else {
                 12.0 // Fallback - should be rare
@@ -295,7 +289,7 @@ impl DocsGenerationTask {
                 },
             });
 
-            let annotation_bounds = if let Some(first_char_bounds) = first_char_bounds_opt {
+            let annotation_bounds = if let Ok(first_char_bounds) = first_char_bounds_opt {
                 Some(LogicalFrame {
                     origin: LogicalPosition {
                         x: textarea_origin.x,
