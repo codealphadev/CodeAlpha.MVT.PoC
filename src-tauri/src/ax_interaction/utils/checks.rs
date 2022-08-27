@@ -42,7 +42,7 @@ pub fn is_currently_focused_app_our_app() -> Result<bool, XcodeError> {
                     Ok(false)
                 }
             }
-            Err(ax_error) => Err(XcodeError::map_ax_error(ax_error)),
+            Err(ax_error) => Err(XcodeError::AXError(ax_error.into())),
         }
     } else {
         Err(XcodeError::WindowHashUnknown)

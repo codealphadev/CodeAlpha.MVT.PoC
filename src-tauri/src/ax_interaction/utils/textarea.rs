@@ -27,7 +27,7 @@ pub fn get_textarea_content(get_via: &GetVia) -> Result<String, XcodeError> {
     if let Some(cf_str) = content_str {
         Ok(cf_str.to_string())
     } else {
-        Err(XcodeError::AXResourceNotFound)
+        Err(XcodeError::GettingTextContentFailed)
     }
 }
 
