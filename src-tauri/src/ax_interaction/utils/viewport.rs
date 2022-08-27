@@ -144,7 +144,7 @@ fn get_text_offset_px(get_via: &GetVia) -> Result<f64, XcodeError> {
 
     println!("Could not get text offset");
 
-    Err(XcodeError::AXResourceNotFound)
+    Err(XcodeError::GettingTextContentFailed)
 }
 
 fn get_annotation_origin_x_offset_px(viewport_uielement: &AXUIElement) -> Result<f64, XcodeError> {
@@ -179,7 +179,7 @@ fn get_viewport_minimap_frame(
         }
     }
 
-    Err(XcodeError::AXResourceNotFound)
+    Err(XcodeError::UIElementNotFound)
 }
 
 fn get_viewport_gutter_frame(
@@ -195,7 +195,7 @@ fn get_viewport_gutter_frame(
         }
     }
 
-    Err(XcodeError::AXResourceNotFound)
+    Err(XcodeError::UIElementNotFound)
 }
 
 fn get_viewport_gutter_change_frame(
@@ -211,5 +211,5 @@ fn get_viewport_gutter_change_frame(
         }
     }
 
-    Err(XcodeError::AXResourceNotFound)
+    Err(XcodeError::UIElementNotFound)
 }

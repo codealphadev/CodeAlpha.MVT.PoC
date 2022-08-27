@@ -22,7 +22,7 @@ use super::{
     },
 };
 pub struct BracketHighlight<'a> {
-    code_document: &'a CodeDocument,
+    code_document: &'a CodeDocument<'a>,
     compute_results: Option<BracketHighlightComputeResults>,
     visualization_results: Option<BracketHighlightResults>,
 }
@@ -292,11 +292,11 @@ struct BracketHighlightComputeResults {
     }
 */
 
-fn get_code_block_treesitter_node(
-    syntax_tree: &SwiftSyntaxTree,
-    selected_text_range: &TextRange,
-    text_content: &XcodeText,
-) -> Result<Option<Node>, BracketHighlightError> {
+fn get_code_block_treesitter_node<'a>(
+    syntax_tree: &'a SwiftSyntaxTree,
+    selected_text_range: &'a TextRange,
+    text_content: &'a XcodeText,
+) -> Result<Option<Node<'a>>, BracketHighlightError> {
     let selected_node = match syntax_tree.get_selected_code_node(&selected_text_range) {
         None => return Ok(None),
         Some(node) => node,
@@ -360,7 +360,7 @@ fn get_line_start_end_positions_and_range(
     let is_touching_left_first_char =
         selected_text_range.index == line_brackets_match_range.0.range.index; // TODO
 
-    if (is_touching_left_first_char) {
+    if is_touching_left_first_char {
         if let Some(parent_node) = code_block_node.parent() {
             if let Some(code_block_parent_node) = get_code_block_parent(parent_node, true) {
                 return get_start_end_positions_and_range(

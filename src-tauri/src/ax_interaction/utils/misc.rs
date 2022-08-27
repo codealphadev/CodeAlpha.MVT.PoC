@@ -39,7 +39,7 @@ pub fn get_selected_text_range(get_via: &GetVia) -> Result<TextRange, XcodeError
             index: selected_text_range_cf_range.location as usize,
             length: selected_text_range_cf_range.length as usize,
         }),
-        Err(ax_error) => Err(XcodeError::map_ax_error(ax_error)),
+        Err(ax_error) => Err(XcodeError::AXError(ax_error.into())),
     }
 }
 
@@ -55,7 +55,7 @@ pub fn set_selected_text_range(text_range: &TextRange, get_via: &GetVia) -> Resu
             })
             .unwrap(),
         )
-        .map_err(|err| XcodeError::map_ax_error(err))
+        .map_err(|err| XcodeError::AXError(err.into()))
 }
 
 pub fn get_dark_mode() -> Result<bool, &'static str> {

@@ -1,6 +1,5 @@
-use accessibility::{AXAttribute, AXUIElement, Error};
+use accessibility::{AXAttribute, AXUIElement};
 use core_foundation::base::{CFHash, TCFType};
-use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub enum GetVia {
@@ -10,12 +9,8 @@ pub enum GetVia {
     UIElem(AXUIElement),
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug)]
 pub enum XcodeError {
-    #[error("Calling macOS AX API failed: {0}.")]
-    AXCallFailed(i32),
-    #[error("AX resource not found.")]
-    AXResourceNotFound,
     #[error("The focused window is not an Xcode editor window.")]
     FocusedWindowNotXcode,
     #[error("The focused UI element not an editor textarea.")]
@@ -24,15 +19,12 @@ pub enum XcodeError {
     WindowHashUnknown,
     #[error("Implausible dimensions computation, e.g. a result turning out negative when it's not supposed to be.")]
     ImplausibleDimensions,
-}
-
-impl XcodeError {
-    pub fn map_ax_error(ax_error: Error) -> XcodeError {
-        match ax_error {
-            Error::NotFound => XcodeError::AXResourceNotFound,
-            Error::Ax(id) => XcodeError::AXCallFailed(id),
-        }
-    }
+    #[error("Could not get the text content of the textarea.")]
+    GettingTextContentFailed,
+    #[error("Could not find the UI element.")]
+    UIElementNotFound,
+    #[error("Calling macOS AX API failed.")]
+    AXError(#[source] anyhow::Error),
 }
 
 pub fn generate_axui_element_hash(ui_element: &AXUIElement) -> usize {
@@ -45,7 +37,7 @@ pub fn ax_attribute<T: TCFType>(
 ) -> Result<T, XcodeError> {
     ui_elem
         .attribute(&attribute)
-        .map_err(|err| XcodeError::map_ax_error(err))
+        .map_err(|err| XcodeError::AXError(err.into()))
 }
 
 pub fn set_ax_attribute<T: TCFType>(
@@ -55,5 +47,5 @@ pub fn set_ax_attribute<T: TCFType>(
 ) -> Result<(), XcodeError> {
     ui_elem
         .set_attribute(&attribute, value)
-        .map_err(|err| XcodeError::map_ax_error(err))
+        .map_err(|e| XcodeError::AXError(e.into()))
 }
