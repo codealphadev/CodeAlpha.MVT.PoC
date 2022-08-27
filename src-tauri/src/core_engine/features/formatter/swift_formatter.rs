@@ -15,6 +15,7 @@ use crate::{
         CodeDocument, TextPosition, TextRange,
     },
     utils::geometry::LogicalSize,
+    CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -33,7 +34,9 @@ pub enum SwiftFormatError {
     GenericError(#[source] anyhow::Error),
 }
 
-pub struct SwiftFormatter {}
+pub struct SwiftFormatter {
+    is_activated: bool,
+}
 
 impl FeatureBase for SwiftFormatter {
     fn compute(
@@ -41,11 +44,17 @@ impl FeatureBase for SwiftFormatter {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
+        if !self.is_activated {
+            return Ok(());
+        }
+
         match trigger {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
                     "S" => {
-                        self.format(code_document);
+                        return self
+                            .format(code_document)
+                            .map_err(|err| FeatureError::GenericError(err.into()));
                     }
                     _ => {}
                 },
@@ -65,11 +74,24 @@ impl FeatureBase for SwiftFormatter {
         // SwiftFormatter is not running on update_visualization step.
         Ok(())
     }
+
+    fn activate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = true;
+        // do nothing
+        Ok(())
+    }
+
+    fn deactivate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = false;
+        todo!()
+    }
 }
 
 impl SwiftFormatter {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
+        }
     }
 
     pub fn format(&self, code_document: &CodeDocument) -> Result<(), SwiftFormatError> {

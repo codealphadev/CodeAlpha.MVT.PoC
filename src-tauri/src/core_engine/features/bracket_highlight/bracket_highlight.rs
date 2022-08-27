@@ -10,6 +10,7 @@ use crate::{
     },
     utils::{geometry::LogicalPosition, messaging::ChannelList, rule_types::MatchRange},
     window_controls::config::AppWindow,
+    CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
 use super::{
@@ -24,6 +25,8 @@ use super::{
 pub struct BracketHighlight {
     compute_results: Option<BracketHighlightComputeResults>,
     visualization_results: Option<BracketHighlightResults>,
+
+    is_activated: bool,
 }
 
 impl FeatureBase for BracketHighlight {
@@ -33,6 +36,10 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
+        if !self.is_activated {
+            return Ok(());
+        }
+
         if !should_compute(trigger) {
             return Ok(());
         }
@@ -100,6 +107,10 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
+        if !self.is_activated {
+            return Ok(());
+        }
+
         let text_content =
             code_document
                 .text_content()
@@ -261,6 +272,18 @@ impl FeatureBase for BracketHighlight {
         self.publish_visualization(code_document);
         Ok(())
     }
+
+    fn activate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = true;
+
+        Ok(())
+    }
+
+    fn deactivate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = false;
+
+        Ok(())
+    }
 }
 
 impl BracketHighlight {
@@ -268,6 +291,7 @@ impl BracketHighlight {
         Self {
             compute_results: None,
             visualization_results: None,
+            is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
     }
 

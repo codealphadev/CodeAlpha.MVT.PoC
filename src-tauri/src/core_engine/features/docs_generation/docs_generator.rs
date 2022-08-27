@@ -14,6 +14,7 @@ use crate::{
     },
     utils::messaging::ChannelList,
     window_controls::EventWindowControls,
+    CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
 use super::docs_generation_task::DocsGenerationTask;
@@ -37,6 +38,7 @@ pub struct DocsGenerator {
     selected_text_range: Option<TextRange>,
     docs_generation_task: HashMap<WindowUid, DocsGenerationTask>,
     window_pid: i32,
+    is_activated: bool,
 }
 
 impl FeatureBase for DocsGenerator {
@@ -45,27 +47,29 @@ impl FeatureBase for DocsGenerator {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
+        if !self.is_activated {
+            return Ok(());
+        }
+
         match trigger {
-            CoreEngineTrigger::OnTextContentChange => self.update_content(
+            CoreEngineTrigger::OnTextContentChange => Ok(self.update_content(
                 &code_document
                     .text_content()
                     .ok_or(FeatureError::GenericError(anyhow!(
                         "CodeDoc text content missing"
                     )))?,
                 code_document.editor_window_props().window_uid,
-            ),
-            CoreEngineTrigger::OnTextSelectionChange => self.update_selected_text_range(
+            )),
+            CoreEngineTrigger::OnTextSelectionChange => Ok(self.update_selected_text_range(
                 &code_document
                     .selected_text_range()
                     .ok_or(FeatureError::GenericError(anyhow!(
                         "CodeDoc selected text range missing"
                     )))?,
                 code_document.editor_window_props().window_uid,
-            ),
-            _ => {}
+            )),
+            _ => Ok(()),
         }
-
-        Ok(())
     }
 
     fn update_visualization(
@@ -73,15 +77,15 @@ impl FeatureBase for DocsGenerator {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        let update_visualization = false;
+        if !self.is_activated {
+            return Ok(());
+        }
 
+        let update_visualization = false;
         match trigger {
-            CoreEngineTrigger::OnShortcutPressed(_) => {}
             CoreEngineTrigger::OnTextContentChange => update_visualization = true,
             CoreEngineTrigger::OnTextSelectionChange => update_visualization = true,
-            CoreEngineTrigger::OnViewportMove => {}
-            CoreEngineTrigger::OnViewportDimensionsChange => {}
-            CoreEngineTrigger::OnVisibleTextRangeChange => {}
+            _ => {}
         }
 
         if update_visualization {
@@ -99,6 +103,19 @@ impl FeatureBase for DocsGenerator {
 
         Ok(())
     }
+
+    fn activate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = true;
+
+        Ok(())
+    }
+
+    fn deactivate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = false;
+        self.clear_docs_generation_tasks();
+
+        Ok(())
+    }
 }
 
 impl DocsGenerator {
@@ -109,6 +126,7 @@ impl DocsGenerator {
             selected_text_range: None,
             docs_generation_task: HashMap::new(),
             window_pid,
+            is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
     }
 
