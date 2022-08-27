@@ -31,8 +31,7 @@ pub fn notify_textarea_scrolled(
     if let Some(window) = &mut known_window {
         update_code_document_dimensions(&window_element, &xcode_observer_state.app_handle).ok();
         AXEventXcode::EditorTextareaScrolled(EditorTextareaScrolledMessage {
-            id: window.0,
-            uielement_hash: window.3,
+            window_uid: window.0,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
 

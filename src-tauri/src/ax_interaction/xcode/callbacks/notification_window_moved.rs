@@ -36,7 +36,7 @@ pub fn notify_window_moved(
 
         // Publish to Tauri
         let msg = EditorWindowMovedMessage {
-            id: window.0,
+            window_uid: window.0,
             window_position: tauri::LogicalPosition {
                 x: origin.x,
                 y: origin.y,
@@ -45,7 +45,6 @@ pub fn notify_window_moved(
                 width: size.width,
                 height: size.height,
             },
-            uielement_hash: window.3,
         };
 
         AXEventXcode::EditorWindowMoved(msg).publish_to_tauri(&xcode_observer_state.app_handle);

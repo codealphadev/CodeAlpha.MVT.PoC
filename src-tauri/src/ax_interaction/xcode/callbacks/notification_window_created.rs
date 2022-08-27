@@ -47,21 +47,17 @@ pub fn notify_window_created(
             .any(|e| unsafe { CFEqual(window.as_CFTypeRef(), e.1.as_CFTypeRef()) != 0 });
 
         if !window_exists {
-            let window_id = uuid::Uuid::new_v4();
-
             let editor_name = app_element.attribute(&AXAttribute::title())?;
             let pid = app_element.pid()?;
-            if let Ok(msg) = window_creation_msg(editor_name.to_string(), pid, window_id, &*window)
-            {
+            if let Ok(msg) = window_creation_msg(editor_name.to_string(), pid, &*window) {
                 // Emit to rust listeners
                 msg.publish_to_tauri(&xcode_observer_state.app_handle);
 
                 // Add window to list of windows
                 xcode_observer_state.window_list.push((
-                    window_id,
+                    generate_axui_element_hash(&window),
                     window.clone(),
                     None,
-                    generate_axui_element_hash(&window),
                 ));
 
                 // Attempt to send an additional notification_uielement_focused
@@ -78,7 +74,6 @@ pub fn notify_window_created(
 fn window_creation_msg(
     editor_name: String,
     pid: i32,
-    id: uuid::Uuid,
     window_element: &AXUIElement,
 ) -> Result<AXEventXcode, Error> {
     let role = window_element.attribute(&AXAttribute::role())?;
@@ -92,7 +87,7 @@ fn window_creation_msg(
     let origin = pos_ax_value.get_value::<CGPoint>()?;
 
     let window_created_msg = EditorWindowCreatedMessage {
-        id,
+        window_uid: generate_axui_element_hash(&window_element),
         window_position: tauri::LogicalPosition {
             x: origin.x,
             y: origin.y,
@@ -103,7 +98,6 @@ fn window_creation_msg(
         },
         pid,
         editor_name,
-        ui_elem_hash: generate_axui_element_hash(&window_element),
     };
 
     Ok(AXEventXcode::EditorWindowCreated(window_created_msg))

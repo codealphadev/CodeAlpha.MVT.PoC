@@ -41,7 +41,7 @@ pub fn notify_textarea_content_changed(
         let content = uielement.value()?;
         let content_str = content.downcast::<CFString>();
 
-        let file_path = if let Ok(file_path) = get_textarea_file_path(&GetVia::Hash(window.3)) {
+        let file_path = if let Ok(file_path) = get_textarea_file_path(&GetVia::Hash(window.0)) {
             Some(file_path)
         } else {
             None
@@ -49,10 +49,9 @@ pub fn notify_textarea_content_changed(
 
         if let Some(cf_str) = content_str {
             AXEventXcode::EditorTextareaContentChanged(EditorTextareaContentChangedMessage {
-                id: window.0,
+                window_uid: window.0,
                 content: cf_str.to_string(),
                 file_path_as_str: file_path,
-                ui_elem_hash: window.3,
                 pid: window.1.pid()?,
             })
             .publish_to_tauri(&xcode_observer_state.app_handle);

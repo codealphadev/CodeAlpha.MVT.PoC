@@ -15,7 +15,7 @@ pub fn on_resize_editor_window(
     let window_manager = &mut window_manager.lock();
     let editor_window_list = &mut window_manager.editor_windows().try_lock()?;
 
-    let editor_window = editor_window_list.get_mut(&resize_msg.uielement_hash)?;
+    let editor_window = editor_window_list.get_mut(&resize_msg.window_uid)?;
 
     let mut textarea_position = resize_msg.textarea_position;
     let mut textarea_size = resize_msg.textarea_size;

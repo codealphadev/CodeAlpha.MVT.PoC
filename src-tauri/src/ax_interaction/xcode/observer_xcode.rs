@@ -26,12 +26,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct XCodeObserverState {
     pub app_handle: tauri::AppHandle,
-    pub window_list: Vec<(
-        uuid::Uuid,
-        AXUIElement,
-        Option<tauri::LogicalSize<f64>>,
-        usize,
-    )>,
+    pub window_list: Vec<(usize, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
 }
 
 static EDITOR_XCODE_BUNDLE_ID: &str = "com.apple.dt.Xcode";

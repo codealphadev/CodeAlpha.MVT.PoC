@@ -28,11 +28,10 @@ pub fn notify_textarea_selected_text_changed(
         let text_range_str = text_range.get_value::<CFRange>()?;
 
         AXEventXcode::EditorTextareaSelectedTextChanged(EditorTextareaSelectedTextChangedMessage {
-            id: window.0,
+            window_uid: window.0,
             index: text_range_str.location as usize,
             length: text_range_str.length as usize,
             selected_text: (uielement_textarea.selected_text()?).to_string(),
-            ui_elem_hash: window.3,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
     }

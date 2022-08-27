@@ -6,9 +6,7 @@ use crate::{
     ax_interaction::{
         get_viewport_frame, models::editor::EditorTextareaContentChangedMessage, GetVia,
     },
-    core_engine::{
-        core_engine::UIElementHash, CodeDocument, CoreEngine, EditorWindowProps, TextRange,
-    },
+    core_engine::{core_engine::WindowUid, CodeDocument, CoreEngine, EditorWindowProps, TextRange},
 };
 
 pub fn on_text_content_changed(
@@ -23,12 +21,11 @@ pub fn on_text_content_changed(
 
     check_if_code_doc_needs_to_be_created(
         code_documents,
-        content_changed_msg.id,
         content_changed_msg.pid,
-        content_changed_msg.ui_elem_hash,
+        content_changed_msg.window_uid,
     );
 
-    if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.ui_elem_hash) {
+    if let Some(code_doc) = code_documents.get_mut(&content_changed_msg.window_uid) {
         code_doc.update_doc_properties(
             &content_changed_msg.content,
             &content_changed_msg.file_path_as_str,
@@ -45,23 +42,21 @@ pub fn on_text_content_changed(
 }
 
 pub fn check_if_code_doc_needs_to_be_created(
-    code_documents: &HashMap<UIElementHash, CodeDocument>,
-    editor_id: uuid::Uuid,
+    code_documents: &HashMap<WindowUid, CodeDocument>,
     editor_pid: i32,
-    editor_window_hash: UIElementHash,
+    editor_window_uid: WindowUid,
 ) -> bool {
     let new_code_doc = CodeDocument::new(&EditorWindowProps {
-        id: editor_id,
+        window_uid: editor_window_uid,
         pid: editor_pid,
-        uielement_hash: editor_window_hash,
         viewport_frame: get_viewport_frame(&GetVia::Pid(editor_pid))
             .expect("Could not get viewport frame."),
         visible_text_range: TextRange::new(0, 0),
     });
 
     // check if code document is already contained in list of documents
-    if (*code_documents).get(&editor_window_hash).is_none() {
-        (*code_documents).insert(editor_window_hash, new_code_doc);
+    if (*code_documents).get(&editor_window_uid).is_none() {
+        (*code_documents).insert(editor_window_uid, new_code_doc);
         true
     } else {
         false

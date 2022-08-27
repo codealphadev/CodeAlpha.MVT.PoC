@@ -44,7 +44,7 @@ pub fn notify_window_resized(
 
         // Set editor window dimensions
         let mut resize_msg = EditorWindowResizedMessage {
-            id: window.0,
+            window_uid: window.0,
             window_position: tauri::LogicalPosition {
                 x: origin.x,
                 y: origin.y,
@@ -55,7 +55,6 @@ pub fn notify_window_resized(
             },
             textarea_position: None,
             textarea_size: None,
-            uielement_hash: window.3,
         };
 
         if "AXScrollBar" == ui_element.role()? {
@@ -76,12 +75,7 @@ pub fn notify_window_resized(
                 }
             }
 
-            let new_tuple = (
-                window.0,
-                window.1.clone(),
-                resize_msg.textarea_size.clone(),
-                window.3,
-            );
+            let new_tuple = (window.0, window.1.clone(), resize_msg.textarea_size.clone());
 
             // Update item window_list
             xcode_observer_state

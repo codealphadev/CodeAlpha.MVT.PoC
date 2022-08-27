@@ -19,12 +19,11 @@ pub fn notify_uielement_focused(
         window
     } else {
         AXEventXcode::EditorUIElementFocused(EditorUIElementFocusedMessage {
-            window_id: None,
+            window_uid: None,
+            pid: None,
             focused_ui_element: FocusedUIElement::Other,
             textarea_position: None,
             textarea_size: None,
-            ui_elem_hash: None,
-            pid: None,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
         return Ok(());
@@ -40,11 +39,10 @@ pub fn notify_uielement_focused(
 
     if let Some(window) = known_window {
         let mut uielement_focused_msg = EditorUIElementFocusedMessage {
-            window_id: Some(window.0),
+            window_uid: Some(window.0),
             focused_ui_element: FocusedUIElement::Other,
             textarea_position: None,
             textarea_size: None,
-            ui_elem_hash: Some(window.3),
             pid: Some(window.1.pid()?),
         };
 
@@ -75,7 +73,6 @@ pub fn notify_uielement_focused(
                     window.0,
                     window.1.clone(),
                     Some(code_section_frame.size.as_tauri_LogicalSize()),
-                    window.3,
                 );
 
                 // Remove item window_list

@@ -34,13 +34,13 @@ pub fn notification_key_press_save(
             }
             _ => {}
         }
-        let ui_elem_hash = get_focused_window().map_err(|_| Error::NotFound)?;
+        let window_uid = get_focused_window().map_err(|_| Error::NotFound)?;
 
         AXEventXcode::EditorShortcutPressed(EditorShortcutPressedMessage {
+            window_uid,
             modifier: cmd_modifier,
             key: cmd_char.to_string(),
             menu_item_title: cmd_title.to_string(),
-            ui_elem_hash,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
     }

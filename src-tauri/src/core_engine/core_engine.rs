@@ -9,9 +9,9 @@ use super::{
     CodeDocument,
 };
 
-pub type UIElementHash = usize;
+pub type WindowUid = usize;
 
-pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<UIElementHash, CodeDocument>>>;
+pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<WindowUid, CodeDocument>>>;
 
 pub struct CoreEngine {
     pub app_handle: tauri::AppHandle,

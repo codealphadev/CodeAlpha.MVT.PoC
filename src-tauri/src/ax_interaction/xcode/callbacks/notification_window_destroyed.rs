@@ -37,8 +37,7 @@ pub fn notify_window_destroyed(
 
         if !still_exists {
             AXEventXcode::EditorWindowDestroyed(EditorWindowDestroyedMessage {
-                id: known_window.0,
-                uielement_hash: known_window.3,
+                window_uid: known_window.0,
             })
             .publish_to_tauri(&xcode_observer_state.app_handle);
         }

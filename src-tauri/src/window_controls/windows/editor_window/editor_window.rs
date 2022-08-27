@@ -70,7 +70,7 @@ pub struct EditorWindow {
 impl EditorWindow {
     pub fn new(created_msg: &EditorWindowCreatedMessage) -> Self {
         let mut editor_window = Self {
-            _id: created_msg.ui_elem_hash,
+            _id: created_msg.window_uid,
             dark_mode: None,
             editor_name: created_msg.editor_name.clone(),
             pid: created_msg.pid,
