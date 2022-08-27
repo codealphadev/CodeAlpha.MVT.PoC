@@ -11,7 +11,7 @@ use super::{
 };
 use crate::{
     app_handle,
-    ax_interaction::models::editor::EditorShortcutPressedMessage,
+    platform::macos::models::editor::EditorShortcutPressedMessage,
     utils::{geometry::LogicalFrame, messaging::ChannelList},
     window_controls::config::AppWindow,
 };

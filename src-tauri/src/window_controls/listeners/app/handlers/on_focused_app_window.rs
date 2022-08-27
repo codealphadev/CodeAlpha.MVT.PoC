@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::{ax_interaction::models::app::AppWindowFocusedMessage, window_controls::WindowManager};
+use crate::{
+    platform::macos::models::app::AppWindowFocusedMessage, window_controls::WindowManager,
+};
 
 pub fn on_focused_app_window(
     window_manager: &Arc<Mutex<WindowManager>>,

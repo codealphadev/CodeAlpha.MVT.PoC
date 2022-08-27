@@ -3,8 +3,8 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    ax_interaction::models::editor::EditorTextareaSelectedTextChangedMessage,
     core_engine::CoreEngine,
+    platform::macos::models::editor::EditorTextareaSelectedTextChangedMessage,
 };
 
 pub fn on_selected_text_changed(

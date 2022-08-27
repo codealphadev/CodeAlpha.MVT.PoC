@@ -2,7 +2,7 @@ use tauri::Manager;
 
 use crate::{
     app_handle,
-    ax_interaction::{
+    platform::macos::{
         get_dark_mode, get_textarea_uielement,
         internal::get_uielement_frame,
         models::editor::{EditorWindowCreatedMessage, FocusedUIElement},

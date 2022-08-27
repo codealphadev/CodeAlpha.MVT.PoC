@@ -5,7 +5,7 @@ use tauri::Manager;
 
 use crate::{
     app_handle,
-    ax_interaction::{
+    platform::macos::{
         models::input_device::{ClickType, MouseButton, MouseClickMessage, MouseMovedMessage},
         EventInputDevice,
     },

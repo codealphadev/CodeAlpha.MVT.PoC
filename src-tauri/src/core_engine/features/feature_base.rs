@@ -1,5 +1,5 @@
 use crate::{
-    ax_interaction::models::editor::EditorShortcutPressedMessage, core_engine::CodeDocument,
+    core_engine::CodeDocument, platform::macos::models::editor::EditorShortcutPressedMessage,
 };
 
 use super::{formatter::SwiftFormatter, BracketHighlight, DocsGenerator};

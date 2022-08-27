@@ -1,7 +1,6 @@
 use std::process::Command;
 
 use crate::{
-    ax_interaction::{get_text_range_of_line, GetVia},
     core_engine::{
         rules::{
             rule_base::{RuleMatchCategory, RuleName, RuleResults},
@@ -11,6 +10,7 @@ use crate::{
         utils::XcodeText,
         TextRange,
     },
+    platform::macos::{get_text_range_of_line, GetVia},
     utils::rule_types::MatchRange,
 };
 

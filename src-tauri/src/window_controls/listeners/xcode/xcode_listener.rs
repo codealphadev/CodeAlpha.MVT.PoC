@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 use tauri::Manager;
 
 use crate::{
-    app_handle, ax_interaction::AXEventXcode, utils::messaging::ChannelList,
+    app_handle, platform::macos::AXEventXcode, utils::messaging::ChannelList,
     window_controls::WindowManager,
 };
 

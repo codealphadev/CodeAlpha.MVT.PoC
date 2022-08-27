@@ -3,16 +3,16 @@ use tauri::api::process::{Command, CommandEvent};
 
 use crate::{
     app_handle,
-    ax_interaction::{
-        get_bounds_for_TextRange, get_textarea_uielement, internal::get_uielement_frame,
-        models::editor::ModifierKey, send_event_mouse_wheel, set_selected_text_range,
-        set_textarea_content, GetVia,
-    },
     core_engine::{
         events::EventRuleExecutionState,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
+    },
+    platform::macos::{
+        get_bounds_for_TextRange, get_textarea_uielement, internal::get_uielement_frame,
+        models::editor::ModifierKey, send_event_mouse_wheel, set_selected_text_range,
+        set_textarea_content, GetVia,
     },
     utils::geometry::LogicalSize,
     CORE_ENGINE_ACTIVE_AT_STARTUP,

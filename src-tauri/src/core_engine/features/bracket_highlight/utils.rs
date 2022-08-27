@@ -1,10 +1,10 @@
 use tree_sitter::Node;
 
 use crate::{
-    ax_interaction::{
+    core_engine::{utils::XcodeText, TextPosition, TextRange},
+    platform::macos::{
         calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped, GetVia,
     },
-    core_engine::{utils::XcodeText, TextPosition, TextRange},
     utils::{geometry::LogicalFrame, rule_types::MatchRange},
 };
 

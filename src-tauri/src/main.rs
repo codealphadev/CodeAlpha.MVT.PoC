@@ -6,16 +6,16 @@
 
 use std::sync::Arc;
 
-use ax_interaction::setup_observers;
 use core_engine::CoreEngine;
 use parking_lot::Mutex;
+use platform::macos::setup_observers;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
 
-mod ax_interaction;
 mod core_engine;
+mod platform;
 mod utils;
 mod window_controls;
 
@@ -80,9 +80,9 @@ fn main() {
                 loop {
                     let api_enabled;
                     if popup_was_shown {
-                        api_enabled = ax_interaction::is_application_trusted();
+                        api_enabled = platform::macos::is_application_trusted();
                     } else {
-                        api_enabled = ax_interaction::is_application_trusted_with_prompt();
+                        api_enabled = platform::macos::is_application_trusted_with_prompt();
                         popup_was_shown = true;
                     }
 
