@@ -1,4 +1,5 @@
 import type { LogicalFrame } from "../src-tauri/bindings/geometry/LogicalFrame";
+import type { LogicalPosition } from "../src-tauri/bindings/geometry/LogicalPosition";
 
 export function convert_global_frame_to_local(global_frame: LogicalFrame, reference_position_global: LogicalPosition): LogicalFrame {
     return {
