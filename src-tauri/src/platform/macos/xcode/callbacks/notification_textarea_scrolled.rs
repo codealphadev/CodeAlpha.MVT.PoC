@@ -1,12 +1,6 @@
-use crate::{
-    platform::macos::{
-        get_textarea_uielement, internal::get_uielement_frame,
-        models::editor::EditorTextareaScrolledMessage, xcode::XCodeObserverState, AXEventXcode,
-        EventViewport, GetVia,
-    },
-    window_controls::{
-        models::editor_window::CodeOverlayDimensionsUpdateMessage, EventWindowControls,
-    },
+use crate::platform::macos::{
+    models::editor::EditorTextareaScrolledMessage, xcode::XCodeObserverState, AXEventXcode,
+    EventViewport, GetVia,
 };
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 
@@ -29,7 +23,7 @@ pub fn notify_textarea_scrolled(
         });
 
     if let Some(window) = &mut known_window {
-        update_code_document_dimensions(&window_element, &xcode_observer_state.app_handle).ok();
+        update_code_document_dimensions(&xcode_observer_state.app_handle).ok();
         AXEventXcode::EditorTextareaScrolled(EditorTextareaScrolledMessage {
             window_uid: window.0,
         })
@@ -43,20 +37,12 @@ pub fn notify_textarea_scrolled(
     Ok(())
 }
 
-pub fn update_code_document_dimensions(
-    window_element: &AXUIElement,
-    app_handle: &tauri::AppHandle,
-) -> Result<(), Error> {
-    let code_document_uielement =
-        get_textarea_uielement(&GetVia::Pid(window_element.pid()?)).map_err(|_| Error::NotFound)?;
-    let code_document_frame =
-        get_uielement_frame(&code_document_uielement).map_err(|_| Error::NotFound)?;
+pub fn update_code_document_dimensions(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     // This event needs to arrive in the frontend before any annotation events
     // because the frontend relies on always having the correct document rect to handle global coordinates sent from core engine.
-    EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
-        code_document_rect: code_document_frame,
-        code_viewport_rect: None,
-    })
-    .publish_to_tauri(&app_handle);
+    EventViewport::new_xcode_viewport_update(&GetVia::Current)
+        .map_err(|_| accessibility::Error::NotFound)?
+        .publish_to_tauri(app_handle);
+
     Ok(())
 }

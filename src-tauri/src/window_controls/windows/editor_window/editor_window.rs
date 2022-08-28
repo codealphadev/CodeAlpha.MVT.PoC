@@ -6,15 +6,11 @@ use crate::{
         get_dark_mode, get_textarea_uielement,
         internal::get_uielement_frame,
         models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
-        GetVia,
+        EventViewport, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::AppWindow,
-        events::EventWindowControls,
-        models::{
-            dark_mode::DarkModeUpdateMessage, editor_window::CodeOverlayDimensionsUpdateMessage,
-        },
+        config::AppWindow, events::EventWindowControls, models::dark_mode::DarkModeUpdateMessage,
     },
 };
 
@@ -127,7 +123,11 @@ impl EditorWindow {
         self.focused_ui_element.as_ref()
     }
 
-    fn set_textarea_dimensions(&mut self, position: LogicalPosition, size: LogicalSize) {
+    fn set_textarea_dimensions(
+        &mut self,
+        position: LogicalPosition,
+        size: LogicalSize,
+    ) -> Result<(), String> {
         self.textarea_position = Some(position);
         self.textarea_size = Some(size);
 
@@ -135,21 +135,12 @@ impl EditorWindow {
         if let Ok(code_doc_uielement) = code_document_uielement {
             let code_document_frame = get_uielement_frame(&code_doc_uielement);
             if let Ok(code_document_frame) = code_document_frame {
-                EventWindowControls::CodeOverlayDimensionsUpdate(
-                    CodeOverlayDimensionsUpdateMessage {
-                        code_document_rect: code_document_frame,
-                        code_viewport_rect: Some(LogicalFrame {
-                            origin: Self::transform_local_position_to_global_position(
-                                self.window_position,
-                                position,
-                            ),
-                            size,
-                        }),
-                    },
-                )
-                .publish_to_tauri(&app_handle());
+                EventViewport::new_xcode_viewport_update(&GetVia::Current)
+                    .map_err(|_| "Viewport update failed")?
+                    .publish_to_tauri(&app_handle());
             }
         }
+        Ok(())
     }
 
     pub fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
@@ -251,25 +242,9 @@ impl EditorWindow {
 
         // Notify the frontend about the updated position of the editor window to allow
         // it to correctly render code annotations.
-        let code_document_uielement = get_textarea_uielement(&GetVia::Pid(self.pid));
-        if let Ok(code_doc_uielement) = code_document_uielement {
-            let code_document_frame = get_uielement_frame(&code_doc_uielement);
-            if let Ok(code_document_frame) = code_document_frame {
-                EventWindowControls::CodeOverlayDimensionsUpdate(
-                    CodeOverlayDimensionsUpdateMessage {
-                        code_document_rect: code_document_frame,
-                        code_viewport_rect: Some(LogicalFrame {
-                            origin: Self::transform_local_position_to_global_position(
-                                self.window_position,
-                                self.textarea_position?,
-                            ),
-                            size: self.textarea_size?,
-                        }),
-                    },
-                )
-                .publish_to_tauri(&app_handle());
-            }
-        }
+        EventViewport::new_xcode_viewport_update(&GetVia::Current)
+            .ok()?
+            .publish_to_tauri(&app_handle());
 
         self.widget_position
             .replace(Self::transform_global_position_to_local_position(
@@ -342,7 +317,7 @@ impl EditorWindow {
         };
 
         if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
-            self.set_textarea_dimensions(position, size)
+            self.set_textarea_dimensions(position, size);
         }
         self.focused_ui_element = Some(focused_ui_element.clone());
         self.check_and_update_dark_mode().ok();

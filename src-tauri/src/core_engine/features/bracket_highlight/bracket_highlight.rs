@@ -341,8 +341,9 @@ impl BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<bool, BracketHighlightError> {
-        let compute_results = self
+        let compute_results = &self
             .compute_results
+            .as_ref()
             .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
 
         match trigger {

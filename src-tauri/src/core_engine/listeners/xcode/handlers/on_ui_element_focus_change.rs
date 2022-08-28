@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{
     core_engine::CoreEngine,
     platform::macos::{
-        get_selected_text_range, get_textarea_content, get_textarea_file_path, get_viewport_frame,
+        get_selected_text_range, get_textarea_content, get_textarea_file_path,
         models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
         GetVia,
     },
@@ -50,8 +50,6 @@ pub fn on_editor_focused_uielement_changed(
     if !core_engine_active_status {
         return None;
     }
-
-    code_doc.update_editor_window_viewport(get_viewport_frame(&GetVia::Current).ok()?);
 
     Some(())
 }

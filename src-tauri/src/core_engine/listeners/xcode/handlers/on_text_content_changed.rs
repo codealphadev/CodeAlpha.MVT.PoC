@@ -7,9 +7,7 @@ use crate::{
         core_engine::WindowUid, features::CoreEngineTrigger, CodeDocument, CoreEngine,
         EditorWindowProps, TextRange,
     },
-    platform::macos::{
-        get_viewport_frame, models::editor::EditorTextareaContentChangedMessage, GetVia,
-    },
+    platform::macos::models::editor::EditorTextareaContentChangedMessage,
 };
 
 pub fn on_text_content_changed(
@@ -55,8 +53,6 @@ pub fn check_if_code_doc_needs_to_be_created(
     let new_code_doc = CodeDocument::new(&EditorWindowProps {
         window_uid: editor_window_uid,
         pid: editor_pid,
-        viewport_frame: get_viewport_frame(&GetVia::Pid(editor_pid))
-            .expect("Could not get viewport frame."),
         visible_text_range: TextRange::new(0, 0),
     });
 

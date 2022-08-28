@@ -7,7 +7,6 @@ use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 use super::models::{
     app_window::{HideAppWindowMessage, ShowAppWindowMessage},
     dark_mode::DarkModeUpdateMessage,
-    editor_window::CodeOverlayDimensionsUpdateMessage,
     TrackingAreaClickedMessage, TrackingAreaEnteredMessage, TrackingAreaExitedMessage,
 };
 
@@ -20,7 +19,6 @@ pub enum EventWindowControls {
     TrackingAreaExited(TrackingAreaExitedMessage),
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
-    CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage),
     DarkModeUpdate(DarkModeUpdateMessage),
 }
 
@@ -41,7 +39,6 @@ impl EventWindowControls {
             EventWindowControls::TrackingAreaExited(_) => publish_to_frontend = true,
             EventWindowControls::AppWindowHide(_) => publish_to_frontend = false,
             EventWindowControls::AppWindowShow(_) => publish_to_frontend = false,
-            EventWindowControls::CodeOverlayDimensionsUpdate(_) => publish_to_frontend = true,
             EventWindowControls::DarkModeUpdate(_) => publish_to_frontend = true,
         }
 
