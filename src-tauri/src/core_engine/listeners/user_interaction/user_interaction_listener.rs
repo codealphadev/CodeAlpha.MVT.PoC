@@ -14,7 +14,7 @@ use super::handlers::on_core_activation_status_update;
 pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
     app_handle().listen_global(ChannelList::EventUserInteractions.to_string(), {
         let core_engine = (core_engine).clone();
-        |msg| {
+        move |msg| {
             let event_user_interaction: EventUserInteraction =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
 

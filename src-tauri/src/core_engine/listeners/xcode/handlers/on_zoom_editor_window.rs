@@ -18,12 +18,10 @@ pub fn on_editor_textarea_zoomed(
         return None;
     }
 
-    let code_documents = &mut core_engine.code_documents().lock();
-
-    if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.window_uid) {
-        code_doc.compute_rule_visualizations();
-        core_engine.run_features(code_doc, &CoreEngineTrigger::OnViewportDimensionsChange);
-    }
+    core_engine.run_features(
+        zoomed_msg.window_uid,
+        &CoreEngineTrigger::OnViewportDimensionsChange,
+    );
 
     Some(())
 }

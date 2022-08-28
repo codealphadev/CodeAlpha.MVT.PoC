@@ -18,7 +18,7 @@ use super::handlers::{
 pub fn xcode_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
     app_handle().listen_global(ChannelList::AXEventXcode.to_string(), {
         let core_engine = core_engine.clone();
-        |msg| {
+        move |msg| {
             let axevent_xcode: AXEventXcode =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
             match axevent_xcode {

@@ -18,12 +18,7 @@ pub fn on_editor_textarea_scrolled(
         return;
     }
 
-    let code_documents = &mut core_engine.code_documents().lock();
-
     if let Ok(focused_window) = get_focused_window() {
-        if let Some(code_doc) = code_documents.get_mut(&focused_window) {
-            code_doc.compute_rule_visualizations();
-            core_engine.run_features(code_doc, &CoreEngineTrigger::OnVisibleTextRangeChange);
-        }
+        core_engine.run_features(focused_window, &CoreEngineTrigger::OnVisibleTextRangeChange);
     }
 }
