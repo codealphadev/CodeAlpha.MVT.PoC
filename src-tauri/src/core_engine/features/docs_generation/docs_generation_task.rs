@@ -17,7 +17,7 @@ use crate::{
         TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
-        get_bounds_for_TextRange, get_viewport_frame,
+        get_annotation_section_frame, get_bounds_for_TextRange, get_viewport_frame,
         xcode::actions::replace_range_with_clipboard_text, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
@@ -122,14 +122,13 @@ impl DocsGenerationTask {
                 )
                 .await;
 
-                // Publish annotation_rect and codeblock_rect to frontend
                 EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
                     id: task_id,
                     text: mintlify_response.preview.to_owned(),
                 })
                 .publish_to_tauri(&app_handle());
 
-                // Notifiy the frontend that the file has been formatted successfully
+                // Notifiy the frontend that the task is finished
                 EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
             }
             (*task_state.lock()) = DocsGenerationTaskState::Finished;
@@ -140,20 +139,34 @@ impl DocsGenerationTask {
         &mut self,
         text: &XcodeText,
         window_uid: WindowUid,
-    ) -> Result<(), &str> {
+    ) -> Result<(), DocsGenerationError> {
         if self.tracking_area.is_some() || self.is_frozen() {
-            return Err("Task is frozen or tracking");
+            return Err(DocsGenerationError::GenericError(anyhow!(
+                "Task is frozen or tracking"
+            )));
         }
+
+        // When we create the annotation, we need to compute the bounds for the frontend so it knows where to display the annotation
+        // and we need to create a tracking area which the tracking area manager takes care of. The tracking area manager uses GLOBAL coordinates
+        // whereas the frontend uses LOCAL coordinates; local to the AnnotationSectionFrame.
+
+        // 1. Get the local coordinates of the AnnotationSectionFrame
+        let annotation_section_origin = get_annotation_section_frame(&GetVia::Current)
+            .map_err(|e| DocsGenerationError::GenericError(e.into()))?
+            .origin;
+
+        // 2. Get the annotation bounds, naturally in global coordinates
         let (annotation_rect_opt, codeblock_bounds) = self.calculate_annotation_bounds(text)?;
-        let rectangles = if let Some(annotation_rect) = annotation_rect_opt {
+        let global_rectangles = if let Some(annotation_rect) = annotation_rect_opt {
             vec![annotation_rect]
         } else {
             vec![]
         };
-        let tracking_area = TrackingArea {
+
+        let mut tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
-            window_uid: window_uid,
-            rectangles,
+            window_uid,
+            rectangles: global_rectangles,
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,
                 TrackingEventType::MouseEntered,
@@ -161,15 +174,25 @@ impl DocsGenerationTask {
             ]),
         };
 
+        // 3. Publish to the tracking area manager with its original GLOBAL coordinates
         EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
 
-        // Publish annotation_rect and codeblock_rect to frontend. Even if empty, publish to remove ghosts from previous messages.
+        // 4. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
         EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
             id: tracking_area.id,
-            annotation_icon: annotation_rect_opt,
-            annotation_codeblock: codeblock_bounds,
+            annotation_icon: annotation_rect_opt
+                .map(|rect| rect.to_local(&annotation_section_origin)),
+            annotation_codeblock: codeblock_bounds
+                .map(|rect| rect.to_local(&annotation_section_origin)),
         })
         .publish_to_tauri(&app_handle());
+
+        // 5. We also store the tracking area in local coordintes
+        let local_rectangles: Vec<LogicalFrame> = global_rectangles
+            .iter()
+            .map(|rect| rect.to_local(&annotation_section_origin))
+            .collect();
+        tracking_area.rectangles = local_rectangles;
 
         self.tracking_area = Some(tracking_area);
         let mut task_state = (self.task_state).lock();
@@ -189,6 +212,11 @@ impl DocsGenerationTask {
                     "No tracking area"
                 )))?;
 
+        // 1. Get the local coordinates of the AnnotationSectionFrame
+        let annotation_section_origin = get_annotation_section_frame(&GetVia::Current)
+            .map_err(|e| DocsGenerationError::GenericError(e.into()))?
+            .origin;
+
         if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
             self.calculate_annotation_bounds(text)
         {
@@ -201,11 +229,13 @@ impl DocsGenerationTask {
             EventTrackingArea::Update(vec![tracking_area_copy.clone()])
                 .publish_to_tauri(&app_handle());
 
-            // Publish annotation_rect and codeblock_rect to frontend
+            // Publish annotation_rect and codeblock_rect to frontend in local coordinates.
             EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
                 id: tracking_area_copy.id,
-                annotation_icon: annotation_rect_opt,
-                annotation_codeblock: codeblock_rect_opt,
+                annotation_icon: annotation_rect_opt
+                    .map(|rect| rect.to_local(&annotation_section_origin)),
+                annotation_codeblock: codeblock_rect_opt
+                    .map(|rect| rect.to_local(&annotation_section_origin)),
             })
             .publish_to_tauri(&app_handle());
         } else {
@@ -231,12 +261,14 @@ impl DocsGenerationTask {
     fn calculate_annotation_bounds(
         &self,
         text: &XcodeText,
-    ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), &'static str> {
+    ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), DocsGenerationError> {
         let (textarea_origin, textarea_size) =
             if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
                 (code_section_frame.origin, code_section_frame.size)
             } else {
-                return Err("Could not derive textarea dimensions");
+                return Err(DocsGenerationError::GenericError(anyhow!(
+                    "Could not derive textarea dimensions"
+                )));
             };
 
         // 2. Calculate the annotation rectangles
@@ -312,7 +344,9 @@ impl DocsGenerationTask {
 
             return Ok((annotation_bounds, codeblock_bounds));
         } else {
-            return Err("Could not get text range of the codeblock");
+            return Err(DocsGenerationError::GenericError(anyhow!(
+                "Could not get text range of the codeblock"
+            )));
         }
     }
 }

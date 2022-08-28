@@ -116,11 +116,6 @@ impl CodeDocument {
         }
 
         let parsed_successfully = self.syntax_tree.parse(&new_content);
-
-        // Update text content in features
-        self.docs_generator
-            .lock()
-            .update_content(&new_content, self.editor_window_props.window_uid);
     }
 
     pub fn process_rules(&mut self) {
@@ -156,10 +151,6 @@ impl CodeDocument {
     pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
         let text_range = TextRange { length, index };
         self.selected_text_range = Some(text_range);
-
-        self.docs_generator
-            .lock()
-            .update_selected_text_range(&text_range, self.editor_window_props.window_uid);
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {
