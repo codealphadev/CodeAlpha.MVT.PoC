@@ -40,6 +40,20 @@ impl LogicalPosition {
             y: self.y,
         }
     }
+
+    pub fn to_global(&self, local_origin: &LogicalPosition) -> LogicalPosition {
+        LogicalPosition {
+            x: self.x + local_origin.x,
+            y: self.y + local_origin.y,
+        }
+    }
+
+    pub fn to_local(&self, global_origin: &LogicalPosition) -> LogicalPosition {
+        LogicalPosition {
+            x: self.x - global_origin.x,
+            y: self.y - global_origin.y,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -139,6 +153,20 @@ impl LogicalFrame {
         LogicalPosition {
             x: self.origin.x + self.size.width,
             y: self.origin.y,
+        }
+    }
+
+    pub fn to_global(&self, local_origin: &LogicalPosition) -> LogicalFrame {
+        LogicalFrame {
+            origin: self.origin.to_global(local_origin),
+            size: self.size,
+        }
+    }
+
+    pub fn to_local(&self, global_origin: &LogicalPosition) -> LogicalFrame {
+        LogicalFrame {
+            origin: self.origin.to_local(global_origin),
+            size: self.size,
         }
     }
 }

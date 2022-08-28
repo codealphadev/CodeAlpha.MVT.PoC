@@ -1,8 +1,9 @@
 use anyhow::anyhow;
-use tauri::{Manager, Position};
+use tauri::Manager;
 use tree_sitter::Node;
 
 use crate::{
+    app_handle,
     core_engine::{
         features::feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
         rules::get_index_of_next_row,
@@ -10,14 +11,8 @@ use crate::{
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
-    platform::macos::{
-        calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped, GetVia,
-    },
-    utils::{
-        geometry::{LogicalFrame, LogicalPosition},
-        messaging::ChannelList,
-        rule_types::MatchRange,
-    },
+    platform::macos::{is_text_of_line_wrapped, GetVia},
+    utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
@@ -28,7 +23,6 @@ use super::{
         get_char_rectangle_from_text_index, get_code_block_parent,
         get_indexes_of_first_and_last_char_in_node, get_text_index_of_left_most_char_in_range,
         length_to_code_block_body_start, only_whitespace_on_line_until_position,
-        rectanges_of_wrapped_line,
     },
 };
 
@@ -40,7 +34,6 @@ pub struct BracketHighlight {
 }
 
 impl FeatureBase for BracketHighlight {
-    // TODO: Need to set results to none instead of returning early.
     fn compute(
         &mut self,
         code_document: &CodeDocument,
@@ -122,6 +115,7 @@ impl FeatureBase for BracketHighlight {
         self.visualization_results = Some(self.calculate_visualization_results(code_document)?);
 
         self.publish_visualization(code_document);
+
         Ok(())
     }
 
@@ -133,6 +127,9 @@ impl FeatureBase for BracketHighlight {
 
     fn deactivate(&mut self) -> Result<(), FeatureError> {
         self.is_activated = false;
+
+        self.compute_results = None;
+        self.visualization_results = None;
 
         Ok(())
     }
@@ -146,11 +143,11 @@ fn get_left_most_char_position(
     line_closing_char: &PositionAndIndex,
 ) -> Result<Option<LogicalPosition>, BracketHighlightError> {
     // Elbow needed because the open and closing bracket are on different lines
-    let next_row_index = get_index_of_next_row(line_opening_char.index, &text_content)
-        .ok_or(anyhow!(
+    let next_row_index = get_index_of_next_row(line_opening_char.index, &text_content).ok_or(
+        BracketHighlightError::GenericError(anyhow!(
             "Malformed text content; could not find another row"
-        ))
-        .into()?;
+        )),
+    )?;
 
     let left_most_char_index = get_text_index_of_left_most_char_in_range(
         TextRange {
@@ -159,10 +156,9 @@ fn get_left_most_char_position(
         },
         &text_content,
     )
-    .ok_or(anyhow!(
-        "Malformed text content; could not get text index of left-most char in range"
-    ))
-    .into()?;
+    .ok_or(BracketHighlightError::GenericError(anyhow!(
+        "Malformed text content; could not find another row"
+    )))?;
 
     match get_char_rectangle_from_text_index(left_most_char_index)? {
         Some(rectangle) => Ok(Some(rectangle.origin)),
@@ -258,11 +254,12 @@ impl BracketHighlight {
             &line_closing_char,
         )? {
             None => {
+                // Case: elbow is not within the visible_text_range of Xcode
                 return Ok(BracketHighlightResults {
                     lines: BracketHighlightLines {
                         start: line_start_point,
                         end: line_end_point,
-                        elbow: Some(estimate_elbow()), // TODO: Do we need to calculate the bottom line top?
+                        elbow: Some(Elbow::EstimatedElbowOffset(0.0)),
                     },
                     boxes: BracketHighlightBoxPair {
                         opening_bracket: opening_bracket_rect,
@@ -314,7 +311,7 @@ impl BracketHighlight {
 
     fn publish_visualization(&self, code_document: &CodeDocument) {
         // TODO: Use proper event syntax
-        let _ = code_document.app_handle.emit_to(
+        let _ = app_handle().emit_to(
             &AppWindow::CodeOverlay.to_string(),
             &ChannelList::BracketHighlightResults.to_string(),
             &self.visualization_results,

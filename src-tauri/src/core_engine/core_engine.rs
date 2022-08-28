@@ -5,6 +5,9 @@ use parking_lot::Mutex;
 use crate::{app_handle, CORE_ENGINE_ACTIVE_AT_STARTUP};
 
 use super::{
+    features::{
+        BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, SwiftFormatter,
+    },
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     CodeDocument,
 };
@@ -19,6 +22,9 @@ pub struct CoreEngine {
     /// List of open code documents.
     code_documents: CodeDocumentsArcMutex,
 
+    /// Features include bracket highlighting, docs generation and formatters.
+    features: Vec<Feature>,
+
     /// Identifier indicating if the app is currently active and supposed to give suggestions
     engine_active: bool,
 }
@@ -29,6 +35,11 @@ impl CoreEngine {
             app_handle: app_handle(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
             engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            features: vec![
+                Feature::BracketHighlighting(BracketHighlight::new()),
+                Feature::Formatter(SwiftFormatter::new()),
+                Feature::DocsGeneration(DocsGenerator::new()),
+            ],
         }
     }
 
@@ -47,11 +58,30 @@ impl CoreEngine {
 
         if engine_active_status {
             // Activate features (currently nothing needs to be done)
-        } else {
-            // Deactivate features
-            for code_document in code_documents.values_mut() {
-                code_document.deactivate_features();
+            for feature in &mut self.features {
+                feature.activate();
             }
+        } else {
+            // Activate features (currently nothing needs to be done)
+            for feature in &mut self.features {
+                feature.deactivate();
+            }
+        }
+    }
+
+    pub fn compute_features(&mut self, code_document: &CodeDocument, trigger: &CoreEngineTrigger) {
+        for feature in &mut self.features {
+            feature.compute(code_document, trigger);
+        }
+    }
+
+    pub fn update_feature_visualizations(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) {
+        for feature in &mut self.features {
+            feature.update_visualization(code_document, trigger);
         }
     }
 

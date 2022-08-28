@@ -29,6 +29,8 @@ pub enum XcodeError {
     CustomError(String),
     #[error("Calling macOS AX API failed.")]
     AXError(#[source] anyhow::Error),
+    #[error("Something failed.")]
+    GenericError(#[source] anyhow::Error),
 }
 
 pub fn generate_axui_element_hash(ui_element: &AXUIElement) -> usize {

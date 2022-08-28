@@ -2,11 +2,8 @@ use tree_sitter::Node;
 
 use crate::{
     core_engine::{utils::XcodeText, TextPosition, TextRange},
-    platform::macos::{
-        calc_rectangles_and_line_matches, get_bounds_for_TextRange, get_text_range_of_line,
-        is_text_of_line_wrapped, GetVia, XcodeError,
-    },
-    utils::{geometry::LogicalFrame, rule_types::MatchRange},
+    platform::macos::{get_bounds_for_TextRange, GetVia, XcodeError},
+    utils::geometry::LogicalFrame,
 };
 
 use super::BracketHighlightError;
@@ -135,31 +132,6 @@ pub fn get_indexes_of_first_and_last_char_in_node(
     Err(BracketHighlightError::GenericError(anyhow::Error::msg(
         "Failed to get indexes of first and last char in node",
     )))
-}
-
-// This function returns the rectangles of a wrapped line
-pub fn rectangles_of_wrapped_line(
-    row: usize,
-    content: &XcodeText,
-) -> Result<Vec<LogicalFrame>, BracketHighlightError> {
-    let row = is_text_of_line_wrapped(row, &GetVia::Current)
-        .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
-
-    if !row.0 {
-        return Ok(vec![row.]);
-    }
-
-    // line is wrapped
-    let text_range = get_text_range_of_line(row, &GetVia::Current)
-        .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
-
-    if let Some(match_range) = MatchRange::from_text_and_range(&content, text_range) {
-        if let Ok((rectangles, _)) =
-            calc_rectangles_and_line_matches(&match_range, &GetVia::Current)
-        {
-            return rectangles;
-        }
-    }
 }
 
 pub fn only_whitespace_on_line_until_position(
@@ -332,11 +304,8 @@ mod tests {
     #[cfg(test)]
     mod get_left_most_column_in_rows {
         use crate::core_engine::{
-            features::bracket_highlight::utils::{
-                get_text_index_of_left_most_char_in_range, IndexAndRow,
-            },
-            utils::XcodeText,
-            TextRange,
+            features::bracket_highlight::utils::get_text_index_of_left_most_char_in_range,
+            utils::XcodeText, TextRange,
         };
 
         fn test_fn(text: &str, index: usize, length: usize, expected: Option<usize>) {

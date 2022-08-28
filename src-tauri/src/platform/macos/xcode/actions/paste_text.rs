@@ -1,12 +1,14 @@
 use accessibility::{AXUIElement, AXUIElementAttributes};
-use accessibility_sys::pid_t;
 use core_foundation::string::CFString;
 use enigo::{Enigo, Key, KeyboardControllable};
-use tauri::{ClipboardManager, Error};
+use tauri::ClipboardManager;
 
 use crate::{
-    platform::macos::{get_selected_text_range, set_selected_text_range, GetVia},
     core_engine::TextRange,
+    platform::macos::{
+        get_selected_text_range, internal::get_focused_uielement, set_selected_text_range, GetVia,
+        XcodeError,
+    },
 };
 
 /// A function that pastes the clipboard content into the textarea of the Xcode editor.
@@ -25,11 +27,14 @@ use crate::{
 /// Might returns a Tauri Error.
 pub async fn paste_clipboard_text(
     app_handle: &tauri::AppHandle,
-    pid: pid_t,
+    get_via: &GetVia,
     text: Option<&String>,
-) -> Result<(), Error> {
+    add_linebreak_with_enter: bool,
+) -> Result<(), XcodeError> {
     let mut clipboard = app_handle.clipboard_manager();
-    let preserve_old_clipboard = clipboard.read_text()?;
+    let preserve_old_clipboard = clipboard
+        .read_text()
+        .map_err(|err| XcodeError::GenericError(err.into()))?;
 
     // When not pasting from clipboard but with a text argument,
     // we add a linebreak after the pasted text block. Unfortunately, in Xcode just adding a linebreak
@@ -38,11 +43,14 @@ pub async fn paste_clipboard_text(
     // To prevent this, we add a whitespace character after the linebreak and erase it after the paste.
     if let Some(text) = text {
         let text_to_paste = format!("{}\n ", text);
-        clipboard.write_text(text_to_paste)?;
+        clipboard
+            .write_text(text_to_paste)
+            .map_err(|err| XcodeError::GenericError(err.into()))?;
     }
 
-    // Perform the paste operation
-    let app_ui_element = AXUIElement::application(pid);
+    let app_ui_element = get_focused_uielement(get_via)?
+        .focused_application()
+        .map_err(|err| XcodeError::AXError(err.into()))?;
     let _ = perform_paste_xcode_ax_api(&app_ui_element);
 
     if text.is_some() {
@@ -85,7 +93,7 @@ pub async fn paste_clipboard_text(
 /// * `restore_cursor`: if true, the cursor position will be restored after the text is replaced
 pub async fn replace_range_with_clipboard_text(
     app_handle: &tauri::AppHandle,
-    pid: pid_t,
+    get_via: &GetVia,
     range: &TextRange,
     text: Option<&String>,
     restore_cursor: bool,
@@ -93,7 +101,7 @@ pub async fn replace_range_with_clipboard_text(
     let mut preserved_cursor_position: Option<TextRange> = None;
 
     if restore_cursor {
-        if let Ok(range) = get_selected_text_range(&GetVia::Pid(pid)) {
+        if let Ok(range) = get_selected_text_range(get_via) {
             preserved_cursor_position = Some(range);
         } else {
             // Case: an error was thrown while attempting to obtain the cursor position
@@ -101,13 +109,13 @@ pub async fn replace_range_with_clipboard_text(
         };
     }
 
-    if set_selected_text_range(&range, &GetVia::Pid(pid)).is_ok() {
-        let _ = paste_clipboard_text(&app_handle, pid, text).await;
+    if set_selected_text_range(&range, get_via).is_ok() {
+        let _ = paste_clipboard_text(&app_handle, get_via, text).await;
     }
 
     if restore_cursor {
         if let Some(range) = preserved_cursor_position {
-            let _ = set_selected_text_range(&range, &GetVia::Pid(pid));
+            let _ = set_selected_text_range(&range, get_via);
         }
     }
 }
