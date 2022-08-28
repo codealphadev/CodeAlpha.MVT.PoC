@@ -25,7 +25,7 @@ pub struct MatchRange {
 }
 
 impl MatchRange {
-    pub fn from_text_and_range(text: &XcodeText, range: TextRange) -> Option<Self> {
+    pub fn from_text_and_range(text: &XcodeText, range: &TextRange) -> Option<Self> {
         if text.len() < range.index + range.length {
             return None;
         }

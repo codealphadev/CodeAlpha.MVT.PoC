@@ -26,9 +26,8 @@ fn code_block_kinds_with_declaration() -> Vec<&'static str> {
 
 pub fn get_char_rectangle_from_text_index(
     index: usize,
-    window_uid: usize,
 ) -> Result<Option<LogicalFrame>, BracketHighlightError> {
-    match get_bounds_for_TextRange(&TextRange { index, length: 1 }, &GetVia::Hash(window_uid)) {
+    match get_bounds_for_TextRange(&TextRange { index, length: 1 }, &GetVia::Current) {
         Ok(bounds) => Ok(Some(bounds)),
         Err(XcodeError::NotContainedVisibleTextRange) => Ok(None),
         Err(err) => Err(BracketHighlightError::GenericError(err.into())),
@@ -138,30 +137,29 @@ pub fn get_indexes_of_first_and_last_char_in_node(
     )))
 }
 
-pub fn rectanges_of_wrapped_line(
+// This function returns the rectangles of a wrapped line
+pub fn rectangles_of_wrapped_line(
     row: usize,
     content: &XcodeText,
-    textarea_element_hash: usize,
-) -> Vec<LogicalFrame> {
-    if let Ok(is_wrapped) = is_text_of_line_wrapped(row, &GetVia::Hash(textarea_element_hash)) {
-        if is_wrapped.0 {
-            // line is wrapped
-            if let Ok(text_range) =
-                get_text_range_of_line(row, &GetVia::Hash(textarea_element_hash))
-            {
-                if let Some(match_range) = MatchRange::from_text_and_range(&content, text_range) {
-                    if let Ok((rectangles, _)) = calc_rectangles_and_line_matches(
-                        &match_range,
-                        &GetVia::Hash(textarea_element_hash),
-                    ) {
-                        return rectangles;
-                    }
-                }
-            }
-        }
+) -> Result<Vec<LogicalFrame>, BracketHighlightError> {
+    let row = is_text_of_line_wrapped(row, &GetVia::Current)
+        .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
+
+    if !row.0 {
+        return Ok(vec![row.]);
     }
 
-    vec![]
+    // line is wrapped
+    let text_range = get_text_range_of_line(row, &GetVia::Current)
+        .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
+
+    if let Some(match_range) = MatchRange::from_text_and_range(&content, text_range) {
+        if let Ok((rectangles, _)) =
+            calc_rectangles_and_line_matches(&match_range, &GetVia::Current)
+        {
+            return rectangles;
+        }
+    }
 }
 
 pub fn only_whitespace_on_line_until_position(
@@ -187,22 +185,15 @@ pub fn only_whitespace_on_line_until_position(
 }
 
 #[derive(Debug, PartialEq)]
-pub struct LeftMostColumn {
+pub struct IndexAndRow {
     pub index: usize,
     pub row: usize,
 }
 
-/// It takes a range of text and returns the index of the first non-whitespace character in the range
-///
-/// Arguments:
-///
-/// * `range`: TextRange - index should be first index of the lines that should be compared, last index should be end of code bracket
-/// * `text_content`: The entire text content of the file.
-///
-/// Returns:
-///
-/// A LeftMostColumn struct
-pub fn get_left_most_column_in_rows(range: TextRange, text: &XcodeText) -> Option<LeftMostColumn> {
+pub fn get_text_index_of_left_most_char_in_range(
+    range: TextRange,
+    text: &XcodeText,
+) -> Option<usize> {
     if text.len() < range.index + range.length {
         return None;
     }
@@ -222,10 +213,7 @@ pub fn get_left_most_column_in_rows(range: TextRange, text: &XcodeText) -> Optio
 
     if rows_data.len() > 0 {
         let (row_i, index, non_whitespace_column_i) = rows_data[0];
-        return Some(LeftMostColumn {
-            index: index + non_whitespace_column_i,
-            row: row_i,
-        });
+        return Some(index + non_whitespace_column_i);
     }
     None
 }
@@ -344,14 +332,16 @@ mod tests {
     #[cfg(test)]
     mod get_left_most_column_in_rows {
         use crate::core_engine::{
-            features::bracket_highlight::utils::{get_left_most_column_in_rows, LeftMostColumn},
+            features::bracket_highlight::utils::{
+                get_text_index_of_left_most_char_in_range, IndexAndRow,
+            },
             utils::XcodeText,
             TextRange,
         };
 
-        fn test_fn(text: &str, index: usize, length: usize, expected: Option<LeftMostColumn>) {
+        fn test_fn(text: &str, index: usize, length: usize, expected: Option<usize>) {
             assert_eq!(
-                get_left_most_column_in_rows(
+                get_text_index_of_left_most_char_in_range(
                     TextRange { index, length },
                     &XcodeText::from_str(text)
                 ),
@@ -367,7 +357,7 @@ mod tests {
            }",
                 12,
                 33,
-                Some(LeftMostColumn { index: 44, row: 1 }),
+                Some(44),
             );
         }
 
@@ -381,7 +371,7 @@ mod tests {
                   }",
                 12,
                 78,
-                Some(LeftMostColumn { index: 55, row: 1 }),
+                Some(55),
             );
         }
 
@@ -393,7 +383,7 @@ mod tests {
             print(y)}",
                 12,
                 48,
-                Some(LeftMostColumn { index: 51, row: 1 }),
+                Some(51),
             );
         }
 
@@ -406,7 +396,7 @@ mod tests {
                   forKnownProcessID: app.processIdentifier)",
                 11,
                 61,
-                Some(LeftMostColumn { index: 31, row: 2 }),
+                Some(31),
             );
         }
 
