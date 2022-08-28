@@ -14,7 +14,7 @@ use crate::{
         },
         features::docs_generation::mintlify_documentation,
         utils::XcodeText,
-        TextPosition, TextRange,
+        TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
         get_bounds_for_TextRange, get_viewport_frame,
@@ -136,7 +136,11 @@ impl DocsGenerationTask {
         });
     }
 
-    pub fn create_code_annotation(&mut self, text: &XcodeText) -> Result<(), &str> {
+    pub fn create_code_annotation(
+        &mut self,
+        text: &XcodeText,
+        window_uid: WindowUid,
+    ) -> Result<(), &str> {
         if self.tracking_area.is_some() || self.is_frozen() {
             return Err("Task is frozen or tracking");
         }
@@ -148,6 +152,7 @@ impl DocsGenerationTask {
         };
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
+            window_uid: window_uid,
             rectangles,
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,

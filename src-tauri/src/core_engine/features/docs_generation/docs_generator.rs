@@ -142,7 +142,7 @@ impl DocsGenerator {
             // Create a new DocsGenerationTask if there is no task running.
             // We create a new one because the text has changed and code annotation might need to be recomputed
             if !self.is_docs_gen_task_running(&window_uid) {
-                if let Ok(new_task) = self.create_docs_gen_task(text_content) {
+                if let Ok(new_task) = self.create_docs_gen_task(text_content, window_uid) {
                     self.docs_generation_task.insert(window_uid, new_task);
                 }
             } else {
@@ -162,7 +162,7 @@ impl DocsGenerator {
             // Create a new DocsGenerationTask if there is no task running.
             // We create a new one because the cursor might have moved into a new codeblock. In this case we need to create a new code annotation.
             if !self.is_docs_gen_task_running(&window_uid) {
-                if let Ok(new_task) = self.create_docs_gen_task(&text_content) {
+                if let Ok(new_task) = self.create_docs_gen_task(&text_content, window_uid) {
                     self.docs_generation_task.insert(window_uid, new_task);
                 }
             }
@@ -176,6 +176,7 @@ impl DocsGenerator {
     fn create_docs_gen_task(
         &self,
         text_content: &XcodeText,
+        window_uid: WindowUid,
     ) -> Result<DocsGenerationTask, DocsGenerationError> {
         let selected_text_range = &self
             .selected_text_range
@@ -205,7 +206,10 @@ impl DocsGenerator {
             codeblock_text,
         );
 
-        if new_task.create_code_annotation(text_content).is_ok() {
+        if new_task
+            .create_code_annotation(text_content, window_uid)
+            .is_ok()
+        {
             Ok(new_task)
         } else {
             Err(DocsGenerationError::DocsGenTaskCreationFailed)
