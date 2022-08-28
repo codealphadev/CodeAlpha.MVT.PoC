@@ -16,6 +16,14 @@ pub type WindowUid = usize;
 
 pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<WindowUid, CodeDocument>>>;
 
+#[derive(thiserror::Error, Debug)]
+pub enum CoreEngineError {
+    #[error("There exists no CodeDocument with window_uid {0}.")]
+    CodeDocNotFound(WindowUid),
+    #[error("Something went wrong.")]
+    GenericError(#[source] anyhow::Error),
+}
+
 pub struct CoreEngine {
     pub app_handle: tauri::AppHandle,
 
@@ -72,7 +80,15 @@ impl CoreEngine {
         user_interaction_listener(&core_engine);
     }
 
-    pub fn run_features(&mut self, code_doc: &CodeDocument, trigger: &CoreEngineTrigger) {
+    pub fn run_features(&mut self, window_uid: WindowUid, trigger: &CoreEngineTrigger) {
+        let code_documents = self.code_documents().lock();
+
+        let code_doc = if let Some(code_document) = code_documents.get(&window_uid) {
+            code_document
+        } else {
+            return;
+        };
+
         self.compute_features(code_doc, trigger);
         self.update_feature_visualizations(code_doc, trigger);
     }

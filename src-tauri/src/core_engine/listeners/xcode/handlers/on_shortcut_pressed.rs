@@ -11,16 +11,15 @@ pub fn on_editor_shortcut_pressed(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
     msg: &EditorShortcutPressedMessage,
 ) {
-    let core_engine = &mut core_engine_arc.lock();
+    let mut core_engine = core_engine_arc.lock();
 
     // Checking if the engine is active. If not, don't continue.
     if !core_engine.engine_active() {
         return;
     }
 
-    let code_documents = core_engine.code_documents().lock();
-
-    if let Some(code_doc) = code_documents.get_mut(&msg.window_uid) {
-        core_engine.run_features(code_doc, &CoreEngineTrigger::OnShortcutPressed(*msg));
-    }
+    core_engine.run_features(
+        msg.window_uid,
+        &CoreEngineTrigger::OnShortcutPressed(msg.clone()),
+    );
 }

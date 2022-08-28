@@ -15,15 +15,18 @@ pub fn on_selected_text_changed(
 
     let core_engine_active_status = core_engine.engine_active();
 
-    let code_documents = &mut core_engine.code_documents().lock();
+    {
+        let code_documents = &mut core_engine.code_documents().lock();
 
-    if let Some(code_doc) = code_documents.get_mut(&msg.window_uid) {
-        code_doc.set_selected_text_range(msg.index, msg.length);
+        if let Some(code_doc) = code_documents.get_mut(&msg.window_uid) {
+            code_doc.set_selected_text_range(msg.index, msg.length);
 
-        // Checking if the engine is active. If not, don't continue.
-        if !core_engine_active_status {
-            return;
+            // Checking if the engine is active. If not, don't continue.
+            if !core_engine_active_status {
+                return;
+            }
         }
-        core_engine.run_features(code_doc, &CoreEngineTrigger::OnTextSelectionChange);
     }
+
+    core_engine.run_features(msg.window_uid, &CoreEngineTrigger::OnTextSelectionChange);
 }
