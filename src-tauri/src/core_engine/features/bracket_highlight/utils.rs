@@ -3,7 +3,8 @@ use tree_sitter::Node;
 use crate::{
     core_engine::{utils::XcodeText, TextPosition, TextRange},
     platform::macos::{
-        calc_rectangles_and_line_matches, get_text_range_of_line, is_text_of_line_wrapped, GetVia,
+        calc_rectangles_and_line_matches, get_bounds_for_TextRange, get_text_range_of_line,
+        is_text_of_line_wrapped, GetVia, XcodeError,
     },
     utils::{geometry::LogicalFrame, rule_types::MatchRange},
 };
@@ -23,17 +24,14 @@ fn code_block_kinds_with_declaration() -> Vec<&'static str> {
     ]
 }
 
-pub fn rectangles_from_match_range(
-    range: &MatchRange,
-    textarea_element_hash: usize,
-) -> Result<LogicalFrame, BracketHighlightError> {
-    let (rectangles, _) =
-        calc_rectangles_and_line_matches(range, &GetVia::Hash(textarea_element_hash))
-            .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
-    if rectangles.len() == 1 {
-        Ok(rectangles[0].clone())
-    } else {
-        Err(BracketHighlightError::ComputingRectFromMatchRangeFailed)
+pub fn get_char_rectangle_from_text_index(
+    index: usize,
+    window_uid: usize,
+) -> Result<Option<LogicalFrame>, BracketHighlightError> {
+    match get_bounds_for_TextRange(&TextRange { index, length: 1 }, &GetVia::Hash(window_uid)) {
+        Ok(bounds) => Ok(Some(bounds)),
+        Err(XcodeError::NotContainedVisibleTextRange) => Ok(None),
+        Err(err) => Err(BracketHighlightError::GenericError(err.into())),
     }
 }
 
@@ -117,51 +115,26 @@ pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Opti
     parent_node
 }
 
-pub fn get_match_range_of_first_and_last_char_in_node(
+pub fn get_indexes_of_first_and_last_char_in_node(
     node: &Node,
     text: &XcodeText,
     selected_text_index: usize,
-) -> Result<(MatchRange, MatchRange), BracketHighlightError> {
-    if let (Some(first_index), Some(last_index)) = (
+) -> Result<(usize, usize), BracketHighlightError> {
+    if let (Some(mut first_index), Some(last_index)) = (
         get_node_start_index(&node, &text),
         get_node_end_index(&node, &text),
     ) {
-        todo!(); // TODO: why are all these ranges length 1? We don't need to return a range here, just a position
-
-        let mut first_option = MatchRange::from_text_and_range(
-            text,
-            TextRange {
-                index: first_index,
-                length: 1,
-            },
-        );
-        let last_option = MatchRange::from_text_and_range(
-            text,
-            TextRange {
-                index: last_index - 1,
-                length: 1,
-            },
-        );
-
         if let Ok(additional_length) =
             length_to_code_block_body_start(node, text, selected_text_index)
         {
-            first_option = MatchRange::from_text_and_range(
-                text,
-                TextRange {
-                    index: first_index + additional_length.0,
-                    length: 1,
-                },
-            );
+            first_index += additional_length.0;
         }
 
-        if let (Some(first), Some(last)) = (first_option, last_option) {
-            return Ok((first, last));
-        }
+        return Ok((first_index, last_index));
     }
 
     Err(BracketHighlightError::GenericError(anyhow::Error::msg(
-        "needs to be defined",
+        "Failed to get indexes of first and last char in node",
     )))
 }
 
@@ -194,14 +167,10 @@ pub fn rectanges_of_wrapped_line(
 pub fn only_whitespace_on_line_until_position(
     position: TextPosition,
     text: &XcodeText,
-) -> Option<bool> {
+) -> Result<bool, BracketHighlightError> {
     let rows = &text.rows;
-    if rows.len() == 0 {
-        return None;
-    }
-
-    if rows.len() - 1 < position.row {
-        return None;
+    if position.row + 1 > rows.len() {
+        return Err(BracketHighlightError::PositionOutOfBounds);
     }
 
     let row = &rows[position.row];
@@ -211,10 +180,10 @@ pub fn only_whitespace_on_line_until_position(
 
     for c_u16 in row[0..position.column].into_iter() {
         if !XcodeText::char_is_whitespace(c_u16) {
-            return Some(false);
+            return Ok(false);
         }
     }
-    Some(true)
+    Ok(true)
 }
 
 #[derive(Debug, PartialEq)]
@@ -282,7 +251,7 @@ mod tests {
             let text = XcodeText::from_str(text);
             let result =
                 only_whitespace_on_line_until_position(TextPosition { row, column }, &text);
-            assert_eq!(result, expected);
+            assert_eq!(result.ok(), expected);
         }
 
         #[test]

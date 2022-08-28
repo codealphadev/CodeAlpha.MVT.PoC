@@ -8,18 +8,21 @@ use crate::{
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
-    utils::{geometry::LogicalPosition, messaging::ChannelList, rule_types::MatchRange},
+    utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
 use super::{
-    models::{BracketHighlightBracketPair, BracketHighlightElbow, BracketHighlightResults},
+    models::{
+        BracketHighlightBoxPair, BracketHighlightElbow, BracketHighlightLines,
+        BracketHighlightResults,
+    },
     utils::{
-        get_code_block_parent, get_left_most_column_in_rows,
-        get_match_range_of_first_and_last_char_in_node, length_to_code_block_body_start,
-        only_whitespace_on_line_until_position, rectanges_of_wrapped_line,
-        rectangles_from_match_range,
+        get_char_rectangle_from_text_index, get_code_block_parent,
+        get_indexes_of_first_and_last_char_in_node, get_left_most_column_in_rows,
+        length_to_code_block_body_start, only_whitespace_on_line_until_position,
+        rectanges_of_wrapped_line,
     },
 };
 pub struct BracketHighlight {
@@ -36,18 +39,17 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated {
+        if !self.is_activated || !should_compute(trigger) {
             return Ok(());
         }
 
-        if !should_compute(trigger) {
-            return Ok(());
-        }
-        let selected_text_range = self
-            .code_document
-            .selected_text_range()
-            .as_ref()
-            .ok_or(BracketHighlightError::InsufficientContext)?; // TODO: Return None? Which of these should be finished?
+        let selected_text_range = match code_document.selected_text_range() {
+            Some(range) => range,
+            None => {
+                self.compute_results = None;
+                return Ok(());
+            }
+        };
 
         let text_content =
             code_document
@@ -57,16 +59,7 @@ impl FeatureBase for BracketHighlight {
                     BracketHighlightError::InsufficientContext.into(),
                 ))?;
 
-        let selected_text_range = match code_document.selected_text_range() {
-            Some(range) => range,
-            None => {
-                self.compute_results = None;
-                todo!("Is this a case"); // TODO: Refactor into separate function?
-                return Ok(());
-            }
-        };
-
-        let code_block_node = match self.get_selected_code_block_node(code_document) {
+        let code_block_node = match get_selected_code_block_node(code_document) {
             Ok(node) => {
                 if let Some(node) = node {
                     node
@@ -81,22 +74,25 @@ impl FeatureBase for BracketHighlight {
             }
         };
 
-        let (box_positions, box_match_range) =
-            get_start_end_positions_and_ranges(&code_block_node, text_content, selected_text_range);
+        let (box_positions, box_match_range) = get_start_end_positions_and_indexes(
+            &code_block_node,
+            text_content,
+            selected_text_range,
+        );
 
         let (line_positions, line_match_range) = get_line_start_end_positions_and_ranges(
             &code_block_node,
-            &box_match_range,
-            &box_positions,
+            box_match_range,
+            box_positions,
             text_content,
             selected_text_range,
         );
 
         self.compute_results = Some(BracketHighlightComputeResults {
             box_positions,
-            box_match_ranges: box_match_range,
+            box_text_indexes: box_match_range,
             line_positions,
-            line_match_ranges: line_match_range,
+            line_text_indexes: line_match_range,
         });
 
         return Ok(());
@@ -107,7 +103,7 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated {
+        if !self.should_update_visualization(trigger) || !self.is_activated {
             return Ok(());
         }
 
@@ -119,72 +115,51 @@ impl FeatureBase for BracketHighlight {
                     BracketHighlightError::InsufficientContext.into(),
                 ))?;
 
-        let textarea_element_hash = code_document.editor_window_props().uielement_hash;
+        let window_uid = code_document.editor_window_props().window_uid;
 
         let BracketHighlightComputeResults {
-            box_positions,
-            box_match_ranges,
+            box_positions: _,
+            box_text_indexes,
             line_positions,
-            line_match_ranges,
-        } = &self.compute_results.ok_or(FeatureError::GenericError(
-            BracketHighlightError::UpdatingVisualizationBeforeComputing.into(),
-        ))?;
+            line_text_indexes,
+        } = &self
+            .compute_results
+            .as_ref()
+            .ok_or(FeatureError::GenericError(
+                BracketHighlightError::UpdatingVisualizationBeforeComputing.into(),
+            ))?;
 
         let (first_line_rectangle, last_line_rectangle, first_box_rectangle, last_box_rectangle) = (
-            rectangles_from_match_range(&line_match_ranges.start, textarea_element_hash),
-            rectangles_from_match_range(&line_match_ranges.end, textarea_element_hash),
-            rectangles_from_match_range(&box_match_ranges.start, textarea_element_hash),
-            rectangles_from_match_range(&box_match_ranges.end, textarea_element_hash),
-        );
-
-        let line_pair = BracketHighlightBracketPair::new(
-            box_match_ranges.start.range,
-            first_line_rectangle,
-            line_positions.start,
-            box_match_ranges.end.range,
-            last_line_rectangle,
-            line_positions.end,
-        );
-
-        let box_pair = BracketHighlightBracketPair::new(
-            box_match_ranges.start.range,
-            first_box_rectangle,
-            box_positions.start,
-            box_match_ranges.end.range,
-            last_box_rectangle,
-            box_positions.end,
+            get_char_rectangle_from_text_index(line_text_indexes.start, window_uid)?,
+            get_char_rectangle_from_text_index(line_text_indexes.end, window_uid)?,
+            get_char_rectangle_from_text_index(box_text_indexes.start, window_uid)?,
+            get_char_rectangle_from_text_index(box_text_indexes.end, window_uid)?,
         );
 
         // Check if elbow is needed
         let mut elbow_origin = None;
         let mut elbow_origin_x_left_most = false;
-        let mut elbow = None;
 
-        // Elbow needed because the open and closing bracket are on different lines
-        let is_line_on_same_row = line_positions.start.row == line_positions.end.row;
-        if !is_line_on_same_row {
-            let first_line_bracket_range = line_match_ranges.start.range.clone();
+        let is_line_spans_multiple_rows = line_positions.start.row != line_positions.end.row;
+        if is_line_spans_multiple_rows {
+            // Elbow needed because the open and closing bracket are on different lines
             if let Some(next_row_index) =
-                get_index_of_next_row(first_line_bracket_range.index, &text_content)
+                get_index_of_next_row(line_text_indexes.start, &text_content)
             {
                 if let Some(left_most_column) = get_left_most_column_in_rows(
                     TextRange {
                         index: next_row_index,
-                        length: line_match_ranges.end.range.index - next_row_index + 1,
+                        length: line_text_indexes.end - next_row_index + 1,
                     },
                     &text_content,
                 ) {
-                    if let (Some(elbow_match_rectangle), Some(line_pair_last)) = (
-                        get_bounds_of_TextRange(
-                            &TextRange {
-                                index: left_most_column.index,
-                                length: 1,
-                            },
-                            textarea_element_hash,
-                        ),
-                        line_pair.last,
+                    // Use left-most column in the code block as the elbow origin
+                    // TODO: Refactor this logic to use columns etc.
+                    if let (Some(elbow_match_rectangle), Some(last_line_rectangle)) = (
+                        get_char_rectangle_from_text_index(left_most_column.index, window_uid)?,
+                        last_line_rectangle,
                     ) {
-                        if line_pair_last.rectangle.origin.x > elbow_match_rectangle.origin.x {
+                        if last_line_rectangle.origin.x > elbow_match_rectangle.origin.x {
                             // Closing bracket is further to the right than the elbow point
                             elbow_origin = Some(LogicalPosition {
                                 x: elbow_match_rectangle.origin.x,
@@ -205,11 +180,8 @@ impl FeatureBase for BracketHighlight {
             }
         }
 
-        let first_line_wrapped_rectangles = rectanges_of_wrapped_line(
-            line_positions.start.row,
-            &text_content,
-            textarea_element_hash,
-        );
+        let first_line_wrapped_rectangles =
+            rectanges_of_wrapped_line(line_positions.start.row, &text_content, window_uid);
         if first_line_wrapped_rectangles.len() > 1 {
             if let (
                 Some(last_wrapped_line_rectangle),
@@ -230,43 +202,37 @@ impl FeatureBase for BracketHighlight {
         }
 
         // Check if bottom line should be to the top or bottom of last line rectangle
-        let elbow_bottom_line_top = if let Some(elbow_bottom_line_top) =
-            only_whitespace_on_line_until_position(
-                TextPosition {
-                    row: line_positions.end.row,
-                    column: if line_positions.end.column == 0 {
-                        0
-                    } else {
-                        line_positions.end.column - 1
-                    },
+        let elbow_bottom_line_top = only_whitespace_on_line_until_position(
+            TextPosition {
+                row: line_positions.end.row,
+                column: if line_positions.end.column == 0 {
+                    0
+                } else {
+                    line_positions.end.column - 1
                 },
-                &text_content,
-            ) {
-            elbow_bottom_line_top
+            },
+            &text_content,
+        )?;
+
+        let elbow = if elbow_origin_x_left_most {
+            Some(BracketHighlightElbow::LeftMost)
+        } else if let Some(elbow_origin) = elbow_origin {
+            Some(BracketHighlightElbow::ElbowPoint(elbow_origin))
         } else {
-            self.visualization_results = None;
-            return;
+            None
         };
 
-        if elbow_origin_x_left_most {
-            elbow = Some(BracketHighlightElbow {
-                origin: None,
-                bottom_line_top: elbow_bottom_line_top,
-                origin_x_left_most: true,
-            });
-        } else if let Some(elbow_origin) = elbow_origin {
-            elbow = Some(BracketHighlightElbow {
-                origin: Some(elbow_origin),
-                bottom_line_top: elbow_bottom_line_top,
-                origin_x_left_most: false,
-            });
-        }
-
-        todo!(); // Refactor visualization results
         self.visualization_results = Some(BracketHighlightResults {
-            lines: line_pair,
-            elbow,
-            boxes: box_pair,
+            lines: BracketHighlightLines {
+                first: first_line_rectangle,
+                last: last_line_rectangle,
+                elbow,
+                bottom_line_top: elbow_bottom_line_top,
+            },
+            boxes: BracketHighlightBoxPair {
+                first: first_box_rectangle,
+                last: last_box_rectangle,
+            },
         });
 
         self.publish_visualization(code_document);
@@ -305,64 +271,76 @@ impl BracketHighlight {
         todo!();
     }
 
-    // TODO: Move to code document?
-    fn get_selected_code_block_node(
-        &self,
-        code_document: &CodeDocument,
-    ) -> Result<Option<Node>, BracketHighlightError> {
-        let text_content = code_document
-            .text_content()
-            .as_ref()
-            .ok_or(BracketHighlightError::InsufficientContext)?;
-
-        let selected_text_range = match code_document.selected_text_range() {
-            Some(selected_text_range) => selected_text_range,
-            None => return Ok(None),
-        };
-
-        let selected_node = match code_document
-            .syntax_tree()
-            .get_selected_code_node(selected_text_range)
-        {
-            None => return Ok(None),
-            Some(node) => node,
-        };
-
-        let code_block_node = match get_code_block_parent(selected_node, false) {
-            None => return Ok(None),
-            Some(node) => node,
-        };
-
-        let length_to_bad_code_block_start = length_to_code_block_body_start(
-            &code_block_node,
-            text_content,
-            selected_text_range.index,
-        );
-
-        // If selected block is in bad code block declaration, then get parent
-        if length_to_bad_code_block_start.is_ok() && length_to_bad_code_block_start.unwrap().1 {
-            code_block_node = match get_code_block_parent(code_block_node, true) {
-                None => return Ok(None),
-                Some(node) => node,
-            };
+    fn should_compute(&self, trigger: &CoreEngineTrigger) -> bool {
+        match trigger {
+            CoreEngineTrigger::OnTextContentChange => true,
+            CoreEngineTrigger::OnTextSelectionChange => true,
+            _ => false,
         }
-        return Ok(Some(code_block_node));
     }
-}
-fn should_compute(trigger: &CoreEngineTrigger) -> bool {
-    match trigger {
-        CoreEngineTrigger::OnTextContentChange => true,
-        CoreEngineTrigger::OnTextSelectionChange => true,
-        CoreEngineTrigger::OnVisibleTextRangeChange => todo!(),
-        _ => false,
+
+    fn should_update_visualization(&self, trigger: &CoreEngineTrigger) -> bool {
+        match trigger {
+            CoreEngineTrigger::OnViewportDimensionsChange => true,
+            // TODO: Make more efficient? Only update visualizations which are missing
+            CoreEngineTrigger::OnVisibleTextRangeChange => {
+                todo!();
+                /*Tif let Some(BracketHighlightResults { lines, boxes }) = self.visualization_results {
+                    if lines.first.is_none()
+                        || lines.last.is_none()
+                        || boxes.first.is_none()
+                        || boxes.last.is_none()
+                        || lines.elbow.is_none()
+                    {
+                        return true;
+                    }
+                } else {*/
+                true
+                //}
+            }
+            _ => false,
+        }
     }
 }
 
-fn should_update_visualization(trigger: &CoreEngineTrigger) -> bool {
-    match trigger {
-        CoreEngineTrigger::OnViewportDimensionsChange => true,
-        _ => false,
+// TODO: Move to code document?
+fn get_selected_code_block_node(
+    code_document: &CodeDocument,
+) -> Result<Option<Node>, BracketHighlightError> {
+    let text_content = code_document
+        .text_content()
+        .as_ref()
+        .ok_or(BracketHighlightError::InsufficientContext)?;
+
+    let selected_text_range = match code_document.selected_text_range() {
+        Some(selected_text_range) => selected_text_range,
+        None => return Ok(None),
+    };
+
+    let selected_node = match code_document
+        .syntax_tree()
+        .get_selected_code_node(selected_text_range)
+    {
+        None => return Ok(None),
+        Some(node) => node,
+    };
+
+    let mut code_block_node = match get_code_block_parent(selected_node, false) {
+        None => return Ok(None),
+        Some(node) => node,
+    };
+
+    let length_to_bad_code_block_start =
+        length_to_code_block_body_start(&code_block_node, text_content, selected_text_range.index);
+
+    // If selected block is in bad code block declaration, then get parent
+    if length_to_bad_code_block_start.is_ok() && length_to_bad_code_block_start.unwrap().1 {
+        code_block_node = match get_code_block_parent(code_block_node, true) {
+            None => return Ok(None),
+            Some(node) => node,
+        };
     }
+    return Ok(Some(code_block_node));
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -375,34 +353,43 @@ pub enum BracketHighlightError {
     ComputingRectFromMatchRangeFailed,
     #[error("Unsupported codeblock.")]
     UnsupportedCodeblock,
+    #[error("Position out of bounds")]
+    PositionOutOfBounds,
     #[error("Something went wrong when executing this BracketHighlighting feature.")]
     GenericError(#[source] anyhow::Error),
 }
 
-// TODO: Do we need this?
-struct StartAndEndMatchRanges {
-    start: MatchRange,
-    end: MatchRange,
+impl From<BracketHighlightError> for FeatureError {
+    fn from(cause: BracketHighlightError) -> Self {
+        FeatureError::GenericError(cause.into())
+    }
+}
+
+#[derive(Copy, Clone)]
+struct StartAndEndTextIndexes {
+    start: usize,
+    end: usize,
 }
 
 struct BracketHighlightComputeResults {
     box_positions: StartAndEndTextPositions,
-    box_match_ranges: StartAndEndMatchRanges,
+    box_text_indexes: StartAndEndTextIndexes,
     line_positions: StartAndEndTextPositions,
-    line_match_ranges: StartAndEndMatchRanges,
+    line_text_indexes: StartAndEndTextIndexes,
 }
 
+#[derive(Copy, Clone)]
 struct StartAndEndTextPositions {
     start: TextPosition,
     end: TextPosition,
 }
 
-fn get_start_end_positions_and_ranges(
+fn get_start_end_positions_and_indexes(
     node: &Node,
     text_content: &XcodeText,
     selected_text_range: &TextRange,
-) -> (StartAndEndTextPositions, StartAndEndMatchRanges) {
-    let match_ranges = match get_match_range_of_first_and_last_char_in_node(
+) -> (StartAndEndTextPositions, StartAndEndTextIndexes) {
+    let match_ranges = match get_indexes_of_first_and_last_char_in_node(
         &node,
         &text_content,
         selected_text_range.index,
@@ -411,13 +398,13 @@ fn get_start_end_positions_and_ranges(
         Err(_) => todo!(),
     };
 
-    let mut box_positions: StartAndEndTextPositions = StartAndEndTextPositions {
+    let box_positions: StartAndEndTextPositions = StartAndEndTextPositions {
         start: TextPosition::from_TSPoint(&node.start_position()),
         end: TextPosition::from_TSPoint(&node.end_position()),
     };
     return (
         box_positions,
-        StartAndEndMatchRanges {
+        StartAndEndTextIndexes {
             start: match_ranges.0,
             end: match_ranges.1,
         },
@@ -426,21 +413,20 @@ fn get_start_end_positions_and_ranges(
 
 fn get_line_start_end_positions_and_ranges(
     code_block_node: &Node,
-    box_match_ranges: &StartAndEndMatchRanges,
-    box_positions: &StartAndEndTextPositions,
+    box_match_ranges: StartAndEndTextIndexes,
+    box_positions: StartAndEndTextPositions,
     text_content: &XcodeText,
     selected_text_range: &TextRange,
-) -> (StartAndEndTextPositions, StartAndEndMatchRanges) {
-    let line_brackets_match_ranges = *box_match_ranges.clone();
-    let line_positions = *box_positions.clone();
+) -> (StartAndEndTextPositions, StartAndEndTextIndexes) {
+    let line_brackets_match_ranges = box_match_ranges;
+    let line_positions = box_positions;
 
-    let is_touching_left_first_char =
-        selected_text_range.index == line_brackets_match_ranges.start.range.index; // TODO
+    let is_touching_left_first_char = selected_text_range.index == line_brackets_match_ranges.start; // TODO
 
     if is_touching_left_first_char {
         if let Some(parent_node) = code_block_node.parent() {
             if let Some(code_block_parent_node) = get_code_block_parent(parent_node, true) {
-                return get_start_end_positions_and_ranges(
+                return get_start_end_positions_and_indexes(
                     &code_block_parent_node,
                     text_content,
                     selected_text_range,
