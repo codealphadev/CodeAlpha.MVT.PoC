@@ -3,9 +3,12 @@ use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
-use crate::platform::macos::{
-    models::editor::EditorWindowMovedMessage, xcode::XCodeObserverState, AXEventXcode,
-    EventViewport, GetVia,
+use crate::{
+    platform::macos::{
+        models::editor::EditorWindowMovedMessage, xcode::XCodeObserverState, AXEventXcode,
+        EventViewport, GetVia,
+    },
+    utils::geometry::LogicalSize,
 };
 
 /// Notify Tauri that an editor window has been moved
@@ -44,6 +47,10 @@ pub fn notify_window_moved(
             window_size: tauri::LogicalSize {
                 width: size.width,
                 height: size.height,
+            },
+            origin_delta: LogicalSize {
+                width: origin.x - window.2.x,
+                height: origin.y - window.2.y,
             },
         };
 

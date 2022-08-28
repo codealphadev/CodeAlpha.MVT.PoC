@@ -3,6 +3,7 @@ use core_foundation::base::{CFEqual, TCFType};
 
 use crate::platform::macos::{
     get_viewport_frame,
+    internal::get_uielement_frame,
     models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
     xcode::XCodeObserverState,
     AXEventXcode, EventViewport, GetVia,
@@ -59,19 +60,24 @@ pub fn notify_uielement_focused(
             EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
                 .publish_to_tauri(&xcode_observer_state.app_handle);
 
-            if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
+            if let (Ok(code_section_frame), Ok(window_frame)) = (
+                get_viewport_frame(&GetVia::Current),
+                get_uielement_frame(&window.1),
+            ) {
                 // Update EditorWindowResizedMessage
-
                 uielement_focused_msg.focused_ui_element = FocusedUIElement::Textarea;
                 uielement_focused_msg.textarea_position =
                     Some(code_section_frame.origin.as_tauri_LogicalPosition());
                 uielement_focused_msg.textarea_size =
                     Some(code_section_frame.size.as_tauri_LogicalSize());
 
+                // Get the window dimensions
+
                 // update the window's textarea size
                 let new_tuple = (
                     window.0,
                     window.1.clone(),
+                    window_frame.origin.as_tauri_LogicalPosition(),
                     Some(code_section_frame.size.as_tauri_LogicalSize()),
                 );
 
