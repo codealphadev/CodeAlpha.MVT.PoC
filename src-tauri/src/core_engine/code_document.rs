@@ -98,9 +98,6 @@ impl CodeDocument {
             return;
         }
 
-        self.text = Some(new_content);
-        self.file_path = file_path.clone();
-
         // Update Rule Properties
         for rule in self.rules_mut() {
             match rule {
@@ -112,7 +109,9 @@ impl CodeDocument {
             }
         }
 
+        self.file_path = file_path.clone();
         self.syntax_tree.parse(&new_content);
+        self.text = Some(new_content);
     }
 
     pub fn process_rules(&mut self) {
