@@ -122,7 +122,8 @@ impl DocsGenerationTask {
                     &docs_insertion_point_move_copy,
                     Some(&mintlify_response.docstring),
                     true,
-                );
+                )
+                .await;
 
                 // Publish annotation_rect and codeblock_rect to frontend
                 EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {

@@ -1,6 +1,7 @@
 use accessibility::{AXUIElement, AXUIElementAttributes};
 use accessibility_sys::pid_t;
 use core_foundation::string::CFString;
+use enigo::{Enigo, Key, KeyboardControllable};
 use tauri::{ClipboardManager, Error};
 
 use crate::{
@@ -22,31 +23,42 @@ use crate::{
 /// * `text`: optional - The text to paste into the text area. If provided, the clipboard will be preserved.
 ///
 /// Might returns a Tauri Error.
-pub fn paste_clipboard_text(
+pub async fn paste_clipboard_text(
     app_handle: &tauri::AppHandle,
     pid: pid_t,
     text: Option<&String>,
-    add_linebreak_with_enter: bool,
 ) -> Result<(), Error> {
     let mut clipboard = app_handle.clipboard_manager();
     let preserve_old_clipboard = clipboard.read_text()?;
 
+    // When not pasting from clipboard but with a text argument,
+    // we add a linebreak after the pasted text block. Unfortunately, in Xcode just adding a linebreak
+    // doesn't work for us, because the subsequent textblock will always be moving to the first column,
+    // leaving the code badly formatted after pasting.
+    // To prevent this, we add a whitespace character after the linebreak and erase it after the paste.
     if let Some(text) = text {
-        let text_to_paste = if add_linebreak_with_enter {
-            format!("{}\n", text)
-        } else {
-            text.clone()
-        };
+        let text_to_paste = format!("{}\n ", text);
         clipboard.write_text(text_to_paste)?;
     }
 
+    // Perform the paste operation
     let app_ui_element = AXUIElement::application(pid);
     let _ = perform_paste_xcode_ax_api(&app_ui_element);
 
+    if text.is_some() {
+        // Erase the added whitespace character
+        // Press the BACKSPACE key
+        let delay = std::time::Duration::from_millis(1);
+        tokio::time::sleep(delay).await;
+
+        let mut enigo = Enigo::new();
+        enigo.key_down(Key::Backspace);
+    }
+
+    // Restore the old clipboard content
     if let Some(text) = preserve_old_clipboard {
         tauri::async_runtime::spawn(async move {
-            use std::time;
-            let delay = time::Duration::from_millis(150);
+            let delay = std::time::Duration::from_millis(120);
             tokio::time::sleep(delay).await;
 
             let _ = clipboard.write_text(text);
@@ -71,7 +83,7 @@ pub fn paste_clipboard_text(
 /// * `text`: The text to replace the range with. If this is None, the text from the clipboard will be
 /// used.
 /// * `restore_cursor`: if true, the cursor position will be restored after the text is replaced
-pub fn replace_range_with_clipboard_text(
+pub async fn replace_range_with_clipboard_text(
     app_handle: &tauri::AppHandle,
     pid: pid_t,
     range: &TextRange,
@@ -90,7 +102,7 @@ pub fn replace_range_with_clipboard_text(
     }
 
     if set_selected_text_range(&range, &GetVia::Pid(pid)).is_ok() {
-        let _ = paste_clipboard_text(&app_handle, pid, text, true);
+        let _ = paste_clipboard_text(&app_handle, pid, text).await;
     }
 
     if restore_cursor {
