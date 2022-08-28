@@ -3,9 +3,12 @@ use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
 
-use crate::platform::macos::{
-    get_viewport_frame, models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState,
-    AXEventXcode, EventViewport, GetVia,
+use crate::{
+    platform::macos::{
+        get_viewport_frame, models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState,
+        AXEventXcode, EventViewport, GetVia,
+    },
+    utils::geometry::LogicalSize,
 };
 
 /// Notify Tauri that an editor window has been resized
@@ -55,6 +58,10 @@ pub fn notify_window_resized(
             },
             textarea_position: None,
             textarea_size: None,
+            window_origin_delta: LogicalSize {
+                width: origin.x - window.2.x,
+                height: origin.y - window.2.y,
+            },
         };
 
         if "AXScrollBar" == ui_element.role()? {
@@ -66,7 +73,7 @@ pub fn notify_window_resized(
             let _ = derive_resize_parameters_from_scrollbar(&mut resize_msg, ui_element);
 
             // Avoid spam by checking if the editor textarea dimensions have changed
-            if let (Some(old_size), Some(new_size)) = (window.2, resize_msg.textarea_size) {
+            if let (Some(old_size), Some(new_size)) = (window.3, resize_msg.textarea_size) {
                 if old_size.width as i32 == new_size.width as i32
                     && old_size.height as i32 == new_size.height as i32
                 {
@@ -75,7 +82,12 @@ pub fn notify_window_resized(
                 }
             }
 
-            let new_tuple = (window.0, window.1.clone(), resize_msg.textarea_size.clone());
+            let new_tuple = (
+                window.0,
+                window.1.clone(),
+                resize_msg.window_position,
+                resize_msg.textarea_size.clone(),
+            );
 
             // Update item window_list
             xcode_observer_state

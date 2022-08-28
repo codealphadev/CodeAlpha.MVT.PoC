@@ -23,10 +23,18 @@ use crate::{
     },
 };
 
+type EditorWindowTextareaSize = Option<tauri::LogicalSize<f64>>;
+type EditorWindowOrigin = tauri::LogicalPosition<f64>;
+
 #[derive(Debug, Clone)]
 pub struct XCodeObserverState {
     pub app_handle: tauri::AppHandle,
-    pub window_list: Vec<(usize, AXUIElement, Option<tauri::LogicalSize<f64>>)>,
+    pub window_list: Vec<(
+        usize,
+        AXUIElement,
+        EditorWindowOrigin,
+        EditorWindowTextareaSize,
+    )>,
 }
 
 static EDITOR_XCODE_BUNDLE_ID: &str = "com.apple.dt.Xcode";

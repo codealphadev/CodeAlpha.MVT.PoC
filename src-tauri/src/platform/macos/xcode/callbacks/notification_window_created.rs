@@ -53,10 +53,20 @@ pub fn notify_window_created(
                 // Emit to rust listeners
                 msg.publish_to_tauri(&xcode_observer_state.app_handle);
 
+                // .... sorry, but ... extracting the window origin with a match statement.
+                let window_origin = match msg {
+                    AXEventXcode::EditorWindowCreated(msg) => tauri::LogicalPosition {
+                        x: msg.window_position.x,
+                        y: msg.window_position.y,
+                    },
+                    _ => tauri::LogicalPosition { x: 0.0, y: 0.0 },
+                };
+
                 // Add window to list of windows
                 xcode_observer_state.window_list.push((
                     generate_axui_element_hash(&window),
                     window.clone(),
+                    window_origin,
                     None,
                 ));
 
