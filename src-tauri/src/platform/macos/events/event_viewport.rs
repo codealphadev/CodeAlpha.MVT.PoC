@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{
-    platform::macos::{get_code_document_frame_properties, get_viewport_properties, GetVia},
+    platform::macos::{
+        get_code_document_frame_properties, get_viewport_properties, GetVia, XcodeError,
+    },
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
@@ -43,19 +45,10 @@ impl EventViewport {
         );
     }
 
-    pub fn new_xcode_viewport_update(get_via: &GetVia) -> Self {
-        let viewport_properties = match get_viewport_properties(&get_via) {
-            Ok(properties) => Some(properties),
-            Err(_) => None,
-        };
-        let code_document_frame_properties = match get_code_document_frame_properties(&get_via) {
-            Ok(properties) => Some(properties),
-            Err(_) => None,
-        };
-
-        Self::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
-            viewport_properties,
-            code_document_frame_properties,
-        })
+    pub fn new_xcode_viewport_update(get_via: &GetVia) -> Result<Self, XcodeError> {
+        Ok(Self::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
+            viewport_properties: get_viewport_properties(&get_via)?,
+            code_document_frame_properties: get_code_document_frame_properties(&get_via)?,
+        }))
     }
 }

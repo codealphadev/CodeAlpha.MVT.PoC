@@ -184,7 +184,7 @@ pub fn get_text_index_of_left_most_char_in_range(
     rows_data.sort_by(|a, b| a.2.cmp(&b.2));
 
     if rows_data.len() > 0 {
-        let (row_i, index, non_whitespace_column_i) = rows_data[0];
+        let (_, index, non_whitespace_column_i) = rows_data[0];
         return Some(index + non_whitespace_column_i);
     }
     None

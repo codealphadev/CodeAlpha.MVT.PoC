@@ -77,13 +77,17 @@ impl FeatureBase for SwiftFormatter {
 
     fn activate(&mut self) -> Result<(), FeatureError> {
         self.is_activated = true;
-        // do nothing
         Ok(())
     }
 
     fn deactivate(&mut self) -> Result<(), FeatureError> {
         self.is_activated = false;
-        todo!()
+        Ok(())
+    }
+
+    fn reset(&mut self) -> Result<(), FeatureError> {
+        // Do nothing
+        Ok(())
     }
 }
 

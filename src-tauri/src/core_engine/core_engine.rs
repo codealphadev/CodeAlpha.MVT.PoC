@@ -69,24 +69,35 @@ impl CoreEngine {
         }
     }
 
-    pub fn compute_features(&mut self, code_document: &CodeDocument, trigger: &CoreEngineTrigger) {
-        for feature in &mut self.features {
-            feature.compute(code_document, trigger);
-        }
-    }
-
-    pub fn update_feature_visualizations(
-        &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
-    ) {
-        for feature in &mut self.features {
-            feature.update_visualization(code_document, trigger);
-        }
-    }
-
     pub fn start_core_engine_listeners(core_engine: &Arc<Mutex<CoreEngine>>) {
         xcode_listener(&core_engine);
         user_interaction_listener(&core_engine);
+    }
+
+    pub fn run_features(&mut self, code_doc: &CodeDocument, trigger: &CoreEngineTrigger) {
+        self.compute_features(code_doc, trigger);
+        self.update_feature_visualizations(code_doc, trigger);
+    }
+
+    fn compute_features(&mut self, code_doc: &CodeDocument, trigger: &CoreEngineTrigger) {
+        for feature in &mut self.features {
+            feature.compute(code_doc, trigger);
+        }
+    }
+
+    fn update_feature_visualizations(
+        &mut self,
+        code_doc: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) {
+        for feature in &mut self.features {
+            feature.update_visualization(code_doc, trigger);
+        }
+    }
+
+    pub fn reset_features(&mut self) {
+        for feature in &mut self.features {
+            feature.reset();
+        }
     }
 }

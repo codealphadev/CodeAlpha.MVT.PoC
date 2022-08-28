@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    core_engine::CoreEngine,
+    core_engine::{features::CoreEngineTrigger, CoreEngine},
     platform::macos::{get_focused_window, models::editor::EditorTextareaScrolledMessage},
 };
 
@@ -23,7 +23,7 @@ pub fn on_editor_textarea_scrolled(
     if let Ok(focused_window) = get_focused_window() {
         if let Some(code_doc) = code_documents.get_mut(&focused_window) {
             code_doc.compute_rule_visualizations();
-            code_doc.update_docs_gen_annotation_visualization();
+            core_engine.run_features(code_doc, &CoreEngineTrigger::OnVisibleTextRangeChange);
         }
     }
 }

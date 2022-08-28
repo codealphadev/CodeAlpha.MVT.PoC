@@ -67,6 +67,7 @@ pub fn notify_window_resized(
         if "AXScrollBar" == ui_element.role()? {
             // Publish an updated viewport properties message
             EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
+                .map_err(|_| accessibility::Error::NotFound)?
                 .publish_to_tauri(&xcode_observer_state.app_handle);
             // Determine editor textarea dimensions
             // For now at least, ignore errors and still continue with control flow.
