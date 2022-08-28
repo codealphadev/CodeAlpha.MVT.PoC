@@ -73,24 +73,14 @@ impl CodeDocument {
                 Feature::BracketHighlighting(BracketHighlight::new()),
             ],
             editor_window_props: editor_window_props.clone(),
-            text,
+            text: None,
             file_path: None,
             selected_text_range: None,
             syntax_tree: SwiftSyntaxTree::new(),
             docs_generator: docs_generator_arc,
         };
 
-        code_document.init_features();
-
         code_document
-    }
-
-    pub fn init_features(&mut self) {
-        self.features = [
-            Feature::Formatter(SwiftFormatter::new()),
-            Feature::BracketHighlighting(BracketHighlight::new()),
-        ]
-        .to_vec();
     }
 
     pub fn syntax_tree(&self) -> &SwiftSyntaxTree {
@@ -198,7 +188,7 @@ impl CodeDocument {
             .update_selected_text_range(&text_range);
 
         for feature in &mut self.features {
-            feature.compute(&CoreEngineTrigger::OnTextSelectionChange);
+            feature.compute(self, &CoreEngineTrigger::OnTextSelectionChange);
         }
     }
 

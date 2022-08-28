@@ -28,7 +28,7 @@ pub fn get_bounds_for_TextRange(
             let bounds_rectangle = bounds_as_axval
                 .get_value::<CGRect>()
                 .map_err(|err| XcodeError::AXError(err.into()))?;
-            // If off screen, it returns 0.0, 0.0 for size; treat this as no match
+            // If off screen, it returns 0.0, 0.0 for size - error.
             if bounds_rectangle.size.width == 0.0 && bounds_rectangle.size.height == 0.0 {
                 return Err(XcodeError::NotContainedVisibleTextRange);
             }
@@ -224,13 +224,10 @@ pub fn calc_match_rects_for_wrapped_range(
     }
 }
 
-pub fn calc_rectangles_and_line_matches(
-    match_range: &MatchRange,
-    get_via: &GetVia,
-) -> Result<(Vec<LogicalFrame>, Vec<LineMatch>), XcodeError> {
+// Break up match range into individual matches that only span one line in the editor
+fn split_match_by_lines(match_range: &MatchRange, get_via: &GetVia) -> Vec<MatchRange> {
     let mut line_match_ranges: Vec<MatchRange> = Vec::new();
 
-    // 2. Break up match range into individual matches that only span one line in the editor
     let mut current_match_index = match_range.range.index;
     while let Ok(line_number) = get_line_number_for_range_index(current_match_index, get_via) {
         if let Ok(current_line_range) = get_text_range_of_line(line_number, get_via) {
@@ -274,8 +271,16 @@ pub fn calc_rectangles_and_line_matches(
             }
         }
     }
+    return line_match_ranges;
+}
 
-    // 3. Calculate rectangles for each line match range; checking if they are wrapped, potentially adding multiple rectangles
+pub fn calc_rectangles_and_line_matches(
+    match_range: &MatchRange,
+    get_via: &GetVia,
+) -> Result<(Vec<LogicalFrame>, Vec<LineMatch>), XcodeError> {
+    let line_match_ranges: Vec<MatchRange> = split_match_by_lines(match_range, get_via);
+
+    // Calculate rectangles for each line match range; checking if they are wrapped, potentially adding multiple rectangles
     let mut rule_match_rectangles: Vec<LogicalFrame> = Vec::new();
     let mut line_matches: Vec<LineMatch> = Vec::new();
     for line_match_range in line_match_ranges {
