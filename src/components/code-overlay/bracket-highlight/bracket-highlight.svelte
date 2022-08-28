@@ -77,8 +77,7 @@
 		return Math.round(value * factor) / factor;
 	};
 
-	function reset_highlight_rectangle(): LogicalFrame {
-		return {
+	function reset_highlight_rectangle(): LogicalFrame { return {
 			origin: {
 				x: 0,
 				y: 0

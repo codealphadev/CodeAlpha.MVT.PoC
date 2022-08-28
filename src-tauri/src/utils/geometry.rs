@@ -113,6 +113,34 @@ impl LogicalFrame {
         let y_in_bounds = y >= self.origin.y && y <= self.origin.y + self.size.height;
         x_in_bounds && y_in_bounds
     }
+
+    pub fn bottom_right(&self) -> LogicalPosition {
+        LogicalPosition {
+            x: self.origin.x + self.size.width,
+            y: self.origin.y + self.size.height,
+        }
+    }
+
+    pub fn bottom_left(&self) -> LogicalPosition {
+        LogicalPosition {
+            x: self.origin.x,
+            y: self.origin.y + self.size.height,
+        }
+    }
+
+    pub fn top_left(&self) -> LogicalPosition {
+        LogicalPosition {
+            x: self.origin.x,
+            y: self.origin.y,
+        }
+    }
+
+    pub fn top_right(&self) -> LogicalPosition {
+        LogicalPosition {
+            x: self.origin.x + self.size.width,
+            y: self.origin.y,
+        }
+    }
 }
 
 #[cfg(test)]
