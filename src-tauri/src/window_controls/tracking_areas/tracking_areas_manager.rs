@@ -324,7 +324,7 @@ impl TrackingAreasManager {
 
                 match ax_event_xcode {
                     AXEventXcode::EditorWindowMoved(msg) => Self::on_tracking_areas_origin_moved(
-                        &tracking_area_manager,
+                        &mut tracking_area_manager,
                         &msg.origin_delta,
                         msg.window_uid,
                     ),
@@ -360,7 +360,7 @@ impl TrackingAreasManager {
     }
 
     fn on_tracking_areas_origin_moved(
-        tracking_area_manager: &TrackingAreasManager,
+        tracking_area_manager: &mut TrackingAreasManager,
         move_dist: &LogicalSize,
         window_uid: WindowUid,
     ) {
