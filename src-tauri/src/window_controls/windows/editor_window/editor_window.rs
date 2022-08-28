@@ -3,8 +3,7 @@ use tauri::Manager;
 use crate::{
     app_handle,
     platform::macos::{
-        get_dark_mode, get_textarea_uielement,
-        internal::get_uielement_frame,
+        get_dark_mode,
         models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
         EventViewport, GetVia,
     },
@@ -131,15 +130,10 @@ impl EditorWindow {
         self.textarea_position = Some(position);
         self.textarea_size = Some(size);
 
-        let code_document_uielement = get_textarea_uielement(&GetVia::Pid(self.pid));
-        if let Ok(code_doc_uielement) = code_document_uielement {
-            let code_document_frame = get_uielement_frame(&code_doc_uielement);
-            if let Ok(code_document_frame) = code_document_frame {
-                EventViewport::new_xcode_viewport_update(&GetVia::Current)
-                    .map_err(|_| "Viewport update failed")?
-                    .publish_to_tauri(&app_handle());
-            }
-        }
+        EventViewport::new_xcode_viewport_update(&GetVia::Current)
+            .map_err(|_| "Viewport update failed")?
+            .publish_to_tauri(&app_handle());
+
         Ok(())
     }
 
