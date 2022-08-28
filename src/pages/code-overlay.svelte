@@ -7,20 +7,43 @@
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 
 	import { getContext } from 'svelte';
+	import { convert_global_frame_to_local } from '../utils';
 	
 	const { setTheme } = getContext("theme");
 
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
+	let text_offset: number | null;
 
-	const listenWindowChannels = async () => {
+	const listenToViewportEvents = async () => {
+		let WindowControlsChannel: ChannelList = 'EventViewport';
+		await listen(WindowControlsChannel, (e) => {
+			const {event, payload} = JSON.parse(e.payload as string) as EventViewport;
+
+			switch (event) {
+				case 'ViewportPropertiesUpdateMessage':
+					const {
+						viewport_properties, code_document_frame_properties
+					} = payload;
+
+					const code_document_rect_global = code_document_frame_properties.dimensions;
+					text_offset = code_document_frame_properties.text_offset;
+					console.log(text_offset);
+					code_document_rect = convert_global_frame_to_local(code_document_rect_global, viewport_properties.dimensions);
+
+					break;
+				
+				default:
+					break;
+			}
+		});
+	}
+
+	const listenToWindowEvents = async () => {
 		let WindowControlsChannel: ChannelList = 'EventWindowControls';
 		await listen(WindowControlsChannel, (e) => {
 			const {event, payload} = JSON.parse(e.payload as string) as EventWindowControls;
 
 			switch (event) {
-				case 'CodeOverlayDimensionsUpdate':
-						code_document_rect = payload.code_document_rect;
-					break;
 				case 'DarkModeUpdate':
 					setTheme(payload.dark_mode ? 'dark' : 'light');
 					break;
@@ -31,8 +54,8 @@
 		});
 	}
 
-	listenWindowChannels();
-	
+	listenToWindowEvents();
+	listenToViewportEvents();	
 
 </script>
 

@@ -7,17 +7,10 @@ use std::time::{Duration, Instant};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
-use crate::{
-    app_handle,
-    window_controls::{
-        models::editor_window::CodeOverlayDimensionsUpdateMessage, EventWindowControls,
-    },
-};
+use crate::app_handle;
 
 use super::{
-    generate_axui_element_hash, get_textarea_uielement,
-    internal::{get_focused_uielement, get_uielement_frame},
-    GetVia,
+    generate_axui_element_hash, internal::get_focused_uielement, EventViewport, GetVia, XcodeError,
 };
 lazy_static! {
     static ref CORRECTION_EVENT_PUBLISHING_TIME: Mutex<Option<Instant>> = Mutex::new(None);
@@ -81,24 +74,15 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
     Some(())
 }
 
-fn execute_publishing_event(text_editor_hash: usize) -> Option<()> {
+fn execute_publishing_event(text_editor_hash: usize) -> Result<(), XcodeError> {
     // Check if text editor is still focused
-    let current_hash = generate_axui_element_hash(&get_focused_uielement(&GetVia::Current).ok()?);
+    let current_hash = generate_axui_element_hash(&get_focused_uielement(&GetVia::Current)?);
 
     if text_editor_hash == current_hash {
-        // This is the window that is currently focused.
-        // We do not need to publish the correction event.
-        let code_document_uielement = get_textarea_uielement(&GetVia::Current).ok()?;
-        let code_document_frame = get_uielement_frame(&code_document_uielement).ok()?;
+        // Update viewport
+        EventViewport::new_xcode_viewport_update(&GetVia::Current)?.publish_to_tauri(&app_handle());
 
-        // Fast-track method instead of calling editor_windows.update_code_document_frame()
-        EventWindowControls::CodeOverlayDimensionsUpdate(CodeOverlayDimensionsUpdateMessage {
-            code_viewport_rect: None,
-            code_document_rect: code_document_frame,
-        })
-        .publish_to_tauri(&app_handle());
-        return Some(());
+        return Ok(());
     }
-
-    Some(())
+    Ok(())
 }

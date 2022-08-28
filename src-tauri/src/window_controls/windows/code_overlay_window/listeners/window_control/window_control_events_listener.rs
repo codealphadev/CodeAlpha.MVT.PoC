@@ -33,9 +33,6 @@ pub fn window_control_events_listener(code_overlay_window: &Arc<Mutex<CodeOverla
             EventWindowControls::AppWindowShow(msg) => {
                 on_show_app_window(&code_overlay_window_move_copy, &msg);
             }
-            EventWindowControls::CodeOverlayDimensionsUpdate(_) => {
-                // Do Nothing here
-            }
             EventWindowControls::DarkModeUpdate(_) => {
                 // Do Nothing here
             }

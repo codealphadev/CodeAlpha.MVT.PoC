@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 
 use crate::{
     core_engine::{features::CoreEngineTrigger, CoreEngine},
-    platform::macos::{get_viewport_frame, models::editor::EditorWindowResizedMessage, GetVia},
+    platform::macos::models::editor::EditorWindowResizedMessage,
 };
 
 pub fn on_editor_window_resized(
@@ -21,8 +21,6 @@ pub fn on_editor_window_resized(
     let code_documents = core_engine.code_documents().lock();
 
     if let Some(code_doc) = code_documents.get_mut(&resized_msg.window_uid) {
-        code_doc.update_editor_window_viewport(get_viewport_frame(&GetVia::Current).ok()?);
-
         core_engine.run_features(code_doc, &CoreEngineTrigger::OnViewportDimensionsChange);
     }
     Some(())
