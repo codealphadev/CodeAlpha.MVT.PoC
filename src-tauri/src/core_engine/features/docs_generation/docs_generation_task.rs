@@ -83,7 +83,7 @@ impl DocsGenerationTask {
             || *task_state == DocsGenerationTaskState::Processing
     }
 
-    pub fn generate_documentation(&mut self) {
+    pub fn generate_documentation(&self) {
         let mut task_state = (self.task_state).lock();
         *task_state = DocsGenerationTaskState::Processing;
 
@@ -166,7 +166,7 @@ impl DocsGenerationTask {
         let mut tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
             window_uid,
-            rectangles: global_rectangles,
+            rectangles: global_rectangles.clone(),
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,
                 TrackingEventType::MouseEntered,

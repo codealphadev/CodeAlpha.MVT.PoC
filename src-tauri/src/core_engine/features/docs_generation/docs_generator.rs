@@ -168,7 +168,7 @@ impl DocsGenerator {
 
         let first_char_position = codeblock.get_first_char_position();
 
-        let (docs_insertion_index, docs_indentation) = self
+        let (docs_insertion_index, _) = self
             .compute_docs_insertion_point_and_indentation(text_content, first_char_position.row)?;
 
         let mut new_task = DocsGenerationTask::new(
@@ -229,7 +229,7 @@ impl DocsGenerator {
     ) {
         app_handle.listen_global(ChannelList::EventWindowControls.to_string(), {
             let docs_generator = (docs_generator).clone();
-            |msg| {
+            move |msg| {
                 let event_window_controls: EventWindowControls =
                     serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
@@ -237,7 +237,7 @@ impl DocsGenerator {
 
                 match event_window_controls {
                     EventWindowControls::TrackingAreaClicked(msg) => {
-                        for docs_generation_task in docs_manager.docs_generation_task {
+                        for docs_generation_task in &docs_manager.docs_generation_task {
                             if let Some(task_id) = docs_generation_task.1.id() {
                                 if msg.id == task_id {
                                     docs_generation_task.1.generate_documentation();
@@ -252,7 +252,7 @@ impl DocsGenerator {
     }
 
     fn is_docs_gen_task_running(&self, window_uid: &WindowUid) -> bool {
-        if let Some(current_task) = self.docs_generation_task.get_mut(&window_uid) {
+        if let Some(current_task) = self.docs_generation_task.get(&window_uid) {
             match current_task.task_state() {
                 super::docs_generation_task::DocsGenerationTaskState::Processing => true,
                 _ => false,
