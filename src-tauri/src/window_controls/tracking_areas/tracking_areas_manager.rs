@@ -5,11 +5,12 @@ use tauri::Manager;
 
 use crate::{
     app_handle,
+    core_engine::WindowUid,
     platform::macos::{
         models::input_device::{ClickType, MouseButton, MouseClickMessage, MouseMovedMessage},
-        EventInputDevice,
+        AXEventXcode, EventInputDevice,
     },
-    utils::messaging::ChannelList,
+    utils::{geometry::LogicalSize, messaging::ChannelList},
     window_controls::{
         config::AppWindow,
         events::{
@@ -69,6 +70,17 @@ impl TrackingAreasManager {
                 if tracking_area.0.id == updated_tracking_area.id {
                     tracking_area.0.update(updated_tracking_area);
                 }
+            }
+        }
+    }
+
+    pub fn move_tracking_areas(&mut self, move_distance: &LogicalSize, window_uid: WindowUid) {
+        for tracking_area in self.tracking_areas.iter_mut() {
+            if tracking_area.0.window_uid == window_uid {
+                tracking_area.0.rectangles.iter_mut().for_each(|rectangle| {
+                    rectangle.origin.x += move_distance.width;
+                    rectangle.origin.y += move_distance.height;
+                });
             }
         }
     }
@@ -247,51 +259,76 @@ impl TrackingAreasManager {
         }
     }
 
-    fn start_listener_events_input_devices(tracking_area_manager: &Arc<Mutex<Self>>) {
-        let tracking_area_manager_move_copy = (tracking_area_manager).clone();
-        app_handle().listen_global(ChannelList::EventInputDevice.to_string(), move |msg| {
-            // Only process mouse events if the CodeOverlay window is shown.
-            if !check_code_overlay_visible() {
-                return;
-            }
-
-            let event_input_device: EventInputDevice =
-                serde_json::from_str(&msg.payload().unwrap()).unwrap();
-
-            match event_input_device {
-                EventInputDevice::MouseMoved(msg) => {
-                    Self::on_mouse_moved(&tracking_area_manager_move_copy, &msg);
+    fn start_listener_events_input_devices(tracking_area_manager_arc: &Arc<Mutex<Self>>) {
+        app_handle().listen_global(ChannelList::EventInputDevice.to_string(), {
+            let tracking_area_manager_arc = (tracking_area_manager_arc).clone();
+            move |msg| {
+                // Only process mouse events if the CodeOverlay window is shown.
+                if !check_code_overlay_visible() {
+                    return;
                 }
-                EventInputDevice::MouseClick(msg) => {
-                    Self::on_mouse_clicked(&tracking_area_manager_move_copy, &msg);
+
+                let event_input_device: EventInputDevice =
+                    serde_json::from_str(&msg.payload().unwrap()).unwrap();
+
+                match event_input_device {
+                    EventInputDevice::MouseMoved(msg) => {
+                        Self::on_mouse_moved(&tracking_area_manager_arc, &msg);
+                    }
+                    EventInputDevice::MouseClick(msg) => {
+                        Self::on_mouse_clicked(&tracking_area_manager_arc, &msg);
+                    }
                 }
             }
         });
     }
 
-    fn start_listener_tracking_areas(tracking_area_manager: &Arc<Mutex<Self>>) {
-        let tracking_area_manager_move_copy = (tracking_area_manager).clone();
-        app_handle().listen_global(ChannelList::EventTrackingAreas.to_string(), move |msg| {
-            let event_tracking_areas: EventTrackingArea =
-                serde_json::from_str(&msg.payload().unwrap()).unwrap();
+    fn start_listener_tracking_areas(tracking_area_manager_arc: &Arc<Mutex<Self>>) {
+        app_handle().listen_global(ChannelList::EventTrackingAreas.to_string(), {
+            let tracking_area_manager_arc = (tracking_area_manager_arc).clone();
+            move |msg| {
+                let event_tracking_areas: EventTrackingArea =
+                    serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
-            let mut tracking_area_manager = tracking_area_manager_move_copy.lock();
+                let mut tracking_area_manager = tracking_area_manager_arc.lock();
 
-            match event_tracking_areas {
-                EventTrackingArea::Add(msg) => {
-                    tracking_area_manager.add_tracking_areas(msg);
+                match event_tracking_areas {
+                    EventTrackingArea::Add(msg) => {
+                        tracking_area_manager.add_tracking_areas(msg);
+                    }
+                    EventTrackingArea::Remove(msg) => {
+                        tracking_area_manager.remove_tracking_areas(msg);
+                    }
+                    EventTrackingArea::Reset() => {
+                        tracking_area_manager.reset_tracking_areas();
+                    }
+                    EventTrackingArea::Update(msg) => {
+                        tracking_area_manager.update_tracking_areas(msg);
+                    }
+                    EventTrackingArea::Replace(msg) => {
+                        tracking_area_manager.replace_tracking_areas(msg);
+                    }
                 }
-                EventTrackingArea::Remove(msg) => {
-                    tracking_area_manager.remove_tracking_areas(msg);
-                }
-                EventTrackingArea::Reset() => {
-                    tracking_area_manager.reset_tracking_areas();
-                }
-                EventTrackingArea::Update(msg) => {
-                    tracking_area_manager.update_tracking_areas(msg);
-                }
-                EventTrackingArea::Replace(msg) => {
-                    tracking_area_manager.replace_tracking_areas(msg);
+            }
+        });
+    }
+
+    fn start_listener_xcode_events(tracking_area_manager_arc: &Arc<Mutex<Self>>) {
+        app_handle().listen_global(ChannelList::AXEventXcode.to_string(), {
+            let tracking_area_manager_arc = (tracking_area_manager_arc).clone();
+            move |msg| {
+                let ax_event_xcode: AXEventXcode =
+                    serde_json::from_str(&msg.payload().unwrap()).unwrap();
+
+                let mut tracking_area_manager = tracking_area_manager_arc.lock();
+
+                match ax_event_xcode {
+                    AXEventXcode::EditorWindowMoved(msg) => Self::on_tracking_areas_origin_moved(
+                        &tracking_area_manager,
+                        &msg.origin_delta,
+                        msg.window_uid,
+                    ),
+                    _ => {}
                 }
             }
         });
@@ -300,6 +337,7 @@ impl TrackingAreasManager {
     pub fn start_event_listeners(tracking_area_manager: &Arc<Mutex<Self>>) {
         Self::start_listener_tracking_areas(tracking_area_manager);
         Self::start_listener_events_input_devices(tracking_area_manager);
+        Self::start_listener_xcode_events(tracking_area_manager);
     }
 
     fn on_mouse_moved(tracking_area_manager_arc: &Arc<Mutex<Self>>, move_msg: &MouseMovedMessage) {
@@ -319,6 +357,14 @@ impl TrackingAreasManager {
             tracking_area_manager
                 .track_mouse_click(click_msg.cursor_position.x, click_msg.cursor_position.y);
         }
+    }
+
+    fn on_tracking_areas_origin_moved(
+        tracking_area_manager: &TrackingAreasManager,
+        move_dist: &LogicalSize,
+        window_uid: WindowUid,
+    ) {
+        tracking_area_manager.move_tracking_areas(move_dist, window_uid);
     }
 }
 
