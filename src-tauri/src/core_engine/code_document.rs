@@ -50,11 +50,10 @@ pub struct CodeDocument {
 
 impl CodeDocument {
     pub fn new(editor_window_props: &EditorWindowProps) -> Self {
-        let pid = editor_window_props.pid;
         let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new()));
         DocsGenerator::start_listener_window_control_events(&app_handle(), &docs_generator_arc);
 
-        let mut code_document = Self {
+        Self {
             rules: vec![],
             editor_window_props: editor_window_props.clone(),
             text: None,
@@ -62,9 +61,7 @@ impl CodeDocument {
             selected_text_range: None,
             syntax_tree: SwiftSyntaxTree::new(),
             docs_generator: docs_generator_arc,
-        };
-
-        code_document
+        }
     }
 
     pub fn syntax_tree(&self) -> &SwiftSyntaxTree {
@@ -115,7 +112,7 @@ impl CodeDocument {
             }
         }
 
-        let parsed_successfully = self.syntax_tree.parse(&new_content);
+        self.syntax_tree.parse(&new_content);
     }
 
     pub fn process_rules(&mut self) {

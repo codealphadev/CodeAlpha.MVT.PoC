@@ -54,8 +54,6 @@ impl CoreEngine {
     pub fn set_engine_active(&mut self, engine_active_status: bool) {
         self.engine_active = engine_active_status;
 
-        let code_documents = &mut self.code_documents().lock();
-
         if engine_active_status {
             // Activate features (currently nothing needs to be done)
             for feature in &mut self.features {
