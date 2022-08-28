@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use super::{
-    features::{
-        BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, SwiftFormatter,
-    },
+    features::DocsGenerator,
     rules::{rule_base::RuleResults, RuleBase, RuleType, SwiftLinterProps},
     syntax_tree::SwiftSyntaxTree,
     utils::XcodeText,
@@ -11,7 +9,6 @@ use super::{
 };
 use crate::{
     app_handle,
-    platform::macos::models::editor::EditorShortcutPressedMessage,
     utils::{geometry::LogicalFrame, messaging::ChannelList},
     window_controls::config::AppWindow,
 };
@@ -26,6 +23,7 @@ pub struct EditorWindowProps {
     /// The process identifier for the window's editor application.
     pub pid: i32,
 
+    /// The viewport of the editor. Is composed of (in parts overlapping) annotation and code section.
     pub viewport_frame: LogicalFrame,
 
     // Range of the code document for which we can get bounds using the AX API
@@ -33,8 +31,6 @@ pub struct EditorWindowProps {
 }
 
 pub struct CodeDocument {
-    pub app_handle: tauri::AppHandle,
-
     /// Properties of the editor window that contains this code document.
     editor_window_props: EditorWindowProps,
 
@@ -49,29 +45,24 @@ pub struct CodeDocument {
     /// to a file on disk.
     file_path: Option<String>,
 
+    // The currently selected text range in the text field.
     selected_text_range: Option<TextRange>,
 
+    // A treesitter syntax tree
     syntax_tree: SwiftSyntaxTree,
 
     /// The module that manages the generation of documentation for this code document.
     docs_generator: Arc<Mutex<DocsGenerator>>,
-
-    features: [Feature; 2],
 }
 
 impl CodeDocument {
     pub fn new(editor_window_props: &EditorWindowProps) -> Self {
         let pid = editor_window_props.pid;
-        let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new(pid)));
+        let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new()));
         DocsGenerator::start_listener_window_control_events(&app_handle(), &docs_generator_arc);
 
         let mut code_document = Self {
-            app_handle: app_handle(),
             rules: vec![],
-            features: [
-                Feature::Formatter(SwiftFormatter::new()),
-                Feature::BracketHighlighting(BracketHighlight::new()),
-            ],
             editor_window_props: editor_window_props.clone(),
             text: None,
             file_path: None,
@@ -138,21 +129,15 @@ impl CodeDocument {
         let parsed_successfully = self.syntax_tree.parse(&new_content);
 
         // Update text content in features
-        self.docs_generator.lock().update_content(&new_content);
+        self.docs_generator
+            .lock()
+            .update_content(&new_content, self.editor_window_props.window_uid);
     }
 
     pub fn process_rules(&mut self) {
         for rule in &mut self.rules {
             rule.run();
         }
-    }
-
-    pub fn update_docs_gen_annotation_visualization(&mut self) {
-        self.docs_generator.lock().update_visualization();
-    }
-
-    pub fn deactivate_features(&mut self) {
-        self.docs_generator.lock().clear_docs_generation_tasks();
     }
 
     pub fn compute_rule_visualizations(&mut self) {
@@ -165,14 +150,14 @@ impl CodeDocument {
             }
         }
         // Send to CodeOverlay window
-        let _ = self.app_handle.emit_to(
+        let _ = app_handle().emit_to(
             &AppWindow::CodeOverlay.to_string(),
             &ChannelList::RuleResults.to_string(),
             &rule_results,
         );
 
         // Send to Main window
-        let _ = self.app_handle.emit_to(
+        let _ = app_handle().emit_to(
             &AppWindow::Content.to_string(),
             &ChannelList::RuleResults.to_string(),
             &rule_results,
@@ -185,20 +170,7 @@ impl CodeDocument {
 
         self.docs_generator
             .lock()
-            .update_selected_text_range(&text_range);
-
-        for feature in &mut self.features {
-            feature.compute(self, &CoreEngineTrigger::OnTextSelectionChange);
-        }
-    }
-
-    pub fn on_save(&mut self, shortcut: &EditorShortcutPressedMessage) {
-        for feature in &mut self.features {
-            feature.compute(
-                self,
-                &CoreEngineTrigger::OnShortcutPressed(shortcut.clone()),
-            );
-        }
+            .update_selected_text_range(&text_range, self.editor_window_props.window_uid);
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {

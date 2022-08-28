@@ -40,21 +40,17 @@ pub enum DocsGenerationTaskState {
 pub struct DocsGenerationTask {
     tracking_area: Option<TrackingArea>, // TODO: Don't think this should be optional. Guard in the factory pattern constructor.
     docs_insertion_point: TextRange,
-    _docs_indentation: usize,
     codeblock_first_char_pos: TextPosition,
     codeblock_last_char_pos: TextPosition,
     codeblock_text: XcodeText,
-    pid: i32,
     task_state: Arc<Mutex<DocsGenerationTaskState>>,
 }
 
 impl DocsGenerationTask {
     pub fn new(
-        pid: i32,
         codeblock_first_char_position: TextPosition,
         codeblock_last_char_position: TextPosition,
         docs_insertion_point: TextRange,
-        _docs_indentation: usize,
         codeblock_text: XcodeText,
     ) -> Self {
         Self {
@@ -62,10 +58,8 @@ impl DocsGenerationTask {
             codeblock_first_char_pos: codeblock_first_char_position,
             codeblock_last_char_pos: codeblock_last_char_position,
             codeblock_text,
-            pid,
             task_state: Arc::new(Mutex::new(DocsGenerationTaskState::Uninitialized)),
             docs_insertion_point,
-            _docs_indentation,
         }
     }
 
@@ -103,7 +97,6 @@ impl DocsGenerationTask {
 
         let codeblock_text_string =
             String::from_utf16(&self.codeblock_text).expect("`codeblock_text` is not valid UTF-16");
-        let pid_move_copy = self.pid;
         let docs_insertion_point_move_copy = self.docs_insertion_point.clone();
         let task_state = self.task_state.clone();
         tauri::async_runtime::spawn(async move {
@@ -122,7 +115,7 @@ impl DocsGenerationTask {
                 // Paste it at the docs insertion point
                 replace_range_with_clipboard_text(
                     &app_handle(),
-                    pid_move_copy,
+                    &GetVia::Current,
                     &docs_insertion_point_move_copy,
                     Some(&mintlify_response.docstring),
                     true,
@@ -251,7 +244,7 @@ impl DocsGenerationTask {
                     index: first_char_text_pos,
                     length: 1,
                 },
-                &GetVia::Pid(self.pid),
+                &GetVia::Current,
             );
 
             let last_char_bounds_opt = get_bounds_for_TextRange(
@@ -259,7 +252,7 @@ impl DocsGenerationTask {
                     index: last_char_text_pos,
                     length: 1,
                 },
-                &GetVia::Pid(self.pid),
+                &GetVia::Current,
             );
             let codeblock_top = if let Ok(first_char_bounds) = first_char_bounds_opt {
                 f64::max(

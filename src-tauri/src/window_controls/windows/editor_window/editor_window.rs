@@ -492,9 +492,6 @@ impl EditorWindow {
 
     /// A global position is relative to the origin of the primary screen. A local position, in this context,
     /// is defined as a position relative to the top left corner of the editor window (=origin).
-    ///
-    /// In case the editor window origin is updated and we need to use this new value for the transformation _before_
-    /// updating Self, this method can take this updated origin as optional argument.
     fn transform_global_position_to_local_position(
         local_origin: LogicalPosition,
         global_position: LogicalPosition,

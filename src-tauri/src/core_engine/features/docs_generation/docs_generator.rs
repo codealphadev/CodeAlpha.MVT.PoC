@@ -37,7 +37,6 @@ pub struct DocsGenerator {
     text_content: Option<XcodeText>,
     selected_text_range: Option<TextRange>,
     docs_generation_task: HashMap<WindowUid, DocsGenerationTask>,
-    window_pid: i32,
     is_activated: bool,
 }
 
@@ -85,19 +84,26 @@ impl FeatureBase for DocsGenerator {
         match trigger {
             CoreEngineTrigger::OnTextContentChange => update_visualization = true,
             CoreEngineTrigger::OnTextSelectionChange => update_visualization = true,
+            CoreEngineTrigger::OnVisibleTextRangeChange => update_visualization = true,
+            CoreEngineTrigger::OnViewportMove => update_visualization = true,
+            CoreEngineTrigger::OnViewportDimensionsChange => update_visualization = true,
             _ => {}
         }
 
         if update_visualization {
-            if let Some(text_content) = code_document.text_content() {
-                if let Some(docs_gen_task) = self
-                    .docs_generation_task
-                    .get_mut(&code_document.editor_window_props().window_uid)
-                {
-                    return docs_gen_task
-                        .update_code_annotation_position(text_content)
-                        .map_err(|err| FeatureError::GenericError(err.into()));
-                }
+            let text_content = code_document
+                .text_content()
+                .ok_or(FeatureError::GenericError(anyhow!(
+                    "CodeDoc text content missing"
+                )))?;
+
+            if let Some(docs_gen_task) = self
+                .docs_generation_task
+                .get_mut(&code_document.editor_window_props().window_uid)
+            {
+                return docs_gen_task
+                    .update_code_annotation_position(&text_content)
+                    .map_err(|err| FeatureError::GenericError(err.into()));
             }
         }
 
@@ -119,13 +125,12 @@ impl FeatureBase for DocsGenerator {
 }
 
 impl DocsGenerator {
-    pub fn new(window_pid: i32) -> Self {
+    pub fn new() -> Self {
         Self {
             swift_syntax_tree: SwiftSyntaxTree::new(),
             text_content: None,
             selected_text_range: None,
             docs_generation_task: HashMap::new(),
-            window_pid,
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
     }
@@ -191,14 +196,12 @@ impl DocsGenerator {
             self.compute_docs_insertion_point_and_indentation(first_char_position.row)?;
 
         let mut new_task = DocsGenerationTask::new(
-            self.window_pid,
             codeblock.get_first_char_position(),
             codeblock.get_last_char_position(),
             TextRange {
                 index: docs_insertion_index,
                 length: 0,
             },
-            docs_indentation,
             codeblock_text,
         );
 

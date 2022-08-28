@@ -31,7 +31,7 @@ impl MatchRange {
         }
         Some(Self {
             string: XcodeText::from_array(&text[(range.index)..(range.index + range.length)]),
-            range,
+            range: *range,
         })
     }
 }
@@ -49,7 +49,7 @@ mod tests_MatchRange {
 
         let match_range = MatchRange::from_text_and_range(
             s,
-            TextRange {
+            &TextRange {
                 index: 2,
                 length: 5,
             },
@@ -68,7 +68,7 @@ mod tests_MatchRange {
 
         let match_range_out_of_range = MatchRange::from_text_and_range(
             s,
-            TextRange {
+            &TextRange {
                 index: 10,
                 length: 5,
             },

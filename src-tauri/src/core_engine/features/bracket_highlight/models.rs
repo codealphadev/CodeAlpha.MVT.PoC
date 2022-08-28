@@ -12,8 +12,8 @@ pub struct BracketHighlightBracket {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub enum Elbow {
-    KnownElbow(LogicalPosition),     // Includes wrapped line case
-    EstimatedElbow(LogicalPosition), // Case: we're missing information
+    KnownElbow(LogicalPosition), // Includes wrapped line case
+    EstimatedElbowOffset(f64),   // Case: we're missing information
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
