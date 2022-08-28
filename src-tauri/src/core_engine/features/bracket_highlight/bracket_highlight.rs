@@ -5,6 +5,7 @@ use crate::{
     core_engine::{
         features::feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
         rules::get_index_of_next_row,
+        syntax_tree::SwiftSyntaxTreeError,
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
@@ -39,7 +40,7 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated || !should_compute(trigger) {
+        if !self.is_activated || !self.should_compute(trigger) {
             return Ok(());
         }
 
@@ -321,8 +322,9 @@ fn get_selected_code_block_node(
         .syntax_tree()
         .get_selected_code_node(selected_text_range)
     {
-        None => return Ok(None),
-        Some(node) => node,
+        Ok(node) => node,
+        Err(SwiftSyntaxTreeError::NoTreesitterNodeFound) => return Ok(None),
+        Err(err) => return Err(BracketHighlightError::GenericError(err.into())),
     };
 
     let mut code_block_node = match get_code_block_parent(selected_node, false) {
