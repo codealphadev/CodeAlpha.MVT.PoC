@@ -66,14 +66,12 @@ impl FeatureBase for DocsGenerator {
             if let Ok(new_task) = self.create_docs_gen_task(
                 selected_text_range,
                 text_content,
+                window_uid,
                 code_document.syntax_tree(),
             ) {
                 self.docs_generation_task.insert(window_uid, new_task);
             }
         }
-
-        return Ok(());
-    }
 
         return Ok(());
     }
@@ -133,7 +131,7 @@ impl DocsGenerator {
         match trigger {
             CoreEngineTrigger::OnTextContentChange => true,
             CoreEngineTrigger::OnTextSelectionChange => true,
-            
+
             _ => false,
         }
     }
@@ -142,7 +140,7 @@ impl DocsGenerator {
             CoreEngineTrigger::OnTextContentChange => true,
             CoreEngineTrigger::OnTextSelectionChange => true,
             CoreEngineTrigger::OnVisibleTextRangeChange => true,
-            CoreEngineTrigger::OnViewportMove =>  true,
+            CoreEngineTrigger::OnViewportMove => true,
             CoreEngineTrigger::OnViewportDimensionsChange => true,
 
             _ => false,
