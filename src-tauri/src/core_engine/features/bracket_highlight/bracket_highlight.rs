@@ -11,7 +11,7 @@ use crate::{
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
-    platform::macos::{is_text_of_line_wrapped, GetVia},
+    platform::macos::{get_code_document_frame_properties, is_text_of_line_wrapped, GetVia},
     utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -112,7 +112,14 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
-        self.visualization_results = Some(self.calculate_visualization_results(code_document)?);
+        let code_document_frame = get_code_document_frame_properties(&GetVia::Current)
+            .map_err(|e| BracketHighlightError::GenericError(e.into()))?
+            .dimensions;
+
+        self.visualization_results = Some(
+            self.calculate_visualization_results(code_document)?
+                .to_local(&code_document_frame.origin),
+        );
 
         self.publish_visualization(code_document);
 
@@ -133,12 +140,16 @@ impl FeatureBase for BracketHighlight {
 
         Ok(())
     }
+
+    fn reset(&mut self) -> Result<(), FeatureError> {
+        self.compute_results = None;
+        self.visualization_results = None;
+        Ok(())
+    }
 }
 
 fn get_left_most_char_position(
     text_content: &XcodeText,
-    opening_bracket: &PositionAndIndex,
-    closing_bracket: &PositionAndIndex,
     line_opening_char: &PositionAndIndex,
     line_closing_char: &PositionAndIndex,
 ) -> Result<Option<LogicalPosition>, BracketHighlightError> {
@@ -248,8 +259,6 @@ impl BracketHighlight {
         // in the codeblock between opening and closing bracket.
         let mut left_most_char_origin = match get_left_most_char_position(
             &text_content,
-            &opening_bracket,
-            &closing_bracket,
             &line_opening_char,
             &line_closing_char,
         )? {
@@ -309,7 +318,7 @@ impl BracketHighlight {
         });
     }
 
-    fn publish_visualization(&self, code_document: &CodeDocument) {
+    fn publish_visualization(&self, _: &CodeDocument) {
         // TODO: Use proper event syntax
         let _ = app_handle().emit_to(
             &AppWindow::CodeOverlay.to_string(),

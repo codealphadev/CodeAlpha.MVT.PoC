@@ -1,6 +1,3 @@
-use accessibility::{AXUIElement, AXUIElementAttributes, Error};
-use core_foundation::base::{CFEqual, TCFType};
-
 use crate::{
     platform::macos::{
         get_textarea_uielement, internal::get_uielement_frame,
@@ -11,6 +8,9 @@ use crate::{
         models::editor_window::CodeOverlayDimensionsUpdateMessage, EventWindowControls,
     },
 };
+use accessibility::{AXUIElement, AXUIElementAttributes, Error};
+
+use core_foundation::base::{CFEqual, TCFType};
 
 pub fn notify_textarea_scrolled(
     uielement: &AXUIElement,
@@ -37,7 +37,8 @@ pub fn notify_textarea_scrolled(
 
         // Publish an updated viewport properties message
         EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
-            .publish_to_tauri(&xcode_observer_state.app_handle);
+            .map_err(|_| accessibility::Error::NotFound)?
+            .publish_to_tauri(&xcode_observer_state.app_handle)
     }
     Ok(())
 }

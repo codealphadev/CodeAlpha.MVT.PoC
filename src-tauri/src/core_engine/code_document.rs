@@ -7,11 +7,7 @@ use super::{
     utils::XcodeText,
     TextRange,
 };
-use crate::{
-    app_handle,
-    utils::{geometry::LogicalFrame, messaging::ChannelList},
-    window_controls::config::AppWindow,
-};
+use crate::{app_handle, utils::messaging::ChannelList, window_controls::config::AppWindow};
 use parking_lot::Mutex;
 use tauri::Manager;
 
@@ -22,9 +18,6 @@ pub struct EditorWindowProps {
 
     /// The process identifier for the window's editor application.
     pub pid: i32,
-
-    /// The viewport of the editor. Is composed of (in parts overlapping) annotation and code section.
-    pub viewport_frame: LogicalFrame,
 
     // Range of the code document for which we can get bounds using the AX API
     pub visible_text_range: TextRange,
@@ -92,10 +85,6 @@ impl CodeDocument {
 
     pub fn selected_text_range(&self) -> &Option<TextRange> {
         &self.selected_text_range
-    }
-
-    pub fn update_editor_window_viewport(&mut self, viewport_frame: LogicalFrame) {
-        self.editor_window_props.viewport_frame = viewport_frame;
     }
 
     pub fn update_doc_properties(

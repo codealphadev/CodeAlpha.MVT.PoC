@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::{core_engine::CoreEngine, platform::macos::models::editor::EditorWindowMovedMessage};
+use crate::{
+    core_engine::{features::CoreEngineTrigger, CoreEngine},
+    platform::macos::models::editor::EditorWindowMovedMessage,
+};
 
 pub fn on_editor_window_moved(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
@@ -18,6 +21,6 @@ pub fn on_editor_window_moved(
     let code_documents = &mut core_engine.code_documents().lock();
 
     if let Some(code_doc) = code_documents.get_mut(&moved_msg.window_uid) {
-        // TODO
+        core_engine.run_features(code_doc, &CoreEngineTrigger::OnViewportMove);
     }
 }

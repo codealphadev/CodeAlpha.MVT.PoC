@@ -3,7 +3,8 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    core_engine::CoreEngine, platform::macos::models::editor::EditorShortcutPressedMessage,
+    core_engine::{features::CoreEngineTrigger, CoreEngine},
+    platform::macos::models::editor::EditorShortcutPressedMessage,
 };
 
 pub fn on_editor_shortcut_pressed(
@@ -20,6 +21,6 @@ pub fn on_editor_shortcut_pressed(
     let code_documents = core_engine.code_documents().lock();
 
     if let Some(code_doc) = code_documents.get_mut(&msg.window_uid) {
-        code_doc.on_save(&msg);
+        core_engine.run_features(code_doc, &CoreEngineTrigger::OnShortcutPressed(*msg));
     }
 }

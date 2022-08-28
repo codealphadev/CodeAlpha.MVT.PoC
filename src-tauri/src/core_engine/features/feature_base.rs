@@ -42,6 +42,7 @@ pub trait FeatureBase {
     ) -> Result<(), FeatureError>;
     fn activate(&mut self) -> Result<(), FeatureError>;
     fn deactivate(&mut self) -> Result<(), FeatureError>;
+    fn reset(&mut self) -> Result<(), FeatureError>;
 }
 
 impl FeatureBase for Feature {
@@ -88,6 +89,14 @@ impl FeatureBase for Feature {
             Feature::BracketHighlighting(feature) => feature.deactivate(),
             Feature::DocsGeneration(feature) => feature.deactivate(),
             Feature::Formatter(feature) => feature.deactivate(),
+        }
+    }
+
+    fn reset(&mut self) -> Result<(), FeatureError> {
+        match self {
+            Feature::BracketHighlighting(feature) => feature.reset(),
+            Feature::DocsGeneration(feature) => feature.reset(),
+            Feature::Formatter(feature) => feature.reset(),
         }
     }
 }

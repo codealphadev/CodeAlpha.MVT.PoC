@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    core_engine::CoreEngine,
+    core_engine::{features::CoreEngineTrigger, CoreEngine},
     platform::macos::{get_viewport_frame, models::editor::EditorTextareaZoomedMessage, GetVia},
 };
 
@@ -23,7 +23,7 @@ pub fn on_editor_textarea_zoomed(
     if let Some(code_doc) = code_documents.get_mut(&zoomed_msg.window_uid) {
         code_doc.update_editor_window_viewport(get_viewport_frame(&GetVia::Current).ok()?);
         code_doc.compute_rule_visualizations();
-        code_doc.update_docs_gen_annotation_visualization();
+        core_engine.run_features(code_doc, &CoreEngineTrigger::OnViewportDimensionsChange);
     }
 
     Some(())

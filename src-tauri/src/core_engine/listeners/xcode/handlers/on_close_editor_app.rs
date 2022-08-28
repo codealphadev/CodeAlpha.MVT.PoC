@@ -8,4 +8,6 @@ pub fn on_close_editor_app(core_engine_arc: &Arc<Mutex<CoreEngine>>) {
     let core_engine = core_engine_arc.lock();
 
     *core_engine.code_documents().lock() = HashMap::new();
+
+    core_engine.reset_features();
 }

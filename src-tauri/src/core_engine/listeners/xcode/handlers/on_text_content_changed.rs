@@ -3,7 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 use parking_lot::Mutex;
 
 use crate::{
-    core_engine::{core_engine::WindowUid, CodeDocument, CoreEngine, EditorWindowProps, TextRange},
+    core_engine::{
+        core_engine::WindowUid, features::CoreEngineTrigger, CodeDocument, CoreEngine,
+        EditorWindowProps, TextRange,
+    },
     platform::macos::{
         get_viewport_frame, models::editor::EditorTextareaContentChangedMessage, GetVia,
     },
@@ -19,6 +22,7 @@ pub fn on_text_content_changed(
 
     let code_documents = &mut core_engine.code_documents().lock();
 
+    // TODO: Is this really necessary?
     check_if_code_doc_needs_to_be_created(
         code_documents,
         content_changed_msg.pid,
@@ -35,6 +39,8 @@ pub fn on_text_content_changed(
         if !core_engine_active_status {
             return;
         }
+
+        core_engine.run_features(code_doc, &CoreEngineTrigger::OnTextContentChange);
 
         code_doc.process_rules();
         code_doc.compute_rule_visualizations();

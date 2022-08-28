@@ -32,6 +32,7 @@
 	}
 
 	listenWindowChannels();
+	
 
 </script>
 
