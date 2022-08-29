@@ -30,19 +30,21 @@ use super::docs_generator::DocsGenerationError;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DocsGenerationTaskState {
-    Uninitialized,
     Prepared,
     Processing,
     Finished,
-    Canceled,
+}
+
+pub struct CodeBlock {
+    pub first_char_pos: TextPosition,
+    pub last_char_pos: TextPosition,
+    pub text: XcodeText,
 }
 
 pub struct DocsGenerationTask {
-    tracking_area: Option<TrackingArea>, // TODO: Don't think this should be optional. Guard in the factory pattern constructor.
+    tracking_area: TrackingArea,
     docs_insertion_point: TextRange,
-    codeblock_first_char_pos: TextPosition,
-    codeblock_last_char_pos: TextPosition,
-    codeblock_text: XcodeText,
+    codeblock: CodeBlock,
     task_state: Arc<Mutex<DocsGenerationTaskState>>,
 }
 
@@ -52,100 +54,86 @@ impl DocsGenerationTask {
         codeblock_last_char_position: TextPosition,
         docs_insertion_point: TextRange,
         codeblock_text: XcodeText,
-    ) -> Self {
-        Self {
-            tracking_area: None,
-            codeblock_first_char_pos: codeblock_first_char_position,
-            codeblock_last_char_pos: codeblock_last_char_position,
-            codeblock_text,
-            task_state: Arc::new(Mutex::new(DocsGenerationTaskState::Uninitialized)),
+        text_content: &XcodeText,
+        window_uid: WindowUid,
+    ) -> Result<Self, DocsGenerationError> {
+        let codeblock = CodeBlock {
+            first_char_pos: codeblock_first_char_position,
+            last_char_pos: codeblock_last_char_position,
+            text: codeblock_text,
+        };
+
+        let tracking_area = Self::create_code_annotation(text_content, &codeblock, window_uid)?;
+
+        Ok(Self {
+            tracking_area,
+            codeblock,
+            task_state: Arc::new(Mutex::new(DocsGenerationTaskState::Prepared)),
             docs_insertion_point,
-        }
+        })
     }
 
     pub fn task_state(&self) -> DocsGenerationTaskState {
         (*self.task_state.lock()).clone()
     }
 
-    pub fn id(&self) -> Option<uuid::Uuid> {
-        if let Some(tracking_area) = self.tracking_area.as_ref() {
-            Some(tracking_area.id)
-        } else {
-            None
-        }
+    pub fn id(&self) -> uuid::Uuid {
+        self.tracking_area.id
     }
 
-    fn is_frozen(&self) -> bool {
-        let task_state = (self.task_state).lock();
-
-        *task_state == DocsGenerationTaskState::Finished
-            || *task_state == DocsGenerationTaskState::Canceled
-            || *task_state == DocsGenerationTaskState::Processing
+    pub fn docs_insertion_point(&self) -> TextRange {
+        self.docs_insertion_point.clone()
     }
 
-    pub fn generate_documentation(&self) {
+    pub fn generate_documentation(&self) -> Result<(), DocsGenerationError> {
         let mut task_state = (self.task_state).lock();
         *task_state = DocsGenerationTaskState::Processing;
 
         EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
 
-        let task_id = if let Some(id) = self.id() {
-            id
-        } else {
-            return;
-        };
+        tauri::async_runtime::spawn({
+            let codeblock_text_string = String::from_utf16(&self.codeblock.text)
+                .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
+            let docs_insertion_point = self.docs_insertion_point();
+            let task_state = self.task_state.clone();
+            let task_id = self.id();
+            async move {
+                let mut mintlify_response =
+                    mintlify_documentation(&codeblock_text_string, None).await;
 
-        let codeblock_text_string =
-            String::from_utf16(&self.codeblock_text).expect("`codeblock_text` is not valid UTF-16");
-        let docs_insertion_point_move_copy = self.docs_insertion_point.clone();
-        let task_state = self.task_state.clone();
-        tauri::async_runtime::spawn(async move {
-            let mut mintlify_response = mintlify_documentation(&codeblock_text_string, None).await;
+                if let Ok(mintlify_response) = &mut mintlify_response {
+                    // Paste it at the docs insertion point
+                    replace_range_with_clipboard_text(
+                        &app_handle(),
+                        &GetVia::Current,
+                        &docs_insertion_point,
+                        Some(&mintlify_response.docstring),
+                        true,
+                    )
+                    .await;
 
-            if let Ok(mintlify_response) = &mut mintlify_response {
-                // add newline character at the end of mintlify_response.docstring
-                // mintlify_response.docstring.push('\n');
-                // mintlify_response.docstring.push('\t');
+                    EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
+                        id: task_id,
+                        text: mintlify_response.preview.to_owned(),
+                    })
+                    .publish_to_tauri(&app_handle());
 
-                // add spaces at the end of the docstring equal to the column of the codeblock_first_char to have a correct indentation after the paste operation
-                // for _ in 0..self.docs_indentation {
-                //     mintlify_response.docstring.push(' ');
-                // }
-
-                // Paste it at the docs insertion point
-                replace_range_with_clipboard_text(
-                    &app_handle(),
-                    &GetVia::Current,
-                    &docs_insertion_point_move_copy,
-                    Some(&mintlify_response.docstring),
-                    true,
-                )
-                .await;
-
-                EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
-                    id: task_id,
-                    text: mintlify_response.preview.to_owned(),
-                })
-                .publish_to_tauri(&app_handle());
-
-                // Notifiy the frontend that the task is finished
-                EventRuleExecutionState::DocsGenerationFinished().publish_to_tauri(&app_handle());
+                    // Notifiy the frontend that the task is finished
+                    EventRuleExecutionState::DocsGenerationFinished()
+                        .publish_to_tauri(&app_handle());
+                }
+                (*task_state.lock()) = DocsGenerationTaskState::Finished;
             }
-            (*task_state.lock()) = DocsGenerationTaskState::Finished;
         });
+
+        Ok(())
     }
 
     pub fn create_code_annotation(
-        &mut self,
         text: &XcodeText,
+        code_block: &CodeBlock,
         window_uid: WindowUid,
-    ) -> Result<(), DocsGenerationError> {
-        if self.tracking_area.is_some() || self.is_frozen() {
-            return Err(DocsGenerationError::GenericError(anyhow!(
-                "Task is frozen or tracking"
-            )));
-        }
-
+    ) -> Result<TrackingArea, DocsGenerationError> {
         // When we create the annotation, we need to compute the bounds for the frontend so it knows where to display the annotation
         // and we need to create a tracking area which the tracking area manager takes care of. The tracking area manager uses GLOBAL coordinates
         // whereas the frontend uses LOCAL coordinates; local to the AnnotationSectionFrame.
@@ -156,7 +144,8 @@ impl DocsGenerationTask {
             .origin;
 
         // 2. Get the annotation bounds, naturally in global coordinates
-        let (annotation_rect_opt, codeblock_bounds) = self.calculate_annotation_bounds(text)?;
+        let (annotation_rect_opt, codeblock_bounds) =
+            Self::calculate_annotation_bounds(text, code_block)?;
         let global_rectangles = if let Some(annotation_rect) = annotation_rect_opt {
             vec![annotation_rect]
         } else {
@@ -194,73 +183,50 @@ impl DocsGenerationTask {
             .collect();
         tracking_area.rectangles = local_rectangles;
 
-        self.tracking_area = Some(tracking_area);
-        let mut task_state = (self.task_state).lock();
-        *task_state = DocsGenerationTaskState::Prepared;
-
-        Ok(())
+        Ok(tracking_area)
     }
 
     pub fn update_code_annotation_position(
         &mut self,
         text: &XcodeText,
     ) -> Result<(), DocsGenerationError> {
-        let mut tracking_area_copy =
-            self.tracking_area
-                .clone()
-                .ok_or(DocsGenerationError::GenericError(anyhow!(
-                    "No tracking area"
-                )))?;
-
         // 1. Get the local coordinates of the AnnotationSectionFrame
         let annotation_section_origin = get_annotation_section_frame(&GetVia::Current)
             .map_err(|e| DocsGenerationError::GenericError(e.into()))?
             .origin;
 
         if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
-            self.calculate_annotation_bounds(text)
+            Self::calculate_annotation_bounds(text, &self.codeblock)
         {
-            tracking_area_copy.rectangles = if let Some(annotation_rect) = annotation_rect_opt {
+            self.tracking_area.rectangles = if let Some(annotation_rect) = annotation_rect_opt {
                 vec![annotation_rect]
             } else {
                 vec![]
             };
 
-            EventTrackingArea::Update(vec![tracking_area_copy.clone()])
+            EventTrackingArea::Update(vec![self.tracking_area.clone()])
                 .publish_to_tauri(&app_handle());
 
             // Publish annotation_rect and codeblock_rect to frontend in local coordinates.
             EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
-                id: tracking_area_copy.id,
+                id: self.tracking_area.id,
                 annotation_icon: annotation_rect_opt
                     .map(|rect| rect.to_local(&annotation_section_origin)),
                 annotation_codeblock: codeblock_rect_opt
                     .map(|rect| rect.to_local(&annotation_section_origin)),
             })
             .publish_to_tauri(&app_handle());
-        } else {
-            // Remove the tracking area
-            EventTrackingArea::Remove(vec![tracking_area_copy.id]).publish_to_tauri(&app_handle());
-            let mut task_state = (self.task_state).lock();
-            *task_state = DocsGenerationTaskState::Canceled;
-
-            // Remove the annotation from the frontend
-            EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage {
-                id: tracking_area_copy.id,
-            })
-            .publish_to_tauri(&app_handle());
-
-            self.tracking_area = None;
         }
-        Ok(())
+
+        return Err(DocsGenerationError::DocsGenTaskUpdateFailed);
     }
 
     /// It calculates the bounds of the annotation icon and the codeblock rectangle
     /// The annotation icon is going to be the TrackingArea's rectangle. The codeblock rectangle is
     /// the one that is going to be highlighted.
     fn calculate_annotation_bounds(
-        &self,
         text: &XcodeText,
+        code_block: &CodeBlock,
     ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), DocsGenerationError> {
         let (textarea_origin, textarea_size) =
             if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
@@ -273,8 +239,8 @@ impl DocsGenerationTask {
 
         // 2. Calculate the annotation rectangles
         if let (Some(first_char_text_pos), Some(last_char_text_pos)) = (
-            self.codeblock_first_char_pos.as_TextIndex(&text),
-            self.codeblock_last_char_pos.as_TextIndex(&text),
+            code_block.first_char_pos.as_TextIndex(&text),
+            code_block.last_char_pos.as_TextIndex(&text),
         ) {
             let first_char_bounds_opt = get_bounds_for_TextRange(
                 &TextRange {
@@ -353,12 +319,8 @@ impl DocsGenerationTask {
 
 impl Drop for DocsGenerationTask {
     fn drop(&mut self) {
-        if let Some(tracking_area) = self.tracking_area.as_ref() {
-            EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage {
-                id: tracking_area.id,
-            })
+        EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage { id: self.id() })
             .publish_to_tauri(&app_handle());
-            EventTrackingArea::Remove(vec![tracking_area.id]).publish_to_tauri(&app_handle());
-        }
+        EventTrackingArea::Remove(vec![self.id()]).publish_to_tauri(&app_handle());
     }
 }

@@ -11,7 +11,6 @@ use super::models::CoreActivationStatusMessage;
 #[serde(tag = "event", content = "payload")]
 pub enum EventUserInteraction {
     CoreActivationStatus(CoreActivationStatusMessage),
-    None,
 }
 
 impl EventUserInteraction {

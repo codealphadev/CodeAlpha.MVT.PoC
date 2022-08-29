@@ -2,13 +2,17 @@ use std::{collections::HashMap, sync::Arc};
 
 use parking_lot::Mutex;
 
-use crate::{app_handle, CORE_ENGINE_ACTIVE_AT_STARTUP};
+use crate::{app_handle, platform::macos::XcodeError, CORE_ENGINE_ACTIVE_AT_STARTUP};
 
 use super::{
     features::{
-        BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, SwiftFormatter,
+        BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, FeatureError,
+        SwiftFormatter,
     },
-    listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
+    listeners::{
+        user_interaction::user_interaction_listener, window_control::window_control_listener,
+        xcode::xcode_listener,
+    },
     CodeDocument,
 };
 
@@ -20,8 +24,22 @@ pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<WindowUid, CodeDocument>>>;
 pub enum CoreEngineError {
     #[error("There exists no CodeDocument with window_uid {0}.")]
     CodeDocNotFound(WindowUid),
+    #[error("Context missing to proceed: {0}.")]
+    MissingContext(String),
     #[error("Something went wrong.")]
     GenericError(#[source] anyhow::Error),
+}
+
+impl From<FeatureError> for CoreEngineError {
+    fn from(cause: FeatureError) -> Self {
+        CoreEngineError::GenericError(cause.into())
+    }
+}
+
+impl From<XcodeError> for CoreEngineError {
+    fn from(cause: XcodeError) -> Self {
+        CoreEngineError::GenericError(cause.into())
+    }
 }
 
 pub struct CoreEngine {
@@ -65,12 +83,12 @@ impl CoreEngine {
         if engine_active_status {
             // Activate features (currently nothing needs to be done)
             for feature in &mut self.features {
-                feature.activate();
+                _ = feature.activate();
             }
         } else {
             // Activate features (currently nothing needs to be done)
             for feature in &mut self.features {
-                feature.deactivate();
+                _ = feature.deactivate();
             }
         }
     }
@@ -78,6 +96,7 @@ impl CoreEngine {
     pub fn start_core_engine_listeners(core_engine: &Arc<Mutex<CoreEngine>>) {
         xcode_listener(&core_engine);
         user_interaction_listener(&core_engine);
+        window_control_listener(&core_engine);
     }
 
     pub fn run_features(
@@ -91,8 +110,8 @@ impl CoreEngine {
             .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
         for feature in self.features.iter_mut() {
-            feature.compute(code_doc, trigger)?;
-            feature.update_visualization(code_doc, trigger)?;
+            _ = feature.compute(code_doc, trigger);
+            _ = feature.update_visualization(code_doc, trigger);
         }
 
         Ok(())
@@ -100,7 +119,7 @@ impl CoreEngine {
 
     pub fn reset_features(&mut self) {
         for feature in &mut self.features {
-            feature.reset();
+            _ = feature.reset();
         }
     }
 }

@@ -422,20 +422,12 @@ pub enum BracketHighlightError {
     InsufficientContext,
     #[error("Attempted to update visualization before computing results")]
     UpdatingVisualizationBeforeComputing,
-    #[error("Computing rectangles from match range failed.")]
-    ComputingRectFromMatchRangeFailed,
     #[error("Unsupported codeblock.")]
     UnsupportedCodeblock,
     #[error("Position out of bounds")]
     PositionOutOfBounds,
     #[error("Something went wrong when executing this BracketHighlighting feature.")]
     GenericError(#[source] anyhow::Error),
-}
-
-impl From<BracketHighlightError> for FeatureError {
-    fn from(cause: BracketHighlightError) -> Self {
-        FeatureError::GenericError(cause.into())
-    }
 }
 
 #[derive(Copy, Clone)]

@@ -17,7 +17,6 @@ pub fn on_editor_window_moved(
     if !core_engine.engine_active() {
         return Ok(());
     }
-    core_engine.run_features(moved_msg.window_uid, &CoreEngineTrigger::OnViewportMove);
 
-    Ok(())
+    core_engine.run_features(moved_msg.window_uid, &CoreEngineTrigger::OnViewportMove)
 }

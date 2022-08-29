@@ -18,8 +18,6 @@ pub enum SwiftSyntaxTreeError {
     NoValidCodeblockFound,
     #[error("At this point, no valid tree is available.")]
     NoTreeParsed,
-    #[error("Generic error.")]
-    GenericError(#[source] anyhow::Error),
 }
 
 pub struct SwiftSyntaxTree {
@@ -110,7 +108,7 @@ impl SwiftSyntaxTree {
                 if let Some(parent) = node.parent() {
                     node = parent;
                 } else {
-                    SwiftSyntaxTreeError::NoValidCodeblockFound;
+                    return Err(SwiftSyntaxTreeError::NoValidCodeblockFound);
                 }
             }
         }

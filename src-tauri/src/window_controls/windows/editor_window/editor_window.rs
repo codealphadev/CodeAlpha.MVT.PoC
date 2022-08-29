@@ -201,7 +201,7 @@ impl EditorWindow {
         // Update the editor window's and textarea's dimensions.
         self.window_position = window.origin;
         self.window_size = window.size;
-        self.set_textarea_dimensions(textarea.origin, textarea.size);
+        _ = self.set_textarea_dimensions(textarea.origin, textarea.size);
         self.widget_position
             .replace(Self::transform_global_position_to_local_position(
                 self.window_position,
@@ -283,7 +283,7 @@ impl EditorWindow {
         }
 
         // Update the editor window's and textarea's dimensions.
-        self.set_textarea_dimensions(textarea.origin, textarea.size);
+        _ = self.set_textarea_dimensions(textarea.origin, textarea.size);
         self.widget_position
             .replace(Self::transform_global_position_to_local_position(
                 self.window_position,
@@ -311,7 +311,7 @@ impl EditorWindow {
         };
 
         if let (Some(position), Some(size)) = (textarea_position, textarea_size) {
-            self.set_textarea_dimensions(position, size);
+            _ = self.set_textarea_dimensions(position, size);
         }
         self.focused_ui_element = Some(focused_ui_element.clone());
         self.check_and_update_dark_mode().ok();
