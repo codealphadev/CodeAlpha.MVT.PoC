@@ -2,5 +2,6 @@
 
 export interface TrackingAreaClickedMessage {
   id: string;
+  window_uid: number;
   duration_ms: bigint;
 }

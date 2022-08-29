@@ -21,6 +21,7 @@ pub fn xcode_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
         move |msg| {
             let axevent_xcode: AXEventXcode =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
+
             match axevent_xcode {
                 AXEventXcode::EditorWindowMoved(msg) => {
                     _ = on_editor_window_moved(&core_engine, &msg);

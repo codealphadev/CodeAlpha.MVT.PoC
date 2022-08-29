@@ -9,6 +9,7 @@ use super::{
     BracketHighlight, BracketHighlightError, DocsGenerator,
 };
 
+#[derive(Debug, Clone)]
 pub enum CoreEngineTrigger {
     OnShortcutPressed(EditorShortcutPressedMessage),
     OnTextContentChange,

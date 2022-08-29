@@ -44,10 +44,10 @@ pub fn get_focused_uielement(get_via: &GetVia) -> Result<AXUIElement, XcodeError
                 Err(ax_error) => Err(XcodeError::AXError(ax_error.into())),
             }
         }
-        GetVia::UIElem(uielem) => match uielem.focused_uielement() {
-            Ok(ui_elem) => Ok(ui_elem),
-            Err(ax_error) => Err(XcodeError::AXError(ax_error.into())),
-        },
+        GetVia::UIElem(uielem) => {
+            let pid = uielem.pid().map_err(|e| XcodeError::AXError(e.into()))?;
+            get_focused_uielement(&GetVia::Pid(pid))
+        }
         GetVia::Current => {
             let system_wide_element = AXUIElement::system_wide();
 

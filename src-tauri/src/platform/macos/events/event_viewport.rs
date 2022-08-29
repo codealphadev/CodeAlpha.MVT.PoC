@@ -2,6 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use ts_rs::TS;
 
 use crate::{
     platform::macos::{
@@ -13,8 +14,9 @@ use crate::{
 
 use super::models::viewport::ViewportPropertiesUpdateMessage;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(tag = "event", content = "bindings/macOS_specific/")]
+#[derive(Clone, Serialize, Deserialize, Debug, TS)]
+#[serde(tag = "event", content = "payload")]
+#[ts(export, export_to = "bindings/macOS_specific/")]
 pub enum EventViewport {
     XcodeViewportUpdate(ViewportPropertiesUpdateMessage),
 }

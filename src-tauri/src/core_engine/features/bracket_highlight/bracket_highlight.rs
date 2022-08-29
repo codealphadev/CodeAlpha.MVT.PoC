@@ -39,9 +39,11 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
+        println!("BracketHighlight::compute");
         if !self.is_activated || !self.should_compute(trigger) {
             return Ok(());
         }
+        println!("BracketHighlight::compute - should compute");
 
         let selected_text_range = match code_document.selected_text_range() {
             Some(range) => range,
@@ -86,8 +88,8 @@ impl FeatureBase for BracketHighlight {
         let (line_opening_character, line_closing_character) =
             get_line_start_end_positions_and_indexes(
                 &code_block_node,
-                closing_bracket,
                 opening_bracket,
+                closing_bracket,
                 text_content,
                 selected_text_range,
             );
@@ -108,9 +110,11 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
+        println!("BracketHighlight::update_visualization");
         if !self.is_activated || !self.should_update_visualization(code_document, trigger)? {
             return Ok(());
         }
+        println!("BracketHighlight::update_visualization - should update");
 
         let code_document_frame = get_code_document_frame_properties(&GetVia::Current)
             .map_err(|e| BracketHighlightError::GenericError(e.into()))?
@@ -163,7 +167,7 @@ fn get_left_most_char_x(
     let left_most_char_index = get_text_index_of_left_most_char_in_range(
         TextRange {
             index: next_row_index,
-            length: line_closing_char.index - next_row_index + 1,
+            length: dbg!(line_closing_char.index) - dbg!(next_row_index) + 1,
         },
         &text_content,
     )
@@ -319,7 +323,6 @@ impl BracketHighlight {
             &ChannelList::BracketHighlightResults.to_string(),
             &self.visualization_results,
         );
-        todo!();
     }
 
     fn should_compute(&self, trigger: &CoreEngineTrigger) -> bool {
@@ -339,6 +342,8 @@ impl BracketHighlight {
             .compute_results
             .as_ref()
             .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
+
+        println!("{:?}", trigger);
 
         match trigger {
             CoreEngineTrigger::OnViewportDimensionsChange => Ok(true),
@@ -370,6 +375,8 @@ impl BracketHighlight {
                     Ok(true)
                 }
             }
+            CoreEngineTrigger::OnTextContentChange => Ok(true),
+            CoreEngineTrigger::OnTextSelectionChange => Ok(true),
             _ => Ok(false),
         }
     }
@@ -430,20 +437,20 @@ pub enum BracketHighlightError {
     GenericError(#[source] anyhow::Error),
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 struct PositionAndIndex {
     position: TextPosition,
     index: usize,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 struct StartAndEndTextPositions {
     start: TextPosition,
     end: TextPosition,
 }
 
+#[derive(Copy, Clone, Debug)]
 struct BracketHighlightComputeResults {
-    // TODO: Map
     opening_bracket: PositionAndIndex,
     closing_bracket: PositionAndIndex,
     line_opening_char: PositionAndIndex,
