@@ -18,8 +18,9 @@ pub fn on_editor_textarea_scrolled(
         return Ok(());
     }
 
-    core_engine.run_features(
-        get_focused_window()?,
-        &CoreEngineTrigger::OnVisibleTextRangeChange,
-    )
+    println!("on_editor_textarea_scrolled");
+
+    let focused_window = get_focused_window()?;
+
+    core_engine.run_features(focused_window, &CoreEngineTrigger::OnVisibleTextRangeChange)
 }

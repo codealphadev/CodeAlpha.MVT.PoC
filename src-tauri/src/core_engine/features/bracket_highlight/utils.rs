@@ -120,7 +120,6 @@ pub fn get_indexes_of_first_and_last_char_in_node(
         get_node_start_index(&node, &text),
         get_node_end_index(&node, &text).map(|x| x - 1),
     ) {
-        println!("first and last{} {}", first_index, last_index);
         if let Ok(additional_length) =
             length_to_code_block_body_start(node, text, selected_text_index)
         {
@@ -145,8 +144,8 @@ pub fn only_whitespace_on_line_until_position(
     }
 
     let row = &rows[position.row];
-    if row.len() < position.column + 1 {
-        return None;
+    if position.column + 1 > row.len() {
+        return Err(BracketHighlightError::PositionOutOfBounds);
     }
 
     for c_u16 in row[0..position.column].into_iter() {

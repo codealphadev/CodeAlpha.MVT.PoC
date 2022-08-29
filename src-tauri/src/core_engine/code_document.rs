@@ -4,7 +4,12 @@ use super::{
     utils::XcodeText,
     TextRange,
 };
-use crate::{app_handle, utils::messaging::ChannelList, window_controls::config::AppWindow};
+use crate::{
+    app_handle,
+    platform::macos::{get_textarea_content, GetVia},
+    utils::messaging::ChannelList,
+    window_controls::config::AppWindow,
+};
 use tauri::Manager;
 
 #[derive(Clone, Debug)]
@@ -70,11 +75,6 @@ impl CodeDocument {
         &self.selected_text_range
     }
 
-    pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
-        let text_range = TextRange { length, index };
-        self.selected_text_range = Some(text_range);
-    }
-
     pub fn update_doc_properties(
         &mut self,
         new_content_string: &String,
@@ -101,8 +101,9 @@ impl CodeDocument {
         }
 
         self.file_path = file_path.clone();
-        self.syntax_tree.parse(&new_content);
-        self.text = Some(new_content);
+        if (self.syntax_tree.parse(&new_content)) {
+            self.text = Some(new_content);
+        }
     }
 
     pub fn process_rules(&mut self) {
@@ -133,6 +134,24 @@ impl CodeDocument {
             &ChannelList::RuleResults.to_string(),
             &rule_results,
         );
+    }
+
+    pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
+        let text_range = TextRange { length, index };
+        // Check if content changed at same time
+        if let (Ok(content_text), Some(text)) = (
+            get_textarea_content(&GetVia::Pid(self.editor_window_props.pid)),
+            self.text.as_ref(),
+        ) {
+            let content_text_u16 = &XcodeText::from_str(&content_text);
+            self.selected_text_range = Some(text_range);
+
+            if content_text_u16 != text {
+                if self.syntax_tree.parse(content_text_u16) {
+                    self.text = Some(content_text_u16.clone());
+                }
+            }
+        }
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {

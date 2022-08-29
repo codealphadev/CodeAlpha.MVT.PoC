@@ -114,6 +114,7 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
+        println!("{:?} update_visualization", trigger);
         let code_document_frame = get_code_document_frame_properties(&GetVia::Current)
             .map_err(|e| BracketHighlightError::GenericError(e.into()))?
             .dimensions;
@@ -207,14 +208,10 @@ impl BracketHighlight {
             .as_ref()
             .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
 
-        println!("opening_bracket_index {:?}", opening_bracket.index);
-        println!("closing_bracket_index {:?}", closing_bracket.index);
         let (opening_bracket_rect, closing_bracket_rect) = (
             get_char_rectangle_from_text_index(opening_bracket.index)?,
             get_char_rectangle_from_text_index(closing_bracket.index)?,
         );
-        println!("opening_bracket_rect {:?}", opening_bracket_rect);
-        println!("closing_bracket_rect {:?}", closing_bracket_rect);
 
         let (line_opening_char_rect, line_closing_char_rect) = (
             get_char_rectangle_from_text_index(line_opening_char.index)?,
@@ -348,7 +345,7 @@ impl BracketHighlight {
 
     fn should_compute(&self, trigger: &CoreEngineTrigger) -> bool {
         match trigger {
-            CoreEngineTrigger::OnTextContentChange => true,
+            CoreEngineTrigger::OnTextContentChange => false, // The TextSelectionChange is already triggered on text content change
             CoreEngineTrigger::OnTextSelectionChange => true,
             _ => false,
         }
@@ -395,8 +392,8 @@ impl BracketHighlight {
                     Ok(true)
                 }
             }
-            CoreEngineTrigger::OnTextContentChange => Ok(true),
             CoreEngineTrigger::OnTextSelectionChange => Ok(true),
+            CoreEngineTrigger::OnTextContentChange => Ok(false), // text content change already triggers text selection change
             _ => Ok(false),
         }
     }
