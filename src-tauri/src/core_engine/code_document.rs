@@ -1,14 +1,10 @@
-use std::sync::Arc;
-
 use super::{
-    features::DocsGenerator,
     rules::{rule_base::RuleResults, RuleBase, RuleType, SwiftLinterProps},
     syntax_tree::SwiftSyntaxTree,
     utils::XcodeText,
     TextRange,
 };
 use crate::{app_handle, utils::messaging::ChannelList, window_controls::config::AppWindow};
-use parking_lot::Mutex;
 use tauri::Manager;
 
 #[derive(Clone, Debug)]
@@ -43,16 +39,10 @@ pub struct CodeDocument {
 
     // A treesitter syntax tree
     syntax_tree: SwiftSyntaxTree,
-
-    /// The module that manages the generation of documentation for this code document.
-    docs_generator: Arc<Mutex<DocsGenerator>>,
 }
 
 impl CodeDocument {
     pub fn new(editor_window_props: &EditorWindowProps) -> Self {
-        let docs_generator_arc = Arc::new(Mutex::new(DocsGenerator::new()));
-        DocsGenerator::start_listener_window_control_events(&app_handle(), &docs_generator_arc);
-
         Self {
             rules: vec![],
             editor_window_props: editor_window_props.clone(),
@@ -60,7 +50,6 @@ impl CodeDocument {
             file_path: None,
             selected_text_range: None,
             syntax_tree: SwiftSyntaxTree::new(),
-            docs_generator: docs_generator_arc,
         }
     }
 

@@ -17,7 +17,7 @@ lazy_static! {
 }
 
 pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) -> Option<()> {
-    execute_publishing_event(text_editor_hash);
+    _ = execute_publishing_event(text_editor_hash);
 
     let mut publishing_time_mutex = CORRECTION_EVENT_PUBLISHING_TIME.lock();
     if publishing_time_mutex.is_none() {
@@ -54,11 +54,11 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
                 if publishing_moment_reached {
                     // Sometimes, XCode handles the scroll event quickly, but sometimes it takes longer.
                     // Send multiple correction events at different delays for optimal handling.
-                    execute_publishing_event(text_editor_hash);
+                    _ = execute_publishing_event(text_editor_hash);
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                    execute_publishing_event(text_editor_hash);
+                    _ = execute_publishing_event(text_editor_hash);
                     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-                    execute_publishing_event(text_editor_hash);
+                    _ = execute_publishing_event(text_editor_hash);
 
                     break;
                 } else {

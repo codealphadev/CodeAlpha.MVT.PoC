@@ -209,6 +209,7 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseEntered => {
                         EventWindowControls::TrackingAreaEntered(TrackingAreaEnteredMessage {
                             id: area.id,
+                            window_uid: area.window_uid,
                         })
                         .publish_to_tauri(&self.app_handle);
                     }
@@ -221,6 +222,7 @@ impl TrackingAreasManager {
 
                         EventWindowControls::TrackingAreaExited(TrackingAreaExitedMessage {
                             id: area.id,
+                            window_uid: area.window_uid,
                             duration_ms,
                         })
                         .publish_to_tauri(&self.app_handle);
@@ -237,6 +239,7 @@ impl TrackingAreasManager {
 
                         EventWindowControls::TrackingAreaClicked(TrackingAreaClickedMessage {
                             id: area.id,
+                            window_uid: area.window_uid,
                             duration_ms,
                         })
                         .publish_to_tauri(&self.app_handle);

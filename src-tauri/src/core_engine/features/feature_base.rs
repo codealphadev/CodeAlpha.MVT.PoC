@@ -1,9 +1,13 @@
 use crate::{
-    core_engine::{core_engine::CoreEngineError, CodeDocument},
-    platform::macos::models::editor::EditorShortcutPressedMessage,
+    core_engine::CodeDocument, platform::macos::models::editor::EditorShortcutPressedMessage,
+    window_controls::models::TrackingAreaClickedMessage,
 };
 
-use super::{formatter::SwiftFormatter, BracketHighlight, DocsGenerator};
+use super::{
+    docs_generation::DocsGenerationError,
+    formatter::{SwiftFormatError, SwiftFormatter},
+    BracketHighlight, BracketHighlightError, DocsGenerator,
+};
 
 pub enum CoreEngineTrigger {
     OnShortcutPressed(EditorShortcutPressedMessage),
@@ -12,6 +16,7 @@ pub enum CoreEngineTrigger {
     OnViewportMove,
     OnViewportDimensionsChange,
     OnVisibleTextRangeChange,
+    OnTrackingAreaClicked(TrackingAreaClickedMessage),
 }
 
 pub enum Feature {
@@ -22,17 +27,25 @@ pub enum Feature {
 
 #[derive(thiserror::Error, Debug)]
 pub enum FeatureError {
-    #[error("Feature could not compute.")]
-    ComputeUnsuccessful(),
-    #[error("Feature could not update visualization.")]
-    UpdateVisualizationUnsuccessful,
     #[error("Something went wrong when executing this feature.")]
     GenericError(#[source] anyhow::Error),
 }
 
-impl From<FeatureError> for CoreEngineError {
-    fn from(cause: FeatureError) -> Self {
-        CoreEngineError::GenericError(cause.into())
+impl From<BracketHighlightError> for FeatureError {
+    fn from(cause: BracketHighlightError) -> Self {
+        FeatureError::GenericError(cause.into())
+    }
+}
+
+impl From<DocsGenerationError> for FeatureError {
+    fn from(cause: DocsGenerationError) -> Self {
+        FeatureError::GenericError(cause.into())
+    }
+}
+
+impl From<SwiftFormatError> for FeatureError {
+    fn from(cause: SwiftFormatError) -> Self {
+        FeatureError::GenericError(cause.into())
     }
 }
 
@@ -78,9 +91,7 @@ impl FeatureBase for Feature {
                 feature.update_visualization(code_document, trigger)
             }
             Feature::Formatter(feature) => feature.update_visualization(code_document, trigger),
-        };
-
-        Ok(())
+        }
     }
 
     fn activate(&mut self) -> Result<(), FeatureError> {

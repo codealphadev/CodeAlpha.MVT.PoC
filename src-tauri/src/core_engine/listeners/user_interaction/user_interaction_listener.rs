@@ -22,7 +22,6 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventUserInteraction::CoreActivationStatus(msg) => {
                     on_core_activation_status_update(&core_engine, &msg);
                 }
-                EventUserInteraction::None => {}
             }
         }
     });

@@ -26,10 +26,6 @@ pub enum SwiftFormatError {
     InsufficientContextForFormat,
     #[error("File does not exist: '{0}'")]
     FileNotExisting(String),
-    #[error("Calling SwiftFormat Sidecar failed: '{0}'")]
-    SidecarFailure(String),
-    #[error("SwiftFormat failed. Empty result returned.")]
-    EmptyContentResult,
     #[error("Something went wrong when executing this SwiftFormatter.")]
     GenericError(#[source] anyhow::Error),
 }
@@ -52,9 +48,7 @@ impl FeatureBase for SwiftFormatter {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
                     "S" => {
-                        return self
-                            .format(code_document)
-                            .map_err(|err| FeatureError::GenericError(err.into()));
+                        return self.format(code_document).map_err(|err| err.into());
                     }
                     _ => {}
                 },
@@ -139,7 +133,7 @@ impl SwiftFormatter {
             }
 
             // 4. Restore cursor position
-            set_selected_text_range(
+            _ = set_selected_text_range(
                 &TextRange {
                     index: Self::get_adjusted_cursor_index(
                         &text_content,
@@ -154,7 +148,7 @@ impl SwiftFormatter {
             // 5. Scroll to the same position as before the formatting
             if let Ok(scroll_delta) = scroll_delta {
                 tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-                send_event_mouse_wheel(scroll_delta);
+                _ = send_event_mouse_wheel(scroll_delta);
             }
 
             // 6. Notifiy the frontend that the file has been formatted successfully
