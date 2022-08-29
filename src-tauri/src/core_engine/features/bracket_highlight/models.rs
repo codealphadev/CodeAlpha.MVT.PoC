@@ -34,8 +34,8 @@ pub struct BracketHighlightBoxPair {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightResults {
-    lines: BracketHighlightLines,
-    boxes: BracketHighlightBoxPair,
+    pub lines: BracketHighlightLines,
+    pub boxes: BracketHighlightBoxPair,
 }
 
 impl BracketHighlightResults {
