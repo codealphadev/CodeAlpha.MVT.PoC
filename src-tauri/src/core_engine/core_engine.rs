@@ -80,33 +80,20 @@ impl CoreEngine {
         user_interaction_listener(&core_engine);
     }
 
-    pub fn run_features(&mut self, window_uid: WindowUid, trigger: &CoreEngineTrigger) {
-        let code_documents = self.code_documents().lock();
-
-        let code_doc = if let Some(code_document) = code_documents.get(&window_uid) {
-            code_document
-        } else {
-            return;
-        };
-
-        self.compute_features(code_doc, trigger);
-        self.update_feature_visualizations(code_doc, trigger);
-    }
-
-    fn compute_features(&mut self, code_doc: &CodeDocument, trigger: &CoreEngineTrigger) {
-        for feature in &mut self.features {
-            feature.compute(code_doc, trigger);
-        }
-    }
-
-    fn update_feature_visualizations(
+    pub fn run_features(
         &mut self,
-        code_doc: &CodeDocument,
+        window_uid: WindowUid,
         trigger: &CoreEngineTrigger,
-    ) {
-        for feature in &mut self.features {
-            feature.update_visualization(code_doc, trigger);
+    ) -> Result<(), CoreEngineError> {
+        let code_documents = self.code_documents.lock();
+        let code_doc = code_documents.get(&window_uid).unwrap();
+
+        for feature in self.features.iter_mut() {
+            feature.compute(code_doc, trigger)?;
+            feature.update_visualization(code_doc, trigger)?;
         }
+
+        Ok(())
     }
 
     pub fn reset_features(&mut self) {

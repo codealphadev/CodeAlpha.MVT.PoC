@@ -1,5 +1,6 @@
 use crate::{
-    core_engine::CodeDocument, platform::macos::models::editor::EditorShortcutPressedMessage,
+    core_engine::{core_engine::CoreEngineError, CodeDocument},
+    platform::macos::models::editor::EditorShortcutPressedMessage,
 };
 
 use super::{formatter::SwiftFormatter, BracketHighlight, DocsGenerator};
@@ -27,6 +28,12 @@ pub enum FeatureError {
     UpdateVisualizationUnsuccessful,
     #[error("Something went wrong when executing this feature.")]
     GenericError(#[source] anyhow::Error),
+}
+
+impl From<FeatureError> for CoreEngineError {
+    fn from(cause: FeatureError) -> Self {
+        CoreEngineError::GenericError(cause.into())
+    }
 }
 
 pub trait FeatureBase {
