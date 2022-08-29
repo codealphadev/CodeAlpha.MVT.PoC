@@ -194,7 +194,6 @@ impl DocsGenerationTask {
         let annotation_section_origin = get_annotation_section_frame(&GetVia::Current)
             .map_err(|e| DocsGenerationError::GenericError(e.into()))?
             .origin;
-
         if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
             Self::calculate_annotation_bounds(text, &self.codeblock)
         {
@@ -203,7 +202,6 @@ impl DocsGenerationTask {
             } else {
                 vec![]
             };
-
             EventTrackingArea::Update(vec![self.tracking_area.clone()])
                 .publish_to_tauri(&app_handle());
 
@@ -216,9 +214,10 @@ impl DocsGenerationTask {
                     .map(|rect| rect.to_local(&annotation_section_origin)),
             })
             .publish_to_tauri(&app_handle());
+            Ok(())
+        } else {
+            Err(DocsGenerationError::DocsGenTaskUpdateFailed)
         }
-
-        return Err(DocsGenerationError::DocsGenTaskUpdateFailed);
     }
 
     /// It calculates the bounds of the annotation icon and the codeblock rectangle

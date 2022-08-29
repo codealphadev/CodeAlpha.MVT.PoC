@@ -62,7 +62,7 @@ pub fn register_observer_xcode() -> Result<(), Error> {
             // We observed that even though the registration is supposetly successful, the observer is not yet registered.
             // We found that waiting for 2 seconds is enough.
             std::thread::sleep(std::time::Duration::from_millis(2000));
-            _ = dbg!(create_observer_and_add_notifications());
+            _ = create_observer_and_add_notifications();
         });
     }
 
