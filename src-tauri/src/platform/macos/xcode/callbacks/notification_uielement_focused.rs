@@ -58,7 +58,7 @@ pub fn notify_uielement_focused(
         if role.to_string() == "AXTextArea" {
             // Publish an updated viewport properties message
             // Publish an updated viewport properties message
-            EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
+            EventViewport::new_xcode_viewport_update(&GetVia::Current)
                 .map_err(|_| accessibility::Error::NotFound)?
                 .publish_to_tauri(&xcode_observer_state.app_handle);
 

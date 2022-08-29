@@ -2,4 +2,5 @@
 
 export interface TrackingAreaEnteredMessage {
   id: string;
+  window_uid: number;
 }
