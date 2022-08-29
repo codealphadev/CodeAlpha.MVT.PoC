@@ -69,6 +69,7 @@ pub fn notify_window_resized(
             EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
                 .map_err(|_| accessibility::Error::NotFound)?
                 .publish_to_tauri(&xcode_observer_state.app_handle);
+
             // Determine editor textarea dimensions
             // For now at least, ignore errors and still continue with control flow.
             let _ = derive_resize_parameters_from_scrollbar(&mut resize_msg, ui_element);
@@ -81,6 +82,9 @@ pub fn notify_window_resized(
                     // Don't publish new event because nothing has changed --> the event was likely emited by a scroll event rather than resize
                     return Ok(());
                 }
+            } else {
+                // Don't publish new event because textarea dimensions are not available
+                return Ok(());
             }
 
             let new_tuple = (

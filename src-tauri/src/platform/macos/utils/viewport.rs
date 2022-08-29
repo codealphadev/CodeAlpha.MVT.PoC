@@ -142,8 +142,6 @@ fn get_text_offset_px(get_via: &GetVia) -> Result<f64, XcodeError> {
         }
     }
 
-    println!("Could not get text offset");
-
     Err(XcodeError::GettingTextContentFailed)
 }
 

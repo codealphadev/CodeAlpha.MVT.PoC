@@ -110,11 +110,9 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        println!("BracketHighlight::update_visualization");
         if !self.is_activated || !self.should_update_visualization(code_document, trigger)? {
             return Ok(());
         }
-        println!("BracketHighlight::update_visualization - should update");
 
         let code_document_frame = get_code_document_frame_properties(&GetVia::Current)
             .map_err(|e| BracketHighlightError::GenericError(e.into()))?
@@ -167,7 +165,7 @@ fn get_left_most_char_x(
     let left_most_char_index = get_text_index_of_left_most_char_in_range(
         TextRange {
             index: next_row_index,
-            length: dbg!(line_closing_char.index) - dbg!(next_row_index) + 1,
+            length: line_closing_char.index - next_row_index + 1,
         },
         &text_content,
     )
