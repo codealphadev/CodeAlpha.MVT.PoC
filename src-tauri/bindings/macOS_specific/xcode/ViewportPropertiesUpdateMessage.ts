@@ -3,6 +3,6 @@ import type { CodeDocumentFrameProperties } from "./CodeDocumentFrameProperties"
 import type { ViewportProperties } from "./ViewportProperties";
 
 export interface ViewportPropertiesUpdateMessage {
-  viewport_properties: ViewportProperties | null;
-  code_document_frame_properties: CodeDocumentFrameProperties | null;
+  viewport_properties: ViewportProperties;
+  code_document_frame_properties: CodeDocumentFrameProperties;
 }
