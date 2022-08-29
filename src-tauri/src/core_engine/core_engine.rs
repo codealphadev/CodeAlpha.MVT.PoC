@@ -86,7 +86,9 @@ impl CoreEngine {
         trigger: &CoreEngineTrigger,
     ) -> Result<(), CoreEngineError> {
         let code_documents = self.code_documents.lock();
-        let code_doc = code_documents.get(&window_uid).unwrap();
+        let code_doc = code_documents
+            .get(&window_uid)
+            .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
         for feature in self.features.iter_mut() {
             feature.compute(code_doc, trigger)?;
