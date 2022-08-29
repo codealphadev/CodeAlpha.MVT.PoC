@@ -12,7 +12,7 @@ use crate::{
         CodeDocument, TextPosition, TextRange,
     },
     platform::macos::{get_code_document_frame_properties, is_text_of_line_wrapped, GetVia},
-    utils::{geometry::LogicalPosition, messaging::ChannelList},
+    utils::messaging::ChannelList,
     window_controls::config::AppWindow,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
@@ -148,11 +148,11 @@ impl FeatureBase for BracketHighlight {
     }
 }
 
-fn get_left_most_char_position(
+fn get_left_most_char_x(
     text_content: &XcodeText,
     line_opening_char: &PositionAndIndex,
     line_closing_char: &PositionAndIndex,
-) -> Result<Option<LogicalPosition>, BracketHighlightError> {
+) -> Result<Option<f64>, BracketHighlightError> {
     // Elbow needed because the open and closing bracket are on different lines
     let next_row_index = get_index_of_next_row(line_opening_char.index, &text_content).ok_or(
         BracketHighlightError::GenericError(anyhow!(
@@ -172,7 +172,7 @@ fn get_left_most_char_position(
     )))?;
 
     match get_char_rectangle_from_text_index(left_most_char_index)? {
-        Some(rectangle) => Ok(Some(rectangle.origin)),
+        Some(rectangle) => Ok(Some(rectangle.origin.x)),
         None => Ok(None), // Could not compute bounds
     }
 }
@@ -257,37 +257,34 @@ impl BracketHighlight {
 
         // To determine the elbow point we are interested of the left-most text position
         // in the codeblock between opening and closing bracket.
-        let mut left_most_char_origin = match get_left_most_char_position(
-            &text_content,
-            &line_opening_char,
-            &line_closing_char,
-        )? {
-            None => {
-                // Case: elbow is not within the visible_text_range of Xcode
-                return Ok(BracketHighlightResults {
-                    lines: BracketHighlightLines {
-                        start: line_start_point,
-                        end: line_end_point,
-                        elbow: Some(Elbow::EstimatedElbowOffset(0.0)),
-                    },
-                    boxes: BracketHighlightBoxPair {
-                        opening_bracket: opening_bracket_rect,
-                        closing_bracket: closing_bracket_rect,
-                    },
-                });
-            }
-            Some(left_most_char_rect) => left_most_char_rect,
-        };
+        let mut left_most_char_x =
+            match get_left_most_char_x(&text_content, &line_opening_char, &line_closing_char)? {
+                None => {
+                    // Case: elbow is not within the visible_text_range of Xcode
+                    return Ok(BracketHighlightResults {
+                        lines: BracketHighlightLines {
+                            start: line_start_point,
+                            end: line_end_point,
+                            elbow: Some(Elbow::EstimatedElbowOffset(0.0)),
+                        },
+                        boxes: BracketHighlightBoxPair {
+                            opening_bracket: opening_bracket_rect,
+                            closing_bracket: closing_bracket_rect,
+                        },
+                    });
+                }
+                Some(left_most_char_rect) => left_most_char_rect,
+            };
 
         // Check if maybe opening or closing bracket are further left than the elbow point.
         if let Some(line_opening_char_rect) = line_opening_char_rect {
-            if line_opening_char_rect.origin.x < left_most_char_origin.x {
-                left_most_char_origin.x = line_opening_char_rect.origin.x;
+            if line_opening_char_rect.origin.x < left_most_char_x {
+                left_most_char_x = line_opening_char_rect.origin.x;
             }
         }
         if let Some(line_closing_char_rect) = line_closing_char_rect {
-            if line_closing_char_rect.origin.x < left_most_char_origin.x {
-                left_most_char_origin.x = line_closing_char_rect.origin.x;
+            if line_closing_char_rect.origin.x < left_most_char_x {
+                left_most_char_x = line_closing_char_rect.origin.x;
             }
         }
 
@@ -297,12 +294,9 @@ impl BracketHighlight {
                 .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
 
         let elbow = if is_first_line_wrapped.0 {
-            Some(Elbow::KnownElbow(LogicalPosition {
-                x: 0.0,
-                y: left_most_char_origin.y,
-            }))
+            Some(Elbow::KnownElbow(0.0))
         } else {
-            Some(Elbow::KnownElbow(left_most_char_origin))
+            Some(Elbow::KnownElbow(left_most_char_x))
         };
 
         return Ok(BracketHighlightResults {

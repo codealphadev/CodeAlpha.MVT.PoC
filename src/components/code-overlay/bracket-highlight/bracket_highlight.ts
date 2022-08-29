@@ -1,7 +1,6 @@
 import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
-import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 import type { LogicalSize } from '@tauri-apps/api/window';
-export const BORDER_WIDTH = 1;
+export const BORDER_WIDTH = 1; // TODO: Do we need this? Can we just use an outline?
 import type { Elbow } from '../../../../src-tauri/bindings/features/bracket_highlighting/Elbow';
 import type { BracketHighlightResults } from '../../../../src-tauri/bindings/features/bracket_highlighting/BracketHighlightResults';
 
@@ -46,7 +45,7 @@ export const compute_bracket_highlight_rects = (
 	};
 };
 
-function is_known_elbow(elbow: Elbow): elbow is { KnownElbow: LogicalPosition } {
+function is_known_elbow(elbow: Elbow): elbow is { KnownElbow: number } {
 	return elbow.hasOwnProperty('KnownElbow');
 }
 
@@ -54,5 +53,5 @@ function get_elbow_x(elbow: Elbow | null): number | null {
 	if (elbow === null) {
 		return null;
 	}
-	return is_known_elbow(elbow) ? elbow.KnownElbow.x : elbow.EstimatedElbowOffset;
+	return is_known_elbow(elbow) ? elbow.KnownElbow : elbow.EstimatedElbowOffset;
 }
