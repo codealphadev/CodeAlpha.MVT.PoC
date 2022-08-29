@@ -118,8 +118,9 @@ pub fn get_indexes_of_first_and_last_char_in_node(
 ) -> Result<(usize, usize), BracketHighlightError> {
     if let (Some(mut first_index), Some(last_index)) = (
         get_node_start_index(&node, &text),
-        get_node_end_index(&node, &text),
+        get_node_end_index(&node, &text).map(|x| x - 1),
     ) {
+        println!("first and last{} {}", first_index, last_index);
         if let Ok(additional_length) =
             length_to_code_block_body_start(node, text, selected_text_index)
         {
