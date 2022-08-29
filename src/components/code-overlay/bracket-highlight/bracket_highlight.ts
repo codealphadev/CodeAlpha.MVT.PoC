@@ -22,18 +22,19 @@ export const compute_bracket_highlight_rects = (
 	const top_y = start?.y ?? 0;
 
 	return {
-		top_rect: start
-			? {
-					origin: {
-						x: left_x,
-						y: top_y
-					},
-					size: {
-						width: start.x - left_x, // TODO: Should this be absolute instead of max?
-						height: bottom_y - top_y
-					}
-			  }
-			: null,
+		top_rect:
+			start && start.x > left_x
+				? {
+						origin: {
+							x: left_x + 1, // Add border width because vertical line is handled by bottom rect
+							y: top_y
+						},
+						size: {
+							width: start.x - left_x, // TODO: Should this be absolute instead of max?
+							height: 0.0
+						}
+				  }
+				: null,
 		bottom_rect: end
 			? {
 					origin: {

@@ -14,7 +14,7 @@ use crate::{
     platform::macos::{
         get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
     },
-    utils::messaging::ChannelList,
+    utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
@@ -228,8 +228,14 @@ impl BracketHighlight {
         if !is_line_spans_multiple_rows {
             return Ok(BracketHighlightResults {
                 lines: BracketHighlightLines {
-                    start: line_opening_char_rect.map(|rect| rect.bottom_right()),
-                    end: line_closing_char_rect.map(|rect| rect.bottom_left()),
+                    start: line_opening_char_rect.map(|rect| LogicalPosition {
+                        x: rect.bottom_right().x,
+                        y: rect.bottom_right().y - 1.0,
+                    }),
+                    end: line_closing_char_rect.map(|rect| LogicalPosition {
+                        x: rect.bottom_left().x,
+                        y: rect.bottom_left().y - 1.0,
+                    }),
                     elbow: None,
                 },
                 boxes: BracketHighlightBoxPair {
@@ -252,12 +258,21 @@ impl BracketHighlight {
             &text_content,
         )?;
 
-        let line_start_point = line_opening_char_rect.map(|rect| rect.bottom_left());
+        let line_start_point = line_opening_char_rect.map(|rect| LogicalPosition {
+            x: rect.bottom_left().x,
+            y: rect.bottom_left().y - 1.0,
+        });
         let line_end_point = line_closing_char_rect.map(|rect| {
             if elbow_bottom_line_top {
-                rect.top_left()
+                LogicalPosition {
+                    x: rect.top_left().x,
+                    y: rect.top_left().y + 1.0,
+                }
             } else {
-                rect.bottom_left()
+                LogicalPosition {
+                    x: rect.bottom_left().x,
+                    y: rect.bottom_left().y - 1.0,
+                }
             }
         });
 
