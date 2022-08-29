@@ -6,6 +6,8 @@
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 
+	import type { ViewportPropertiesUpdateMessage } from '../../src-tauri/bindings/macOS_specific/xcode/ViewportPropertiesUpdateMessage';
+
 	import { getContext } from 'svelte';
 	import { convert_global_frame_to_local } from '../utils';
 	
@@ -17,7 +19,10 @@
 	const listenToViewportEvents = async () => {
 		let WindowControlsChannel: ChannelList = 'EventViewport';
 		await listen(WindowControlsChannel, (e) => {
-			const {event, payload} = JSON.parse(e.payload as string) as EventViewport;
+			const {event, payload} = JSON.parse(e.payload as string) as {
+				event: 'ViewportPropertiesUpdateMessage',
+				payload: ViewportPropertiesUpdateMessage
+			};
 
 			switch (event) {
 				case 'ViewportPropertiesUpdateMessage':
@@ -28,7 +33,7 @@
 					const code_document_rect_global = code_document_frame_properties.dimensions;
 					text_offset = code_document_frame_properties.text_offset;
 					console.log(text_offset);
-					code_document_rect = convert_global_frame_to_local(code_document_rect_global, viewport_properties.dimensions);
+					code_document_rect = convert_global_frame_to_local(code_document_rect_global, viewport_properties.dimensions.origin);
 
 					break;
 				
