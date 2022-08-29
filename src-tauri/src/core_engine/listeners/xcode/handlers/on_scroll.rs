@@ -11,20 +11,15 @@ pub fn on_editor_textarea_scrolled(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
     _: &EditorTextareaScrolledMessage,
 ) -> Result<(), CoreEngineError> {
-    if let Some(core_engine) = &mut core_engine_arc.try_lock() {
-        // Checking if the engine is active. If not, it returns.
-        if !core_engine.engine_active() {
-            return Ok(());
-        }
-        println!("on_editor_textarea_scrolled");
+    let core_engine = &mut core_engine_arc.lock();
 
-        core_engine.run_features(
-            get_focused_window()?,
-            &CoreEngineTrigger::OnVisibleTextRangeChange,
-        );
-    } else {
-        println!("Could not lock core engine");
+    // Checking if the engine is active. If not, it returns.
+    if !core_engine.engine_active() {
+        return Ok(());
     }
 
-    Ok(())
+    core_engine.run_features(
+        get_focused_window()?,
+        &CoreEngineTrigger::OnVisibleTextRangeChange,
+    )
 }

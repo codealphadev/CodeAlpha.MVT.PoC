@@ -28,6 +28,9 @@ impl AppWindow {
     pub fn hidden_on_focus_lost() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay, AppWindow::Repair]
     }
+    pub fn hiddon_on_zoom_level_change() -> Vec<AppWindow> {
+        vec![AppWindow::CodeOverlay, AppWindow::Repair]
+    }
 
     pub fn shown_on_focus_gained() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay]

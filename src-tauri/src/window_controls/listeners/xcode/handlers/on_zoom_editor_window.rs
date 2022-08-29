@@ -30,7 +30,7 @@ pub fn on_zoom_editor_window(
         },
     });
 
-    window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
+    window_manager.temporarily_hide_app_windows(AppWindow::hiddon_on_zoom_level_change());
 
     Some(())
 }
