@@ -10,9 +10,8 @@ use crate::{
         CodeDocument, TextPosition, TextRange,
     },
     platform::macos::{
-        get_bounds_for_TextRange, get_textarea_uielement, internal::get_uielement_frame,
-        models::editor::ModifierKey, send_event_mouse_wheel, set_selected_text_range,
-        set_textarea_content, GetVia,
+        get_bounds_for_TextRange, get_viewport_frame, models::editor::ModifierKey,
+        send_event_mouse_wheel, set_selected_text_range, set_textarea_content, GetVia,
     },
     utils::geometry::LogicalSize,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -161,20 +160,18 @@ impl SwiftFormatter {
     fn scroll_dist_after_formatting(
         selected_text_range: &TextRange,
     ) -> Result<LogicalSize, SwiftFormatError> {
-        if let Ok(textarea_frame) = get_uielement_frame(
-            &get_textarea_uielement(&GetVia::Current)
-                .map_err(|err| SwiftFormatError::GenericError(err.into()))?,
-        ) {
+        if let Ok(textarea_frame) = get_viewport_frame(&GetVia::Current)
+            .map_err(|err| SwiftFormatError::GenericError(err.into()))
+        {
             if let Ok(bounds_of_selected_text) = get_bounds_for_TextRange(
-                &selected_text_range.first_char_as_TextRange().ok_or(
-                    SwiftFormatError::GenericError(anyhow::Error::msg(
-                        "Could not get first char as TextRange",
-                    )),
-                )?,
+                &TextRange {
+                    index: selected_text_range.index,
+                    length: 1,
+                },
                 &GetVia::Current,
             ) {
                 return Ok(LogicalSize {
-                    width: textarea_frame.origin.x - bounds_of_selected_text.origin.x,
+                    width: 0.0, // No horizontal scrolling
                     height: bounds_of_selected_text.origin.y - textarea_frame.origin.y,
                 });
             }
@@ -231,8 +228,6 @@ impl SwiftFormatter {
                 new_index = text_index;
             }
         }
-
-        println!("SwiftFormatter: Cursor ending up at the bottom of the file");
 
         new_index
     }
