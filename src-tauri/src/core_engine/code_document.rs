@@ -14,9 +14,6 @@ pub struct EditorWindowProps {
 
     /// The process identifier for the window's editor application.
     pub pid: i32,
-
-    // Range of the code document for which we can get bounds using the AX API
-    pub visible_text_range: TextRange,
 }
 
 pub struct CodeDocument {
@@ -71,6 +68,11 @@ impl CodeDocument {
 
     pub fn selected_text_range(&self) -> &Option<TextRange> {
         &self.selected_text_range
+    }
+
+    pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
+        let text_range = TextRange { length, index };
+        self.selected_text_range = Some(text_range);
     }
 
     pub fn update_doc_properties(
@@ -131,11 +133,6 @@ impl CodeDocument {
             &ChannelList::RuleResults.to_string(),
             &rule_results,
         );
-    }
-
-    pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
-        let text_range = TextRange { length, index };
-        self.selected_text_range = Some(text_range);
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {

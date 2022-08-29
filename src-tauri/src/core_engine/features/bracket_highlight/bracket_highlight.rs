@@ -11,7 +11,9 @@ use crate::{
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
-    platform::macos::{get_code_document_frame_properties, is_text_of_line_wrapped, GetVia},
+    platform::macos::{
+        get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
+    },
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -39,11 +41,9 @@ impl FeatureBase for BracketHighlight {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        println!("BracketHighlight::compute");
         if !self.is_activated || !self.should_compute(trigger) {
             return Ok(());
         }
-        println!("BracketHighlight::compute - should compute");
 
         let selected_text_range = match code_document.selected_text_range() {
             Some(range) => range,
@@ -293,11 +293,15 @@ impl BracketHighlight {
         }
 
         // Check if the first line is wrapped.
-        let is_first_line_wrapped =
-            is_text_of_line_wrapped(line_opening_char.position.row, &GetVia::Current)
-                .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
+        let mut is_first_line_wrapped = false;
+        if opening_bracket_rect.is_some() {
+            is_first_line_wrapped =
+                is_text_of_line_wrapped(line_opening_char.position.row, &GetVia::Current)
+                    .map_err(|err| BracketHighlightError::GenericError(err.into()))?
+                    .0;
+        }
 
-        let elbow = if is_first_line_wrapped.0 {
+        let elbow = if is_first_line_wrapped {
             Some(Elbow::KnownElbow(0.0))
         } else {
             Some(Elbow::KnownElbow(left_most_char_x))
@@ -335,7 +339,7 @@ impl BracketHighlight {
 
     fn should_update_visualization(
         &self,
-        code_document: &CodeDocument,
+        _code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<bool, BracketHighlightError> {
         let compute_results = &self
@@ -343,12 +347,11 @@ impl BracketHighlight {
             .as_ref()
             .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
 
-        println!("{:?}", trigger);
-
         match trigger {
             CoreEngineTrigger::OnViewportDimensionsChange => Ok(true),
             CoreEngineTrigger::OnVisibleTextRangeChange => {
-                let visible_text_range = code_document.editor_window_props().visible_text_range;
+                let visible_text_range = get_visible_text_range(&GetVia::Current)
+                    .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
                 if let Some(BracketHighlightResults { lines, boxes }) = self.visualization_results {
                     if boxes.opening_bracket.is_none()
                         && visible_text_range.includes_index(compute_results.opening_bracket.index)

@@ -6,7 +6,7 @@ use crate::{
     core_engine::{
         core_engine::{CoreEngineError, WindowUid},
         features::CoreEngineTrigger,
-        CodeDocument, CoreEngine, EditorWindowProps, TextRange,
+        CodeDocument, CoreEngine, EditorWindowProps,
     },
     platform::macos::models::editor::EditorTextareaContentChangedMessage,
 };
@@ -62,7 +62,6 @@ pub fn check_if_code_doc_needs_to_be_created(
     let new_code_doc = CodeDocument::new(&EditorWindowProps {
         window_uid: editor_window_uid,
         pid: editor_pid,
-        visible_text_range: TextRange::new(0, 0),
     });
 
     // check if code document is already contained in list of documents
