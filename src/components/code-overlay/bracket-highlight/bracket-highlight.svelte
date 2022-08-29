@@ -11,8 +11,8 @@
 	
 	export let code_document_rect: LogicalFrame;
 
-	let line_rectangle: LogicalFrame | null = null;
-	let elbow_rectangle: LogicalFrame | null = null;
+	let top_rectangle: LogicalFrame | null = null;
+	let bottom_rectangle: LogicalFrame | null = null;
 
 	let opening_bracket_box: LogicalFrame | null = null;
 	let closing_bracket_box: LogicalFrame | null = null;
@@ -25,12 +25,12 @@
 			if (payload == null) {
 				opening_bracket_box = null;
 				closing_bracket_box = null;
-				line_rectangle = null;
-				elbow_rectangle = null;
+				top_rectangle = null;
+				bottom_rectangle = null;
 				return;
 			}
 			const bracket_highlights = payload;
-
+			console.log(bracket_highlights)
 			opening_bracket_box = bracket_highlights.boxes.opening_bracket;
 			closing_bracket_box = bracket_highlights.boxes.closing_bracket;
 
@@ -38,8 +38,9 @@
 				bracket_highlights.lines,
 				code_document_rect.size.height
 			);
-			line_rectangle = rectangles.line_rect;
-			elbow_rectangle = rectangles.elbow_rect;
+			console.log(rectangles);
+			top_rectangle = rectangles.top_rect;
+			bottom_rectangle = rectangles.bottom_rect;
 	
 		});
 	};
@@ -73,13 +74,13 @@
 		border-color: {colors.inactive};"
 	/>
 {/if}
-{#if line_rectangle !== null}
+{#if top_rectangle !== null}
 	<div
 		style="position: absolute; 
-		top: {round_value(line_rectangle.origin.y, 2)}px; 
-		left: {round_value(line_rectangle.origin.x, 2)}px; 
-		width: {round_value(line_rectangle.size.width, 2)}px;
-		height: {round_value(line_rectangle.size.height, 2)}px; 
+		top: {round_value(top_rectangle.origin.y, 2)}px; 
+		left: {round_value(top_rectangle.origin.x, 2)}px; 
+		width: {round_value(top_rectangle.size.width, 2)}px;
+		height: {round_value(top_rectangle.size.height, 2)}px; 
 		border-style: solid; 
 		border-color: {colors.inactive}; 
 		border-top-width: {BORDER_WIDTH}px; 
@@ -88,13 +89,13 @@
 		border-bottom-width: 0;"
 	/>
 {/if}
-{#if elbow_rectangle !== null}
+{#if  bottom_rectangle !== null}
 	<div
 		style="position: absolute; 
-		top: {round_value(elbow_rectangle.origin.y, 2)}px; 
-		left: {round_value(elbow_rectangle.origin.x, 2)}px; 
-		width: {round_value(elbow_rectangle.size.width, 2)}px;
-		height: {round_value(elbow_rectangle.size.height, 2)}px; 
+		top: {round_value(bottom_rectangle.origin.y, 2)}px; 
+		left: {round_value(bottom_rectangle.origin.x, 2)}px; 
+		width: {round_value(bottom_rectangle.size.width, 2)}px;
+		height: {round_value(bottom_rectangle.size.height, 2)}px; 
 		border-bottom-style: solid; 
 		border-left-width: {BORDER_WIDTH}px;
 		border-bottom-width: {BORDER_WIDTH}px; 

@@ -207,10 +207,14 @@ impl BracketHighlight {
             .as_ref()
             .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
 
+        println!("opening_bracket_index {:?}", opening_bracket.index);
+        println!("closing_bracket_index {:?}", closing_bracket.index);
         let (opening_bracket_rect, closing_bracket_rect) = (
             get_char_rectangle_from_text_index(opening_bracket.index)?,
             get_char_rectangle_from_text_index(closing_bracket.index)?,
         );
+        println!("opening_bracket_rect {:?}", opening_bracket_rect);
+        println!("closing_bracket_rect {:?}", closing_bracket_rect);
 
         let (line_opening_char_rect, line_closing_char_rect) = (
             get_char_rectangle_from_text_index(line_opening_char.index)?,

@@ -7,10 +7,10 @@ import type { BracketHighlightResults } from '../../../../src-tauri/bindings/fea
 export const compute_bracket_highlight_rects = (
 	lines: BracketHighlightResults['lines'],
 	codeoverlay_rect_height: LogicalSize['height']
-): { line_rect: LogicalFrame; elbow_rect: LogicalFrame | null } => {
+): { top_rect: LogicalFrame | null; bottom_rect: LogicalFrame | null } => {
 	const { start, end, elbow } = lines;
 
-	const origin_x = Math.min(
+	const left_x = Math.min(
 		// TODO: Arrayify to get rid of these infinities
 		start?.x ?? Infinity,
 		end?.x ?? Infinity,
@@ -19,26 +19,30 @@ export const compute_bracket_highlight_rects = (
 
 	const bottom_y = end?.y ?? codeoverlay_rect_height;
 
+	const top_y = start?.y ?? 0;
+
 	return {
-		line_rect: {
-			origin: {
-				x: origin_x,
-				y: start?.y ?? 0 //-  BORDER_WIDTH
-			},
-			size: {
-				width: Math.max(0, (start?.x ?? 0) - origin_x), // TODO: Should this be absolute instead of max?
-				height: bottom_y - (start?.y ?? 0)
-			}
-		},
-		elbow_rect: end
+		top_rect: start
 			? {
 					origin: {
-						x: origin_x,
-						y: end.y
+						x: left_x,
+						y: top_y
 					},
 					size: {
-						height: 0,
-						width: end.x - origin_x
+						width: start.x - left_x, // TODO: Should this be absolute instead of max?
+						height: bottom_y - top_y
+					}
+			  }
+			: null,
+		bottom_rect: end
+			? {
+					origin: {
+						x: left_x,
+						y: top_y
+					},
+					size: {
+						width: end.x - left_x,
+						height: bottom_y - top_y
 					}
 			  }
 			: null

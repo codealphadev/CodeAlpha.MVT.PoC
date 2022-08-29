@@ -130,15 +130,15 @@ impl LogicalFrame {
 
     pub fn bottom_right(&self) -> LogicalPosition {
         LogicalPosition {
-            x: self.origin.x + self.size.width,
-            y: self.origin.y + self.size.height,
+            x: self.origin.x + self.size.width - 1.0,
+            y: self.origin.y + self.size.height - 1.0,
         }
     }
 
     pub fn bottom_left(&self) -> LogicalPosition {
         LogicalPosition {
             x: self.origin.x,
-            y: self.origin.y + self.size.height,
+            y: self.origin.y + self.size.height - 1.0,
         }
     }
 
@@ -151,7 +151,7 @@ impl LogicalFrame {
 
     pub fn top_right(&self) -> LogicalPosition {
         LogicalPosition {
-            x: self.origin.x + self.size.width,
+            x: self.origin.x + self.size.width - 1.0,
             y: self.origin.y,
         }
     }
