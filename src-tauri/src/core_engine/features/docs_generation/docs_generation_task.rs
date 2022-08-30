@@ -18,7 +18,8 @@ use crate::{
     },
     platform::macos::{
         get_bounds_for_TextRange, get_code_document_frame_properties, get_viewport_frame,
-        xcode::actions::replace_range_with_clipboard_text, GetVia,
+        get_viewport_properties, xcode::actions::replace_range_with_clipboard_text, GetVia,
+        ViewportProperties,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
@@ -253,7 +254,11 @@ impl DocsGenerationTask {
         code_block: &CodeBlock,
     ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), DocsGenerationError> {
         // 1. Get viewport dimensions
-        let viewport = get_viewport_frame(&GetVia::Current).map_err(|_| {
+        let ViewportProperties {
+            dimensions: viewport,
+            annotation_section,
+            code_section: _,
+        } = get_viewport_properties(&GetVia::Current).map_err(|_| {
             DocsGenerationError::GenericError(anyhow!("Could not derive textarea dimensions"))
         })?;
 
@@ -294,21 +299,13 @@ impl DocsGenerationTask {
                 viewport.origin.y + viewport.size.height
             };
 
-            let char_width = if let Ok(first_char_bounds) = first_char_bounds_opt {
-                first_char_bounds.size.height / 1.5
-            } else if let Ok(last_char_bounds) = last_char_bounds_opt {
-                last_char_bounds.size.height / 1.5
-            } else {
-                12.0 // Fallback - should be rare
-            };
-
             let codeblock_bounds = Some(LogicalFrame {
                 origin: LogicalPosition {
                     x: viewport.origin.x,
                     y: codeblock_top,
                 },
                 size: LogicalSize {
-                    width: char_width,
+                    width: annotation_section.size.width,
                     height: codeblock_bottom - codeblock_top,
                 },
             });
@@ -320,7 +317,7 @@ impl DocsGenerationTask {
                         y: first_char_bounds.origin.y,
                     },
                     size: LogicalSize {
-                        width: char_width, // This factor brings it 12px width on 100% zoom level.
+                        width: annotation_section.size.width,
                         height: first_char_bounds.size.height,
                     },
                 })
