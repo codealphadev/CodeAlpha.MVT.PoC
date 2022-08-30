@@ -58,6 +58,10 @@ pub fn get_viewport_properties(get_via: &GetVia) -> Result<ViewportProperties, X
         },
     };
 
+    LAST_KNOWN_VIEWPORT_FRAME
+        .lock()
+        .replace(viewport_frame.clone());
+
     Ok(ViewportProperties {
         dimensions: viewport_frame,
         annotation_section: Some(annotation_section),
@@ -71,35 +75,32 @@ pub fn get_viewport_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> 
 }
 
 pub fn get_annotation_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> {
-    let viewport_uielement = get_viewport_uielement(get_via)?;
+    let scrollarea_uielement = get_scrollarea_uielement(get_via)?;
 
     let text_offset = get_text_offset_px(get_via)?;
-    let annotation_origin_x_offset = get_annotation_origin_x_offset_px(&viewport_uielement)?;
+    let annotation_origin_x_offset = get_annotation_origin_x_offset_px(&scrollarea_uielement)?;
 
-    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
-    LAST_KNOWN_VIEWPORT_FRAME
-        .lock()
-        .replace(viewport_frame.clone());
+    let scrollarea = get_uielement_frame(&scrollarea_uielement)?;
 
     Ok(LogicalFrame {
         origin: LogicalPosition {
-            x: viewport_frame.origin.x + annotation_origin_x_offset,
-            y: viewport_frame.origin.y,
+            x: scrollarea.origin.x + annotation_origin_x_offset,
+            y: scrollarea.origin.y,
         },
         size: LogicalSize {
             width: text_offset - annotation_origin_x_offset,
-            height: viewport_frame.size.height,
+            height: scrollarea.size.height,
         },
     })
 }
 
 pub fn get_code_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> {
-    let viewport_uielement = get_viewport_uielement(get_via)?;
+    let scrollarea_uielement = get_scrollarea_uielement(get_via)?;
 
-    let viewport_frame = get_uielement_frame(&viewport_uielement)?;
+    let viewport_frame = get_uielement_frame(&scrollarea_uielement)?;
 
     // Get all children
-    let children_elements = ax_attribute(&viewport_uielement, AXAttribute::children())?;
+    let children_elements = ax_attribute(&scrollarea_uielement, AXAttribute::children())?;
 
     let minimap_frame = get_viewport_minimap_frame(&children_elements).ok();
     let gutter_frame = get_viewport_gutter_frame(&children_elements)?;
@@ -157,7 +158,7 @@ fn get_annotation_origin_x_offset_px(viewport_uielement: &AXUIElement) -> Result
         - (correction_width_factor * gutter_frame.size.width))
 }
 
-fn get_viewport_uielement(get_via: &GetVia) -> Result<AXUIElement, XcodeError> {
+fn get_scrollarea_uielement(get_via: &GetVia) -> Result<AXUIElement, XcodeError> {
     let textarea_uielement = get_textarea_uielement(get_via)?;
 
     ax_attribute(&textarea_uielement, AXAttribute::parent())
