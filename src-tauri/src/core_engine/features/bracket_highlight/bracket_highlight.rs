@@ -49,7 +49,6 @@ impl FeatureBase for BracketHighlight {
             Some(range) => range,
             None => {
                 self.compute_results = None;
-                self.visualization_results = None;
                 return Ok(());
             }
         };
@@ -68,13 +67,11 @@ impl FeatureBase for BracketHighlight {
                     node
                 } else {
                     self.compute_results = None;
-                    self.visualization_results = None;
                     return Ok(());
                 }
             }
             Err(_) => {
                 self.compute_results = None;
-                self.visualization_results = None;
                 return Ok(());
             }
         };
@@ -100,9 +97,7 @@ impl FeatureBase for BracketHighlight {
             line_opening_char: line_opening_character,
             line_closing_char: line_closing_character,
         });
-        self.visualization_results = None;
-
-        return Ok(());
+        Ok(())
     }
 
     fn update_visualization(
@@ -118,10 +113,9 @@ impl FeatureBase for BracketHighlight {
             .map_err(|e| BracketHighlightError::GenericError(e.into()))?
             .dimensions;
 
-        self.visualization_results = Some(
-            self.calculate_visualization_results(code_document)?
-                .to_local(&code_document_frame.origin),
-        );
+        self.visualization_results = self
+            .calculate_visualization_results(code_document)?
+            .map(|res| res.to_local(&code_document_frame.origin));
 
         self.publish_visualization(code_document);
 
@@ -191,7 +185,7 @@ impl BracketHighlight {
     fn calculate_visualization_results(
         &self,
         code_document: &CodeDocument,
-    ) -> Result<BracketHighlightResults, BracketHighlightError> {
+    ) -> Result<Option<BracketHighlightResults>, BracketHighlightError> {
         let text_content = code_document
             .text_content()
             .as_ref()
@@ -202,11 +196,24 @@ impl BracketHighlight {
             closing_bracket,
             line_opening_char,
             line_closing_char,
-        } = &self
-            .compute_results
-            .as_ref()
-            .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
+        } = match &self.compute_results.as_ref() {
+            Some(compute_results) => compute_results,
+            None => {
+                return Ok(None); /*Ok(BracketHighlightResults {
+                                     boxes: BracketHighlightBoxPair {
+                                         opening_bracket: None,
+                                         closing_bracket: None,
+                                     },
+                                     lines: BracketHighlightLines {
+                                         start: None,
+                                         end: None,
+                                         elbow: None,
+                                     },
+                                 });*/
+            }
+        };
 
+        dbg!(self.compute_results);
         let (opening_bracket_rect, closing_bracket_rect) = (
             get_char_rectangle_from_text_index(opening_bracket.index)?,
             get_char_rectangle_from_text_index(closing_bracket.index)?,
@@ -222,7 +229,7 @@ impl BracketHighlight {
             line_opening_char.position.row != line_closing_char.position.row;
 
         if !is_line_spans_multiple_rows {
-            return Ok(BracketHighlightResults {
+            return Ok(Some(BracketHighlightResults {
                 lines: BracketHighlightLines {
                     start: line_opening_char_rect.map(|rect| LogicalPosition {
                         x: rect.bottom_right().x,
@@ -238,7 +245,7 @@ impl BracketHighlight {
                     opening_bracket: opening_bracket_rect,
                     closing_bracket: closing_bracket_rect,
                 },
-            });
+            }));
         }
 
         // Check if bottom line should be to the top or bottom of last line rectangle
@@ -278,7 +285,7 @@ impl BracketHighlight {
             match get_left_most_char_x(&text_content, &line_opening_char, &line_closing_char)? {
                 None => {
                     // Case: elbow is not within the visible_text_range of Xcode
-                    return Ok(BracketHighlightResults {
+                    return Ok(Some(BracketHighlightResults {
                         lines: BracketHighlightLines {
                             start: line_start_point,
                             end: line_end_point,
@@ -288,7 +295,7 @@ impl BracketHighlight {
                             opening_bracket: opening_bracket_rect,
                             closing_bracket: closing_bracket_rect,
                         },
-                    });
+                    }));
                 }
                 Some(left_most_char_rect) => left_most_char_rect,
             };
@@ -320,7 +327,7 @@ impl BracketHighlight {
             Some(Elbow::KnownElbow(left_most_char_x))
         };
 
-        return Ok(BracketHighlightResults {
+        return Ok(Some(BracketHighlightResults {
             lines: BracketHighlightLines {
                 start: line_start_point,
                 end: line_end_point,
@@ -330,7 +337,7 @@ impl BracketHighlight {
                 opening_bracket: opening_bracket_rect,
                 closing_bracket: closing_bracket_rect,
             },
-        });
+        }));
     }
 
     fn publish_visualization(&self, _: &CodeDocument) {
@@ -355,10 +362,10 @@ impl BracketHighlight {
         _code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<bool, BracketHighlightError> {
-        let compute_results = &self
-            .compute_results
-            .as_ref()
-            .ok_or(BracketHighlightError::UpdatingVisualizationBeforeComputing)?;
+        let compute_results = match self.compute_results.as_ref() {
+            Some(compute_results) => compute_results,
+            None => return Ok(self.visualization_results.is_some()),
+        };
 
         match trigger {
             CoreEngineTrigger::OnViewportDimensionsChange => Ok(true),
