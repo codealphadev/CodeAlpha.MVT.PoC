@@ -56,6 +56,7 @@ pub fn notify_uielement_focused(
         }
 
         if role.to_string() == "AXTextArea" {
+            println!("textarea focused");
             // Publish an updated viewport properties message
             EventViewport::new_xcode_viewport_update(&GetVia::Current)
                 .map_err(|_| accessibility::Error::NotFound)?

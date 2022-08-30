@@ -65,6 +65,7 @@ pub fn notify_window_resized(
         };
 
         if "AXScrollBar" == ui_element.role()? {
+            println!("scrollbar resized");
             // Publish an updated viewport properties message
             EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
                 .map_err(|_| accessibility::Error::NotFound)?
