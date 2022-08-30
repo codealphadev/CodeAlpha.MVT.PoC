@@ -101,9 +101,8 @@ impl CodeDocument {
         }
 
         self.file_path = file_path.clone();
-        if (self.syntax_tree.parse(&new_content)) {
-            self.text = Some(new_content);
-        }
+        dbg!(self.syntax_tree.parse(&new_content));
+        self.text = Some(new_content);
     }
 
     pub fn process_rules(&mut self) {
@@ -147,9 +146,8 @@ impl CodeDocument {
             self.selected_text_range = Some(text_range);
 
             if content_text_u16 != text {
-                if self.syntax_tree.parse(content_text_u16) {
-                    self.text = Some(content_text_u16.clone());
-                }
+                dbg!(self.syntax_tree.parse(content_text_u16));
+                self.text = Some(content_text_u16.clone());
             }
         }
     }

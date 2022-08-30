@@ -33,14 +33,12 @@
 
 			opening_bracket_box = bracket_highlights.boxes.opening_bracket;
 			closing_bracket_box = bracket_highlights.boxes.closing_bracket;
-			console.log(bracket_highlights.lines)
 			const rectangles = compute_bracket_highlight_rects(
 				bracket_highlights.lines,
 				code_document_rect.size.height
 			);
 			top_rectangle = rectangles.top_rect;
 			bottom_rectangle = rectangles.bottom_rect;
-			console.log(top_rectangle, bottom_rectangle)
 		});
 	};
 	listenTauriEvents();
