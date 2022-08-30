@@ -12,8 +12,7 @@ use crate::{
         CodeDocument, TextPosition, TextRange,
     },
     platform::macos::{
-        get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped,
-        CodeDocumentFrameProperties, GetVia,
+        get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
     },
     utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
@@ -115,11 +114,16 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
-        let CodeDocumentFrameProperties {
-            text_offset,
-            dimensions,
-        } = get_code_document_frame_properties(&GetVia::Current)
+        let code_doc_frame_props = get_code_document_frame_properties(&GetVia::Current)
             .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
+
+        let dimensions = code_doc_frame_props.dimensions;
+        let text_offset =
+            code_doc_frame_props
+                .text_offset
+                .ok_or(BracketHighlightError::GenericError(anyhow!(
+                    "Textoffset None - should never happen"
+                )))?;
 
         self.visualization_results = self
             .calculate_visualization_results(code_document, text_offset + dimensions.origin.x)?

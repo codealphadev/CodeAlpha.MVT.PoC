@@ -15,27 +15,25 @@ use super::{
 #[ts(export, export_to = "bindings/macOS_specific/xcode/")]
 pub struct ViewportProperties {
     pub dimensions: LogicalFrame,
-    pub annotation_section: LogicalFrame,
-    pub code_section: LogicalFrame,
+    pub annotation_section: Option<LogicalFrame>,
+    pub code_section: Option<LogicalFrame>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/macOS_specific/xcode/")]
 pub struct CodeDocumentFrameProperties {
     pub dimensions: LogicalFrame,
-    pub text_offset: f64,
+    pub text_offset: Option<f64>,
 }
 
 pub fn get_code_document_frame_properties(
     get_via: &GetVia,
 ) -> Result<CodeDocumentFrameProperties, XcodeError> {
     let code_document_uielement = get_textarea_uielement(get_via)?;
-    let code_document_frame = get_uielement_frame(&code_document_uielement)?;
-    let text_offset = get_text_offset_px(&get_via)?;
 
     Ok(CodeDocumentFrameProperties {
-        dimensions: code_document_frame,
-        text_offset,
+        dimensions: get_uielement_frame(&code_document_uielement)?,
+        text_offset: Some(get_text_offset_px(&get_via)?),
     })
 }
 
@@ -53,8 +51,8 @@ pub fn get_viewport_properties(get_via: &GetVia) -> Result<ViewportProperties, X
                 height: annotation_section.size.height,
             },
         },
-        annotation_section,
-        code_section,
+        annotation_section: Some(annotation_section),
+        code_section: Some(code_section),
     })
 }
 

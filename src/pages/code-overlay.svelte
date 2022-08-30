@@ -18,12 +18,18 @@
 	let text_offset: number | null;
 	$: annotations_opacity = get_annotations_opacity(code_document_rect, text_offset);
 
-	function get_annotations_opacity(code_document_rect: LogicalFrame | null, text_offset: number | null): number {
+	function get_annotations_opacity(
+		code_document_rect: LogicalFrame | null,
+		text_offset: number | null
+	): number {
 		if (code_document_rect === null || text_offset === null || annotation_section === null) {
 			return 1.0;
 		} else {
-			console.log(code_document_rect.origin.x, -text_offset);
-			return code_document_rect.origin.x + text_offset < annotation_section.origin.x - 1 + annotation_section.size.width ? 0.5 : 1.0;
+			// console.log(code_document_rect.origin.x, -text_offset);
+			return code_document_rect.origin.x <
+				annotation_section.origin.x - 1 + annotation_section.size.width
+				? 0.5
+				: 1.0;
 		}
 	}
 	const listenToViewportEvents = async () => {
@@ -35,16 +41,22 @@
 				case 'XcodeViewportUpdate':
 					const { viewport_properties, code_document_frame_properties } = payload;
 
+					if (code_document_frame_properties.text_offset) {
+						text_offset = code_document_frame_properties.text_offset;
+					}
+
 					const code_document_rect_global = code_document_frame_properties.dimensions;
-					text_offset = code_document_frame_properties.text_offset;
 					code_document_rect = convert_global_frame_to_local(
 						code_document_rect_global,
 						viewport_properties.dimensions.origin
 					);
-					annotation_section = convert_global_frame_to_local(
-						viewport_properties.annotation_section,
-						viewport_properties.dimensions.origin
-					);
+					if (viewport_properties.annotation_section !== null) {
+						annotation_section = convert_global_frame_to_local(
+							viewport_properties.annotation_section,
+							viewport_properties.dimensions.origin
+						);
+					}
+					console.log(code_document_rect, annotation_section);
 
 					break;
 
@@ -98,10 +110,8 @@
 			top: {code_document_rect.origin.y}px; 
 			left:0px; position: absolute"
 			class="h-full w-full overflow-hidden absolute"
-	>
+		>
 			<DocsAnnotations />
-
 		</div>
-		
 	</div>
 {/if}

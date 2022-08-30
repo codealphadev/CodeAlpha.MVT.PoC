@@ -80,7 +80,8 @@ fn execute_publishing_event(text_editor_hash: usize) -> Result<(), XcodeError> {
 
     if text_editor_hash == current_hash {
         // Update viewport
-        EventViewport::new_xcode_viewport_update(&GetVia::Current)?.publish_to_tauri(&app_handle());
+        EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current)?
+            .publish_to_tauri(&app_handle());
 
         return Ok(());
     }
