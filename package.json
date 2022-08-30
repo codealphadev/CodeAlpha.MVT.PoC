@@ -32,7 +32,6 @@
   "dependencies": {
     "@tauri-apps/api": "^1.0.0-rc.2",
     "vite": "^3.0.7",
-    "yarn": "^1.22.18",
     "yrv": "^0.0.57"
   },
   "type": "module"
