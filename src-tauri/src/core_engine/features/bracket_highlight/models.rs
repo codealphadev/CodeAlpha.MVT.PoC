@@ -12,8 +12,8 @@ pub struct BracketHighlightBracket {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub enum Elbow {
-    KnownElbow(f64),           // Includes wrapped line case
-    EstimatedElbowOffset(f64), // Case: we're missing information
+    KnownElbow(f64),     // For wrapped line, use text offset
+    EstimatedElbow(f64), // Case: we're missing information
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -61,8 +61,8 @@ impl BracketHighlightResults {
                         Some(Elbow::KnownElbow(pos)) => {
                             Some(Elbow::KnownElbow(pos - global_origin.x))
                         }
-                        Some(Elbow::EstimatedElbowOffset(offset)) => {
-                            Some(Elbow::EstimatedElbowOffset(offset))
+                        Some(Elbow::EstimatedElbow(pos)) => {
+                            Some(Elbow::EstimatedElbow(pos - global_origin.x))
                         }
                         None => None,
                     },

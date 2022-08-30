@@ -12,7 +12,8 @@ use crate::{
         CodeDocument, TextPosition, TextRange,
     },
     platform::macos::{
-        get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
+        get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped,
+        CodeDocumentFrameProperties, GetVia,
     },
     utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
@@ -109,13 +110,15 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
-        let code_document_frame = get_code_document_frame_properties(&GetVia::Current)
-            .map_err(|e| BracketHighlightError::GenericError(e.into()))?
-            .dimensions;
+        let CodeDocumentFrameProperties {
+            text_offset,
+            dimensions,
+        } = get_code_document_frame_properties(&GetVia::Current)
+            .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
 
         self.visualization_results = self
-            .calculate_visualization_results(code_document)?
-            .map(|res| res.to_local(&code_document_frame.origin));
+            .calculate_visualization_results(code_document, text_offset + dimensions.origin.x)?
+            .map(|res| res.to_local(&dimensions.origin));
 
         self.publish_visualization(code_document);
 
@@ -185,6 +188,7 @@ impl BracketHighlight {
     fn calculate_visualization_results(
         &self,
         code_document: &CodeDocument,
+        text_offset_global: f64,
     ) -> Result<Option<BracketHighlightResults>, BracketHighlightError> {
         let text_content = code_document
             .text_content()
@@ -199,21 +203,10 @@ impl BracketHighlight {
         } = match &self.compute_results.as_ref() {
             Some(compute_results) => compute_results,
             None => {
-                return Ok(None); /*Ok(BracketHighlightResults {
-                                     boxes: BracketHighlightBoxPair {
-                                         opening_bracket: None,
-                                         closing_bracket: None,
-                                     },
-                                     lines: BracketHighlightLines {
-                                         start: None,
-                                         end: None,
-                                         elbow: None,
-                                     },
-                                 });*/
+                return Ok(None);
             }
         };
 
-        dbg!(self.compute_results);
         let (opening_bracket_rect, closing_bracket_rect) = (
             get_char_rectangle_from_text_index(opening_bracket.index)?,
             get_char_rectangle_from_text_index(closing_bracket.index)?,
@@ -274,7 +267,7 @@ impl BracketHighlight {
             } else {
                 LogicalPosition {
                     x: rect.bottom_left().x,
-                    y: rect.bottom_left().y - 1.0,
+                    y: rect.bottom_left().y,
                 }
             }
         });
@@ -289,7 +282,7 @@ impl BracketHighlight {
                         lines: BracketHighlightLines {
                             start: line_start_point,
                             end: line_end_point,
-                            elbow: Some(Elbow::EstimatedElbowOffset(0.0)),
+                            elbow: Some(Elbow::EstimatedElbow(text_offset_global)),
                         },
                         boxes: BracketHighlightBoxPair {
                             opening_bracket: opening_bracket_rect,
@@ -322,7 +315,7 @@ impl BracketHighlight {
         }
 
         let elbow = if is_first_line_wrapped {
-            Some(Elbow::KnownElbow(0.0))
+            Some(Elbow::KnownElbow(text_offset_global))
         } else {
             Some(Elbow::KnownElbow(left_most_char_x))
         };
@@ -450,8 +443,6 @@ fn get_selected_code_block_node(
 pub enum BracketHighlightError {
     #[error("Insufficient context for bracket highlighting")]
     InsufficientContext,
-    #[error("Attempted to update visualization before computing results")]
-    UpdatingVisualizationBeforeComputing,
     #[error("Unsupported codeblock.")]
     UnsupportedCodeblock,
     #[error("Position out of bounds")]

@@ -19,7 +19,6 @@
 		let ViewportChannel: ChannelList = 'EventViewport';
 		await listen(ViewportChannel, (e) => {
 			const { event, payload } = JSON.parse(e.payload as string) as EventViewport;
-			console.log(event);
 
 			switch (event) {
 				case 'XcodeViewportUpdate':
@@ -31,7 +30,6 @@
 						code_document_rect_global,
 						viewport_properties.dimensions.origin
 					);
-					console.log(code_document_rect);
 
 					break;
 

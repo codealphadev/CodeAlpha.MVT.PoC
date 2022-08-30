@@ -23,30 +23,31 @@ export const compute_bracket_highlight_rects = (
 
 	return {
 		top_rect:
-			start && start.x > left_x
+			start && start.x > left_x // No top_rect in one-line case
 				? {
 						origin: {
-							x: left_x + 1, // Add border width because vertical line is handled by bottom rect
+							x: left_x + (end ? 1 : 0), // Add border width because vertical line is handled by bottom rect
 							y: top_y
 						},
 						size: {
 							width: start.x - left_x, // TODO: Should this be absolute instead of max?
-							height: 0.0
+							height: end ? 0.0 : bottom_y - top_y // If there is no bottom_rect, need to handle vertical line
 						}
 				  }
 				: null,
-		bottom_rect: end
-			? {
-					origin: {
-						x: left_x,
-						y: top_y
-					},
-					size: {
-						width: end.x - left_x,
-						height: bottom_y - top_y
-					}
-			  }
-			: null
+		bottom_rect:
+			end || !start // Draws the vertical line if there is no start and no end
+				? {
+						origin: {
+							x: left_x,
+							y: top_y
+						},
+						size: {
+							width: Math.max(0, (end?.x ?? 0) - left_x),
+							height: bottom_y - top_y
+						}
+				  }
+				: null
 	};
 };
 
@@ -58,5 +59,5 @@ function get_elbow_x(elbow: Elbow | null): number | null {
 	if (elbow === null) {
 		return null;
 	}
-	return is_known_elbow(elbow) ? elbow.KnownElbow : elbow.EstimatedElbowOffset;
+	return is_known_elbow(elbow) ? elbow.KnownElbow : elbow.EstimatedElbow;
 }
