@@ -102,6 +102,7 @@ impl DocsGenerationTask {
                     mintlify_documentation(&codeblock_text_string, None).await;
 
                 if let Ok(mintlify_response) = &mut mintlify_response {
+                    println!("mintlify response: {:?}", mintlify_response);
                     // Paste it at the docs insertion point
                     replace_range_with_clipboard_text(
                         &app_handle(),
