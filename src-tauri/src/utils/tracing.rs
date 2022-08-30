@@ -36,7 +36,7 @@ impl<S: Subscriber> Layer<S> for GcpLayer {
     fn enabled(
         &self,
         metadata: &tracing::Metadata<'_>,
-        ctx: tracing_subscriber::layer::Context<'_, S>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) -> bool {
         if let Some(module) = metadata.module_path() {
             if module.contains("CodeAlpha") {
@@ -83,7 +83,7 @@ impl TracingSubscriber {
         let gcp_logging = GcpLogging::new();
         gcp_logging.start_remote();
 
-        let mut gcp_layer = GcpLayer {
+        let gcp_layer = GcpLayer {
             gcp_logging: Arc::new(Mutex::new(gcp_logging)),
         };
         let subscriber = tracing_subscriber::fmt()
@@ -91,13 +91,13 @@ impl TracingSubscriber {
             .finish()
             .with(gcp_layer);
 
-        tracing::subscriber::set_global_default(subscriber);
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("Failed to set global default subscriber");
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use tauri::async_runtime::block_on;
     use tracing::info;
 
     use crate::utils::tracing::TracingSubscriber;
@@ -106,13 +106,6 @@ mod tests {
     fn log_info() {
         TracingSubscriber::new();
         let foo = 22;
-        info!("should send");
-
-        info!(message = "should not send to remote", no_remote = true);
-
-        block_on(async {
-            tokio::time::sleep(std::time::Duration::from_secs(4)).await;
-        });
-        println!("done");
+        info!(foo, no_remote = true, "Here is the message");
     }
 }

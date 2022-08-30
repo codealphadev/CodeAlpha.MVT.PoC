@@ -59,6 +59,7 @@ fn main() {
     // Configure tracing
     TracingSubscriber::new();
     info!("Starting Application");
+
     let system_tray = SystemTray::new().with_menu(construct_tray_menu());
 
     let mut app: tauri::App = tauri::Builder::default()

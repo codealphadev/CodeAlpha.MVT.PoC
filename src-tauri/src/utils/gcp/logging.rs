@@ -33,16 +33,16 @@ impl Severity {
 pub struct MonitoredResource {
     #[serde(rename = "type")]
     type_: String,
-    labels: HashMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogEntry {
-    log_name: String,
     jsonPayload: Value,
+    labels: HashMap<String, String>,
+    log_name: String,
     resource: MonitoredResource,
-    timestamp: String,
     severity: Severity,
+    timestamp: String,
 }
 
 impl LogEntry {
@@ -54,15 +54,15 @@ impl LogEntry {
 
         let monitored_resource = MonitoredResource {
             type_: "global".to_string(),
-            labels,
         };
 
         Self {
-            log_name: log_name,
             jsonPayload: jsonPayload,
+            labels,
+            log_name: log_name,
             resource: monitored_resource,
-            timestamp: metadata.timestamp.to_rfc3339(),
             severity: Severity::from_tracing_level(&metadata.level),
+            timestamp: metadata.timestamp.to_rfc3339(),
         }
     }
 }
@@ -80,7 +80,7 @@ pub struct GcpLogging {
 impl GcpLogging {
     pub fn new() -> Self {
         Self {
-            log_name: "projects/client-backend-adam1/logs/client".to_string(),
+            log_name: "projects/client-backend-logs/logs/client".to_string(),
             entries: Arc::new(Mutex::new(Vec::new())),
         }
     }
@@ -103,7 +103,10 @@ impl GcpLogging {
                     }
 
                     if let Some(access_token) = token {
-                        publish_to_gcp(current_entries, access_token).await;
+                        match publish_to_gcp(current_entries, access_token).await {
+                            Ok(_) => {}
+                            Err(_e) => {}
+                        }
                     }
                 }
             }
@@ -114,6 +117,7 @@ impl GcpLogging {
         (*self.entries.lock()).push(LogEntry::new(self.log_name.clone(), message, metadata));
     }
 
+    #[allow(dead_code)] // Used in tests
     pub fn entries(&self) -> Vec<LogEntry> {
         (*self.entries.lock()).clone()
     }
@@ -142,13 +146,13 @@ async fn publish_to_gcp(
             if response.status().is_success() {
                 debug!(
                     no_remote = true,
-                    module_path = "local",
                     "successfully published {} logs to GCP",
                     entries.len()
                 );
             } else {
                 warn!(
                     no_remote = true,
+                    response = ?response,
                     "failed to publish {} logs to GCP",
                     entries.len()
                 );
@@ -174,7 +178,8 @@ mod tests {
     #[test]
     fn write_log() {
         let mut gcp_logging = super::GcpLogging::new();
-        let first_message = serde_json::from_str(r#"{"message": "first message"}"#).unwrap();
+        let first_message =
+            serde_json::from_str(r#"{"message": "TEST message 1", "log_test": "true"}"#).unwrap();
         gcp_logging.add_entry(
             first_message,
             Metadata {
@@ -185,7 +190,8 @@ mod tests {
         );
 
         gcp_logging.start_remote();
-        let second_message = serde_json::from_str(r#"{"message": "second message"}"#).unwrap();
+        let second_message =
+            serde_json::from_str(r#"{"message": "TEST message 2", "log_test": "true"}"#).unwrap();
 
         gcp_logging.add_entry(
             second_message,
@@ -195,10 +201,8 @@ mod tests {
                 level: Level::INFO,
             },
         );
-        println!("gcp_logging.entries: {:?}", gcp_logging.entries());
         block_on(async {
             tokio::time::sleep(std::time::Duration::from_secs(4)).await;
         });
-        println!("done");
     }
 }
