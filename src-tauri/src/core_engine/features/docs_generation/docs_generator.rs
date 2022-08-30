@@ -154,7 +154,7 @@ impl DocsGenerator {
         match trigger {
             CoreEngineTrigger::OnTextContentChange => true,
             CoreEngineTrigger::OnTextSelectionChange => true,
-            CoreEngineTrigger::OnVisibleTextRangeChange => true,
+            CoreEngineTrigger::OnVisibleTextRangeChange => false,
             CoreEngineTrigger::OnViewportMove => true,
             CoreEngineTrigger::OnViewportDimensionsChange => true,
 
