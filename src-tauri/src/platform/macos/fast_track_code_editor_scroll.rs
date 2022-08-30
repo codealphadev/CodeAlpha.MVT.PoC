@@ -2,6 +2,7 @@
 // This only handles mousewheel scrolling events, since they come much faster than the native AX scroll event.
 // We additionally use the native AX scroll event to handle other scrolling cases like scrollbar click-and-drag.
 
+use chrono::Utc;
 use std::time::{Duration, Instant, SystemTime};
 
 use lazy_static::lazy_static;
@@ -18,7 +19,8 @@ lazy_static! {
 
 pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) -> Option<()> {
     let start = Instant::now();
-    _ = execute_publishing_event(text_editor_hash, Some(start));
+    println!("{}", Utc::now().to_rfc3339());
+    _ = execute_publishing_event(text_editor_hash, None);
 
     // Disable correction events for now
     /*
@@ -90,7 +92,11 @@ fn execute_publishing_event(
             .publish_to_tauri(&app_handle());
 
         if let Some(start) = start {
-            println!("{:?} scroll event published", Instant::now() - start);
+            println!(
+                "start: {:?} dur: {:?} scroll event",
+                start,
+                Instant::now() - start
+            );
         }
         return Ok(());
     }

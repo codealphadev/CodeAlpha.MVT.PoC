@@ -35,6 +35,7 @@
 
 			switch (event) {
 				case 'XcodeViewportUpdate':
+					console.log(new Date().toISOString(), 'XcodeViewportUpdate', payload);
 					const { viewport_properties, code_document_frame_properties } = payload;
 
 					if (code_document_frame_properties.text_offset) {
@@ -52,6 +53,7 @@
 							viewport_properties.dimensions.origin
 						);
 					}
+
 
 					break;
 
