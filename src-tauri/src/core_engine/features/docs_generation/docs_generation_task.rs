@@ -17,7 +17,7 @@ use crate::{
         TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
-        get_annotation_section_frame, get_bounds_for_TextRange, get_viewport_frame,
+        get_bounds_for_TextRange, get_code_document_frame_properties, get_viewport_frame,
         xcode::actions::replace_range_with_clipboard_text, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
@@ -136,11 +136,12 @@ impl DocsGenerationTask {
     ) -> Result<TrackingArea, DocsGenerationError> {
         // When we create the annotation, we need to compute the bounds for the frontend so it knows where to display the annotation
         // and we need to create a tracking area which the tracking area manager takes care of. The tracking area manager uses GLOBAL coordinates
-        // whereas the frontend uses LOCAL coordinates; local to the AnnotationSectionFrame.
+        // whereas the frontend uses LOCAL coordinates; local to the CodeDocumentFrame.
 
-        // 1. Get the local coordinates of the AnnotationSectionFrame
-        let annotation_section_origin = get_annotation_section_frame(&GetVia::Current)
+        // 1. Get the coordinates of the CodeDocumentFrame
+        let code_document_frame_origin = get_code_document_frame_properties(&GetVia::Current)
             .map_err(|e| DocsGenerationError::GenericError(e.into()))?
+            .dimensions
             .origin;
 
         // 2. Get the annotation bounds, naturally in global coordinates
@@ -170,16 +171,16 @@ impl DocsGenerationTask {
         EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
             id: tracking_area.id,
             annotation_icon: annotation_rect_opt
-                .map(|rect| rect.to_local(&annotation_section_origin)),
+                .map(|rect| rect.to_local(&code_document_frame_origin)),
             annotation_codeblock: codeblock_bounds
-                .map(|rect| rect.to_local(&annotation_section_origin)),
+                .map(|rect| rect.to_local(&code_document_frame_origin)),
         })
         .publish_to_tauri(&app_handle());
 
         // 5. We also store the tracking area in local coordintes
         let local_rectangles: Vec<LogicalFrame> = global_rectangles
             .iter()
-            .map(|rect| rect.to_local(&annotation_section_origin))
+            .map(|rect| rect.to_local(&code_document_frame_origin))
             .collect();
         tracking_area.rectangles = local_rectangles;
 
@@ -190,10 +191,13 @@ impl DocsGenerationTask {
         &mut self,
         text: &XcodeText,
     ) -> Result<(), DocsGenerationError> {
-        // 1. Get the local coordinates of the AnnotationSectionFrame
-        let annotation_section_origin = get_annotation_section_frame(&GetVia::Current)
+        // 1. Get the coordinates of the CodeDocumentFrame
+        let code_document_frame_origin = get_code_document_frame_properties(&GetVia::Current)
             .map_err(|e| DocsGenerationError::GenericError(e.into()))?
+            .dimensions
             .origin;
+        // 1. Get the local coordinates of the AnnotationSectionFrame
+
         if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
             Self::calculate_annotation_bounds(text, &self.codeblock)
         {
@@ -209,9 +213,9 @@ impl DocsGenerationTask {
             EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
                 id: self.tracking_area.id,
                 annotation_icon: annotation_rect_opt
-                    .map(|rect| rect.to_local(&annotation_section_origin)),
+                    .map(|rect| rect.to_local(&code_document_frame_origin)),
                 annotation_codeblock: codeblock_rect_opt
-                    .map(|rect| rect.to_local(&annotation_section_origin)),
+                    .map(|rect| rect.to_local(&code_document_frame_origin)),
             })
             .publish_to_tauri(&app_handle());
             Ok(())

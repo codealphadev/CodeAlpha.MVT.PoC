@@ -13,8 +13,19 @@
 	const { setTheme } = getContext('theme');
 
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
-	let text_offset: number | null;
+	let annotation_section: LogicalFrame | null = null; // Relative to viewport
 
+	let text_offset: number | null;
+	$: annotations_opacity = get_annotations_opacity(code_document_rect, text_offset);
+
+	function get_annotations_opacity(code_document_rect: LogicalFrame | null, text_offset: number | null): number {
+		if (code_document_rect === null || text_offset === null || annotation_section === null) {
+			return 1.0;
+		} else {
+			console.log(code_document_rect.origin.x, -text_offset);
+			return code_document_rect.origin.x + text_offset < annotation_section.origin.x - 1 + annotation_section.size.width ? 0.5 : 1.0;
+		}
+	}
 	const listenToViewportEvents = async () => {
 		let ViewportChannel: ChannelList = 'EventViewport';
 		await listen(ViewportChannel, (e) => {
@@ -28,6 +39,10 @@
 					text_offset = code_document_frame_properties.text_offset;
 					code_document_rect = convert_global_frame_to_local(
 						code_document_rect_global,
+						viewport_properties.dimensions.origin
+					);
+					annotation_section = convert_global_frame_to_local(
+						viewport_properties.annotation_section,
 						viewport_properties.dimensions.origin
 					);
 
@@ -74,7 +89,19 @@
 			class="h-full w-full overflow-hidden relative"
 		>
 			<BracketHighlight {code_document_rect} />
-			<DocsAnnotations />
 		</div>
+		<div
+			style="
+			opacity: {annotations_opacity};
+			height: {code_document_rect.size.height}px;
+			width: {code_document_rect.size.width}px;
+			top: {code_document_rect.origin.y}px; 
+			left:0px; position: absolute"
+			class="h-full w-full overflow-hidden absolute"
+	>
+			<DocsAnnotations />
+
+		</div>
+		
 	</div>
 {/if}
