@@ -48,10 +48,13 @@ pub async fn paste_clipboard_text(
     }
 
     // Perform the paste operation
-    let app_ui_element = get_focused_uielement(get_via)?
-        .focused_application()
-        .map_err(|err| XcodeError::AXError(err.into()))?;
-    let _ = perform_paste_xcode_ax_api(&app_ui_element);
+    let app_ui_element = get_focused_uielement(get_via)?;
+    let application = AXUIElement::application(
+        app_ui_element
+            .pid()
+            .map_err(|e| XcodeError::GenericError(e.into()))?,
+    );
+    let _ = perform_paste_xcode_ax_api(&application);
 
     if text.is_some() {
         // Erase the added whitespace character
@@ -99,7 +102,6 @@ pub async fn replace_range_with_clipboard_text(
     restore_cursor: bool,
 ) {
     let mut preserved_cursor_position: Option<TextRange> = None;
-
     if restore_cursor {
         if let Ok(range) = get_selected_text_range(get_via) {
             preserved_cursor_position = Some(range);
