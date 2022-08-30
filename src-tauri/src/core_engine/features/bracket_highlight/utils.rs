@@ -145,6 +145,7 @@ pub fn only_whitespace_on_line_until_position(
 
     let row = &rows[position.row];
     if position.column + 1 > row.len() {
+        // remove + 1?
         return Err(BracketHighlightError::PositionOutOfBounds);
     }
 
