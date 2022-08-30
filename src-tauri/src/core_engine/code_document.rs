@@ -101,7 +101,7 @@ impl CodeDocument {
         }
 
         self.file_path = file_path.clone();
-        dbg!(self.syntax_tree.parse(&new_content));
+        self.syntax_tree.parse(&new_content);
         self.text = Some(new_content);
     }
 
@@ -146,7 +146,7 @@ impl CodeDocument {
             self.selected_text_range = Some(text_range);
 
             if content_text_u16 != text {
-                dbg!(self.syntax_tree.parse(content_text_u16));
+                self.syntax_tree.parse(content_text_u16);
                 self.text = Some(content_text_u16.clone());
             }
         }
