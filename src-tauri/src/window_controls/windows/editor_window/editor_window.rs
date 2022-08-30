@@ -5,7 +5,6 @@ use crate::{
     platform::macos::{
         get_dark_mode,
         models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
-        EventViewport, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
@@ -130,10 +129,6 @@ impl EditorWindow {
         self.textarea_position = Some(position);
         self.textarea_size = Some(size);
 
-        EventViewport::new_xcode_viewport_update(&GetVia::Current)
-            .map_err(|_| "Viewport update failed")?
-            .publish_to_tauri(&app_handle());
-
         Ok(())
     }
 
@@ -233,12 +228,6 @@ impl EditorWindow {
         // Update the editor window's and textarea's dimensions.
         self.window_position = window.origin;
         self.window_size = window.size;
-
-        // Notify the frontend about the updated position of the editor window to allow
-        // it to correctly render code annotations.
-        EventViewport::new_xcode_viewport_update(&GetVia::Current)
-            .ok()?
-            .publish_to_tauri(&app_handle());
 
         self.widget_position
             .replace(Self::transform_global_position_to_local_position(
