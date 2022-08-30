@@ -9,7 +9,7 @@ use std::sync::Arc;
 use core_engine::CoreEngine;
 use parking_lot::Mutex;
 use platform::macos::setup_observers;
-use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent};
+use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
@@ -44,7 +44,7 @@ fn construct_tray_menu() -> SystemTrayMenu {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let check_ax_api = CustomMenuItem::new("check_ax_api".to_string(), "Settings...");
 
-    if !ax_interaction::is_application_trusted() {
+    if !platform::macos::is_application_trusted() {
         SystemTrayMenu::new()
             .add_item(check_ax_api)
             .add_native_item(SystemTrayMenuItem::Separator)
@@ -74,7 +74,7 @@ fn main() {
             WindowManager::start_event_listeners(&window_manager);
 
             // Continuously check if the accessibility APIs are enabled, show popup if not
-            let ax_apis_enabled_at_start = ax_interaction::is_application_trusted();
+            let ax_apis_enabled_at_start = platform::macos::is_application_trusted();
             tauri::async_runtime::spawn(async move {
                 let mut popup_was_shown = false;
                 loop {
@@ -115,7 +115,7 @@ fn main() {
                     std::process::exit(0);
                 }
                 "check_ax_api" => {
-                    ax_interaction::is_application_trusted_with_prompt();
+                    platform::macos::is_application_trusted_with_prompt();
                 }
                 _ => {}
             },
