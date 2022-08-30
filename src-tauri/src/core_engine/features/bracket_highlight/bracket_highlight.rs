@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use tauri::Manager;
+use tracing::debug;
 use tree_sitter::Node;
 
 use crate::{
@@ -324,6 +325,7 @@ impl BracketHighlight {
         }
 
         let elbow = if is_first_line_wrapped {
+            debug!("Bracket Highlight: rendered wrapped line");
             Some(Elbow::KnownElbow(text_offset_global))
         } else {
             Some(Elbow::KnownElbow(left_most_char_x))
