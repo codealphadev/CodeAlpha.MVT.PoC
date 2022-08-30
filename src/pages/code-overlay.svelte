@@ -25,11 +25,7 @@
 		if (code_document_rect === null || text_offset === null || annotation_section === null) {
 			return 1.0;
 		} else {
-			// console.log(code_document_rect.origin.x, -text_offset);
-			return code_document_rect.origin.x <
-				annotation_section.origin.x - 1 + annotation_section.size.width
-				? 0.5
-				: 1.0;
+			return code_document_rect.origin.x + text_offset < annotation_section.origin.x - 1 + annotation_section.size.width ? 0.5 : 1.0;
 		}
 	}
 	const listenToViewportEvents = async () => {

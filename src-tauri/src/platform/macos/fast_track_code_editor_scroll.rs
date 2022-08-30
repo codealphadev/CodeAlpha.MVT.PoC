@@ -19,6 +19,10 @@ lazy_static! {
 pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) -> Option<()> {
     _ = execute_publishing_event(text_editor_hash);
 
+    _ = execute_publishing_event(text_editor_hash, Some(start));
+
+    // Disable correction events for now
+    /*
     let mut publishing_time_mutex = CORRECTION_EVENT_PUBLISHING_TIME.lock();
     if publishing_time_mutex.is_none() {
         // Case: This is the first scrolling event. It will be responsible for the final execution, after the last scrolling event has happened.
@@ -69,7 +73,7 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
     } else {
         // Refresh the time to publish final, correction event, since we are stil observing scrolling.
         publishing_time_mutex.replace(Instant::now() + std::time::Duration::from_millis(50));
-    }
+    }*/
 
     Some(())
 }

@@ -305,7 +305,10 @@ impl DocsGenerationTask {
                     y: codeblock_top,
                 },
                 size: LogicalSize {
-                    width: annotation_section.size.width,
+                    width: annotation_section
+                        .expect("Non fast track should return annotation_section")
+                        .size
+                        .width,
                     height: codeblock_bottom - codeblock_top,
                 },
             });
@@ -317,7 +320,10 @@ impl DocsGenerationTask {
                         y: first_char_bounds.origin.y,
                     },
                     size: LogicalSize {
-                        width: annotation_section.size.width,
+                        width: annotation_section
+                            .expect("Non fast track should return annotation_section")
+                            .size
+                            .width,
                         height: first_char_bounds.size.height,
                     },
                 })
