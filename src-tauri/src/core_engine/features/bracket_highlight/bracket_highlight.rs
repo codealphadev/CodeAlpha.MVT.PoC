@@ -114,7 +114,6 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
-        println!("{:?} update_visualization", trigger);
         let code_document_frame = get_code_document_frame_properties(&GetVia::Current)
             .map_err(|e| BracketHighlightError::GenericError(e.into()))?
             .dimensions;

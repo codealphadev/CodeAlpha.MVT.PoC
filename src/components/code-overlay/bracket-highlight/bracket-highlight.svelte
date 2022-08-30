@@ -30,7 +30,7 @@
 				return;
 			}
 			const bracket_highlights = payload;
-			console.log(bracket_highlights)
+
 			opening_bracket_box = bracket_highlights.boxes.opening_bracket;
 			closing_bracket_box = bracket_highlights.boxes.closing_bracket;
 
@@ -38,7 +38,6 @@
 				bracket_highlights.lines,
 				code_document_rect.size.height
 			);
-			console.log(rectangles);
 			top_rectangle = rectangles.top_rect;
 			bottom_rectangle = rectangles.bottom_rect;
 	

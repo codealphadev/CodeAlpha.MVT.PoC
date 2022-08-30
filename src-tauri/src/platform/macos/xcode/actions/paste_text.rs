@@ -29,7 +29,6 @@ pub async fn paste_clipboard_text(
     app_handle: &tauri::AppHandle,
     get_via: &GetVia,
     text: Option<&String>,
-    add_linebreak_with_enter: bool,
 ) -> Result<(), XcodeError> {
     let mut clipboard = app_handle.clipboard_manager();
     let preserve_old_clipboard = clipboard
@@ -48,6 +47,7 @@ pub async fn paste_clipboard_text(
             .map_err(|err| XcodeError::GenericError(err.into()))?;
     }
 
+    // Perform the paste operation
     let app_ui_element = get_focused_uielement(get_via)?
         .focused_application()
         .map_err(|err| XcodeError::AXError(err.into()))?;
