@@ -80,7 +80,18 @@ pub fn get_code_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeErr
     // Get all children
     let children_elements = ax_attribute(&viewport_uielement, AXAttribute::children())?;
 
-    let minimap_frame = get_viewport_minimap_frame(&children_elements)?;
+    let minimap_frame = if let Ok(frame) = get_viewport_minimap_frame(&children_elements) {
+        frame
+    } else {
+        // Return zero size if no minimap is found
+        LogicalFrame::new(
+            LogicalPosition { x: 0., y: 0. },
+            LogicalSize {
+                width: 0.,
+                height: 0.,
+            },
+        )
+    };
     let gutter_frame = get_viewport_gutter_frame(&children_elements)?;
     let gutter_change_frame = get_viewport_gutter_change_frame(&children_elements)?;
 

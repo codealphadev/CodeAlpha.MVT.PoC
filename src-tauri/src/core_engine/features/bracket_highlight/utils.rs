@@ -191,7 +191,7 @@ pub fn only_whitespace_on_line_until_position(
     }
 
     let row = &rows[position.row];
-    if row.len() - 1 < position.column {
+    if row.len() < position.column + 1 {
         return None;
     }
 
@@ -341,6 +341,11 @@ mod tests {
                 0,
                 None,
             );
+        }
+
+        #[test]
+        fn empty_column() {
+            test_fn("", 0, 1, None);
         }
 
         #[test]
