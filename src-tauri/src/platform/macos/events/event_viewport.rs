@@ -6,9 +6,11 @@ use ts_rs::TS;
 
 use crate::{
     platform::macos::{
-        get_code_document_frame_properties, get_viewport_properties, GetVia, XcodeError,
+        get_code_document_frame_properties, get_textarea_uielement, get_viewport_properties,
+        internal::get_uielement_frame, CodeDocumentFrameProperties, GetVia, ViewportProperties,
+        XcodeError,
     },
-    utils::messaging::ChannelList,
+    utils::{messaging::ChannelList, tauri_types::get_tauri_window_frame},
     window_controls::config::AppWindow,
 };
 
@@ -45,6 +47,24 @@ impl EventViewport {
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );
+    }
+
+    pub fn new_xcode_viewport_update_minimal(get_via: &GetVia) -> Result<Self, XcodeError> {
+        let textarea_uielement = get_textarea_uielement(get_via)?;
+        let code_doc_frame = get_uielement_frame(&textarea_uielement)?;
+
+        Ok(Self::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
+            viewport_properties: ViewportProperties {
+                dimensions: get_tauri_window_frame(&AppWindow::CodeOverlay)
+                    .map_err(|err| XcodeError::GenericError(err.into()))?,
+                annotation_section: None,
+                code_section: None,
+            },
+            code_document_frame_properties: CodeDocumentFrameProperties {
+                dimensions: code_doc_frame,
+                text_offset: None,
+            },
+        }))
     }
 
     pub fn new_xcode_viewport_update(get_via: &GetVia) -> Result<Self, XcodeError> {

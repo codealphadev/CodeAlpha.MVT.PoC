@@ -3,6 +3,6 @@ import type { LogicalFrame } from "../../geometry/LogicalFrame";
 
 export interface ViewportProperties {
   dimensions: LogicalFrame;
-  annotation_section: LogicalFrame;
-  code_section: LogicalFrame;
+  annotation_section: LogicalFrame | null;
+  code_section: LogicalFrame | null;
 }

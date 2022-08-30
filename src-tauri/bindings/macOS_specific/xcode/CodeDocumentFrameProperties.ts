@@ -3,5 +3,5 @@ import type { LogicalFrame } from "../../geometry/LogicalFrame";
 
 export interface CodeDocumentFrameProperties {
   dimensions: LogicalFrame;
-  text_offset: number;
+  text_offset: number | null;
 }
