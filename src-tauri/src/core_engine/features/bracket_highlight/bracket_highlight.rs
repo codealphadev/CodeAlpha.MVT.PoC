@@ -71,9 +71,14 @@ impl FeatureBase for BracketHighlight {
                     return Ok(());
                 }
             }
-            Err(_) => {
+            Err(BracketHighlightError::UnterminatedCodeBlock)
+            | Err(BracketHighlightError::InsufficientContext) => {
                 self.compute_results = None;
                 return Ok(());
+            }
+            Err(err) => {
+                self.compute_results = None;
+                return Err(err.into());
             }
         };
 
@@ -436,6 +441,11 @@ fn get_selected_code_block_node(
             Some(node) => node,
         };
     }
+
+    if code_block_node.end_position().column == 0 {
+        // This (probably) means that the codeblock is non-terminated, and the end is taken as the end of the document.
+        return Err(BracketHighlightError::UnterminatedCodeBlock);
+    }
     return Ok(Some(code_block_node));
 }
 
@@ -447,6 +457,8 @@ pub enum BracketHighlightError {
     UnsupportedCodeblock,
     #[error("Position out of bounds")]
     PositionOutOfBounds,
+    #[error("Found unterminated code block")]
+    UnterminatedCodeBlock,
     #[error("Something went wrong when executing this BracketHighlighting feature.")]
     GenericError(#[source] anyhow::Error),
 }
