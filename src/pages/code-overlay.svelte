@@ -52,7 +52,6 @@
 							viewport_properties.dimensions.origin
 						);
 					}
-					console.log(code_document_rect, annotation_section);
 
 					break;
 

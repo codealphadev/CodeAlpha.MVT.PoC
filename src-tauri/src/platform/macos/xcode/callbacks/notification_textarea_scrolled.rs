@@ -28,11 +28,11 @@ pub fn notify_textarea_scrolled(
             window_uid: window.0,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
-
+        /*
         // Publish an updated viewport properties message
         EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
             .map_err(|_| accessibility::Error::NotFound)?
-            .publish_to_tauri(&xcode_observer_state.app_handle)
+            .publish_to_tauri(&xcode_observer_state.app_handle)*/
     }
     Ok(())
 }
@@ -40,9 +40,9 @@ pub fn notify_textarea_scrolled(
 pub fn update_code_document_dimensions(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     // This event needs to arrive in the frontend before any annotation events
     // because the frontend relies on always having the correct document rect to handle global coordinates sent from core engine.
-    EventViewport::new_xcode_viewport_update(&GetVia::Current)
-        .map_err(|_| accessibility::Error::NotFound)?
-        .publish_to_tauri(app_handle);
-
+    /*EventViewport::new_xcode_viewport_update(&GetVia::Current)
+            .map_err(|_| accessibility::Error::NotFound)?
+            .publish_to_tauri(app_handle);
+    */
     Ok(())
 }

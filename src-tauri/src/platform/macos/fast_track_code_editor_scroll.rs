@@ -2,7 +2,7 @@
 // This only handles mousewheel scrolling events, since they come much faster than the native AX scroll event.
 // We additionally use the native AX scroll event to handle other scrolling cases like scrollbar click-and-drag.
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -17,7 +17,8 @@ lazy_static! {
 }
 
 pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) -> Option<()> {
-    _ = execute_publishing_event(text_editor_hash);
+    let start = Instant::now();
+    _ = execute_publishing_event(text_editor_hash, Some(start));
 
     // Disable correction events for now
     /*
@@ -56,11 +57,11 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
                 if publishing_moment_reached {
                     // Sometimes, XCode handles the scroll event quickly, but sometimes it takes longer.
                     // Send multiple correction events at different delays for optimal handling.
-                    _ = execute_publishing_event(text_editor_hash);
+                    _ = execute_publishing_event(text_editor_hash, None);
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                    _ = execute_publishing_event(text_editor_hash);
+                    _ = execute_publishing_event(text_editor_hash, None);
                     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-                    _ = execute_publishing_event(text_editor_hash);
+                    _ = execute_publishing_event(text_editor_hash, None);
 
                     break;
                 } else {
@@ -76,7 +77,10 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
     Some(())
 }
 
-fn execute_publishing_event(text_editor_hash: usize) -> Result<(), XcodeError> {
+fn execute_publishing_event(
+    text_editor_hash: usize,
+    start: Option<Instant>,
+) -> Result<(), XcodeError> {
     // Check if text editor is still focused
     let current_hash = generate_axui_element_hash(&get_focused_uielement(&GetVia::Current)?);
 
@@ -85,6 +89,9 @@ fn execute_publishing_event(text_editor_hash: usize) -> Result<(), XcodeError> {
         EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current)?
             .publish_to_tauri(&app_handle());
 
+        if let Some(start) = start {
+            println!("{:?} scroll event published", Instant::now() - start);
+        }
         return Ok(());
     }
     Ok(())
