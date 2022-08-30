@@ -26,6 +26,13 @@ pub struct CodeDocumentFrameProperties {
     pub text_offset: Option<f64>,
 }
 
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref LAST_KNOWN_VIEWPORT_FRAME: parking_lot::Mutex<Option<LogicalFrame>> =
+        parking_lot::Mutex::new(None);
+}
+
 pub fn get_code_document_frame_properties(
     get_via: &GetVia,
 ) -> Result<CodeDocumentFrameProperties, XcodeError> {
@@ -43,14 +50,16 @@ pub fn get_viewport_properties(get_via: &GetVia) -> Result<ViewportProperties, X
 
     let diff_origin_x = code_section.origin.x - annotation_section.origin.x;
 
-    Ok(ViewportProperties {
-        dimensions: LogicalFrame {
-            origin: annotation_section.origin,
-            size: LogicalSize {
-                width: diff_origin_x + code_section.size.width,
-                height: annotation_section.size.height,
-            },
+    let viewport_frame = LogicalFrame {
+        origin: annotation_section.origin,
+        size: LogicalSize {
+            width: diff_origin_x + code_section.size.width,
+            height: annotation_section.size.height,
         },
+    };
+
+    Ok(ViewportProperties {
+        dimensions: viewport_frame,
         annotation_section: Some(annotation_section),
         code_section: Some(code_section),
     })
@@ -68,6 +77,9 @@ pub fn get_annotation_section_frame(get_via: &GetVia) -> Result<LogicalFrame, Xc
     let annotation_origin_x_offset = get_annotation_origin_x_offset_px(&viewport_uielement)?;
 
     let viewport_frame = get_uielement_frame(&viewport_uielement)?;
+    LAST_KNOWN_VIEWPORT_FRAME
+        .lock()
+        .replace(viewport_frame.clone());
 
     Ok(LogicalFrame {
         origin: LogicalPosition {

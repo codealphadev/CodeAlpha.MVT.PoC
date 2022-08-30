@@ -1,5 +1,6 @@
 use std::fmt;
 
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use ts_rs::TS;
@@ -8,9 +9,9 @@ use crate::{
     platform::macos::{
         get_code_document_frame_properties, get_textarea_uielement, get_viewport_properties,
         internal::get_uielement_frame, CodeDocumentFrameProperties, GetVia, ViewportProperties,
-        XcodeError,
+        XcodeError, LAST_KNOWN_VIEWPORT_FRAME,
     },
-    utils::{messaging::ChannelList, tauri_types::get_tauri_window_frame},
+    utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
 
@@ -55,8 +56,11 @@ impl EventViewport {
 
         Ok(Self::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
             viewport_properties: ViewportProperties {
-                dimensions: get_tauri_window_frame(&AppWindow::CodeOverlay)
-                    .map_err(|err| XcodeError::GenericError(err.into()))?,
+                dimensions: LAST_KNOWN_VIEWPORT_FRAME
+                    .lock()
+                    .ok_or(XcodeError::GenericError(anyhow!(
+                        "Viewport frame not known."
+                    )))?,
                 annotation_section: None,
                 code_section: None,
             },
