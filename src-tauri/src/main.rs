@@ -96,7 +96,7 @@ fn main() {
 
                     if !api_enabled && ax_apis_enabled_at_start {
                         // in this case the permissions were withdrawn at runtime, restart the app
-                        app_handle().restart();
+                        std::process::exit(0);
                     }
 
                     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
