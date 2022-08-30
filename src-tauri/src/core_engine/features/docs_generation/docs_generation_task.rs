@@ -102,7 +102,6 @@ impl DocsGenerationTask {
                     mintlify_documentation(&codeblock_text_string, None).await;
 
                 if let Ok(mintlify_response) = &mut mintlify_response {
-                    println!("mintlify response: {:?}", mintlify_response);
                     // Paste it at the docs insertion point
                     replace_range_with_clipboard_text(
                         &app_handle(),
@@ -203,8 +202,8 @@ impl DocsGenerationTask {
             } else {
                 vec![]
             };
-            EventTrackingArea::Update(vec![self.tracking_area.clone()])
-                .publish_to_tauri(&app_handle());
+
+            Self::update_tracking_area(&self.tracking_area);
 
             // Publish annotation_rect and codeblock_rect to frontend in local coordinates.
             EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
@@ -221,6 +220,27 @@ impl DocsGenerationTask {
         }
     }
 
+    fn update_tracking_area(tracking_area: &TrackingArea) -> Result<(), DocsGenerationError> {
+        let mut tracking_area = tracking_area.to_owned();
+
+        if let Some(annotation_rect) = tracking_area.rectangles.first() {
+            // Check if the annotation is outside of the viewport and if so, remove the tracking areas
+            let viewport = get_viewport_frame(&GetVia::Current).map_err(|_| {
+                DocsGenerationError::GenericError(anyhow!("Could not derive textarea dimensions"))
+            })?;
+
+            if !viewport.contains_position(&annotation_rect.top_left())
+                && !viewport.contains_position(&annotation_rect.bottom_left())
+            {
+                tracking_area.rectangles = vec![];
+            }
+        }
+
+        EventTrackingArea::Update(vec![tracking_area]).publish_to_tauri(&app_handle());
+
+        Ok(())
+    }
+
     /// It calculates the bounds of the annotation icon and the codeblock rectangle
     /// The annotation icon is going to be the TrackingArea's rectangle. The codeblock rectangle is
     /// the one that is going to be highlighted.
@@ -228,14 +248,10 @@ impl DocsGenerationTask {
         text: &XcodeText,
         code_block: &CodeBlock,
     ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), DocsGenerationError> {
-        let (textarea_origin, textarea_size) =
-            if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
-                (code_section_frame.origin, code_section_frame.size)
-            } else {
-                return Err(DocsGenerationError::GenericError(anyhow!(
-                    "Could not derive textarea dimensions"
-                )));
-            };
+        // 1. Get viewport dimensions
+        let viewport = get_viewport_frame(&GetVia::Current).map_err(|_| {
+            DocsGenerationError::GenericError(anyhow!("Could not derive textarea dimensions"))
+        })?;
 
         // 2. Calculate the annotation rectangles
         if let (Some(first_char_text_pos), Some(last_char_text_pos)) = (
@@ -259,19 +275,19 @@ impl DocsGenerationTask {
             );
             let codeblock_top = if let Ok(first_char_bounds) = first_char_bounds_opt {
                 f64::max(
-                    textarea_origin.y,
+                    viewport.origin.y,
                     first_char_bounds.origin.y + first_char_bounds.size.height,
                 )
             } else {
-                textarea_origin.y
+                viewport.origin.y
             };
             let codeblock_bottom = if let Ok(last_char_bounds) = last_char_bounds_opt {
                 f64::min(
                     last_char_bounds.origin.y + last_char_bounds.size.height,
-                    textarea_origin.y + textarea_size.height,
+                    viewport.origin.y + viewport.size.height,
                 )
             } else {
-                textarea_origin.y + textarea_size.height
+                viewport.origin.y + viewport.size.height
             };
 
             let char_width = if let Ok(first_char_bounds) = first_char_bounds_opt {
@@ -284,7 +300,7 @@ impl DocsGenerationTask {
 
             let codeblock_bounds = Some(LogicalFrame {
                 origin: LogicalPosition {
-                    x: textarea_origin.x,
+                    x: viewport.origin.x,
                     y: codeblock_top,
                 },
                 size: LogicalSize {
@@ -296,7 +312,7 @@ impl DocsGenerationTask {
             let annotation_bounds = if let Ok(first_char_bounds) = first_char_bounds_opt {
                 Some(LogicalFrame {
                     origin: LogicalPosition {
-                        x: textarea_origin.x,
+                        x: viewport.origin.x,
                         y: first_char_bounds.origin.y,
                     },
                     size: LogicalSize {

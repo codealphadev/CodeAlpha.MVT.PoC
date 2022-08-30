@@ -122,10 +122,13 @@ impl LogicalFrame {
     }
 
     pub fn contains_point(&self, x: f64, y: f64) -> bool {
-        // Check if mouse_x and mouse_y are within the bounds of the rectangle.
         let x_in_bounds = x >= self.origin.x && x <= self.origin.x + self.size.width;
         let y_in_bounds = y >= self.origin.y && y <= self.origin.y + self.size.height;
         x_in_bounds && y_in_bounds
+    }
+
+    pub fn contains_position(&self, position: &LogicalPosition) -> bool {
+        self.contains_point(position.x, position.y)
     }
 
     pub fn bottom_right(&self) -> LogicalPosition {
