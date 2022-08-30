@@ -19,8 +19,6 @@ lazy_static! {
 pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) -> Option<()> {
     _ = execute_publishing_event(text_editor_hash);
 
-    _ = execute_publishing_event(text_editor_hash);
-
     // Disable correction events for now
     /*
     let mut publishing_time_mutex = CORRECTION_EVENT_PUBLISHING_TIME.lock();
