@@ -106,7 +106,6 @@
 		<div
 			style="position: absolute; 
 			top: {round_value(annotation.annotation_icon.origin.y, 2)}px; 
-			left: {round_value(annotation.annotation_icon.origin.x, 2)}px; 
 			width: {round_value(annotation.annotation_icon.size.width, 2)}px; 
 			height: {round_value(annotation.annotation_icon.size.height, 2)}px;"
 		>
@@ -118,7 +117,6 @@
 		<div
 			style="position: absolute; 
 			top: {round_value(annotation.annotation_codeblock.origin.y, 2)}px; 
-			left: {round_value(annotation.annotation_codeblock.origin.x, 2)}px; 
 			width: {round_value(annotation.annotation_codeblock.size.width, 2)}px; 
 			height: {round_value(annotation.annotation_codeblock.size.height, 2)}px;"
 		>
