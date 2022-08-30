@@ -5,3 +5,11 @@
 
 .DS_Store
 public/build
+
+### Terraform ###
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*

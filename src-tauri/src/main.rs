@@ -10,6 +10,7 @@ use core_engine::CoreEngine;
 use parking_lot::Mutex;
 use platform::macos::setup_observers;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
+use tracing::info;
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
@@ -21,7 +22,7 @@ mod window_controls;
 
 use lazy_static::lazy_static;
 
-use crate::window_controls::cmd_toggle_app_activation;
+use crate::{utils::tracing::TracingSubscriber, window_controls::cmd_toggle_app_activation};
 
 lazy_static! {
     static ref APP_HANDLE: parking_lot::Mutex<Option<tauri::AppHandle>> =
@@ -55,6 +56,9 @@ fn construct_tray_menu() -> SystemTrayMenu {
 }
 
 fn main() {
+    // Configure tracing
+    TracingSubscriber::new();
+    info!("Starting Application");
     let system_tray = SystemTray::new().with_menu(construct_tray_menu());
 
     let mut app: tauri::App = tauri::Builder::default()

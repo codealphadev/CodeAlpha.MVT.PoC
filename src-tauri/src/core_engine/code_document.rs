@@ -55,6 +55,10 @@ impl CodeDocument {
         }
     }
 
+    pub fn selected_text_range(&self) -> &Option<TextRange> {
+        &self.selected_text_range
+    }
+
     pub fn syntax_tree(&self) -> &SwiftSyntaxTree {
         &self.syntax_tree
     }
@@ -69,10 +73,6 @@ impl CodeDocument {
 
     pub fn file_path(&self) -> &Option<String> {
         &self.file_path
-    }
-
-    pub fn selected_text_range(&self) -> &Option<TextRange> {
-        &self.selected_text_range
     }
 
     pub fn update_doc_properties(
