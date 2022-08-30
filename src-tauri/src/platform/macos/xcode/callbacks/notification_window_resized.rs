@@ -6,7 +6,7 @@ use core_graphics_types::geometry::CGSize;
 use crate::{
     platform::macos::{
         get_viewport_frame, models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState,
-        AXEventXcode, EventViewport, GetVia,
+        AXEventXcode, GetVia,
     },
     utils::geometry::LogicalSize,
 };

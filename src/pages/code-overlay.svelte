@@ -38,7 +38,6 @@
 
 			switch (event) {
 				case 'XcodeViewportUpdate':
-					//console.log(new Date().toISOString(), 'XcodeViewportUpdate', payload);
 					const { viewport_properties, code_document_frame_properties } = payload;
 
 					if (code_document_frame_properties.text_offset) {
@@ -88,7 +87,7 @@
 {#if code_document_rect}
 	<div
 		style="height: 100%; width: 100%;
-			border-style: solid; border-width: 1px; border-color: rgba(0,255,0);"
+			border-style: solid; border-width: 0px; border-color: rgba(0,255,0);"
 		class="h-full w-full overflow-hidden relative"
 	>
 		<div
