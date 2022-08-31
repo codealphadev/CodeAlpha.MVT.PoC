@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 
 use crate::{
-    core_engine::{core_engine::CoreEngineError, CoreEngine},
+    core_engine::{core_engine::CoreEngineError, features::CoreEngineTrigger, CoreEngine},
     platform::macos::{
         get_selected_text_range, get_textarea_content, get_textarea_file_path,
         models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
@@ -34,21 +34,25 @@ pub fn on_editor_focused_uielement_changed(
             ))?;
 
     let core_engine = &mut core_engine_arc.lock();
-    let code_documents = &mut core_engine.code_documents().lock();
 
-    _ = check_if_code_doc_needs_to_be_created(code_documents, pid, window_uid);
+    {
+        let code_documents = &mut core_engine.code_documents().lock();
 
-    let code_doc = code_documents
-        .get_mut(&window_uid)
-        .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
+        check_if_code_doc_needs_to_be_created(code_documents, pid, window_uid);
 
-    // Update code document properties
-    let content_str = get_textarea_content(&GetVia::Pid(pid))?;
-    let file_path = get_textarea_file_path(&GetVia::Pid(pid)).ok();
-    code_doc.update_doc_properties(&content_str, &file_path);
+        let code_doc = code_documents
+            .get_mut(&window_uid)
+            .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
-    let selected_text_range = get_selected_text_range(&GetVia::Pid(pid))?;
-    code_doc.set_selected_text_range(selected_text_range.index, selected_text_range.length);
+        // Update code document properties
+        let content_str = get_textarea_content(&GetVia::Pid(pid))?;
+        let file_path = get_textarea_file_path(&GetVia::Pid(pid)).ok();
+        code_doc.update_doc_properties(&content_str, &file_path);
 
-    Ok(())
+        let selected_text_range = get_selected_text_range(&GetVia::Pid(pid))?;
+        code_doc.set_selected_text_range(selected_text_range.index, selected_text_range.length);
+    }
+
+    core_engine.run_features(window_uid, &CoreEngineTrigger::OnTextSelectionChange)
+    // not chosing OnTextContentChange here, because bracket highlighting ignores OnTextContentChange for its own reasons
 }

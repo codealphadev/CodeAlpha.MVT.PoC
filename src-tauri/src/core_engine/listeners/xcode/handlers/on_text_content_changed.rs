@@ -58,7 +58,7 @@ pub fn check_if_code_doc_needs_to_be_created(
     code_documents: &mut HashMap<WindowUid, CodeDocument>,
     editor_pid: i32,
     editor_window_uid: WindowUid,
-) -> bool {
+) {
     let new_code_doc = CodeDocument::new(&EditorWindowProps {
         window_uid: editor_window_uid,
         pid: editor_pid,
@@ -67,8 +67,5 @@ pub fn check_if_code_doc_needs_to_be_created(
     // check if code document is already contained in list of documents
     if (*code_documents).get(&editor_window_uid).is_none() {
         (*code_documents).insert(editor_window_uid, new_code_doc);
-        true
-    } else {
-        false
     }
 }
