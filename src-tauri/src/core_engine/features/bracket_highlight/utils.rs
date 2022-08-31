@@ -302,7 +302,7 @@ mod tests {
 
         #[test]
         fn empty_column() {
-            test_fn("", 0, 1, None);
+            test_fn("", 0, 1, Some(true));
         }
     }
 

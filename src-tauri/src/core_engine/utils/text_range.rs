@@ -304,7 +304,7 @@ mod tests {
 
         assert_eq!(last_char_range.is_some(), true);
 
-        assert_eq!(last_char_range.unwrap().index, 8);
+        assert_eq!(last_char_range.unwrap().index, 7);
         assert_eq!(last_char_range.unwrap().length, 1);
 
         // =====

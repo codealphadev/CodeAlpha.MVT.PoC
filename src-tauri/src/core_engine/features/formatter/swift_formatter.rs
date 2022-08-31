@@ -113,7 +113,7 @@ impl SwiftFormatter {
             let formatted_content = match Self::format_file(&text_file_path).await {
                 Ok(content) => content,
                 Err(err) => {
-                    EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&app_handle());
+                    EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
                     return;
                 }
             };
@@ -127,7 +127,7 @@ impl SwiftFormatter {
             {
                 Ok(_) => {}
                 Err(err) => {
-                    EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&app_handle());
+                    EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
                     return;
                 }
             }
