@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "vite build",
-    "dev": "vite",
+    "build-frontend": "vite build",
+    "start-frontend": "vite",
+    "build": "tauri build --target universal-apple-darwin",
     "start": "tauri dev",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
