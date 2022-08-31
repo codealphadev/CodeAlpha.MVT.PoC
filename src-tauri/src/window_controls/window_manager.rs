@@ -106,7 +106,13 @@ impl WindowManager {
         self.focused_app_window = Some(app_window);
     }
 
-    pub fn hide_app_windows(&self, app_windows: Vec<AppWindow>) {
+    pub fn hide_app_windows(&mut self, app_windows: Vec<AppWindow>) {
+        if let Some(app_window) = self.focused_app_window.as_ref() {
+            if app_windows.contains(app_window) {
+                self.focused_app_window = None;
+            }
+        }
+
         EventWindowControls::AppWindowHide(HideAppWindowMessage { app_windows })
             .publish_to_tauri(&app_handle());
     }
@@ -157,7 +163,7 @@ impl WindowManager {
         Some(())
     }
 
-    pub fn temporarily_hide_app_windows(&self, app_windows: Vec<AppWindow>) {
+    pub fn temporarily_hide_app_windows(&mut self, app_windows: Vec<AppWindow>) {
         self.hide_app_windows(app_windows);
 
         // Check if another instance of this routine is already running
@@ -212,8 +218,8 @@ impl WindowManager {
 
         let focused_editor_window = focused_editor_window_arc.lock();
 
-        let editor_Uid = focused_editor_window.as_ref()?;
-        let editor_window = editor_windows.get(editor_Uid)?;
+        let editor_uid = focused_editor_window.as_ref()?;
+        let editor_window = editor_windows.get(editor_uid)?;
 
         let textarea_position = editor_window.textarea_position(true)?;
         let textarea_size = editor_window.textarea_size()?;

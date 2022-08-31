@@ -1,6 +1,7 @@
 use accessibility::{AXAttribute, AXUIElement, Error};
 
 use crate::platform::macos::{
+    get_focused_window,
     models::editor::{EditorAppActivatedMessage, EditorAppDeactivatedMessage},
     xcode::XCodeObserverState,
     AXEventXcode,
@@ -17,10 +18,12 @@ pub fn notify_app_activated(
 
     let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
+    let window_uid = get_focused_window().expect("Should always find a window");
 
     let activation_msg = EditorAppActivatedMessage {
         editor_name: name.to_string(),
         pid: pid.try_into().unwrap(),
+        window_uid,
     };
 
     let activation_event = AXEventXcode::EditorAppActivated(activation_msg);

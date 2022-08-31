@@ -9,14 +9,14 @@ use crate::{
 
 pub fn on_activate_editor_app(
     window_manager: &Arc<Mutex<WindowManager>>,
-    _activated_msg: &EditorAppActivatedMessage,
+    activated_msg: &EditorAppActivatedMessage,
 ) -> Option<()> {
-    let window_manager = window_manager.lock();
+    let mut window_manager = window_manager.lock();
 
     let is_textarea_focused;
     {
         let editor_window_list = &mut window_manager.editor_windows().lock();
-        let editor_window = editor_window_list.get_mut(&window_manager.focused_editor_window()?)?;
+        let editor_window = editor_window_list.get_mut(&activated_msg.window_uid)?;
 
         if *editor_window.focused_ui_element()? == FocusedUIElement::Textarea {
             is_textarea_focused = true;
@@ -27,8 +27,13 @@ pub fn on_activate_editor_app(
     }
 
     if is_textarea_focused {
-        window_manager.show_app_windows(AppWindow::shown_on_focus_gained(), None);
+        window_manager.show_app_windows(
+            AppWindow::shown_on_focus_gained(),
+            Some(activated_msg.window_uid),
+        );
     }
+
+    window_manager.set_focused_editor_window(Some(activated_msg.window_uid));
 
     Some(())
 }

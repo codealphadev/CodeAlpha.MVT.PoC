@@ -1,3 +1,4 @@
+pub use on_app_activated::on_app_activated;
 pub use on_close_editor_app::on_close_editor_app;
 pub use on_destroyed_editor_window::on_editor_window_destroyed;
 pub use on_move::on_editor_window_moved;
@@ -10,6 +11,7 @@ pub use on_text_content_changed::on_text_content_changed;
 pub use on_ui_element_focus_change::on_editor_focused_uielement_changed;
 pub use on_zoom_editor_window::on_editor_textarea_zoomed;
 
+mod on_app_activated;
 mod on_close_editor_app;
 mod on_destroyed_editor_window;
 mod on_move;

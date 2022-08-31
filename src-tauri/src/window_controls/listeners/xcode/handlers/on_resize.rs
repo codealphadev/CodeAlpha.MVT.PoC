@@ -13,35 +13,38 @@ pub fn on_resize_editor_window(
     resize_msg: &EditorWindowResizedMessage,
 ) -> Option<()> {
     let window_manager = &mut window_manager.lock();
-    let editor_window_list = &mut window_manager.editor_windows().try_lock()?;
 
-    let editor_window = editor_window_list.get_mut(&resize_msg.window_uid)?;
+    {
+        let editor_window_list = &mut window_manager.editor_windows().try_lock()?;
 
-    let mut textarea_position = resize_msg.textarea_position;
-    let mut textarea_size = resize_msg.textarea_size;
+        let editor_window = editor_window_list.get_mut(&resize_msg.window_uid)?;
 
-    // If the textarea dimensions are not set, attempt to derive them from the textarea element.
-    if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Pid(editor_window.pid())) {
-        textarea_position = Some(code_section_frame.origin.as_tauri_LogicalPosition());
-        textarea_size = Some(code_section_frame.size.as_tauri_LogicalSize());
-    };
+        let mut textarea_position = resize_msg.textarea_position;
+        let mut textarea_size = resize_msg.textarea_size;
 
-    editor_window.update_window_and_textarea_dimensions(
-        LogicalFrame {
-            origin: LogicalPosition::from_tauri_LogicalPosition(&resize_msg.window_position),
-            size: LogicalSize::from_tauri_LogicalSize(&resize_msg.window_size),
-        },
-        LogicalFrame {
-            origin: LogicalPosition {
-                x: textarea_position?.x,
-                y: textarea_position?.y,
+        // If the textarea dimensions are not set, attempt to derive them from the textarea element.
+        if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Pid(editor_window.pid())) {
+            textarea_position = Some(code_section_frame.origin.as_tauri_LogicalPosition());
+            textarea_size = Some(code_section_frame.size.as_tauri_LogicalSize());
+        };
+
+        editor_window.update_window_and_textarea_dimensions(
+            LogicalFrame {
+                origin: LogicalPosition::from_tauri_LogicalPosition(&resize_msg.window_position),
+                size: LogicalSize::from_tauri_LogicalSize(&resize_msg.window_size),
             },
-            size: LogicalSize {
-                width: textarea_size?.width,
-                height: textarea_size?.height,
+            LogicalFrame {
+                origin: LogicalPosition {
+                    x: textarea_position?.x,
+                    y: textarea_position?.y,
+                },
+                size: LogicalSize {
+                    width: textarea_size?.width,
+                    height: textarea_size?.height,
+                },
             },
-        },
-    );
+        );
+    }
 
     window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
 
