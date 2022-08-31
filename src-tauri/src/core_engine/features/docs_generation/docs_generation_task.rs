@@ -64,7 +64,7 @@ impl DocsGenerationTask {
             text: codeblock_text,
         };
 
-        let tracking_area = Self::create_code_annotation(text_content, &codeblock, window_uid)?;
+        let tracking_area = Self::create_trask_tracking_area(text_content, &codeblock, window_uid)?;
 
         Ok(Self {
             tracking_area,
@@ -82,8 +82,28 @@ impl DocsGenerationTask {
         self.tracking_area.id
     }
 
-    pub fn docs_insertion_point(&self) -> TextRange {
-        self.docs_insertion_point.clone()
+    pub fn update_visualization(&self, text: &XcodeText) -> Result<(), DocsGenerationError> {
+        // 1. Get the coordinates of the CodeDocumentFrame
+        let code_document_frame_origin = get_code_document_frame_properties(&GetVia::Current)
+            .map_err(|e| DocsGenerationError::GenericError(e.into()))?
+            .dimensions
+            .origin;
+
+        // 2. Get the annotation bounds, naturally in global coordinates
+        let (annotation_rect_opt, codeblock_bounds) =
+            Self::calculate_annotation_bounds(text, &self.codeblock)?;
+
+        // 3. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
+        EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
+            id: self.tracking_area.id,
+            annotation_icon: annotation_rect_opt
+                .map(|rect| rect.to_local(&code_document_frame_origin)),
+            annotation_codeblock: codeblock_bounds
+                .map(|rect| rect.to_local(&code_document_frame_origin)),
+        })
+        .publish_to_tauri(&app_handle());
+
+        Ok(())
     }
 
     pub fn generate_documentation(&self) -> Result<(), DocsGenerationError> {
@@ -95,7 +115,7 @@ impl DocsGenerationTask {
         tauri::async_runtime::spawn({
             let codeblock_text_string = String::from_utf16(&self.codeblock.text)
                 .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
-            let docs_insertion_point = self.docs_insertion_point();
+            let docs_insertion_point = self.docs_insertion_point;
             let task_state = self.task_state.clone();
             let task_id = self.id();
             async move {
@@ -130,7 +150,7 @@ impl DocsGenerationTask {
         Ok(())
     }
 
-    pub fn create_code_annotation(
+    pub fn create_trask_tracking_area(
         text: &XcodeText,
         code_block: &CodeBlock,
         window_uid: WindowUid,
@@ -139,25 +159,13 @@ impl DocsGenerationTask {
         // and we need to create a tracking area which the tracking area manager takes care of. The tracking area manager uses GLOBAL coordinates
         // whereas the frontend uses LOCAL coordinates; local to the CodeDocumentFrame.
 
-        // 1. Get the coordinates of the CodeDocumentFrame
-        let code_document_frame_origin = get_code_document_frame_properties(&GetVia::Current)
-            .map_err(|e| DocsGenerationError::GenericError(e.into()))?
-            .dimensions
-            .origin;
+        // 1. Get the annotation bounds, naturally in global coordinates
+        let (annotation_rect_opt, _) = Self::calculate_annotation_bounds(text, code_block)?;
 
-        // 2. Get the annotation bounds, naturally in global coordinates
-        let (annotation_rect_opt, codeblock_bounds) =
-            Self::calculate_annotation_bounds(text, code_block)?;
-        let global_rectangles = if let Some(annotation_rect) = annotation_rect_opt {
-            vec![annotation_rect]
-        } else {
-            vec![]
-        };
-
-        let mut tracking_area = TrackingArea {
+        let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
             window_uid,
-            rectangles: global_rectangles.clone(),
+            rectangles: annotation_rect_opt.map_or(vec![], |rect| vec![rect]),
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,
                 TrackingEventType::MouseEntered,
@@ -168,84 +176,39 @@ impl DocsGenerationTask {
         // 3. Publish to the tracking area manager with its original GLOBAL coordinates
         EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
 
-        // 4. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
-        EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
-            id: tracking_area.id,
-            annotation_icon: annotation_rect_opt
-                .map(|rect| rect.to_local(&code_document_frame_origin)),
-            annotation_codeblock: codeblock_bounds
-                .map(|rect| rect.to_local(&code_document_frame_origin)),
-        })
-        .publish_to_tauri(&app_handle());
-
-        // 5. We also store the tracking area in local coordintes
-        let local_rectangles: Vec<LogicalFrame> = global_rectangles
-            .iter()
-            .map(|rect| rect.to_local(&code_document_frame_origin))
-            .collect();
-        tracking_area.rectangles = local_rectangles;
-
         Ok(tracking_area)
     }
 
-    pub fn update_code_annotation_position(
+    pub fn update_task_tracking_area(
         &mut self,
         text: &XcodeText,
     ) -> Result<(), DocsGenerationError> {
-        // 1. Get the coordinates of the CodeDocumentFrame
-        let code_document_frame_origin = get_code_document_frame_properties(&GetVia::Current)
-            .map_err(|e| DocsGenerationError::GenericError(e.into()))?
-            .dimensions
-            .origin;
-        // 1. Get the local coordinates of the AnnotationSectionFrame
-
-        if let Ok((annotation_rect_opt, codeblock_rect_opt)) =
+        // 2. Get the local coordinates of the AnnotationSectionFrame
+        if let Ok((annotation_rect_opt, _)) =
             Self::calculate_annotation_bounds(text, &self.codeblock)
         {
-            self.tracking_area.rectangles = if let Some(annotation_rect) = annotation_rect_opt {
-                vec![annotation_rect]
-            } else {
-                vec![]
-            };
+            self.tracking_area.rectangles = annotation_rect_opt.map_or(vec![], |rect| vec![rect]);
 
-            _ = Self::update_tracking_area_manager(&self.tracking_area);
-
-            // Publish annotation_rect and codeblock_rect to frontend in local coordinates.
-            EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
-                id: self.tracking_area.id,
-                annotation_icon: annotation_rect_opt
-                    .map(|rect| rect.to_local(&code_document_frame_origin)),
-                annotation_codeblock: codeblock_rect_opt
-                    .map(|rect| rect.to_local(&code_document_frame_origin)),
-            })
-            .publish_to_tauri(&app_handle());
-            Ok(())
-        } else {
-            Err(DocsGenerationError::DocsGenTaskUpdateFailed)
-        }
-    }
-
-    fn update_tracking_area_manager(
-        tracking_area: &TrackingArea,
-    ) -> Result<(), DocsGenerationError> {
-        let mut tracking_area = tracking_area.to_owned();
-
-        if let Some(annotation_rect) = tracking_area.rectangles.first() {
             // Check if the annotation is outside of the viewport and if so, remove the tracking areas
             let viewport = get_viewport_frame(&GetVia::Current).map_err(|_| {
                 DocsGenerationError::GenericError(anyhow!("Could not derive textarea dimensions"))
             })?;
 
-            if !viewport.contains_position(&annotation_rect.top_left())
-                && !viewport.contains_position(&annotation_rect.bottom_left())
-            {
-                tracking_area.rectangles = vec![];
+            if let Some(annotation_rect) = annotation_rect_opt {
+                if !viewport.contains_position(&annotation_rect.top_left())
+                    && !viewport.contains_position(&annotation_rect.bottom_left())
+                {
+                    self.tracking_area.rectangles = vec![];
+                }
             }
+
+            EventTrackingArea::Update(vec![self.tracking_area.clone()])
+                .publish_to_tauri(&app_handle());
+
+            Ok(())
+        } else {
+            Err(DocsGenerationError::DocsGenTaskUpdateFailed)
         }
-
-        EventTrackingArea::Update(vec![tracking_area]).publish_to_tauri(&app_handle());
-
-        Ok(())
     }
 
     /// It calculates the bounds of the annotation icon and the codeblock rectangle

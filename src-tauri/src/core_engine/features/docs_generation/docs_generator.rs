@@ -8,6 +8,7 @@ use crate::{
         utils::{XcodeChar, XcodeText},
         CodeDocument, TextPosition, TextRange,
     },
+    window_controls::models::TrackingAreaClickedMessage,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
@@ -27,6 +28,12 @@ pub enum DocsGenerationError {
 
 type DocsIndentation = usize;
 type DocsInsertionIndex = usize;
+enum DocsGenComputeTask {
+    CreateNewTask,
+    UpdateExistingTask,
+    GenerateDocs(TrackingAreaClickedMessage),
+    DoNothing,
+}
 
 pub struct DocsGenerator {
     docs_generation_tasks: HashMap<WindowUid, DocsGenerationTask>,
@@ -43,54 +50,64 @@ impl FeatureBase for DocsGenerator {
             return Ok(());
         }
 
-        let should_compute_tasks;
-        match trigger {
-            CoreEngineTrigger::OnTextContentChange => {
-                should_compute_tasks = true;
-            }
-            CoreEngineTrigger::OnTextSelectionChange => {
-                should_compute_tasks = true;
-            }
-            CoreEngineTrigger::OnTrackingAreaClicked(msg) => {
-                // This triggers not to recompute tasks but to generate docs using an existing task
-                should_compute_tasks = false;
+        match Self::should_compute(trigger) {
+            DocsGenComputeTask::DoNothing => {}
+            DocsGenComputeTask::UpdateExistingTask => {
+                if let Some(docs_gen_task) = self
+                    .docs_generation_tasks
+                    .get_mut(&code_document.editor_window_props().window_uid)
+                {
+                    let text_content =
+                        code_document
+                            .text_content()
+                            .as_ref()
+                            .ok_or(FeatureError::GenericError(
+                                DocsGenerationError::MissingContext.into(),
+                            ))?;
 
+                    if let Err(error) = docs_gen_task.update_task_tracking_area(text_content) {
+                        self.docs_generation_tasks
+                            .remove(&code_document.editor_window_props().window_uid);
+                        return Err(FeatureError::GenericError(error.into()));
+                    }
+                }
+            }
+            DocsGenComputeTask::GenerateDocs(msg) => {
                 if let Some(docs_gen_task) = self.docs_generation_tasks.get_mut(&msg.window_uid) {
                     if msg.id == docs_gen_task.id() {
                         docs_gen_task.generate_documentation()?;
                     }
                 }
             }
-            _ => should_compute_tasks = false,
-        }
+            DocsGenComputeTask::CreateNewTask => {
+                let selected_text_range = match code_document.selected_text_range() {
+                    Some(range) => range,
+                    None => {
+                        return Ok(());
+                    }
+                };
 
-        if should_compute_tasks {
-            let selected_text_range = match code_document.selected_text_range() {
-                Some(range) => range,
-                None => {
-                    return Ok(());
-                }
-            };
+                let text_content =
+                    code_document
+                        .text_content()
+                        .as_ref()
+                        .ok_or(FeatureError::GenericError(
+                            DocsGenerationError::MissingContext.into(),
+                        ))?;
 
-            let text_content =
-                code_document
-                    .text_content()
-                    .as_ref()
-                    .ok_or(FeatureError::GenericError(
-                        DocsGenerationError::MissingContext.into(),
-                    ))?;
+                let window_uid = code_document.editor_window_props().window_uid;
 
-            let window_uid = code_document.editor_window_props().window_uid;
-            if !self.is_docs_gen_task_running(&window_uid) {
-                if let Ok(new_task) = self.create_docs_gen_task(
-                    selected_text_range,
-                    text_content,
-                    window_uid,
-                    code_document.syntax_tree(),
-                ) {
-                    self.docs_generation_tasks.insert(window_uid, new_task);
-                } else {
-                    self.docs_generation_tasks.remove(&window_uid);
+                if !self.is_docs_gen_task_running(&window_uid) {
+                    if let Ok(new_task) = self.create_docs_gen_task(
+                        selected_text_range,
+                        text_content,
+                        window_uid,
+                        code_document.syntax_tree(),
+                    ) {
+                        self.docs_generation_tasks.insert(window_uid, new_task);
+                    } else {
+                        self.docs_generation_tasks.remove(&window_uid);
+                    }
                 }
             }
         }
@@ -103,7 +120,7 @@ impl FeatureBase for DocsGenerator {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated || !self.should_update_visualization(trigger) {
+        if !self.is_activated || !Self::should_update_visualization(trigger) {
             return Ok(());
         }
 
@@ -112,8 +129,8 @@ impl FeatureBase for DocsGenerator {
                 .docs_generation_tasks
                 .get_mut(&code_document.editor_window_props().window_uid)
             {
-                // Update the existing task. If this fails, we remove the task from the map.
-                if let Err(error) = docs_gen_task.update_code_annotation_position(text_content) {
+                // Visualize the existing task. If this fails, we remove the task from the map.
+                if let Err(error) = docs_gen_task.update_visualization(text_content) {
                     self.docs_generation_tasks
                         .remove(&code_document.editor_window_props().window_uid);
                     return Err(FeatureError::GenericError(error.into()));
@@ -152,7 +169,7 @@ impl DocsGenerator {
         }
     }
 
-    fn should_update_visualization(&self, trigger: &CoreEngineTrigger) -> bool {
+    fn should_update_visualization(trigger: &CoreEngineTrigger) -> bool {
         match trigger {
             CoreEngineTrigger::OnTextContentChange => true,
             CoreEngineTrigger::OnTextSelectionChange => true,
@@ -161,6 +178,18 @@ impl DocsGenerator {
             CoreEngineTrigger::OnViewportDimensionsChange => true,
 
             _ => false,
+        }
+    }
+
+    fn should_compute(trigger: &CoreEngineTrigger) -> DocsGenComputeTask {
+        match trigger {
+            CoreEngineTrigger::OnTextContentChange => DocsGenComputeTask::CreateNewTask,
+            CoreEngineTrigger::OnTextSelectionChange => DocsGenComputeTask::CreateNewTask,
+            CoreEngineTrigger::OnTrackingAreaClicked(msg) => {
+                DocsGenComputeTask::GenerateDocs(msg.clone())
+            }
+            CoreEngineTrigger::OnVisibleTextRangeChange => DocsGenComputeTask::UpdateExistingTask,
+            _ => DocsGenComputeTask::DoNothing,
         }
     }
 
