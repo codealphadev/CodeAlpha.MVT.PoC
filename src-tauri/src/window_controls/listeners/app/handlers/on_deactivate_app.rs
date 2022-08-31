@@ -11,7 +11,7 @@ pub fn on_deactivate_app(
     window_manager: &Arc<Mutex<WindowManager>>,
     _deactivated_msg: &AppDeactivatedMessage,
 ) {
-    let window_manager = window_manager.lock();
+    let mut window_manager = window_manager.lock();
 
     // Determine if we need to hide our app
     // If the focus now is on a known editor window, we keep showing our app.

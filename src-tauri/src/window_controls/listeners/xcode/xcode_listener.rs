@@ -44,9 +44,6 @@ pub fn xcode_listener(window_manager: &Arc<Mutex<WindowManager>>) {
             AXEventXcode::EditorAppClosed(msg) => {
                 on_close_editor_app(&window_manager_move_copy, &msg);
             }
-            AXEventXcode::EditorAppCodeSelected(_) => {
-                // Do Nothing here, DEPRECATED MESSAGE
-            }
             AXEventXcode::EditorTextareaScrolled(_) => {
                 // Do Nothing here
             }

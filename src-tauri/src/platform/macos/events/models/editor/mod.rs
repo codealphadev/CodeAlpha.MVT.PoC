@@ -1,7 +1,6 @@
 pub use editor_app_activated::*;
 pub use editor_app_closed::*;
 pub use editor_app_deactivated::*;
-pub use editor_code_selected::*;
 pub use editor_shortcut_pressed::*;
 pub use editor_textarea_content_changed::*;
 pub use editor_textarea_scrolled::*;
@@ -16,7 +15,6 @@ pub use editor_window_resized::*;
 pub mod editor_app_activated;
 pub mod editor_app_closed;
 pub mod editor_app_deactivated;
-pub mod editor_code_selected;
 pub mod editor_shortcut_pressed;
 pub mod editor_textarea_content_changed;
 pub mod editor_textarea_scrolled;

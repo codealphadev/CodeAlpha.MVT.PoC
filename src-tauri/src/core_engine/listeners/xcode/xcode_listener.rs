@@ -8,12 +8,7 @@ use crate::{
     utils::messaging::ChannelList,
 };
 
-use super::handlers::{
-    on_close_editor_app, on_editor_focused_uielement_changed, on_editor_shortcut_pressed,
-    on_editor_textarea_scrolled, on_editor_textarea_zoomed, on_editor_window_destroyed,
-    on_editor_window_moved, on_editor_window_resized, on_selected_text_changed,
-    on_text_content_changed,
-};
+use super::handlers::*;
 
 pub fn xcode_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
     app_handle().listen_global(ChannelList::AXEventXcode.to_string(), {
@@ -57,7 +52,12 @@ pub fn xcode_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 AXEventXcode::EditorShortcutPressed(msg) => {
                     _ = on_editor_shortcut_pressed(&core_engine, &msg);
                 }
-                _ => {}
+                AXEventXcode::EditorAppActivated(msg) => {
+                    _ = on_app_activated(&core_engine, &msg);
+                }
+                AXEventXcode::EditorAppDeactivated(_) => {
+                    // Do nothing
+                }
             }
         }
     });

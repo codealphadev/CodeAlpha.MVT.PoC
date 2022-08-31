@@ -6,8 +6,8 @@ use tauri::Manager;
 use crate::utils::messaging::ChannelList;
 
 use super::models::editor::{
-    EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppCodeSelectedMessage,
-    EditorAppDeactivatedMessage, EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
+    EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
+    EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
     EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
     EditorTextareaZoomedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
     EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
@@ -24,7 +24,6 @@ pub enum AXEventXcode {
     EditorAppActivated(EditorAppActivatedMessage),
     EditorAppDeactivated(EditorAppDeactivatedMessage),
     EditorAppClosed(EditorAppClosedMessage),
-    EditorAppCodeSelected(EditorAppCodeSelectedMessage),
     EditorTextareaScrolled(EditorTextareaScrolledMessage),
     EditorTextareaZoomed(EditorTextareaZoomedMessage),
     EditorTextareaContentChanged(EditorTextareaContentChangedMessage),
@@ -43,7 +42,6 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorAppActivated(_) => write!(f, "EditorAppActivated"),
             AXEventXcode::EditorAppDeactivated(_) => write!(f, "EditorAppDeactivated"),
             AXEventXcode::EditorAppClosed(_) => write!(f, "EditorClosed"),
-            AXEventXcode::EditorAppCodeSelected(_) => write!(f, "EditorAppCodeSelected"),
             AXEventXcode::EditorShortcutPressed(_) => write!(f, "EditorShortcutPressed"),
             AXEventXcode::EditorTextareaScrolled(_) => write!(f, "EditorTextareaScrolled"),
             AXEventXcode::EditorTextareaZoomed(_) => write!(f, "EditorTextareaZoomed"),
