@@ -135,20 +135,24 @@ impl CodeDocument {
         );
     }
 
-    pub fn set_selected_text_range(&mut self, index: usize, length: usize) {
-        let text_range = TextRange { length, index };
-        // Check if content changed at same time
-        if let (Ok(content_text), Some(text)) = (
-            get_textarea_content(&GetVia::Pid(self.editor_window_props.pid)),
-            self.text.as_ref(),
-        ) {
-            let content_text_u16 = &XcodeText::from_str(&content_text);
-            self.selected_text_range = Some(text_range);
+    pub fn set_selected_text_range(&mut self, text_range: &TextRange, double_check: bool) {
+        // Check if content changed at same time - this is needed for the case that selected text range
+        // is being delivered before text content change message
+        if double_check {
+            if let (Ok(content_text), Some(text)) = (
+                get_textarea_content(&GetVia::Pid(self.editor_window_props.pid)),
+                self.text.as_ref(),
+            ) {
+                let content_text_u16 = &XcodeText::from_str(&content_text);
+                self.selected_text_range = Some(text_range.clone());
 
-            if content_text_u16 != text {
-                self.syntax_tree.parse(content_text_u16);
-                self.text = Some(content_text_u16.clone());
+                if content_text_u16 != text {
+                    self.syntax_tree.parse(content_text_u16);
+                    self.text = Some(content_text_u16.clone());
+                }
             }
+        } else {
+            self.selected_text_range = Some(text_range.clone());
         }
     }
 
@@ -186,5 +190,63 @@ impl CodeDocument {
         } else {
             true
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::core_engine::TextRange;
+
+    use super::{CodeDocument, EditorWindowProps};
+
+    pub fn get_code_documention_mock_object(
+        default_code_snippet: Option<String>,
+        default_file_path: Option<String>,
+        default_selected_text_range: Option<TextRange>,
+    ) -> CodeDocument {
+        let code_snippet;
+        if default_code_snippet.is_some() {
+            code_snippet = default_code_snippet.unwrap();
+        } else {
+            code_snippet = r#"
+            open class SystemWideElement: UIElement {
+                fileprivate convenience init() {
+                    self.init(AXUIElementCreateSystemWide())
+                }
+            
+                open func elementAtPosition(_ x: Float, _ y: Float) throws -> UIElement? {
+                    return try super.elementAtPosition(x, y)
+                }
+            }"#
+            .to_string();
+        }
+
+        let selected_text_range;
+        if default_selected_text_range.is_some() {
+            selected_text_range = default_selected_text_range.unwrap();
+        } else {
+            selected_text_range = TextRange {
+                index: 110, // this is right before `self.init(AXUIElementCreateSystemWide())`
+                length: 0,
+            };
+        }
+
+        let file_path;
+        if default_file_path.is_some() {
+            file_path = default_file_path;
+        } else {
+            file_path = None;
+        }
+
+        let editor_window = EditorWindowProps {
+            window_uid: 1,
+            pid: 1,
+        };
+
+        let mut code_doc = CodeDocument::new(&editor_window);
+        code_doc.update_doc_properties(&code_snippet, &file_path);
+        code_doc.set_selected_text_range(&selected_text_range, false);
+
+        code_doc
     }
 }
