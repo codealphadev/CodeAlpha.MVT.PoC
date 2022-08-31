@@ -3,7 +3,9 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    core_engine::{core_engine::CoreEngineError, features::CoreEngineTrigger, CoreEngine},
+    core_engine::{
+        core_engine::CoreEngineError, features::CoreEngineTrigger, CoreEngine, TextRange,
+    },
     platform::macos::models::editor::EditorTextareaSelectedTextChangedMessage,
 };
 
@@ -22,7 +24,13 @@ pub fn on_selected_text_changed(
             .get_mut(&msg.window_uid)
             .ok_or(CoreEngineError::CodeDocNotFound(msg.window_uid))?;
 
-        code_doc.set_selected_text_range(msg.index, msg.length);
+        code_doc.set_selected_text_range(
+            &TextRange {
+                index: msg.index,
+                length: msg.length,
+            },
+            true,
+        );
 
         // Checking if the engine is active. If not, don't continue.
         if !core_engine_active_status {
