@@ -1,5 +1,5 @@
 locals {
-  service         = "client-backend-logs"
+  service         = "client-backend-x"
   product         = "codealpha"
   region          = "europe-west1"
   billing_account = "01EF6E-B7F8E7-7029D0"

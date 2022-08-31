@@ -80,7 +80,7 @@ pub struct GcpLogging {
 impl GcpLogging {
     pub fn new() -> Self {
         Self {
-            log_name: "projects/client-backend-logs/logs/client".to_string(),
+            log_name: "projects/client-backend-x/logs/client".to_string(),
             entries: Arc::new(Mutex::new(Vec::new())),
         }
     }
