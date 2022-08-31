@@ -89,6 +89,8 @@ impl FeatureBase for DocsGenerator {
                     code_document.syntax_tree(),
                 ) {
                     self.docs_generation_tasks.insert(window_uid, new_task);
+                } else {
+                    self.docs_generation_tasks.remove(&window_uid);
                 }
             }
         }

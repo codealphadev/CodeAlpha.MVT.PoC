@@ -55,7 +55,7 @@ pub fn notify_window_moved(
         };
 
         AXEventXcode::EditorWindowMoved(msg).publish_to_tauri(&xcode_observer_state.app_handle);
-        println!("window moved");
+
         // Publish an updated viewport properties message
         EventViewport::new_xcode_viewport_update(&GetVia::UIElem(window.1.clone()))
             .map_err(|_| accessibility::Error::NotFound)?
