@@ -112,7 +112,7 @@ impl SwiftFormatter {
             // 1. Format the text content file
             let formatted_content = match Self::format_file(&text_file_path).await {
                 Ok(content) => content,
-                Err(err) => {
+                Err(_err) => {
                     EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
                     return;
                 }
@@ -126,7 +126,7 @@ impl SwiftFormatter {
                 .map_err(|err| SwiftFormatError::GenericError(err.into()))
             {
                 Ok(_) => {}
-                Err(err) => {
+                Err(_err) => {
                     EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
                     return;
                 }
