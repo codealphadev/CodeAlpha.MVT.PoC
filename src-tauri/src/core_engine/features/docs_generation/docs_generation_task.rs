@@ -208,7 +208,7 @@ impl DocsGenerationTask {
                 vec![]
             };
 
-            Self::update_tracking_area(&self.tracking_area);
+            _ = Self::update_tracking_area_manager(&self.tracking_area);
 
             // Publish annotation_rect and codeblock_rect to frontend in local coordinates.
             EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
@@ -225,7 +225,9 @@ impl DocsGenerationTask {
         }
     }
 
-    fn update_tracking_area(tracking_area: &TrackingArea) -> Result<(), DocsGenerationError> {
+    fn update_tracking_area_manager(
+        tracking_area: &TrackingArea,
+    ) -> Result<(), DocsGenerationError> {
         let mut tracking_area = tracking_area.to_owned();
 
         if let Some(annotation_rect) = tracking_area.rectangles.first() {

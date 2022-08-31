@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use tauri::{Error, Manager};
 
 use crate::{app_handle, window_controls::config::AppWindow};

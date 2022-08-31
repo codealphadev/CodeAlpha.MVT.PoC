@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXValue};
 use cocoa::appkit::CGFloat;
 use core_foundation::{
     attributed_string::{CFAttributedString, CFAttributedStringRef},
-    base::{CFRange, CFRelease, TCFType},
+    base::{CFRange, TCFType},
     dictionary::{CFDictionary, CFDictionaryRef},
     mach_port::CFIndex,
     string::{CFString, CFStringRef},
