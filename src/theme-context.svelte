@@ -13,8 +13,6 @@
       // providing Theme store through context makes store readonly
       theme: theme_store,
       setTheme: (theme: ThemeName) => {
-        console.log(`Setting theme to ${theme}`);
-
         _currentTheme = theme;
 
         theme_store.update(t => ({ ...t, ...themes[_currentTheme] }));
