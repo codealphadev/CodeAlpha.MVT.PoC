@@ -18,7 +18,7 @@ pub fn notify_app_activated(
 
     let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
-    let window_uid = get_focused_window().expect("Should always find a window");
+    let window_uid = get_focused_window().map_err(|_| Error::NotFound)?;
 
     let activation_msg = EditorAppActivatedMessage {
         editor_name: name.to_string(),
