@@ -11,7 +11,6 @@ use crate::{
     app_handle,
     utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::{config::AppWindow, utils::create_default_window_builder},
-    DEV_MODE,
 };
 
 use super::listeners::window_control_events_listener;
@@ -37,9 +36,8 @@ impl CodeOverlayWindow {
 
             set_shadow(&window, false).expect("Unsupported platform!");
 
-            if DEV_MODE {
-                window.open_devtools();
-            }
+            #[cfg(debug_assertions)] // only include this code on debug builds
+            window.open_devtools();
         }
 
         Ok(Self { app_handle })
