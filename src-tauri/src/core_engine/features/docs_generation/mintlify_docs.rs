@@ -49,7 +49,7 @@ pub async fn mintlify_documentation(
     };
 
     let response = reqwest::Client::new()
-        .post("https://europe-west1-codealpha-analyze-text-dev.cloudfunctions.net/analyze-code")
+        .post("https://europe-west1-analyze-text-dev.cloudfunctions.net/analyze-code")
         .json(&req_body)
         .send()
         .await?;
