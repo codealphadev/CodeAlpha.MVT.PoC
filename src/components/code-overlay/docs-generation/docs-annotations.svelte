@@ -10,7 +10,7 @@
 	import type { TrackingAreaExitedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaExitedMessage';
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
-		
+
 	type CodeAnnotation = UpdateCodeAnnotationMessage;
 	let annotation: CodeAnnotation | undefined;
 
@@ -19,12 +19,13 @@
 
 	let processing_timeout = 15000; // ms
 
-
 	const listenToCodeAnnotationEvents = async () => {
 		// Listener for docs generation feature
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
-			const {payload, event: event_type} = JSON.parse(event.payload as string) as EventDocsGeneration;
+			const { payload, event: event_type } = JSON.parse(
+				event.payload as string
+			) as EventDocsGeneration;
 			switch (event_type) {
 				case 'UpdateCodeAnnotation':
 					annotation = payload;
@@ -73,7 +74,7 @@
 				case 'TrackingAreaClicked':
 					let clicked_msg = tracking_area_event.payload as unknown as TrackingAreaClickedMessage;
 					if (clicked_msg.id === annotation?.id) {
-						is_hovered = true;
+						is_hovered = false;
 					}
 					break;
 				case 'TrackingAreaEntered':
@@ -101,6 +102,7 @@
 		return Math.round(value * factor) / factor;
 	};
 </script>
+
 {#if annotation}
 	{#if annotation.annotation_icon !== null}
 		<div
