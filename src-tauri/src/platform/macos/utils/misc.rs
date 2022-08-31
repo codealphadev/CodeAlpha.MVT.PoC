@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXValue};
 use cocoa::appkit::CGFloat;
 use core_foundation::{
     attributed_string::{CFAttributedString, CFAttributedStringRef},
-    base::{CFRange, TCFType},
+    base::{CFRange, CFRelease, TCFType},
     dictionary::{CFDictionary, CFDictionaryRef},
     mach_port::CFIndex,
     string::{CFString, CFStringRef},
@@ -90,7 +90,7 @@ pub fn get_dark_mode() -> Result<bool, &'static str> {
         .map_err(|_| "Could not get attributed string")?;
 
     let attributes_dict: CFDictionary = unsafe {
-        CFDictionary::wrap_under_create_rule(CFAttributedStringGetAttributes(
+        CFDictionary::wrap_under_get_rule(CFAttributedStringGetAttributes(
             str.as_concrete_TypeRef(),
             0,
             std::ptr::null(),
@@ -122,6 +122,7 @@ pub fn get_dark_mode() -> Result<bool, &'static str> {
     };
 
     let lightness = (r + g + b) / 3.0;
+
     return Ok(lightness < 0.5);
 }
 
