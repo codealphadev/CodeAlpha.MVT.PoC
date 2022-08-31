@@ -15,7 +15,7 @@ struct GcpLayer {
 }
 
 impl GcpLayer {
-    #[allow(unreachable_code)]
+    #[allow(unreachable_code, unused_variables)]
     fn should_send_to_remote(event: &tracing::Event<'_>) -> bool {
         #[cfg(debug_assertions)] // only include this code on debug builds
         {
