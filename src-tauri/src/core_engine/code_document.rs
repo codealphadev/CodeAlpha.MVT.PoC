@@ -199,7 +199,7 @@ pub mod tests {
 
     use super::{CodeDocument, EditorWindowProps};
 
-    pub fn get_code_documention_mock_object(
+    pub fn _get_code_documention_mock_object(
         default_code_snippet: Option<String>,
         default_file_path: Option<String>,
         default_selected_text_range: Option<TextRange>,
