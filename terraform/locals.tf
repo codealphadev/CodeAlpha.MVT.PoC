@@ -7,5 +7,6 @@ locals {
 
   services_to_enable = [
     "logging.googleapis.com",
+    "storage.googleapis.com"
   ]
 }
