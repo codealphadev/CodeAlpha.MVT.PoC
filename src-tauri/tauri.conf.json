@@ -10,6 +10,12 @@
     "beforeBuildCommand": "npm run build"
   },
   "tauri": {
+    "pattern": {
+      "use": "isolation",
+      "options": {
+        "dir": "../dist-isolation/"
+      }
+    },
     "bundle": {
       "active": true,
       "targets": "all",
