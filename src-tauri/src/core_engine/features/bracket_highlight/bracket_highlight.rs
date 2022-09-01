@@ -245,10 +245,10 @@ impl BracketHighlight {
         }
 
         // Case: opening and closing bracket are on the same line -> no elbow is computed.
-        let is_line_spans_multiple_rows = is_first_line_wrapped
+        let code_block_spans_multiple_lines = is_first_line_wrapped
             || (line_opening_char.position.row != line_closing_char.position.row);
 
-        if !is_line_spans_multiple_rows {
+        if !code_block_spans_multiple_lines {
             return Ok(Some(BracketHighlightResults {
                 lines: BracketHighlightLines {
                     start: line_opening_char_rect.map(|rect| LogicalPosition {
