@@ -113,83 +113,6 @@ impl FeatureBase for DocsGenerator {
 }
 
 impl DocsGenerator {
-    fn procedure_create_new_task(
-        &mut self,
-        code_document: &CodeDocument,
-    ) -> Result<(), FeatureError> {
-        let selected_text_range = match code_document.selected_text_range() {
-            Some(range) => range,
-            None => {
-                return Ok(());
-            }
-        };
-        let text_content =
-            code_document
-                .text_content()
-                .as_ref()
-                .ok_or(FeatureError::GenericError(
-                    DocsGenerationError::MissingContext.into(),
-                ))?;
-        let window_uid = code_document.editor_window_props().window_uid;
-        Ok(if !self.is_docs_gen_task_running(&window_uid) {
-            if let Ok(new_task) = self.create_docs_gen_task(
-                selected_text_range,
-                text_content,
-                window_uid,
-                code_document.syntax_tree(),
-            ) {
-                self.docs_generation_tasks.insert(window_uid, new_task);
-            } else {
-                self.docs_generation_tasks.remove(&window_uid);
-            }
-        })
-    }
-}
-
-impl DocsGenerator {
-    fn procedure_generate_docs(
-        &mut self,
-        msg: TrackingAreaClickedMessage,
-    ) -> Result<(), FeatureError> {
-        Ok(
-            if let Some(docs_gen_task) = self.docs_generation_tasks.get_mut(&msg.window_uid) {
-                if msg.id == docs_gen_task.id() {
-                    docs_gen_task.generate_documentation()?;
-                }
-            },
-        )
-    }
-}
-
-impl DocsGenerator {
-    fn procedure_update_existing_task(
-        &mut self,
-        code_document: &CodeDocument,
-    ) -> Result<(), FeatureError> {
-        Ok(
-            if let Some(docs_gen_task) = self
-                .docs_generation_tasks
-                .get_mut(&code_document.editor_window_props().window_uid)
-            {
-                let text_content =
-                    code_document
-                        .text_content()
-                        .as_ref()
-                        .ok_or(FeatureError::GenericError(
-                            DocsGenerationError::MissingContext.into(),
-                        ))?;
-
-                if let Err(error) = docs_gen_task.update_task_tracking_area(text_content) {
-                    self.docs_generation_tasks
-                        .remove(&code_document.editor_window_props().window_uid);
-                    return Err(FeatureError::GenericError(error.into()));
-                }
-            },
-        )
-    }
-}
-
-impl DocsGenerator {
     pub fn new() -> Self {
         Self {
             docs_generation_tasks: HashMap::new(),
@@ -223,6 +146,77 @@ impl DocsGenerator {
             }
             _ => None,
         }
+    }
+
+    fn procedure_create_new_task(
+        &mut self,
+        code_document: &CodeDocument,
+    ) -> Result<(), FeatureError> {
+        let selected_text_range = match code_document.selected_text_range() {
+            Some(range) => range,
+            None => {
+                return Ok(());
+            }
+        };
+        let text_content =
+            code_document
+                .text_content()
+                .as_ref()
+                .ok_or(FeatureError::GenericError(
+                    DocsGenerationError::MissingContext.into(),
+                ))?;
+        let window_uid = code_document.editor_window_props().window_uid;
+        Ok(if !self.is_docs_gen_task_running(&window_uid) {
+            if let Ok(new_task) = self.create_docs_gen_task(
+                selected_text_range,
+                text_content,
+                window_uid,
+                code_document.syntax_tree(),
+            ) {
+                self.docs_generation_tasks.insert(window_uid, new_task);
+            } else {
+                self.docs_generation_tasks.remove(&window_uid);
+            }
+        })
+    }
+
+    fn procedure_generate_docs(
+        &mut self,
+        msg: TrackingAreaClickedMessage,
+    ) -> Result<(), FeatureError> {
+        Ok(
+            if let Some(docs_gen_task) = self.docs_generation_tasks.get_mut(&msg.window_uid) {
+                if msg.id == docs_gen_task.id() {
+                    docs_gen_task.generate_documentation()?;
+                }
+            },
+        )
+    }
+
+    fn procedure_update_existing_task(
+        &mut self,
+        code_document: &CodeDocument,
+    ) -> Result<(), FeatureError> {
+        Ok(
+            if let Some(docs_gen_task) = self
+                .docs_generation_tasks
+                .get_mut(&code_document.editor_window_props().window_uid)
+            {
+                let text_content =
+                    code_document
+                        .text_content()
+                        .as_ref()
+                        .ok_or(FeatureError::GenericError(
+                            DocsGenerationError::MissingContext.into(),
+                        ))?;
+
+                if let Err(error) = docs_gen_task.update_task_tracking_area(text_content) {
+                    self.docs_generation_tasks
+                        .remove(&code_document.editor_window_props().window_uid);
+                    return Err(FeatureError::GenericError(error.into()));
+                }
+            },
+        )
     }
 
     pub fn clear_docs_generation_taskss(&mut self) {
