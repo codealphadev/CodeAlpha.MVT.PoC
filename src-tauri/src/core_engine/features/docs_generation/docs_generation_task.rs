@@ -64,7 +64,7 @@ impl DocsGenerationTask {
             text: codeblock_text,
         };
 
-        let tracking_area = Self::create_trask_tracking_area(text_content, &codeblock, window_uid)?;
+        let tracking_area = Self::create_task_tracking_area(text_content, &codeblock, window_uid)?;
 
         Ok(Self {
             tracking_area,
@@ -150,7 +150,7 @@ impl DocsGenerationTask {
         Ok(())
     }
 
-    pub fn create_trask_tracking_area(
+    pub fn create_task_tracking_area(
         text: &XcodeText,
         code_block: &CodeBlock,
         window_uid: WindowUid,
