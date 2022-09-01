@@ -10,10 +10,10 @@ edition = "2021"
 rust-version = "1.63"
 
 [build-dependencies]
-tauri-build = { version = "1.0.0", features = [] }
+tauri-build = { version = "1.0.0", features = ["isolation"] }
 
 [dependencies]
-tauri = { version = "1.0.0", features = ["clipboard", "macos-private-api", "notification", "process-command-api", "shell-sidecar", "system-tray", "window-close", "window-hide", "window-start-dragging"] }
+tauri = { version = "1.0.0", features = ["clipboard", "isolation", "macos-private-api", "notification", "process-command-api", "shell-sidecar", "system-tray", "window-close", "window-hide", "window-start-dragging"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
