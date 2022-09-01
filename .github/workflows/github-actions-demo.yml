@@ -4,7 +4,7 @@ on: [push]
 jobs:
   Publish:
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v3
       - name: Set up Node
@@ -34,3 +34,9 @@ jobs:
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false
+      - id: 'auth'
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          workload_identity_provider: projects/767491075312/locations/global/workloadIdentityPools/codealpha-pool/providers/codealpha-gh-provider
+          service_account: release-creation@client-backend-x.iam.gserviceaccount.com
