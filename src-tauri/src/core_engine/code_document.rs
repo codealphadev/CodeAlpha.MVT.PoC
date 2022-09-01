@@ -231,12 +231,7 @@ pub mod tests {
             };
         }
 
-        let file_path;
-        if default_file_path.is_some() {
-            file_path = default_file_path;
-        } else {
-            file_path = None;
-        }
+        let file_path = default_file_path;
 
         let editor_window = EditorWindowProps {
             window_uid: 1,
