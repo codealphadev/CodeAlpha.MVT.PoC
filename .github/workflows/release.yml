@@ -3,8 +3,8 @@ on: [push]
 
 jobs:
   Publish:
-    runs-on: macos-latest
-    timeout-minutes: 20
+    runs-on: self-hosted
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
       - name: Set up Node
@@ -37,7 +37,7 @@ jobs:
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false
-      - id: 'auth'
+      - id: auth
         name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v0.4.0
         with:

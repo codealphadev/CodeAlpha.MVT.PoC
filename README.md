@@ -48,3 +48,6 @@ The frontend is built in TypeScript, with [Svelte](https://svelte.dev/) and [Tai
 Communication between these modules is event-driven, as is communication between the backend and frontend, by serializing and de-serializing structs to JSON.
 
 The shared interfaces between the frontend and backend are generated from Rust structs with the `TS` annotation, and exported to TypeScript interfaces in `src-tauri/bindings/`, where they can be imported by the frontend. This is provided by [ts-rs](https://github.com/Aleph-Alpha/ts-rs)
+
+## CI/CD
+This repository uses GitHub Actions on self-hosted hardware. To set up your development machine to run these, follow this guide: https://docs.github.com/en/actions/hosting-your-own-runners/adding-self-hosted-runners
