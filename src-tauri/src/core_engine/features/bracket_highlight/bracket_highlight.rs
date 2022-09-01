@@ -162,6 +162,14 @@ fn get_left_most_char_x(
     line_opening_char: &PositionAndIndex,
     line_closing_char: &PositionAndIndex,
 ) -> Result<Option<f64>, BracketHighlightError> {
+    if line_opening_char.position.row == line_closing_char.position.row {
+        return Ok(Some(line_opening_char.position.column as f64));
+    }
+    if line_opening_char.position.row > line_closing_char.position.row {
+        return Err(BracketHighlightError::GenericError(anyhow!(
+            "Opening bracket is after closing bracket"
+        )));
+    }
     // Elbow needed because the open and closing bracket are on different lines
     let next_row_index = get_index_of_next_row(line_opening_char.index, &text_content).ok_or(
         BracketHighlightError::GenericError(anyhow!(
@@ -227,9 +235,18 @@ impl BracketHighlight {
             get_char_rectangle_from_text_index(line_closing_char.index)?,
         );
 
+        // Check if the first line is wrapped.
+        let mut is_first_line_wrapped = false;
+        if opening_bracket_rect.is_some() {
+            is_first_line_wrapped =
+                is_text_of_line_wrapped(line_opening_char.position.row, &GetVia::Current)
+                    .map_err(|err| BracketHighlightError::GenericError(err.into()))?
+                    .0;
+        }
+
         // Case: opening and closing bracket are on the same line -> no elbow is computed.
-        let is_line_spans_multiple_rows =
-            line_opening_char.position.row != line_closing_char.position.row;
+        let is_line_spans_multiple_rows = is_first_line_wrapped
+            || (line_opening_char.position.row != line_closing_char.position.row);
 
         if !is_line_spans_multiple_rows {
             return Ok(Some(BracketHighlightResults {
@@ -313,15 +330,6 @@ impl BracketHighlight {
             if line_closing_char_rect.origin.x < left_most_char_x {
                 left_most_char_x = line_closing_char_rect.origin.x;
             }
-        }
-
-        // Check if the first line is wrapped.
-        let mut is_first_line_wrapped = false;
-        if opening_bracket_rect.is_some() {
-            is_first_line_wrapped =
-                is_text_of_line_wrapped(line_opening_char.position.row, &GetVia::Current)
-                    .map_err(|err| BracketHighlightError::GenericError(err.into()))?
-                    .0;
         }
 
         let elbow = if is_first_line_wrapped {
