@@ -3,7 +3,6 @@
 	import { appWindow } from '@tauri-apps/api/window';
 	import WidgetBackground from '../components/widget/widget-background.svelte';
 	import IconLogo from '../components/widget/icons/icon-logo.svelte';
-	import IconDocsGen from '../components/widget/icons/icon-docs-gen.svelte';
 	import IconLogoGreyscale from '../components/widget/icons/icon-logo-greyscale.svelte';
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
@@ -12,6 +11,7 @@
 	import WidgetBackgroundGreyscale from '../components/widget/widget-background-greyscale.svelte';
 	import { fade } from 'svelte/transition';
 	import SwiftFormat from '../components/widget/swift-format.svelte';
+	import DocsGeneration from '../components/widget/docs-generation.svelte';
 
 	let app_active = true;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
@@ -55,6 +55,11 @@
 						ruleExecutionState = null;
 					}, processing_timeout);
 					break;
+				case 'DocsGenerationFailed':
+					setTimeout(async () => {
+						ruleExecutionState = null;
+					}, show_alternate_icon_duration);
+					break;
 				case 'DocsGenerationFinished':
 					setTimeout(async () => {
 						ruleExecutionState = null;
@@ -91,9 +96,9 @@
 					<div in:fade={{ duration: 200 }}>
 						<SwiftFormat event={ruleExecutionState.event} />
 					</div>
-				{:else if ruleExecutionState != null && ruleExecutionState.event === 'DocsGenerationFinished'}
+				{:else if ruleExecutionState != null && (ruleExecutionState.event === 'DocsGenerationFinished' || ruleExecutionState.event === 'DocsGenerationFailed')}
 					<div in:fade={{ duration: 200 }}>
-						<IconDocsGen />
+						<DocsGeneration event={ruleExecutionState.event} />
 					</div>
 				{:else if ruleExecutionState != null && ruleExecutionState.event === 'DocsGenerationStarted'}
 					<div in:fade={{ duration: 200 }}>

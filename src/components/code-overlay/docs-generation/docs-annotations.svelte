@@ -58,6 +58,9 @@
 				case 'DocsGenerationFinished':
 					is_processing = false;
 					break;
+				case 'DocsGenerationFailed':
+					is_processing = false;
+					break;
 				default:
 					break;
 			}

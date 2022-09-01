@@ -11,6 +11,7 @@ pub enum EventRuleExecutionState {
     SwiftFormatFinished(),
     SwiftFormatFailed(),
     DocsGenerationStarted(),
+    DocsGenerationFailed(),
     DocsGenerationFinished(),
 }
 

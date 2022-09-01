@@ -142,6 +142,8 @@ impl DocsGenerationTask {
                     // Notifiy the frontend that the task is finished
                     EventRuleExecutionState::DocsGenerationFinished()
                         .publish_to_tauri(&app_handle());
+                } else {
+                    EventRuleExecutionState::DocsGenerationFailed().publish_to_tauri(&app_handle());
                 }
                 (*task_state.lock()) = DocsGenerationTaskState::Finished;
             }
