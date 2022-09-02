@@ -93,6 +93,19 @@ pub fn notify_uielement_focused(
 
         AXEventXcode::EditorUIElementFocused(uielement_focused_msg)
             .publish_to_tauri(&xcode_observer_state.app_handle);
+    } else {
+        // Case: window not found in the list; introduced after observing COD-282
+        // This case happens when a modal is opening on top of code in the textarea. Even though this modal belongs to a valid window,
+        // we ignore said window because it does not contain any code text fields.
+        AXEventXcode::EditorUIElementFocused(EditorUIElementFocusedMessage {
+            window_uid: None,
+            pid: None,
+            focused_ui_element: FocusedUIElement::Other,
+            textarea_position: None,
+            textarea_size: None,
+        })
+        .publish_to_tauri(&xcode_observer_state.app_handle);
+        return Ok(());
     }
 
     Ok(())
