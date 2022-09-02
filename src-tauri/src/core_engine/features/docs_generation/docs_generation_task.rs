@@ -62,19 +62,11 @@ impl PartialEq for DocsGenerationTask {
 
 impl DocsGenerationTask {
     pub fn new(
-        codeblock_first_char_position: TextPosition,
-        codeblock_last_char_position: TextPosition,
-        docs_insertion_point: TextRange,
-        codeblock_text: XcodeText,
+        codeblock: CodeBlock,
         text_content: &XcodeText,
+        docs_insertion_point: TextRange,
         window_uid: WindowUid,
     ) -> Result<Self, DocsGenerationError> {
-        let codeblock = CodeBlock {
-            first_char_pos: codeblock_first_char_position,
-            last_char_pos: codeblock_last_char_position,
-            text: codeblock_text,
-        };
-
         let tracking_area = Self::create_task_tracking_area(text_content, &codeblock, window_uid)?;
 
         Ok(Self {
@@ -91,6 +83,10 @@ impl DocsGenerationTask {
 
     pub fn id(&self) -> uuid::Uuid {
         self.tracking_area.id
+    }
+
+    pub fn codeblock(&self) -> &CodeBlock {
+        &self.codeblock
     }
 
     pub fn update_visualization(&self, text: &XcodeText) -> Result<(), DocsGenerationError> {

@@ -12,7 +12,7 @@ use crate::{
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
-use super::{DocsGenerationTask, DocsGenerationTaskState};
+use super::{docs_generation_task::CodeBlock, DocsGenerationTask, DocsGenerationTaskState};
 
 #[derive(thiserror::Error, Debug)]
 pub enum DocsGenerationError {
@@ -178,31 +178,33 @@ impl DocsGenerator {
                 ))?;
 
         let window_uid = code_document.editor_window_props().window_uid;
-        Ok(if !self.is_docs_gen_task_running(&window_uid) {
-            if let Ok(new_task) = self.create_docs_gen_task(
-                selected_text_range,
-                text_content,
-                window_uid,
-                code_document.syntax_tree(),
-            ) {
-                self.docs_generation_tasks
-                    .entry(window_uid)
-                    .and_modify(|prev| {
-                        if !new_task.eq(&prev) {
-                            self.compute_results_updated = true;
-                            *prev = new_task.clone()
-                        } else {
-                            self.compute_results_updated = false;
-                        }
-                    })
-                    .or_insert({
+
+        let new_codeblock =
+            Self::derive_codeblock(selected_text_range, code_document.syntax_tree())?;
+
+        if !self.is_docs_gen_task_running(&window_uid) {
+            if let Some(current_task) = self.docs_generation_tasks.get(&window_uid) {
+                if *current_task.codeblock() != new_codeblock {
+                    if let Ok(new_task) =
+                        self.create_docs_gen_task(new_codeblock, text_content, window_uid)
+                    {
+                        self.docs_generation_tasks.insert(window_uid, new_task);
                         self.compute_results_updated = true;
-                        new_task
-                    });
+                    } else {
+                        self.docs_generation_tasks.remove(&window_uid);
+                    }
+                } else {
+                    self.compute_results_updated = false;
+                }
             } else {
-                self.docs_generation_tasks.remove(&window_uid);
+                let new_task =
+                    self.create_docs_gen_task(new_codeblock, text_content, window_uid)?;
+                self.docs_generation_tasks.insert(window_uid, new_task);
+                self.compute_results_updated = true;
             }
-        })
+        }
+
+        Ok(())
     }
 
     fn procedure_generate_docs(
@@ -248,35 +250,46 @@ impl DocsGenerator {
         self.docs_generation_tasks.clear();
     }
 
-    fn create_docs_gen_task(
-        &self,
+    fn derive_codeblock(
         selected_text_range: &TextRange,
-        text_content: &XcodeText,
-        window_uid: WindowUid,
         syntax_tree: &SwiftSyntaxTree,
-    ) -> Result<DocsGenerationTask, DocsGenerationError> {
+    ) -> Result<CodeBlock, DocsGenerationError> {
         let codeblock: SwiftCodeBlock = syntax_tree
             .get_selected_codeblock_node(&selected_text_range)
             .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
 
-        let codeblock_text = codeblock
+        let text = codeblock
             .get_codeblock_text()
             .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
 
-        let first_char_position = codeblock.get_first_char_position();
+        let first_char_pos = codeblock.get_first_char_position();
+        let last_char_pos = codeblock.get_last_char_position();
 
-        let (docs_insertion_index, _) = self
-            .compute_docs_insertion_point_and_indentation(text_content, first_char_position.row)?;
+        Ok(CodeBlock {
+            first_char_pos,
+            last_char_pos,
+            text,
+        })
+    }
+
+    fn create_docs_gen_task(
+        &self,
+        codeblock: CodeBlock,
+        text_content: &XcodeText,
+        window_uid: WindowUid,
+    ) -> Result<DocsGenerationTask, DocsGenerationError> {
+        let (docs_insertion_index, _) = self.compute_docs_insertion_point_and_indentation(
+            text_content,
+            codeblock.first_char_pos.row,
+        )?;
 
         DocsGenerationTask::new(
-            codeblock.get_first_char_position(),
-            codeblock.get_last_char_position(),
+            codeblock,
+            text_content,
             TextRange {
                 index: docs_insertion_index,
                 length: 0,
             },
-            codeblock_text,
-            text_content,
             window_uid,
         )
     }
