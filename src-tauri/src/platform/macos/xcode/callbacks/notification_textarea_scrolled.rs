@@ -1,6 +1,7 @@
 use crate::platform::macos::{
-    models::editor::EditorTextareaScrolledMessage, xcode::XCodeObserverState, AXEventXcode,
-    EventViewport, GetVia,
+    models::editor::{EditorTextareaScrolledMessage, EditorTextareaScrollingFinishedMessage},
+    xcode::XCodeObserverState,
+    AXEventXcode, EventViewport, GetVia,
 };
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 

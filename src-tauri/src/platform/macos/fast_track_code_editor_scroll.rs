@@ -2,7 +2,7 @@
 // This only handles mousewheel scrolling events, since they come much faster than the native AX scroll event.
 // We additionally use the native AX scroll event to handle other scrolling cases like scrollbar click-and-drag.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -10,7 +10,9 @@ use parking_lot::Mutex;
 use crate::app_handle;
 
 use super::{
-    generate_axui_element_hash, internal::get_focused_uielement, EventViewport, GetVia, XcodeError,
+    generate_axui_element_hash, internal::get_focused_uielement,
+    models::editor::EditorTextareaScrollingFinishedMessage, AXEventXcode, EventViewport, GetVia,
+    XcodeError,
 };
 lazy_static! {
     static ref CORRECTION_EVENT_PUBLISHING_TIME: Mutex<Option<Instant>> = Mutex::new(None);
@@ -22,14 +24,14 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
     _ = execute_publishing_event(text_editor_hash, None);
 
     // Disable correction events for now
-    /*
+
     let mut publishing_time_mutex = CORRECTION_EVENT_PUBLISHING_TIME.lock();
     if publishing_time_mutex.is_none() {
         // Case: This is the first scrolling event. It will be responsible for the final execution, after the last scrolling event has happened.
         // So we wait until the last scrolling event was more than 50 millis ago.
 
         // Refresh the time to publish final, correction event, since we are still observing scrolling.
-        publishing_time_mutex.replace(Instant::now() + std::time::Duration::from_millis(50));
+        publishing_time_mutex.replace(Instant::now() + std::time::Duration::from_millis(20));
 
         tauri::async_runtime::spawn(async move {
             loop {
@@ -56,13 +58,14 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
                 }
 
                 if publishing_moment_reached {
+                    AXEventXcode::EditorTextareaScrollingFinished(
+                        EditorTextareaScrollingFinishedMessage {
+                            window_uid: text_editor_hash,
+                        },
+                    )
+                    .publish_to_tauri(&app_handle());
                     // Sometimes, XCode handles the scroll event quickly, but sometimes it takes longer.
                     // Send multiple correction events at different delays for optimal handling.
-                    _ = execute_publishing_event(text_editor_hash, None);
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                    _ = execute_publishing_event(text_editor_hash, None);
-                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-                    _ = execute_publishing_event(text_editor_hash, None);
 
                     break;
                 } else {
@@ -73,7 +76,7 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
     } else {
         // Refresh the time to publish final, correction event, since we are stil observing scrolling.
         publishing_time_mutex.replace(Instant::now() + std::time::Duration::from_millis(50));
-    }*/
+    }
 
     Some(())
 }
@@ -90,13 +93,6 @@ fn execute_publishing_event(
         EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current)?
             .publish_to_tauri(&app_handle());
 
-        // if let Some(start) = start {
-        //     println!(
-        //         "start: {:?} dur: {:?} scroll event",
-        //         start,
-        //         Instant::now() - start
-        //     );
-        // }
         return Ok(());
     }
     Ok(())

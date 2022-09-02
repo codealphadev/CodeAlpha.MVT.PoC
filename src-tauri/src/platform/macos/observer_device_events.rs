@@ -7,7 +7,10 @@ use rdev::{simulate, EventType};
 
 use crate::{
     app_handle,
-    platform::macos::{models::input_device::MouseMovedMessage, EventInputDevice},
+    platform::macos::{
+        get_textarea_uielement, internal::get_uielement_frame,
+        models::input_device::MouseMovedMessage, EventInputDevice,
+    },
     utils::geometry::{LogicalPosition, LogicalSize},
 };
 
@@ -82,9 +85,17 @@ fn notification_mousewheel_event() -> Option<()> {
         if editor_pid == focused_ui_element.pid().ok()? {
             // 2. Is focused app a valid text editor field?
             if is_focused_uielement_xcode_editor_textarea().ok()? {
-                let text_editor_hash = generate_axui_element_hash(&focused_ui_element);
-                fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash);
-            }
+                if let Ok(textarea_frame) = get_uielement_frame(&focused_ui_element) {
+                    use enigo::Enigo;
+
+                    let foo = Enigo::mouse_location();
+
+                    if textarea_frame.contains_point(foo.0 as f64, foo.1 as f64) {
+                        let text_editor_hash = generate_axui_element_hash(&focused_ui_element);
+                        fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash);
+                    }
+                }
+            };
         }
     }
 

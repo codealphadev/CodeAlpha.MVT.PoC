@@ -8,9 +8,10 @@ use crate::utils::messaging::ChannelList;
 use super::models::editor::{
     EditorAppActivatedMessage, EditorAppClosedMessage, EditorAppDeactivatedMessage,
     EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
-    EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
-    EditorTextareaZoomedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
-    EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+    EditorTextareaScrolledMessage, EditorTextareaScrollingFinishedMessage,
+    EditorTextareaSelectedTextChangedMessage, EditorTextareaZoomedMessage,
+    EditorUIElementFocusedMessage, EditorWindowCreatedMessage, EditorWindowDestroyedMessage,
+    EditorWindowMovedMessage, EditorWindowResizedMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -25,6 +26,7 @@ pub enum AXEventXcode {
     EditorAppDeactivated(EditorAppDeactivatedMessage),
     EditorAppClosed(EditorAppClosedMessage),
     EditorTextareaScrolled(EditorTextareaScrolledMessage),
+    EditorTextareaScrollingFinished(EditorTextareaScrollingFinishedMessage),
     EditorTextareaZoomed(EditorTextareaZoomedMessage),
     EditorTextareaContentChanged(EditorTextareaContentChangedMessage),
     EditorTextareaSelectedTextChanged(EditorTextareaSelectedTextChangedMessage),
@@ -50,6 +52,9 @@ impl fmt::Display for AXEventXcode {
             }
             AXEventXcode::EditorTextareaContentChanged(_) => {
                 write!(f, "EditorTextareaContentChanged")
+            }
+            AXEventXcode::EditorTextareaScrollingFinished(_) => {
+                write!(f, "EditorTextareaScrollingFinished")
             }
         }
     }

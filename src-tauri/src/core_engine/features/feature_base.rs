@@ -17,6 +17,7 @@ pub enum CoreEngineTrigger {
     OnViewportMove,
     OnViewportDimensionsChange,
     OnVisibleTextRangeChange,
+    OnScrollingFinished,
     OnTrackingAreaClicked(TrackingAreaClickedMessage),
 }
 

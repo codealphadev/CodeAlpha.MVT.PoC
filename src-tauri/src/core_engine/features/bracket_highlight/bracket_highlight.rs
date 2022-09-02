@@ -115,20 +115,7 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
-        let code_doc_frame_props = get_code_document_frame_properties(&GetVia::Current)
-            .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
-
-        let dimensions = code_doc_frame_props.dimensions;
-        let text_offset =
-            code_doc_frame_props
-                .text_offset
-                .ok_or(BracketHighlightError::GenericError(anyhow!(
-                    "Textoffset None - should never happen"
-                )))?;
-
-        self.visualization_results = self
-            .calculate_visualization_results(code_document, text_offset + dimensions.origin.x)?
-            .map(|res| res.to_local(&dimensions.origin));
+        self.visualization_results = self.calculate_visualization_results(code_document)?;
 
         self.publish_visualization(code_document);
 
@@ -206,7 +193,6 @@ impl BracketHighlight {
     fn calculate_visualization_results(
         &self,
         code_document: &CodeDocument,
-        text_offset_global: f64,
     ) -> Result<Option<BracketHighlightResults>, BracketHighlightError> {
         let text_content = code_document
             .text_content()
@@ -230,6 +216,10 @@ impl BracketHighlight {
             get_char_rectangle_from_text_index(closing_bracket.index)?,
         );
 
+        // We fetch the code_document_frame_properties here, between the other calls to the AX API, to minimize the difference in screen position caused by scrolling
+        let code_doc_frame_props = get_code_document_frame_properties(&GetVia::Current)
+            .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
+
         let (line_opening_char_rect, line_closing_char_rect) = (
             get_char_rectangle_from_text_index(line_opening_char.index)?,
             get_char_rectangle_from_text_index(line_closing_char.index)?,
@@ -249,23 +239,26 @@ impl BracketHighlight {
             || (line_opening_char.position.row != line_closing_char.position.row);
 
         if !code_block_spans_multiple_lines {
-            return Ok(Some(BracketHighlightResults {
-                lines: BracketHighlightLines {
-                    start: line_opening_char_rect.map(|rect| LogicalPosition {
-                        x: rect.bottom_right().x,
-                        y: rect.bottom_right().y - 1.0,
-                    }),
-                    end: line_closing_char_rect.map(|rect| LogicalPosition {
-                        x: rect.bottom_left().x,
-                        y: rect.bottom_left().y - 1.0,
-                    }),
-                    elbow: None,
-                },
-                boxes: BracketHighlightBoxPair {
-                    opening_bracket: opening_bracket_rect,
-                    closing_bracket: closing_bracket_rect,
-                },
-            }));
+            return Ok(Some(
+                (BracketHighlightResults {
+                    lines: BracketHighlightLines {
+                        start: line_opening_char_rect.map(|rect| LogicalPosition {
+                            x: rect.bottom_right().x,
+                            y: rect.bottom_right().y - 1.0,
+                        }),
+                        end: line_closing_char_rect.map(|rect| LogicalPosition {
+                            x: rect.bottom_left().x,
+                            y: rect.bottom_left().y - 1.0,
+                        }),
+                        elbow: None,
+                    },
+                    boxes: BracketHighlightBoxPair {
+                        opening_bracket: opening_bracket_rect,
+                        closing_bracket: closing_bracket_rect,
+                    },
+                })
+                .to_local(&code_doc_frame_props.dimensions.origin),
+            ));
         }
 
         // Check if bottom line should be to the top or bottom of last line rectangle
@@ -299,23 +292,34 @@ impl BracketHighlight {
             }
         });
 
+        let text_offset_global =
+            code_doc_frame_props
+                .text_offset
+                .ok_or(BracketHighlightError::GenericError(anyhow!(
+                    "Textoffset None - should never happen"
+                )))?
+                + code_doc_frame_props.dimensions.origin.x;
+
         // To determine the elbow point we are interested of the left-most text position
         // in the codeblock between opening and closing bracket.
         let mut left_most_char_x =
             match get_left_most_char_x(&text_content, &line_opening_char, &line_closing_char)? {
                 None => {
                     // Case: elbow is not within the visible_text_range of Xcode
-                    return Ok(Some(BracketHighlightResults {
-                        lines: BracketHighlightLines {
-                            start: line_start_point,
-                            end: line_end_point,
-                            elbow: Some(Elbow::EstimatedElbow(text_offset_global)),
-                        },
-                        boxes: BracketHighlightBoxPair {
-                            opening_bracket: opening_bracket_rect,
-                            closing_bracket: closing_bracket_rect,
-                        },
-                    }));
+                    return Ok(Some(
+                        (BracketHighlightResults {
+                            lines: BracketHighlightLines {
+                                start: line_start_point,
+                                end: line_end_point,
+                                elbow: Some(Elbow::EstimatedElbow(text_offset_global)),
+                            },
+                            boxes: BracketHighlightBoxPair {
+                                opening_bracket: opening_bracket_rect,
+                                closing_bracket: closing_bracket_rect,
+                            },
+                        })
+                        .to_local(&code_doc_frame_props.dimensions.origin),
+                    ));
                 }
                 Some(left_most_char_rect) => left_most_char_rect,
             };
@@ -339,17 +343,20 @@ impl BracketHighlight {
             Some(Elbow::KnownElbow(left_most_char_x))
         };
 
-        return Ok(Some(BracketHighlightResults {
-            lines: BracketHighlightLines {
-                start: line_start_point,
-                end: line_end_point,
-                elbow,
-            },
-            boxes: BracketHighlightBoxPair {
-                opening_bracket: opening_bracket_rect,
-                closing_bracket: closing_bracket_rect,
-            },
-        }));
+        return Ok(Some(
+            (BracketHighlightResults {
+                lines: BracketHighlightLines {
+                    start: line_start_point,
+                    end: line_end_point,
+                    elbow,
+                },
+                boxes: BracketHighlightBoxPair {
+                    opening_bracket: opening_bracket_rect,
+                    closing_bracket: closing_bracket_rect,
+                },
+            })
+            .to_local(&code_doc_frame_props.dimensions.origin),
+        ));
     }
 
     fn publish_visualization(&self, _: &CodeDocument) {
@@ -380,10 +387,12 @@ impl BracketHighlight {
         };
 
         match trigger {
+            CoreEngineTrigger::OnScrollingFinished => Ok(true),
             CoreEngineTrigger::OnViewportDimensionsChange => Ok(true),
             CoreEngineTrigger::OnVisibleTextRangeChange => {
                 let visible_text_range = get_visible_text_range(&GetVia::Current)
                     .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
+
                 if let Some(BracketHighlightResults { lines, boxes }) = self.visualization_results {
                     if boxes.opening_bracket.is_none()
                         && visible_text_range.includes_index(compute_results.opening_bracket.index)

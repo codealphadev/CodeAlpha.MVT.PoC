@@ -58,6 +58,9 @@ pub fn xcode_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 AXEventXcode::EditorAppDeactivated(_) => {
                     // Do nothing
                 }
+                AXEventXcode::EditorTextareaScrollingFinished(msg) => {
+                    _ = on_editor_textarea_scrolling_finished(&core_engine, &msg);
+                }
             }
         }
     });

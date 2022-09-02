@@ -59,6 +59,9 @@ pub fn xcode_listener(window_manager: &Arc<Mutex<WindowManager>>) {
             AXEventXcode::EditorShortcutPressed(_) => {
                 // Do Nothing here
             }
+            AXEventXcode::EditorTextareaScrollingFinished(_) => {
+                // Do nothing here
+            }
         }
     });
 }
