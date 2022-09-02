@@ -11,7 +11,8 @@ use crate::{
 use super::handlers::{
     on_activate_editor_app, on_close_editor_app, on_created_editor_window,
     on_deactivate_editor_app, on_destroyed_editor_window, on_editor_ui_element_focus_change,
-    on_move_editor_window, on_resize_editor_window, on_zoom_editor_window,
+    on_minimize_editor_window, on_move_editor_window, on_resize_editor_window,
+    on_zoom_editor_window,
 };
 
 pub fn xcode_listener(window_manager: &Arc<Mutex<WindowManager>>) {
@@ -58,6 +59,9 @@ pub fn xcode_listener(window_manager: &Arc<Mutex<WindowManager>>) {
             }
             AXEventXcode::EditorShortcutPressed(_) => {
                 // Do Nothing here
+            }
+            AXEventXcode::EditorWindowMinimized(msg) => {
+                on_minimize_editor_window(&window_manager_move_copy, &msg);
             }
         }
     });

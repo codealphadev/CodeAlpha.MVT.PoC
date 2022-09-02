@@ -17,7 +17,7 @@ use core_foundation::{
 };
 
 use crate::platform::macos::xcode::{
-    callbacks::{notify_window_created, notify_window_destroyed},
+    callbacks::{notify_window_created, notify_window_destroyed, notify_window_minimized},
     XCodeObserverState,
 };
 
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn callback_xcode_notifications(
             let _ = notify_window_resized(&element, &mut (*context));
         }
         kAXWindowMiniaturizedNotification => {
-            // Here we do nothing, because this behavior would be duplicated with kAXFocusedUIElementChangedNotification
+            let _ = notify_window_minimized(&element);
         }
         kAXWindowDeminiaturizedNotification => {
             // Here we do nothing, because this behavior would be duplicated with kAXFocusedUIElementChangedNotification
