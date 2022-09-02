@@ -63,7 +63,10 @@ fn main() {
     let system_tray = SystemTray::new().with_menu(construct_tray_menu());
 
     let mut app: tauri::App = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![cmd_toggle_app_activation])
+        .invoke_handler(tauri::generate_handler![
+            cmd_toggle_app_activation,
+            cmd_check_debug_mode
+        ])
         .setup(|app| {
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
@@ -174,4 +177,12 @@ fn deadlock_detection() {
             }
         }
     });
+}
+
+#[tauri::command]
+fn cmd_check_debug_mode(_app_handle: tauri::AppHandle) -> bool {
+    #[cfg(not(debug_assertions))]
+    return false;
+    #[cfg(debug_assertions)]
+    return true;
 }
