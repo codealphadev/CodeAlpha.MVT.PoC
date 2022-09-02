@@ -3,7 +3,7 @@ on: [push]
 
 jobs:
   Publish:
-    runs-on: self-hosted
+    runs-on: [self-hosted, adam]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
