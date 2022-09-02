@@ -18,7 +18,7 @@ pub enum TrackingEventType {
     MouseClicked,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TrackingArea {
     pub id: uuid::Uuid,
     pub window_uid: WindowUid,
@@ -33,5 +33,11 @@ impl TrackingArea {
         }
         self.rectangles = updated_tracking_area.rectangles.clone();
         self.event_subscriptions = updated_tracking_area.event_subscriptions.clone();
+    }
+
+    pub fn eq_props(&self, other: &Self) -> bool {
+        self.window_uid == other.window_uid
+            && self.rectangles == other.rectangles
+            && self.event_subscriptions == other.event_subscriptions
     }
 }

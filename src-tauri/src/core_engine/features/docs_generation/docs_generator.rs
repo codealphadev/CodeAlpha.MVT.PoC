@@ -37,6 +37,7 @@ enum DocsGenComputeProcedure {
 pub struct DocsGenerator {
     docs_generation_tasks: HashMap<WindowUid, DocsGenerationTask>,
     is_activated: bool,
+    compute_results_updated: bool,
 }
 
 impl FeatureBase for DocsGenerator {
@@ -71,7 +72,7 @@ impl FeatureBase for DocsGenerator {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated || !Self::should_update_visualization(trigger) {
+        if !self.is_activated || !self.should_update_visualization(trigger) {
             return Ok(());
         }
 
@@ -117,14 +118,23 @@ impl DocsGenerator {
         Self {
             docs_generation_tasks: HashMap::new(),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            compute_results_updated: false,
         }
     }
 
-    fn should_update_visualization(trigger: &CoreEngineTrigger) -> bool {
+    fn should_update_visualization(&mut self, trigger: &CoreEngineTrigger) -> bool {
         match trigger {
             CoreEngineTrigger::OnTextContentChange => true,
-            CoreEngineTrigger::OnTextSelectionChange => true,
-            CoreEngineTrigger::OnVisibleTextRangeChange => false,
+            CoreEngineTrigger::OnTextSelectionChange => {
+                if self.compute_results_updated {
+                    // Reset the flag.
+                    self.compute_results_updated = false;
+                    true
+                } else {
+                    false
+                }
+            }
+            CoreEngineTrigger::OnVisibleTextRangeChange => true,
             CoreEngineTrigger::OnViewportMove => true,
             CoreEngineTrigger::OnViewportDimensionsChange => true,
 
@@ -158,6 +168,7 @@ impl DocsGenerator {
                 return Ok(());
             }
         };
+
         let text_content =
             code_document
                 .text_content()
@@ -165,6 +176,7 @@ impl DocsGenerator {
                 .ok_or(FeatureError::GenericError(
                     DocsGenerationError::MissingContext.into(),
                 ))?;
+
         let window_uid = code_document.editor_window_props().window_uid;
         Ok(if !self.is_docs_gen_task_running(&window_uid) {
             if let Ok(new_task) = self.create_docs_gen_task(
@@ -173,7 +185,20 @@ impl DocsGenerator {
                 window_uid,
                 code_document.syntax_tree(),
             ) {
-                self.docs_generation_tasks.insert(window_uid, new_task);
+                self.docs_generation_tasks
+                    .entry(window_uid)
+                    .and_modify(|prev| {
+                        if !new_task.eq(&prev) {
+                            self.compute_results_updated = true;
+                            *prev = new_task.clone()
+                        } else {
+                            self.compute_results_updated = false;
+                        }
+                    })
+                    .or_insert({
+                        self.compute_results_updated = true;
+                        new_task
+                    });
             } else {
                 self.docs_generation_tasks.remove(&window_uid);
             }

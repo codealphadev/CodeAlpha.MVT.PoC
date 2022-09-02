@@ -37,17 +37,27 @@ pub enum DocsGenerationTaskState {
     Finished,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct CodeBlock {
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,
     pub text: XcodeText,
 }
 
+#[derive(Debug, Clone)]
 pub struct DocsGenerationTask {
     tracking_area: TrackingArea,
     docs_insertion_point: TextRange,
     codeblock: CodeBlock,
     task_state: Arc<Mutex<DocsGenerationTaskState>>,
+}
+
+impl PartialEq for DocsGenerationTask {
+    fn eq(&self, other: &Self) -> bool {
+        self.tracking_area.eq_props(&other.tracking_area)
+            && self.docs_insertion_point == other.docs_insertion_point
+            && self.codeblock == other.codeblock
+    }
 }
 
 impl DocsGenerationTask {
