@@ -13,3 +13,5 @@ public/build
 # .tfstate files
 *.tfstate
 *.tfstate.*
+
+actions-runner/*
