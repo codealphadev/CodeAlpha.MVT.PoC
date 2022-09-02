@@ -21,25 +21,31 @@ jobs:
           rustup target add aarch64-apple-darwin
           rustup target add x86_64-apple-darwin
       - name: Build
-        run: npm run build
-      - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        run: npm run build
+      - name: Auto Increment Semver Action
+        uses: MCKanpolat/auto-semver-action@1.0.7
+        id: versioning
         with:
-          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: true
-          prerelease: false
+          releaseType: patch
+          incrementPerCommit: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Releasing new version
+        run: echo ${{ steps.versioning.outputs.version }}
       - id: auth
         name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v0.4.0
         with:
           workload_identity_provider: projects/767491075312/locations/global/workloadIdentityPools/codealpha-pool/providers/codealpha-gh-provider
           service_account: release-creation@client-backend-x.iam.gserviceaccount.com
+      - id: 'upload-file'
+        uses: 'google-github-actions/upload-cloud-storage@v0'
+        with:
+          path: './src-tauri/target/release/bundle/macos/CodeAlpha.app'
+          destination: 'codealpha-releases/${{steps.versioning.outputs.version}}/CodeAlpha.app'
