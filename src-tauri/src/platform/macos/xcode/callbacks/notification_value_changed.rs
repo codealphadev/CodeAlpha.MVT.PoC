@@ -1,9 +1,14 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
+use core_foundation::string::CFString;
 
-use crate::platform::macos::{
-    get_textarea_uielement,
-    xcode::{callbacks::notify_textarea_selected_text_changed, XCodeObserverState},
-    GetVia,
+use crate::{
+    app_handle,
+    platform::macos::{
+        get_textarea_uielement,
+        models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
+        xcode::{callbacks::notify_textarea_selected_text_changed, XCodeObserverState},
+        AXEventXcode, GetVia,
+    },
 };
 
 use super::{
@@ -36,6 +41,8 @@ pub fn notify_value_changed(
                 )?;
             }
 
+            check_event_received_due_to_xcode_dev_panel_closed(&uielement);
+
             Ok(())
         }
         "AXTextArea" => {
@@ -49,5 +56,30 @@ pub fn notify_value_changed(
             }
         }
         _ => Ok(()),
+    }
+}
+
+fn check_event_received_due_to_xcode_dev_panel_closed(uielement: &AXUIElement) {
+    // Case: Observed issue COD-282; Removing Split-Panel in the editor does not reset CodeOverlay window
+    // Closing a split-dev-panel does not emit a notification that the UIElementFocus has changed. Instead, we
+    // observed `XCode notification: "AXValueChanged", ui element role: "AXStaticText", value: "No Selection")`
+    // This literally tells us in "text" what Xcode should normally tell us by emitting a "UIElementFocusChanged" notification.
+    if let Ok(uielement_role) = uielement.role() {
+        if uielement_role.to_string() == "AXStaticText" {
+            if let Ok(uielement_value) = uielement.value() {
+                if let Some(uielement_value_str) = uielement_value.downcast::<CFString>() {
+                    if uielement_value_str.to_string() == "No Selection" {
+                        AXEventXcode::EditorUIElementFocused(EditorUIElementFocusedMessage {
+                            window_uid: None,
+                            pid: None,
+                            focused_ui_element: FocusedUIElement::Other,
+                            textarea_position: None,
+                            textarea_size: None,
+                        })
+                        .publish_to_tauri(&app_handle());
+                    }
+                }
+            }
+        }
     }
 }
