@@ -9,6 +9,7 @@ pub use editor_textarea_zoomed::*;
 pub use editor_uielement_focused::*;
 pub use editor_window_created::*;
 pub use editor_window_destroyed::*;
+pub use editor_window_minimized::*;
 pub use editor_window_moved::*;
 pub use editor_window_resized::*;
 
@@ -23,5 +24,6 @@ pub mod editor_textarea_zoomed;
 pub mod editor_uielement_focused;
 pub mod editor_window_created;
 pub mod editor_window_destroyed;
+pub mod editor_window_minimized;
 pub mod editor_window_moved;
 pub mod editor_window_resized;

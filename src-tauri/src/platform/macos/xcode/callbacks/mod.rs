@@ -10,6 +10,7 @@ pub use notification_uielement_focused::notify_uielement_focused;
 pub use notification_value_changed::notify_value_changed;
 pub use notification_window_created::notify_window_created;
 pub use notification_window_destroyed::notify_window_destroyed;
+pub use notification_window_minimized::notify_window_minimized;
 pub use notification_window_moved::notify_window_moved;
 pub use notification_window_resized::notify_window_resized;
 
@@ -24,5 +25,6 @@ mod notification_uielement_focused;
 mod notification_value_changed;
 mod notification_window_created;
 mod notification_window_destroyed;
+mod notification_window_minimized;
 mod notification_window_moved;
 mod notification_window_resized;

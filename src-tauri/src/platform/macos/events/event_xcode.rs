@@ -10,7 +10,8 @@ use super::models::editor::{
     EditorShortcutPressedMessage, EditorTextareaContentChangedMessage,
     EditorTextareaScrolledMessage, EditorTextareaSelectedTextChangedMessage,
     EditorTextareaZoomedMessage, EditorUIElementFocusedMessage, EditorWindowCreatedMessage,
-    EditorWindowDestroyedMessage, EditorWindowMovedMessage, EditorWindowResizedMessage,
+    EditorWindowDestroyedMessage, EditorWindowMinimizedMessage, EditorWindowMovedMessage,
+    EditorWindowResizedMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -21,6 +22,7 @@ pub enum AXEventXcode {
     EditorWindowDestroyed(EditorWindowDestroyedMessage),
     EditorWindowResized(EditorWindowResizedMessage),
     EditorWindowMoved(EditorWindowMovedMessage),
+    EditorWindowMinimized(EditorWindowMinimizedMessage),
     EditorAppActivated(EditorAppActivatedMessage),
     EditorAppDeactivated(EditorAppDeactivatedMessage),
     EditorAppClosed(EditorAppClosedMessage),
@@ -51,6 +53,7 @@ impl fmt::Display for AXEventXcode {
             AXEventXcode::EditorTextareaContentChanged(_) => {
                 write!(f, "EditorTextareaContentChanged")
             }
+            AXEventXcode::EditorWindowMinimized(_) => write!(f, "EditorWindowMinimized"),
         }
     }
 }
