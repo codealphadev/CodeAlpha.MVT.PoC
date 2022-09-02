@@ -126,9 +126,9 @@
       "window": {
         "all": false,
         "center": false,
-        "close": true,
+        "close": false,
         "create": false,
-        "hide": true,
+        "hide": false,
         "maximize": false,
         "minimize": false,
         "print": false,

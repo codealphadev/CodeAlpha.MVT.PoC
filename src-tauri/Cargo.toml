@@ -1,8 +1,8 @@
 [package]
 name = "CodeAlpha"
-version = "0.1.0"
+version = "0.0.1"
 description = "CodeAlpha"
-authors = ["Adrian Hupka"]
+authors = ["Adrian Hupka, Daniel Owens, Adam Nyberg"]
 license = ""
 repository = ""
 default-run = "CodeAlpha"
@@ -13,25 +13,31 @@ rust-version = "1.63"
 tauri-build = { version = "1.0.0", features = ["isolation"] }
 
 [dependencies]
-tauri = { version = "1.0.0", features = ["clipboard", "isolation", "macos-private-api", "notification", "process-command-api", "shell-sidecar", "system-tray", "window-close", "window-hide", "window-start-dragging"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-uuid = { version = "0.8.2", features = ["v4", "serde"] }
-tokio = { version=  "1.17.0",features = ["full"] }
+tauri = { version = "1.0.5", features = ["clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "window-start-dragging"] }
+tauri-plugin-log = { git = "https://github.com/tauri-apps/tauri-plugin-log", features = ["colored"] }
+
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = "1.0.85"
+uuid = { version = "0.8.2", features = ["v4", "serde"] } # we can't go higher than 0.8.2 because the 'ts-rs' doesn't allow serializing Uuid in more recent versions 
+tokio = { version=  "1.17.0",features = ["time"] }
 lazy_static = "1.4.0"
-strum = { version = "0.24.1", features = ["derive"] }
-differ = { version = "1.0.2", features = ["use_serde"] }
+strum = { version = "0.24.1", features = ["derive"] }  # strum generates iterators from enums and structs
+differ = { version = "1.0.2", features = ["use_serde"] } 
 reqwest = { version = "0.11", features = ["json"] }
 parking_lot = {version = "0.12.1", features = ["deadlock_detection"] }
 unicode-segmentation = "1.9.0"
+gcp_auth = "0.7.3"
+machine-uid = "0.2.0"
+
+# Error reporting
+anyhow = "1.0.62"
+thiserror = "1.0.32"
+
+# Tracing / Logging
 tracing = "0.1"
 tracing-subscriber = { version ="0.3" }
 tracing-serde = "0.1.3"
-gcp_auth = "0.7.3"
-chrono = "0.4.22"
-machine-uid = "0.2.0"
-thiserror = "1.0.32"
-anyhow = "1.0.62"
+log = "0.4.17"
 
 # macOS dependencies (crucial for Accessibility features to work)
 core-foundation = "0.9.3"
@@ -47,15 +53,17 @@ accessibility-sys = { git = "https://github.com/Hupka/accessibility" }
 # Miscellaneous
 colored = "2" # Coloring console output
 rand = "0.8.5" # Random number generator
-enigo = "0.0.14" # Enigo keyboard library
 rdev = "0.5.1"
+enigo = "0.0.14" # Enigo keyboard library
 ts-rs = {version = "6.2.0", features = ["serde-compat", "format", "uuid-impl"] }
+chrono = "0.4.22"
 
 # Parsing source files into syntax trees
 tree-sitter = "0.20.0"
 tree-sitter-swift = "=0.3.0"
 
 window-shadows = "0.1.3"
+
 
 [dev-dependencies]
 pretty_assertions = "1.2.0"
