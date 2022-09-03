@@ -1,14 +1,15 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::HashMap, sync::Arc};
 
 use accessibility::AXObserver;
 use lazy_static::lazy_static;
+use parking_lot::Mutex;
 
 use super::{
     app::register_observer_app, observer_device_events::subscribe_mouse_events,
     xcode::register_observer_xcode,
 };
 
-static LOOP_TIME_IN_MS: u64 = 500;
+static LOOP_TIME_IN_MS: u64 = 50;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum ObserverType {
@@ -17,8 +18,8 @@ pub enum ObserverType {
 }
 
 lazy_static! {
-    static ref REGISTERED_AX_OBSERVERS: Mutex<HashMap<ObserverType, (i32, AXObserver)>> =
-        Mutex::new(HashMap::new());
+    static ref REGISTERED_AX_OBSERVERS: Arc<Mutex<HashMap<ObserverType, (i32, AXObserver)>>> =
+        Arc::new(Mutex::new(HashMap::new()));
 }
 
 // This is the entry point for the Observer registrations. We register observers
@@ -52,6 +53,7 @@ fn start_monitoring_editor_pids() {
         loop {
             _ = register_observer_xcode();
 
+            println!("Sleeping for {} ms", LOOP_TIME_IN_MS);
             tokio::time::sleep(std::time::Duration::from_millis(LOOP_TIME_IN_MS)).await;
         }
     });
@@ -64,21 +66,16 @@ pub fn store_registered_ax_observer(
 ) -> Option<(i32, AXObserver)> {
     REGISTERED_AX_OBSERVERS
         .lock()
-        .unwrap()
         .insert(observer_type, (pid, observer.to_owned()))
 }
 
 pub fn get_registered_ax_observer(observer_type: ObserverType) -> Option<(i32, AXObserver)> {
     REGISTERED_AX_OBSERVERS
         .lock()
-        .unwrap()
         .get(&observer_type)
         .map(|(pid, observer)| (*pid, observer.to_owned()))
 }
 
 pub fn remove_registered_ax_observer(observer_type: ObserverType) -> Option<(i32, AXObserver)> {
-    REGISTERED_AX_OBSERVERS
-        .lock()
-        .unwrap()
-        .remove(&observer_type)
+    REGISTERED_AX_OBSERVERS.lock().remove(&observer_type)
 }

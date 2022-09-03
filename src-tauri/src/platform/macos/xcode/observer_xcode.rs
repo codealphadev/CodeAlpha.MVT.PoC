@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use accessibility_sys::{
     kAXApplicationActivatedNotification, kAXApplicationDeactivatedNotification,
     kAXApplicationHiddenNotification, kAXApplicationShownNotification,
@@ -9,6 +11,7 @@ use accessibility_sys::{
 
 use accessibility::{AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
+use parking_lot::Mutex;
 
 use super::callback_xcode_notifications;
 use crate::{
@@ -55,15 +58,23 @@ static OBSERVER_NOTIFICATIONS: &'static [&'static str] = &[
     kAXMenuItemSelectedNotification,
 ];
 
+use lazy_static::lazy_static;
+lazy_static! {
+    static ref AX_OBSERVER_REGISTRATION_ONGOING: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+}
+
 pub fn register_observer_xcode() -> Result<(), Error> {
     if is_new_xcode_observer_registration_required()? {
-        std::thread::spawn(|| {
-            // The Xcode application is still starting up, we need to wait before registering its AX observer.
-            // We observed that even though the registration is supposetly successful, the observer is not yet registered.
-            // We found that waiting for 2 seconds is enough.
-            std::thread::sleep(std::time::Duration::from_millis(2000));
-            _ = create_observer_and_add_notifications();
-        });
+        if !*AX_OBSERVER_REGISTRATION_ONGOING.lock() {
+            *AX_OBSERVER_REGISTRATION_ONGOING.lock() = true;
+            std::thread::spawn(|| {
+                // The Xcode application is still starting up, we need to wait before registering its AX observer.
+                // We observed that even though the registration is supposetly successful, the observer is not yet registered.
+                // We found that waiting for 2 seconds is enough.
+                std::thread::sleep(std::time::Duration::from_millis(2000));
+                _ = create_observer_and_add_notifications();
+            });
+        }
     }
 
     Ok(())
@@ -139,6 +150,8 @@ fn create_observer_and_add_notifications() -> Result<(), Error> {
             },
         );
     }
+
+    *AX_OBSERVER_REGISTRATION_ONGOING.lock() = false;
 
     // 4. Kick of RunLoop on this thread
     CFRunLoop::run_current();
