@@ -93,12 +93,6 @@ impl CoreEngine {
         }
     }
 
-    pub fn start_core_engine_listeners(core_engine: &Arc<Mutex<CoreEngine>>) {
-        xcode_listener(&core_engine);
-        user_interaction_listener(&core_engine);
-        window_control_listener(&core_engine);
-    }
-
     pub fn run_features(
         &mut self,
         window_uid: WindowUid,
@@ -121,5 +115,11 @@ impl CoreEngine {
         for feature in &mut self.features {
             _ = feature.reset();
         }
+    }
+
+    pub fn start_core_engine_listeners(core_engine: &Arc<Mutex<CoreEngine>>) {
+        xcode_listener(&core_engine);
+        user_interaction_listener(&core_engine);
+        window_control_listener(&core_engine);
     }
 }
