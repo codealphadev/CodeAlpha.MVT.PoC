@@ -9,6 +9,7 @@ dependencies = [
  "accessibility",
  "accessibility-sys",
  "anyhow",
+ "backtrace",
  "chrono",
  "cocoa 0.24.0",
  "colored 2.0.0",
