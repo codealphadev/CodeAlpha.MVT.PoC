@@ -28,6 +28,7 @@ parking_lot = {version = "0.12.1", features = ["deadlock_detection"] }
 unicode-segmentation = "1.9.0"
 gcp_auth = "0.7.3"
 machine-uid = "0.2.0"
+backtrace = "0.3.66"
 
 # Error reporting
 anyhow = "1.0.62"

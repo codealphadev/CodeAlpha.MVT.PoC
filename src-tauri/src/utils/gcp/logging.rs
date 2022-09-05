@@ -4,6 +4,7 @@ use parking_lot::Mutex;
 use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::async_runtime::block_on;
 use tracing::{debug, warn, Level};
 
 use crate::utils::{gcp::auth, tracing::Metadata};
@@ -73,15 +74,15 @@ pub struct LoggingEntriesWriteRequest {
 }
 
 pub struct GcpLogging {
-    log_name: String,
     entries: Arc<Mutex<Vec<LogEntry>>>,
+    log_name: String,
 }
 
 impl GcpLogging {
     pub fn new() -> Self {
         Self {
-            log_name: "projects/client-backend-x/logs/client".to_string(),
             entries: Arc::new(Mutex::new(Vec::new())),
+            log_name: "projects/client-backend-x/logs/client".to_string(),
         }
     }
 
@@ -103,10 +104,7 @@ impl GcpLogging {
                     }
 
                     if let Some(access_token) = token {
-                        match publish_to_gcp(current_entries, access_token).await {
-                            Ok(_) => {}
-                            Err(_e) => {}
-                        }
+                        publish_to_gcp(current_entries, access_token).await.ok();
                     }
                 }
             }
@@ -115,6 +113,18 @@ impl GcpLogging {
 
     pub fn add_entry(&mut self, message: Value, metadata: Metadata) {
         (*self.entries.lock()).push(LogEntry::new(self.log_name.clone(), message, metadata));
+    }
+
+    pub fn publish_entry_synchronously(&mut self, message: Value, metadata: Metadata) {
+        let entries = vec![LogEntry::new(self.log_name.clone(), message, metadata)];
+        // get token
+        let mut auth = auth::GcpAuth::new();
+        let token = block_on(auth.token_str());
+
+        // publish to gcp
+        if let Some(access_token) = token {
+            block_on(publish_to_gcp(entries, access_token)).ok();
+        }
     }
 
     #[allow(dead_code)] // Used in tests

@@ -1,11 +1,12 @@
-use std::sync::Arc;
+use std::{panic, sync::Arc};
 
+use backtrace::Backtrace;
 use chrono::{DateTime, Utc};
 use parking_lot::Mutex;
 use serde_json::json;
 use tracing_serde::AsSerde;
 
-use tracing::{metadata::LevelFilter, Level, Subscriber};
+use tracing::{error, metadata::LevelFilter, Level, Subscriber};
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, Layer};
 
 use super::gcp::logging::GcpLogging;
@@ -27,8 +28,16 @@ impl GcpLayer {
                 return false;
             }
         }
-
         true
+    }
+
+    fn should_send_sync(event: &tracing::Event<'_>) -> bool {
+        for field in event.fields() {
+            if field.name() == "publish_sync" {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -57,15 +66,18 @@ impl<S: Subscriber> Layer<S> for GcpLayer {
         let level = event.metadata().level().to_owned();
 
         if Self::should_send_to_remote(event) {
+            let message = json!(event.as_serde());
+            let metadata = Metadata {
+                timestamp,
+                name,
+                level,
+            };
             let mut gcp_logging = self.gcp_logging.lock();
-            gcp_logging.add_entry(
-                json!(event.as_serde()),
-                Metadata {
-                    timestamp,
-                    name,
-                    level,
-                },
-            );
+            if Self::should_send_sync(event) {
+                gcp_logging.publish_entry_synchronously(message, metadata);
+            } else {
+                gcp_logging.add_entry(message, metadata);
+            }
         }
     }
 }
@@ -93,6 +105,18 @@ impl TracingSubscriber {
 
         tracing::subscriber::set_global_default(subscriber)
             .expect("Failed to set global default subscriber");
+
+        let default_panic = std::panic::take_hook();
+        panic::set_hook(Box::new(move |panic_info| {
+            let backtrace = Backtrace::new();
+            error!(
+                publish_sync = true,
+                ?panic_info,
+                ?backtrace,
+                "Application Panic"
+            );
+            default_panic(panic_info);
+        }));
     }
 }
 
