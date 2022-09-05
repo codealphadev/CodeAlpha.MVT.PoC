@@ -4,7 +4,7 @@ use crate::platform::macos::{
     get_focused_window,
     models::editor::{EditorAppActivatedMessage, EditorAppDeactivatedMessage},
     xcode::XCodeObserverState,
-    AXEventXcode,
+    AXEventXcode, EventViewport, GetVia,
 };
 
 /// Notify Tauri that XCode has been activated, which means focus has moved to XCode from a different application.
@@ -30,6 +30,11 @@ pub fn notify_app_activated(
 
     // Emit to rust listeners
     activation_event.publish_to_tauri(&xcode_observer_state.app_handle);
+
+    // If the focused ui element is already the correct textarea publish viewport update event.
+    if let Ok(update_viewport_event) = EventViewport::new_xcode_viewport_update(&GetVia::Current) {
+        update_viewport_event.publish_to_tauri(&xcode_observer_state.app_handle);
+    }
 
     Ok(())
 }
