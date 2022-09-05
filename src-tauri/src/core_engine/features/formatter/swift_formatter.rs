@@ -1,5 +1,6 @@
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
+use tracing::debug;
 
 use crate::{
     app_handle,
@@ -114,6 +115,7 @@ impl SwiftFormatter {
                 Ok(content) => content,
                 Err(_err) => {
                     EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
+                    debug!(error = ?_err, "SwiftFormatFailed");
                     return;
                 }
             };
@@ -128,6 +130,7 @@ impl SwiftFormatter {
                 Ok(_) => {}
                 Err(_err) => {
                     EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
+                    debug!(error = ?_err, "SwiftFormatFailed");
                     return;
                 }
             }
@@ -153,6 +156,7 @@ impl SwiftFormatter {
 
             // 6. Notifiy the frontend that the file has been formatted successfully
             EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&app_handle());
+            debug!("SwiftFormatFinished");
         });
 
         Ok(())
