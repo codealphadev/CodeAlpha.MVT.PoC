@@ -17,6 +17,12 @@ jobs:
         with:
           workload_identity_provider: projects/767491075312/locations/global/workloadIdentityPools/codealpha-pool/providers/codealpha-gh-provider
           service_account: release-creation@client-backend-x.iam.gserviceaccount.com
+      - id: 'fetch-tauri-private-key-secrets'
+        uses: 'google-github-actions/get-secretmanager-secrets@v0'
+        with:
+          secrets: |-
+            private-key:767491075312/tauri_private_key
+            private-key-pw:767491075312/tauri_key_pw
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
@@ -38,6 +44,8 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          TAURI_PRIVATE_KEY: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key }}
+          TAURI_KEY_PASSWORD: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key-pw }}
         run: npm run build
       - name: Auto Increment Semver Action
         uses: MCKanpolat/auto-semver-action@1.0.7
@@ -48,9 +56,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Releasing new version
         run: echo ${{ steps.versioning.outputs.version }}
-
       - id: 'upload-file'
-        uses: 'google-github-actions/upload-cloud-storage@v0'
+        uses: 'google-github-actions/upload-cloud-storage@v0.5.0'
         with:
           path: './src-tauri/target/release/bundle/macos/CodeAlpha.app'
           destination: 'codealpha-releases/${{steps.versioning.outputs.version}}/CodeAlpha.app'

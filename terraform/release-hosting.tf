@@ -15,7 +15,7 @@ resource "google_service_account" "release_creation" {
 resource "google_storage_bucket_iam_member" "storage_admin" {
   bucket = google_storage_bucket.releases.name
   role   = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.tracing.email}"
+  member = "serviceAccount:${google_service_account.release_creation.email}"
 }
 
 
@@ -32,10 +32,20 @@ module "gh_oidc" {
   provider_id = "codealpha-gh-provider"
   sa_mapping = {
     "release-service-account" = {
-      sa_name   = "projects/${google_project.project.project_id}/serviceAccounts/${google_service_account.tracing.email}"
+      sa_name   = "projects/${google_project.project.project_id}/serviceAccounts/${google_service_account.release_creation.email}"
       attribute = "attribute.repository/codealphadev/CodeAlpha.MVT.PoC"
     }
   }
+}
+resource "google_secret_manager_secret" "tauri_key_pw" {
+  secret_id = "tauri_key_pw"
+  replication { automatic = true }
+}
+
+
+resource "google_secret_manager_secret" "tauri_private_key" {
+  secret_id = "tauri_private_key"
+  replication { automatic = true }
 }
 
 output "provider_name" {
