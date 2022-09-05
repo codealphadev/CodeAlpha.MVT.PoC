@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use parking_lot::Mutex;
+use tracing::debug;
 
 use crate::{
     app_handle,
@@ -142,8 +143,13 @@ impl DocsGenerationTask {
                     // Notifiy the frontend that the task is finished
                     EventRuleExecutionState::DocsGenerationFinished()
                         .publish_to_tauri(&app_handle());
+                    debug!(
+                        mintlify_docstring = mintlify_response.docstring,
+                        "DocsGenerationFinished"
+                    );
                 } else {
                     EventRuleExecutionState::DocsGenerationFailed().publish_to_tauri(&app_handle());
+                    debug!("DocsGenerationFailed");
                 }
                 (*task_state.lock()) = DocsGenerationTaskState::Finished;
             }
