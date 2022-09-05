@@ -40,6 +40,10 @@ impl<'a> XcodeText {
         Self::from_vec(&array.to_vec())
     }
 
+    pub fn as_string(&self) -> String {
+        String::from_utf16_lossy(&self.text)
+    }
+
     pub fn utf16_bytes_count(&self) -> usize {
         self.text.len() * 2
     }

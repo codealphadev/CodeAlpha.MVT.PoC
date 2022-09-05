@@ -120,6 +120,11 @@ impl SwiftFormatter {
                 }
             };
 
+            if text_content.as_string() == formatted_content {
+                // Nothing changed: No need to update the content
+                return;
+            }
+
             // 2. Store the position of the selected text to scroll to after formatting
             let scroll_delta = Self::scroll_dist_after_formatting(&selected_text_range);
 
