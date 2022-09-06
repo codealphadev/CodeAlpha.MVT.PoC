@@ -93,8 +93,8 @@ fn check_focus_on_widget_window(app_handle: &tauri::AppHandle) -> Option<AppWind
         && cursor_location.1 >= origin.y as i32
         && cursor_location.1 <= origin.y as i32 + size.height as i32
     {
-        Some(AppWindow::Widget);
+        Some(AppWindow::Widget)
+    } else {
+        None
     }
-
-    None
 }

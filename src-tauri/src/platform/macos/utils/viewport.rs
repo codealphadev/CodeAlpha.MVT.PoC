@@ -97,7 +97,7 @@ pub fn get_annotation_section_frame(get_via: &GetVia) -> Result<LogicalFrame, Xc
 pub fn get_code_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeError> {
     let scrollarea_uielement = get_scrollarea_uielement(get_via)?;
 
-    let viewport_frame = get_uielement_frame(&scrollarea_uielement)?;
+    let scrollarea_frame = get_uielement_frame(&scrollarea_uielement)?;
 
     // Get all children
     let children_elements = ax_attribute(&scrollarea_uielement, AXAttribute::children())?;
@@ -106,17 +106,25 @@ pub fn get_code_section_frame(get_via: &GetVia) -> Result<LogicalFrame, XcodeErr
     let gutter_frame = get_viewport_gutter_frame(&children_elements)?;
     let gutter_change_frame = get_viewport_gutter_change_frame(&children_elements)?;
 
+    let optional_folding_ribbon_frame = get_viewport_folding_ribbon_frame(&children_elements).ok();
+
     Ok(LogicalFrame {
         origin: LogicalPosition {
-            x: viewport_frame.origin.x + gutter_frame.size.width + gutter_change_frame.size.width,
-            y: viewport_frame.origin.y,
+            x: scrollarea_frame.origin.x
+                + gutter_frame.size.width
+                + gutter_change_frame.size.width
+                + optional_folding_ribbon_frame
+                    .map_or(0.0, |folding_ribbon_frame| folding_ribbon_frame.size.width),
+            y: scrollarea_frame.origin.y,
         },
         size: LogicalSize {
-            width: viewport_frame.size.width
+            width: scrollarea_frame.size.width
                 - gutter_frame.size.width
                 - gutter_change_frame.size.width
+                - optional_folding_ribbon_frame
+                    .map_or(0.0, |folding_ribbon_frame| folding_ribbon_frame.size.width)
                 - minimap_frame.map_or(0.0, |minimap_frame| minimap_frame.size.width),
-            height: viewport_frame.size.height,
+            height: scrollarea_frame.size.height,
         },
     })
 }
@@ -150,12 +158,17 @@ fn get_annotation_origin_x_offset_px(viewport_uielement: &AXUIElement) -> Result
 
     let gutter_frame = get_viewport_gutter_frame(&viewport_children)?;
     let change_gutter_frame = get_viewport_gutter_change_frame(&viewport_children)?;
+    let optional_folding_ribbon_frame = get_viewport_folding_ribbon_frame(&viewport_children).ok();
 
     // We make the textarea a little bit bigger so our annotations have more space to draw on
     let correction_width_factor = 0.105;
 
-    Ok(gutter_frame.size.width + change_gutter_frame.size.width
-        - (correction_width_factor * gutter_frame.size.width))
+    Ok(gutter_frame.size.width
+        + change_gutter_frame.size.width
+        + optional_folding_ribbon_frame.map_or(
+            -(correction_width_factor * gutter_frame.size.width),
+            |folding_ribbon_frame| folding_ribbon_frame.size.width,
+        ))
 }
 
 fn get_scrollarea_uielement(get_via: &GetVia) -> Result<AXUIElement, XcodeError> {
@@ -204,6 +217,22 @@ fn get_viewport_gutter_change_frame(
     for child in viewport_children {
         if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
             if identifier.to_string().as_str() == "Source Editor Change Gutter" {
+                return get_uielement_frame(&child);
+            }
+        }
+    }
+
+    Err(XcodeError::UIElementNotFound)
+}
+
+fn get_viewport_folding_ribbon_frame(
+    viewport_children: &CFArray<AXUIElement>,
+) -> Result<LogicalFrame, XcodeError> {
+    // Get all children
+
+    for child in viewport_children {
+        if let Ok(identifier) = child.attribute(&AXAttribute::identifier()) {
+            if identifier.to_string().as_str() == "Folding Ribbon Region" {
                 return get_uielement_frame(&child);
             }
         }

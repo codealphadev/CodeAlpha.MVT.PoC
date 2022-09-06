@@ -48,8 +48,6 @@ impl CodeOverlayWindow {
     }
 
     pub fn show(&self, position: &LogicalPosition, size: &LogicalSize) -> Option<()> {
-        self.set_macos_properties()?;
-
         let tauri_window = self
             .app_handle
             .get_window(&AppWindow::CodeOverlay.to_string())?;
@@ -58,6 +56,9 @@ impl CodeOverlayWindow {
         tauri_window
             .set_position(position.as_tauri_LogicalPosition())
             .ok()?;
+
+        self.set_macos_properties()?;
+
         tauri_window.show().ok()?;
 
         Some(())
