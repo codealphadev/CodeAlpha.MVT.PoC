@@ -23,6 +23,9 @@ jobs:
           secrets: |-
             private-key:767491075312/tauri_private_key
             private-key-pw:767491075312/tauri_key_pw
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11.0-rc.1'
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
@@ -63,35 +66,7 @@ jobs:
           destination: 'codealpha-releases/${{steps.versioning.outputs.version}}'
           glob: '**'
       - name: Update releases.json
-        run: |
-          import os
-          import datetime
-          import requests
-          import json
-          with open('./src-tauri/target/universal-apple-darwin/release/bundle/macos/CodeAlpha.app.tar.gz.sig', 'r') as file:
-            signature = file.read()
-
-          response = requests.get("https://storage.googleapis.com/codealpha-releases/releases.json")
-          with open("./releases.json", "w") as f: # opening a file handler to create new file 
-            f.write(resp.content) 
-
-          release = {
-            "version": "${{ steps.versioning.outputs.version }}",
-            "pub_date": datetime.datetime.now().isoformat(),
-            "platforms": {
-              "darwin-aarch64": {
-                "signature": signature,
-                "url": "${{ steps.upload-file.outputs.uploaded }}"
-              },
-              "darwin-x86_64": {
-                "signature": signature,
-                "url": "${{ steps.upload-file.outputs.uploaded }}"
-              }
-            }
-          }
-          f = open("releases.json", "a")
-          f.write(json.dumps(release))
-        shell: python
+        run: python ./scripts/update_releases_json.py
       - id: 'upload-release-manifest'
         uses: 'google-github-actions/upload-cloud-storage@v0.5.0'
         with:
