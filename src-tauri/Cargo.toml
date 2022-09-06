@@ -13,7 +13,7 @@ rust-version = "1.63"
 tauri-build = { version = "1.0.0", features = ["isolation"] }
 
 [dependencies]
-tauri = { version = "1.0.5", features = ["clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "window-start-dragging"] }
+tauri = { version = "1.0.5", features = ["clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-start-dragging"] }
 tauri-plugin-log = { git = "https://github.com/tauri-apps/tauri-plugin-log", features = ["colored"] }
 
 serde = { version = "1.0.144", features = ["derive"] }
