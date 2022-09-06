@@ -28,7 +28,7 @@ resource "google_storage_bucket_iam_member" "public_viewer" {
 module "gh_oidc" {
   source      = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
   project_id  = google_project.project.project_id
-  pool_id     = "codealpha-pool"
+  pool_id     = "codealpha-pool-2"
   provider_id = "codealpha-gh-provider"
   sa_mapping = {
     "release-service-account" = {
@@ -41,12 +41,25 @@ resource "google_secret_manager_secret" "tauri_key_pw" {
   secret_id = "tauri_key_pw"
   replication { automatic = true }
 }
-
+resource "google_secret_manager_secret_iam_member" "pw_member" {
+  project   = google_secret_manager_secret.tauri_key_pw.project
+  secret_id = google_secret_manager_secret.tauri_key_pw.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.release_creation.email}"
+}
 
 resource "google_secret_manager_secret" "tauri_private_key" {
   secret_id = "tauri_private_key"
   replication { automatic = true }
 }
+
+resource "google_secret_manager_secret_iam_member" "key_member" {
+  project   = google_secret_manager_secret.tauri_private_key.project
+  secret_id = google_secret_manager_secret.tauri_private_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.release_creation.email}"
+}
+
 
 output "provider_name" {
   value = module.gh_oidc.provider_name

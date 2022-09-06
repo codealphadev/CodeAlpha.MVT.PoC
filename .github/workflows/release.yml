@@ -15,7 +15,7 @@ jobs:
         name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v0.8.1
         with:
-          workload_identity_provider: projects/767491075312/locations/global/workloadIdentityPools/codealpha-pool/providers/codealpha-gh-provider
+          workload_identity_provider: projects/767491075312/locations/global/workloadIdentityPools/codealpha-pool-2/providers/codealpha-gh-provider
           service_account: release-creation@client-backend-x.iam.gserviceaccount.com
       - id: 'fetch-tauri-private-key-secrets'
         uses: 'google-github-actions/get-secretmanager-secrets@v0.5.0'
