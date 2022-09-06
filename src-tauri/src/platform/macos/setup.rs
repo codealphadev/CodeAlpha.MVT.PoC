@@ -9,7 +9,7 @@ use super::{
     xcode::register_observer_xcode,
 };
 
-static LOOP_TIME_IN_MS: u64 = 50;
+static LOOP_TIME_IN_MS: u64 = 500;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum ObserverType {
@@ -53,7 +53,6 @@ fn start_monitoring_editor_pids() {
         loop {
             _ = register_observer_xcode();
 
-            println!("Sleeping for {} ms", LOOP_TIME_IN_MS);
             tokio::time::sleep(std::time::Duration::from_millis(LOOP_TIME_IN_MS)).await;
         }
     });
