@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   Publish:
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, adam]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
@@ -34,22 +34,22 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      # - name: Install dependencies
-      #   run: |
-      #     npm ci --loglevel verbose
-      #     rustup target add aarch64-apple-darwin
-      #     rustup target add x86_64-apple-darwin
-      # - name: Build
-      #   env:
-      #     ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
-      #     APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      #     APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      #     APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-      #     APPLE_ID: ${{ secrets.APPLE_ID }}
-      #     APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-      #     TAURI_PRIVATE_KEY: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key }}
-      #     TAURI_KEY_PASSWORD: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key-pw }}
-      #   run: npm run build
+      - name: Install dependencies
+        run: |
+          npm ci --loglevel verbose
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+      - name: Build
+        env:
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          TAURI_PRIVATE_KEY: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key }}
+          TAURI_KEY_PASSWORD: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key-pw }}
+        run: npm run build
       - name: Git Semantic Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.0.0-alpha2
@@ -60,13 +60,13 @@ jobs:
           format: '${major}.${minor}.${patch}'
           bump_each_commit: false
           search_commit_body: false
-      # - id: 'upload-file'
-      #   uses: 'google-github-actions/upload-cloud-storage@v0.5.0'
-      #   with:
-      #     path: './src-tauri/target/universal-apple-darwin/release/bundle/macos'
-      #     destination: 'codealpha-releases/${{steps.versioning.outputs.version}}'
-      #     glob: '**'
-      #     parent: false
+      - id: 'upload-file'
+        uses: 'google-github-actions/upload-cloud-storage@v0.5.0'
+        with:
+          path: './src-tauri/target/universal-apple-darwin/release/bundle/macos'
+          destination: 'codealpha-releases/${{steps.versioning.outputs.version}}'
+          glob: '**'
+          parent: false
       - name: Update manifest
         env:
           VERSION: ${{ steps.versioning.outputs.version }}
