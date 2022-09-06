@@ -23,17 +23,17 @@ jobs:
           secrets: |-
             private-key:767491075312/tauri_private_key
             private-key-pw:767491075312/tauri_key_pw
-      - uses: actions/setup-python@v4
+      # - uses: actions/setup-python@v4
+      #   with:
+      #     python-version: '3.11.0-rc.1'
+      - name: Set up Node
+        uses: actions/setup-node@v2
         with:
-          python-version: '3.11.0-rc.1'
-      # - name: Set up Node
-      #   uses: actions/setup-node@v2
-      #   with:
-      #     node-version: 18
-      # - name: Install Rust stable
-      #   uses: actions-rs/toolchain@v1
-      #   with:
-      #     toolchain: stable
+          node-version: 18
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       # - name: Install dependencies
       #   run: |
       #     npm ci --loglevel verbose
@@ -50,13 +50,16 @@ jobs:
       #     TAURI_PRIVATE_KEY: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key }}
       #     TAURI_KEY_PASSWORD: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key-pw }}
       #   run: npm run build
-      # - name: Auto Increment Semver Action
-      #   uses: MCKanpolat/auto-semver-action@1.0.7
-      #   id: versioning
-      #   with:
-      #     releaseType: patch
-      #     incrementPerCommit: false
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Git Semantic Version
+        id: versioning
+        uses: PaulHatch/semantic-version@v5.0.0-alpha2
+        with:
+          tag_prefix: 'v'
+          major_pattern: '(MAJOR)'
+          minor_pattern: '(MINOR)'
+          format: '${major}.${minor}.${patch}'
+          bump_each_commit: false
+          search_commit_body: false
       # - id: 'upload-file'
       #   uses: 'google-github-actions/upload-cloud-storage@v0.5.0'
       #   with:
@@ -68,9 +71,10 @@ jobs:
         env:
           VERSION: ${{ steps.versioning.outputs.version }}
           URL: https://storage.googleapis.com/codealpha-releases/0.0.1/CodeAlpha.app.tar.gz # ${{ steps.upload-file.outputs.uploaded }}
-        run: python ./scripts/update_release_manifest.py
+        run: python3 ./scripts/update_release_manifest.py
       - id: 'upload-release-manifest'
         uses: 'google-github-actions/upload-cloud-storage@v0.5.0'
         with:
           path: './manifest.json'
-          destination: 'codealpha-releases/manifest.json'
+          destination: 'codealpha-releases'
+          parent: false
