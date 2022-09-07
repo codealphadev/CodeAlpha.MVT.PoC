@@ -50,7 +50,7 @@ impl FeatureBase for DocsGenerator {
             return Ok(());
         }
 
-        if let Some(procedure) = Self::should_compute(trigger) {
+        if let Some(procedure) = self.should_compute(code_document, trigger) {
             match procedure {
                 DocsGenComputeProcedure::UpdateExistingTask => {
                     self.procedure_update_existing_task(code_document)?;
@@ -142,11 +142,20 @@ impl DocsGenerator {
         }
     }
 
-    fn should_compute(trigger: &CoreEngineTrigger) -> Option<DocsGenComputeProcedure> {
+    fn should_compute(
+        &self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Option<DocsGenComputeProcedure> {
+        let is_docs_task_running =
+            self.is_docs_gen_task_running(&code_document.editor_window_props().window_uid);
+
         match trigger {
-            CoreEngineTrigger::OnTextContentChange => Some(DocsGenComputeProcedure::CreateNewTask),
+            CoreEngineTrigger::OnTextContentChange => {
+                is_docs_task_running.then(|| DocsGenComputeProcedure::CreateNewTask)
+            }
             CoreEngineTrigger::OnTextSelectionChange => {
-                Some(DocsGenComputeProcedure::CreateNewTask)
+                is_docs_task_running.then(|| DocsGenComputeProcedure::CreateNewTask)
             }
             CoreEngineTrigger::OnTrackingAreaClicked(msg) => {
                 Some(DocsGenComputeProcedure::GenerateDocs(msg.clone()))
@@ -182,26 +191,17 @@ impl DocsGenerator {
         let new_codeblock =
             Self::derive_codeblock(selected_text_range, code_document.syntax_tree())?;
 
-        if !self.is_docs_gen_task_running(&window_uid) {
-            if let Some(current_task) = self.docs_generation_tasks.get(&window_uid) {
-                if *current_task.codeblock() != new_codeblock {
-                    if let Ok(new_task) =
-                        self.create_docs_gen_task(new_codeblock, text_content, window_uid)
-                    {
-                        self.docs_generation_tasks.insert(window_uid, new_task);
-                        self.compute_results_updated = true;
-                    } else {
-                        self.docs_generation_tasks.remove(&window_uid);
-                    }
-                } else {
-                    self.compute_results_updated = false;
-                }
-            } else {
-                let new_task =
-                    self.create_docs_gen_task(new_codeblock, text_content, window_uid)?;
-                self.docs_generation_tasks.insert(window_uid, new_task);
-                self.compute_results_updated = true;
-            }
+        let current_task = self.docs_generation_tasks.get(&window_uid);
+        let did_codeblock_update =
+            current_task.map_or(true, |current| *current.codeblock() != new_codeblock);
+
+        if current_task.is_some() && !did_codeblock_update {
+            if self
+                .create_docs_gen_task(new_codeblock, text_content, window_uid)
+                .is_err()
+            {
+                self.docs_generation_tasks.remove(&window_uid);
+            };
         }
 
         Ok(())
@@ -273,17 +273,17 @@ impl DocsGenerator {
     }
 
     fn create_docs_gen_task(
-        &self,
+        &mut self,
         codeblock: CodeBlock,
         text_content: &XcodeText,
         window_uid: WindowUid,
-    ) -> Result<DocsGenerationTask, DocsGenerationError> {
+    ) -> Result<(), DocsGenerationError> {
         let (docs_insertion_index, _) = self.compute_docs_insertion_point_and_indentation(
             text_content,
             codeblock.first_char_pos.row,
         )?;
 
-        DocsGenerationTask::new(
+        let new_task = DocsGenerationTask::new(
             codeblock,
             text_content,
             TextRange {
@@ -291,7 +291,12 @@ impl DocsGenerator {
                 length: 0,
             },
             window_uid,
-        )
+        )?;
+
+        self.docs_generation_tasks.insert(window_uid, new_task);
+        self.compute_results_updated = true;
+
+        Ok(())
     }
 
     fn compute_docs_insertion_point_and_indentation(
