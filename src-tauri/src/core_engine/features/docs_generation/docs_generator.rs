@@ -76,15 +76,13 @@ impl FeatureBase for DocsGenerator {
             return Ok(());
         }
 
+        let window_uid = code_document.editor_window_props().window_uid;
+
         if let Some(text_content) = code_document.text_content() {
-            if let Some(docs_gen_task) = self
-                .docs_generation_tasks
-                .get_mut(&code_document.editor_window_props().window_uid)
-            {
+            if let Some(docs_gen_task) = self.docs_generation_tasks.get_mut(&window_uid) {
                 // Visualize the existing task. If this fails, we remove the task from the map.
                 if let Err(error) = docs_gen_task.update_visualization(text_content) {
-                    self.docs_generation_tasks
-                        .remove(&code_document.editor_window_props().window_uid);
+                    self.docs_generation_tasks.remove(&window_uid);
                     return Err(FeatureError::GenericError(error.into()));
                 }
             }
@@ -163,7 +161,11 @@ impl DocsGenerator {
             CoreEngineTrigger::OnVisibleTextRangeChange => {
                 Some(DocsGenComputeProcedure::UpdateExistingTask)
             }
-            _ => None,
+            CoreEngineTrigger::OnViewportMove => Some(DocsGenComputeProcedure::UpdateExistingTask),
+            CoreEngineTrigger::OnViewportDimensionsChange => {
+                Some(DocsGenComputeProcedure::UpdateExistingTask)
+            }
+            CoreEngineTrigger::OnShortcutPressed(_) => None,
         }
     }
 
@@ -224,26 +226,26 @@ impl DocsGenerator {
         &mut self,
         code_document: &CodeDocument,
     ) -> Result<(), FeatureError> {
-        Ok(
-            if let Some(docs_gen_task) = self
-                .docs_generation_tasks
-                .get_mut(&code_document.editor_window_props().window_uid)
-            {
-                let text_content =
-                    code_document
-                        .text_content()
-                        .as_ref()
-                        .ok_or(FeatureError::GenericError(
-                            DocsGenerationError::MissingContext.into(),
-                        ))?;
+        if let Some(docs_gen_task) = self
+            .docs_generation_tasks
+            .get_mut(&code_document.editor_window_props().window_uid)
+        {
+            let text_content =
+                code_document
+                    .text_content()
+                    .as_ref()
+                    .ok_or(FeatureError::GenericError(
+                        DocsGenerationError::MissingContext.into(),
+                    ))?;
 
-                if let Err(error) = docs_gen_task.update_task_tracking_area(text_content) {
-                    self.docs_generation_tasks
-                        .remove(&code_document.editor_window_props().window_uid);
-                    return Err(FeatureError::GenericError(error.into()));
-                }
-            },
-        )
+            if let Err(error) = docs_gen_task.update_task_tracking_area(text_content) {
+                self.docs_generation_tasks
+                    .remove(&code_document.editor_window_props().window_uid);
+                return Err(FeatureError::GenericError(error.into()));
+            }
+        }
+
+        Ok(())
     }
 
     pub fn clear_docs_generation_taskss(&mut self) {
