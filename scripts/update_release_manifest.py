@@ -22,6 +22,7 @@ release = {
         }
     }
 }
+print(release)
 
 f = open("manifest.json", "a")
 f.write(json.dumps(release))
