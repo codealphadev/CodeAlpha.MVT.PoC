@@ -147,15 +147,15 @@ impl DocsGenerator {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Option<DocsGenComputeProcedure> {
-        let is_docs_task_running =
-            self.is_docs_gen_task_running(&code_document.editor_window_props().window_uid);
+        let no_docs_task_is_running =
+            !self.is_docs_gen_task_running(&code_document.editor_window_props().window_uid);
 
         match trigger {
             CoreEngineTrigger::OnTextContentChange => {
-                is_docs_task_running.then(|| DocsGenComputeProcedure::CreateNewTask)
+                no_docs_task_is_running.then(|| DocsGenComputeProcedure::CreateNewTask)
             }
             CoreEngineTrigger::OnTextSelectionChange => {
-                is_docs_task_running.then(|| DocsGenComputeProcedure::CreateNewTask)
+                no_docs_task_is_running.then(|| DocsGenComputeProcedure::CreateNewTask)
             }
             CoreEngineTrigger::OnTrackingAreaClicked(msg) => {
                 Some(DocsGenComputeProcedure::GenerateDocs(msg.clone()))
@@ -195,7 +195,7 @@ impl DocsGenerator {
         let did_codeblock_update =
             current_task.map_or(true, |current| *current.codeblock() != new_codeblock);
 
-        if current_task.is_some() && !did_codeblock_update {
+        if current_task.is_none() || (current_task.is_some() && did_codeblock_update) {
             if self
                 .create_docs_gen_task(new_codeblock, text_content, window_uid)
                 .is_err()
