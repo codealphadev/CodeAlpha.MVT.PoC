@@ -1,79 +1,96 @@
 [package]
 name = "CodeAlpha"
-version = "0.0.1"
+version = "0.0.2"
 description = "CodeAlpha"
-authors = ["Adrian Hupka, Daniel Owens, Adam Nyberg"]
+authors = [ "Adrian Hupka, Daniel Owens, Adam Nyberg",]
 license = ""
 repository = ""
 default-run = "CodeAlpha"
 edition = "2021"
 rust-version = "1.63"
 
-[build-dependencies]
-tauri-build = { version = "1.0.0", features = ["isolation"] }
-
 [dependencies]
-tauri = { version = "1.0.5", features = ["clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-start-dragging"] }
-tauri-plugin-log = { git = "https://github.com/tauri-apps/tauri-plugin-log", features = ["colored"] }
-
-serde = { version = "1.0.144", features = ["derive"] }
 serde_json = "1.0.85"
-uuid = { version = "0.8.2", features = ["v4", "serde"] } # we can't go higher than 0.8.2 because the 'ts-rs' doesn't allow serializing Uuid in more recent versions 
-tokio = { version=  "1.17.0",features = ["time"] }
 lazy_static = "1.4.0"
-strum = { version = "0.24.1", features = ["derive"] }  # strum generates iterators from enums and structs
-differ = { version = "1.0.2", features = ["use_serde"] } 
-reqwest = { version = "0.11", features = ["json"] }
-parking_lot = {version = "0.12.1", features = ["deadlock_detection"] }
 unicode-segmentation = "1.9.0"
 gcp_auth = "0.7.3"
 machine-uid = "0.2.0"
 backtrace = "0.3.66"
-
-# Error reporting
 anyhow = "1.0.62"
 thiserror = "1.0.32"
-
-# Tracing / Logging
 tracing = "0.1"
-tracing-subscriber = { version ="0.3" }
 tracing-serde = "0.1.3"
 log = "0.4.17"
-
-# macOS dependencies (crucial for Accessibility features to work)
 core-foundation = "0.9.3"
-core-graphics="0.22.3"
+core-graphics = "0.22.3"
 core-graphics-types = "0.1.1"
 cocoa = "0.24.0"
 objc = "0.2.7"
-
-# Dependencies for accessibility apis
-accessibility = { git = "https://github.com/Hupka/accessibility" }
-accessibility-sys = { git = "https://github.com/Hupka/accessibility" }
-
-# Miscellaneous
-colored = "2" # Coloring console output
-rand = "0.8.5" # Random number generator
+colored = "2"
+rand = "0.8.5"
 rdev = "0.5.1"
-enigo = "0.0.14" # Enigo keyboard library
-ts-rs = {version = "6.2.0", features = ["serde-compat", "format", "uuid-impl"] }
+enigo = "0.0.14"
 chrono = "0.4.22"
-
-# Parsing source files into syntax trees
 tree-sitter = "0.20.0"
 tree-sitter-swift = "=0.3.0"
-
 window-shadows = "0.1.3"
-
 
 [dev-dependencies]
 pretty_assertions = "1.2.0"
 
 [features]
-# by default Tauri runs in production mode
-# when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
-default = [ "custom-protocol" ]
+default = [ "custom-protocol",]
+custom-protocol = [ "tauri/custom-protocol",]
 
-# this feature is used used for production builds where `devPath` points to the filesystem
-# DO NOT remove this
-custom-protocol = [ "tauri/custom-protocol" ]
+[build-dependencies.tauri-build]
+version = "1.0.0"
+features = [ "isolation",]
+
+[dependencies.tauri]
+version = "1.0.5"
+features = [ "clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-start-dragging",]
+
+[dependencies.tauri-plugin-log]
+git = "https://github.com/tauri-apps/tauri-plugin-log"
+features = [ "colored",]
+
+[dependencies.serde]
+version = "1.0.144"
+features = [ "derive",]
+
+[dependencies.uuid]
+version = "0.8.2"
+features = [ "v4", "serde",]
+
+[dependencies.tokio]
+version = "1.17.0"
+features = [ "time",]
+
+[dependencies.strum]
+version = "0.24.1"
+features = [ "derive",]
+
+[dependencies.differ]
+version = "1.0.2"
+features = [ "use_serde",]
+
+[dependencies.reqwest]
+version = "0.11"
+features = [ "json",]
+
+[dependencies.parking_lot]
+version = "0.12.1"
+features = [ "deadlock_detection",]
+
+[dependencies.tracing-subscriber]
+version = "0.3"
+
+[dependencies.accessibility]
+git = "https://github.com/Hupka/accessibility"
+
+[dependencies.accessibility-sys]
+git = "https://github.com/Hupka/accessibility"
+
+[dependencies.ts-rs]
+version = "6.2.0"
+features = [ "serde-compat", "format", "uuid-impl",]
