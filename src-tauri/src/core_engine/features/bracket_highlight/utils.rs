@@ -82,7 +82,7 @@ pub fn get_code_block_parent(node_input: Node, ignore_declaration: bool) -> Opti
         "value_arguments",
         "while_statement",
         // "class_declaration",
-        // "function_declaration",
+        "function_declaration",
         // "source_file",
     ];
 
