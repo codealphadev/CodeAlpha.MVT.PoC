@@ -32,7 +32,7 @@ rdev = "0.5.1"
 enigo = "0.0.14"
 chrono = "0.4.22"
 tree-sitter = "0.20.0"
-tree-sitter-swift = "=0.3.0"
+tree-sitter-swift = "=0.3.2"
 window-shadows = "0.1.3"
 
 [dev-dependencies]
