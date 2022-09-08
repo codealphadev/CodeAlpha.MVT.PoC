@@ -7,12 +7,12 @@ use std::{
 
 type Result<T> = std::result::Result<T, Error>;
 
-pub struct FileOnDisk {
+pub struct TemporaryFileOnDisk {
     pub path: PathBuf,
     pub content: String,
 }
 
-impl FileOnDisk {
+impl TemporaryFileOnDisk {
     pub fn new(path: PathBuf, content: String) -> Self {
         Self { path, content }
     }
@@ -30,7 +30,7 @@ impl FileOnDisk {
     }
 }
 
-impl Drop for FileOnDisk {
+impl Drop for TemporaryFileOnDisk {
     fn drop(&mut self) {
         let _ = self.delete();
     }
