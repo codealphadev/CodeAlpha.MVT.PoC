@@ -27,6 +27,8 @@ jobs:
         env:
           VERSION: ${{ steps.versioning.outputs.version }}
         run: python3 ./scripts/update_repo_version.py
+      - name: Update Cargo.lock
+        run: cd src-tauri && cargo check
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Update version to v${{ steps.versioning.outputs.version }}
