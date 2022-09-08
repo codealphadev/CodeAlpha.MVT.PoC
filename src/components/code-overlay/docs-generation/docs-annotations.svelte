@@ -14,6 +14,8 @@
 	type CodeAnnotation = UpdateCodeAnnotationMessage;
 	let annotation: CodeAnnotation | undefined;
 
+	export let active_window_uid: number;
+
 	let is_hovered = false;
 	let is_processing = false;
 
@@ -106,7 +108,7 @@
 	};
 </script>
 
-{#if annotation}
+{#if annotation && annotation.window_uid == active_window_uid}
 	{#if annotation.annotation_icon !== null}
 		<div
 			style="position: absolute; 

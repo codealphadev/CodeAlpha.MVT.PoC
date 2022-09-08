@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::utils::geometry::{LogicalFrame, LogicalPosition};
+use crate::{
+    core_engine::WindowUid,
+    utils::geometry::{LogicalFrame, LogicalPosition},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
@@ -34,6 +37,7 @@ pub struct BracketHighlightBoxPair {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/bracket_highlighting/")]
 pub struct BracketHighlightResults {
+    pub window_uid: WindowUid,
     pub lines: BracketHighlightLines,
     pub boxes: BracketHighlightBoxPair,
 }
@@ -68,6 +72,7 @@ impl BracketHighlightResults {
                     },
                 }
             },
+            window_uid: self.window_uid,
         }
     }
 }

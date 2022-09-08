@@ -2,4 +2,5 @@
 
 export interface RemoveCodeAnnotationMessage {
   id: string;
+  window_uid: number;
 }

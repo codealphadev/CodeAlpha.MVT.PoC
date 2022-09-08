@@ -101,6 +101,7 @@ impl DocsGenerationTask {
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
             annotation_codeblock: codeblock_bounds
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
+            window_uid: self.tracking_area.window_uid,
         })
         .publish_to_tauri(&app_handle());
 
@@ -231,6 +232,7 @@ impl DocsGenerationTask {
             dimensions: viewport,
             annotation_section,
             code_section: _,
+            window_uid: _,
         } = get_viewport_properties(&GetVia::Current).map_err(|_| {
             DocsGenerationError::GenericError(anyhow!("Could not derive textarea dimensions"))
         })?;
@@ -315,8 +317,11 @@ impl DocsGenerationTask {
 
 impl Drop for DocsGenerationTask {
     fn drop(&mut self) {
-        EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage { id: self.id() })
-            .publish_to_tauri(&app_handle());
+        EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage {
+            id: self.id(),
+            window_uid: self.tracking_area.window_uid,
+        })
+        .publish_to_tauri(&app_handle());
         EventTrackingArea::Remove(vec![self.id()]).publish_to_tauri(&app_handle());
     }
 }

@@ -54,15 +54,18 @@ impl EventViewport {
         let textarea_uielement = get_textarea_uielement(get_via)?;
         let code_doc_frame = get_uielement_frame(&textarea_uielement)?;
 
+        let viewport = LAST_KNOWN_VIEWPORT_FRAME
+            .lock()
+            .ok_or(XcodeError::GenericError(anyhow!(
+                "Viewport frame not known."
+            )))?;
+
         Ok(Self::XcodeViewportUpdate(ViewportPropertiesUpdateMessage {
             viewport_properties: ViewportProperties {
-                dimensions: LAST_KNOWN_VIEWPORT_FRAME
-                    .lock()
-                    .ok_or(XcodeError::GenericError(anyhow!(
-                        "Viewport frame not known."
-                    )))?,
+                dimensions: viewport.1,
                 annotation_section: None,
                 code_section: None,
+                window_uid: viewport.0,
             },
             code_document_frame_properties: CodeDocumentFrameProperties {
                 dimensions: code_doc_frame,

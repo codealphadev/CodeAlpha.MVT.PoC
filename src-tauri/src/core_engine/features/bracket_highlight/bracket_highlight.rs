@@ -10,7 +10,7 @@ use crate::{
         rules::get_index_of_next_row,
         syntax_tree::SwiftSyntaxTreeError,
         utils::XcodeText,
-        CodeDocument, TextPosition, TextRange,
+        CodeDocument, TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
         get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
@@ -110,6 +110,7 @@ impl FeatureBase for BracketHighlight {
             closing_bracket,
             line_opening_char: line_opening_character,
             line_closing_char: line_closing_character,
+            window_uid: code_document.editor_window_props().window_uid,
         });
 
         Ok(())
@@ -227,6 +228,7 @@ impl BracketHighlight {
             closing_bracket,
             line_opening_char,
             line_closing_char,
+            window_uid,
         } = match &self.compute_results.as_ref() {
             Some(compute_results) => compute_results,
             None => {
@@ -274,6 +276,7 @@ impl BracketHighlight {
                     opening_bracket: opening_bracket_rect,
                     closing_bracket: closing_bracket_rect,
                 },
+                window_uid: *window_uid,
             }));
         }
 
@@ -324,6 +327,7 @@ impl BracketHighlight {
                             opening_bracket: opening_bracket_rect,
                             closing_bracket: closing_bracket_rect,
                         },
+                        window_uid: *window_uid,
                     }));
                 }
                 Some(left_most_char_rect) => left_most_char_rect,
@@ -358,6 +362,7 @@ impl BracketHighlight {
                 opening_bracket: opening_bracket_rect,
                 closing_bracket: closing_bracket_rect,
             },
+            window_uid: *window_uid,
         }));
     }
 
@@ -393,7 +398,12 @@ impl BracketHighlight {
             CoreEngineTrigger::OnVisibleTextRangeChange => {
                 let visible_text_range = get_visible_text_range(&GetVia::Current)
                     .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
-                if let Some(BracketHighlightResults { lines, boxes }) = self.visualization_results {
+                if let Some(BracketHighlightResults {
+                    lines,
+                    boxes,
+                    window_uid: _,
+                }) = self.visualization_results
+                {
                     if boxes.opening_bracket.is_none()
                         && visible_text_range.includes_index(compute_results.opening_bracket.index)
                     {
@@ -500,6 +510,7 @@ struct StartAndEndTextPositions {
 
 #[derive(Copy, Clone, Debug)]
 struct BracketHighlightComputeResults {
+    window_uid: WindowUid,
     opening_bracket: PositionAndIndex,
     closing_bracket: PositionAndIndex,
     line_opening_char: PositionAndIndex,

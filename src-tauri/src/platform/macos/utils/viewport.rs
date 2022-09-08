@@ -4,16 +4,20 @@ use core_graphics::geometry::CGRect;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize};
+use crate::{
+    core_engine::WindowUid,
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
+};
 
 use super::{
-    ax_helpers::ax_attribute, get_textarea_uielement, internal::get_uielement_frame, GetVia,
-    XcodeError,
+    ax_helpers::ax_attribute, get_focused_window, get_textarea_uielement,
+    internal::get_uielement_frame, GetVia, XcodeError,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/macOS_specific/xcode/")]
 pub struct ViewportProperties {
+    pub window_uid: WindowUid,
     pub dimensions: LogicalFrame,
     pub annotation_section: Option<LogicalFrame>,
     pub code_section: Option<LogicalFrame>,
@@ -29,7 +33,7 @@ pub struct CodeDocumentFrameProperties {
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref LAST_KNOWN_VIEWPORT_FRAME: parking_lot::Mutex<Option<LogicalFrame>> =
+    pub static ref LAST_KNOWN_VIEWPORT_FRAME: parking_lot::Mutex<Option<(WindowUid, LogicalFrame)>> =
         parking_lot::Mutex::new(None);
 }
 
@@ -58,14 +62,17 @@ pub fn get_viewport_properties(get_via: &GetVia) -> Result<ViewportProperties, X
         },
     };
 
+    let window_uid = get_focused_window()?;
+
     LAST_KNOWN_VIEWPORT_FRAME
         .lock()
-        .replace(viewport_frame.clone());
+        .replace((window_uid.clone(), viewport_frame.clone()));
 
     Ok(ViewportProperties {
         dimensions: viewport_frame,
         annotation_section: Some(annotation_section),
         code_section: Some(code_section),
+        window_uid,
     })
 }
 
