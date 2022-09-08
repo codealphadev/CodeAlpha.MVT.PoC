@@ -42,10 +42,6 @@ pretty_assertions = "1.2.0"
 default = [ "custom-protocol",]
 custom-protocol = [ "tauri/custom-protocol",]
 
-[build-dependencies.tauri-build]
-version = "1.0.0"
-features = [ "isolation",]
-
 [dependencies.tauri]
 version = "1.0.5"
 features = [ "clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-start-dragging",]
@@ -94,3 +90,7 @@ git = "https://github.com/Hupka/accessibility"
 [dependencies.ts-rs]
 version = "6.2.0"
 features = [ "serde-compat", "format", "uuid-impl",]
+
+[build-dependencies.tauri-build]
+version = "1.0.0"
+features = [ "isolation",]
