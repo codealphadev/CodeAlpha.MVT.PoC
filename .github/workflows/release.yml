@@ -27,6 +27,8 @@ jobs:
         env:
           VERSION: ${{ steps.versioning.outputs.version }}
         run: python3 ./scripts/update_repo_version.py
+      - name: Update package-lock.json
+        run: npm i --package-lock-only --ignore-scripts
       - name: Update Cargo.lock
         run: cd src-tauri && cargo update
       - uses: stefanzweifel/git-auto-commit-action@v4
@@ -61,8 +63,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      - name: Npm prepare
-        run: npm run prepare
       - name: Install Rust stable
         uses: actions-rs/toolchain@v1
         with:
