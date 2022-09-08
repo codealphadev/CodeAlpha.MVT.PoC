@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tauri::api::process::{Command, CommandEvent};
 use tracing::debug;
 
@@ -7,6 +7,7 @@ use crate::{
     core_engine::{
         events::EventRuleExecutionState,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
+        rules::TemporaryFileOnDisk,
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
@@ -93,78 +94,115 @@ impl SwiftFormatter {
     }
 
     pub fn format(&self, code_document: &CodeDocument) -> Result<(), SwiftFormatError> {
-        let text_content = code_document
-            .text_content()
-            .as_ref()
-            .ok_or(SwiftFormatError::InsufficientContextForFormat)?
-            .clone();
-        let text_file_path = code_document
-            .file_path()
-            .as_ref()
-            .ok_or(SwiftFormatError::InsufficientContextForFormat)?
-            .clone();
-        let selected_text_range = code_document
-            .selected_text_range()
-            .as_ref()
-            .ok_or(SwiftFormatError::InsufficientContextForFormat)?
-            .clone();
+        tauri::async_runtime::spawn({
+            let text_content = code_document
+                .text_content()
+                .as_ref()
+                .ok_or(SwiftFormatError::InsufficientContextForFormat)?
+                .clone();
 
-        tauri::async_runtime::spawn(async move {
-            // 1. Format the text content file
-            let formatted_content = match Self::format_file(&text_file_path).await {
-                Ok(content) => content,
-                Err(_err) => {
-                    EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
-                    debug!(error = ?_err, "SwiftFormatFailed");
+            let selected_text_range = code_document
+                .selected_text_range()
+                .as_ref()
+                .ok_or(SwiftFormatError::InsufficientContextForFormat)?
+                .clone();
+
+            let file_path = code_document.file_path().clone();
+
+            async move {
+                // Either get the path from the code document or copy the text content into a temp file.
+                let temp_file = match Self::create_temp_file(&text_content) {
+                    Ok(temp_file) => temp_file,
+                    Err(err) => {
+                        EventRuleExecutionState::SwiftFormatFailed()
+                            .publish_to_tauri(&app_handle());
+                        debug!(error = ?err, "SwiftFormatFailed");
+                        return;
+                    }
+                };
+
+                let mut text_file_path = temp_file.path.to_string_lossy().to_string();
+
+                // If a valid swift file path is provided through AX api, we read the file from disk.
+                // If we use the file path pointing to the file in the repository, swiftformat will pick up any
+                // local .swiftformat file and use that configuration.
+                if let Some(file_path) = file_path {
+                    if let Some(extension) = PathBuf::from(&file_path).extension() {
+                        if extension == "swift" {
+                            text_file_path = file_path;
+                        }
+                    }
+                }
+
+                // 1. Format the text content file
+                let formatted_content = match Self::format_file(&text_file_path).await {
+                    Ok(content) => content,
+                    Err(err) => {
+                        EventRuleExecutionState::SwiftFormatFailed()
+                            .publish_to_tauri(&app_handle());
+                        debug!(error = ?err, "SwiftFormatFailed");
+                        return;
+                    }
+                };
+
+                if text_content.as_string() == formatted_content {
+                    // Nothing changed: No need to update the content
                     return;
                 }
-            };
 
-            if text_content.as_string() == formatted_content {
-                // Nothing changed: No need to update the content
-                return;
-            }
+                // 2. Store the position of the selected text to scroll to after formatting
+                let scroll_delta = Self::scroll_dist_after_formatting(&selected_text_range);
 
-            // 2. Store the position of the selected text to scroll to after formatting
-            let scroll_delta = Self::scroll_dist_after_formatting(&selected_text_range);
-
-            // 3. Update textarea content
-            match set_textarea_content(&formatted_content, &GetVia::Current)
-                .map_err(|err| SwiftFormatError::GenericError(err.into()))
-            {
-                Ok(_) => {}
-                Err(_err) => {
-                    EventRuleExecutionState::SwiftFormatFailed().publish_to_tauri(&app_handle());
-                    debug!(error = ?_err, "SwiftFormatFailed");
-                    return;
+                // 3. Update textarea content
+                match set_textarea_content(&formatted_content, &GetVia::Current)
+                    .map_err(|err| SwiftFormatError::GenericError(err.into()))
+                {
+                    Ok(_) => {}
+                    Err(err) => {
+                        EventRuleExecutionState::SwiftFormatFailed()
+                            .publish_to_tauri(&app_handle());
+                        debug!(error = ?err, "SwiftFormatFailed");
+                        return;
+                    }
                 }
+
+                // 4. Restore cursor position
+                _ = set_selected_text_range(
+                    &TextRange {
+                        index: Self::get_adjusted_cursor_index(
+                            &text_content,
+                            selected_text_range.index,
+                            &XcodeText::from_str(formatted_content.as_str()),
+                        ),
+                        length: selected_text_range.length,
+                    },
+                    &GetVia::Current,
+                );
+
+                // 5. Scroll to the same position as before the formatting
+                if let Ok(scroll_delta) = scroll_delta {
+                    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+                    _ = send_event_mouse_wheel(scroll_delta);
+                }
+
+                // 6. Notifiy the frontend that the file has been formatted successfully
+                EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&app_handle());
+                debug!("SwiftFormatFinished");
             }
-
-            // 4. Restore cursor position
-            _ = set_selected_text_range(
-                &TextRange {
-                    index: Self::get_adjusted_cursor_index(
-                        &text_content,
-                        selected_text_range.index,
-                        &XcodeText::from_str(formatted_content.as_str()),
-                    ),
-                    length: selected_text_range.length,
-                },
-                &GetVia::Current,
-            );
-
-            // 5. Scroll to the same position as before the formatting
-            if let Ok(scroll_delta) = scroll_delta {
-                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-                _ = send_event_mouse_wheel(scroll_delta);
-            }
-
-            // 6. Notifiy the frontend that the file has been formatted successfully
-            EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&app_handle());
-            debug!("SwiftFormatFinished");
         });
 
         Ok(())
+    }
+
+    fn create_temp_file(text_content: &XcodeText) -> Result<TemporaryFileOnDisk, SwiftFormatError> {
+        let file_name = "codealpha_swiftformat.swift";
+        let path_buf = std::env::temp_dir().join(file_name);
+
+        let file = TemporaryFileOnDisk::new(path_buf, text_content.as_string());
+        file.write()
+            .map_err(|err| SwiftFormatError::GenericError(err.into()))?;
+
+        Ok(file)
     }
 
     fn scroll_dist_after_formatting(

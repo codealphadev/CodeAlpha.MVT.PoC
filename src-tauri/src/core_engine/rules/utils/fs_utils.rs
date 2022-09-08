@@ -7,6 +7,35 @@ use std::{
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub struct TemporaryFileOnDisk {
+    pub path: PathBuf,
+    pub content: String,
+}
+
+impl TemporaryFileOnDisk {
+    pub fn new(path: PathBuf, content: String) -> Self {
+        Self { path, content }
+    }
+
+    pub fn write(&self) -> Result<PathBuf> {
+        write_text_to_file(&self.path, &self.content)
+    }
+
+    pub fn _read(&self) -> Result<String> {
+        read_text_from_file(&self.path)
+    }
+
+    pub fn delete(&self) -> Result<()> {
+        remove_file(&self.path)
+    }
+}
+
+impl Drop for TemporaryFileOnDisk {
+    fn drop(&mut self) {
+        let _ = self.delete();
+    }
+}
+
 /// It creates a directory if it doesn't exist, creates a file in that directory, and writes the text content
 /// to the file.
 ///
@@ -19,7 +48,7 @@ type Result<T> = std::result::Result<T, Error>;
 ///
 /// A Result<PathBuf> to the newly created file.
 #[allow(dead_code)]
-pub fn write_text_to_file(file_path: PathBuf, content: &str) -> Result<PathBuf> {
+pub fn write_text_to_file(file_path: &PathBuf, content: &str) -> Result<PathBuf> {
     let mut dir_path = file_path.clone();
     if dir_path.extension().is_some() {
         dir_path.pop();
@@ -30,7 +59,7 @@ pub fn write_text_to_file(file_path: PathBuf, content: &str) -> Result<PathBuf> 
         .and_then(|_| File::create(&file_path).map_err(Into::into))
         .and_then(|mut f| f.write_all(content.as_bytes()).map_err(Into::into))?;
 
-    Ok(file_path)
+    Ok(file_path.clone())
 }
 
 /// It opens a file, reads its contents into a string, and returns the string
@@ -130,12 +159,12 @@ mod tests_fs_utils {
         let path_buf = std::env::temp_dir();
 
         // Check if error is returned if no extension exists
-        let result_no_extension = write_text_to_file(path_buf, &content);
+        let result_no_extension = write_text_to_file(&path_buf, &content);
         assert!(result_no_extension.is_err());
 
         // Check if file is written
         let file_path = std::env::temp_dir().join(file_name);
-        let result_with_extension = write_text_to_file(file_path.clone(), &content);
+        let result_with_extension = write_text_to_file(&file_path, &content);
         assert!(result_with_extension.is_ok());
         assert!(file_path.exists());
 
