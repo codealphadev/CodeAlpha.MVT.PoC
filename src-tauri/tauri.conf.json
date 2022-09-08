@@ -1,13 +1,13 @@
 {
   "package": {
     "productName": "CodeAlpha",
-    "version": "0.1.0"
+    "version": "0.0.5"
   },
   "build": {
     "distDir": "../dist",
     "devPath": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "npm run start-frontend",
+    "beforeBuildCommand": "npm run build-frontend"
   },
   "tauri": {
     "pattern": {
@@ -54,7 +54,12 @@
     },
     "macOSPrivateApi": true,
     "updater": {
-      "active": false
+      "active": true,
+      "endpoints": [
+        "https://storage.googleapis.com/codealpha-releases/manifest.json"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFQzExN0Y3OEY1RDlDRUYKUldUdm5GMlA5eGZCVGxBek5hL1NYUHNVTDMzblp3MHY4WnBQMDc4RGtsTitlcUVYQUZMa2JlbDYK"
     },
     "allowlist": {
       "all": false,

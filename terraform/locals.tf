@@ -7,5 +7,11 @@ locals {
 
   services_to_enable = [
     "logging.googleapis.com",
+    "secretmanager.googleapis.com",
+    "storage.googleapis.com",
+    "iam.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "sts.googleapis.com"
   ]
 }
