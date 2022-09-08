@@ -1,0 +1,33 @@
+name: Build and publish client
+on: [workflow_dispatch]
+
+permissions:
+  id-token: write # Make GitHub populate environment variables for OIDC with GCP
+  contents: write # Get access to repository
+
+jobs:
+  update_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Git Semantic Version
+        id: versioning
+        uses: PaulHatch/semantic-version@v4.0.2
+        with:
+          tag_prefix: 'v'
+          major_pattern: '(MAJOR)'
+          minor_pattern: '(MINOR)'
+          format: '${major}.${minor}.${patch}'
+          bump_each_commit: false
+      - run: pip3 install -r scripts/requirements.txt
+      - name: Update repo version
+        env:
+          VERSION: ${{ steps.versioning.outputs.version }}
+        run: python3 ./scripts/update_repo_version.py
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Update version to v${{ steps.versioning.outputs.version }}
+          tagging_message: v${{ steps.versioning.outputs.version }}
