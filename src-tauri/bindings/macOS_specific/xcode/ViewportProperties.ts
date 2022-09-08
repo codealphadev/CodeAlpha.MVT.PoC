@@ -2,6 +2,7 @@
 import type { LogicalFrame } from "../../geometry/LogicalFrame";
 
 export interface ViewportProperties {
+  window_uid: number;
   dimensions: LogicalFrame;
   annotation_section: LogicalFrame | null;
   code_section: LogicalFrame | null;

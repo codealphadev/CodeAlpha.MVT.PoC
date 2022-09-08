@@ -3,6 +3,7 @@ import type { BracketHighlightBoxPair } from "./BracketHighlightBoxPair";
 import type { BracketHighlightLines } from "./BracketHighlightLines";
 
 export interface BracketHighlightResults {
+  window_uid: number;
   lines: BracketHighlightLines;
   boxes: BracketHighlightBoxPair;
 }

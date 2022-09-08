@@ -14,6 +14,7 @@
 
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
 	let annotation_section: LogicalFrame | null = null; // Relative to viewport
+	let active_window_uid: number | null = null;
 
 	let text_offset: number | null;
 	$: annotations_opacity = get_annotations_opacity(code_document_rect, text_offset);
@@ -39,6 +40,8 @@
 			switch (event) {
 				case 'XcodeViewportUpdate':
 					const { viewport_properties, code_document_frame_properties } = payload;
+
+					active_window_uid = viewport_properties.window_uid;
 
 					if (code_document_frame_properties.text_offset) {
 						text_offset = code_document_frame_properties.text_offset;
@@ -84,7 +87,7 @@
 	listenToViewportEvents();
 </script>
 
-{#if code_document_rect}
+{#if code_document_rect && active_window_uid}
 	<div
 		style="height: 100%; width: 100%;
 			border-style: solid; border-width: 0px; border-color: rgba(255,20,255);"
@@ -98,7 +101,7 @@
 			left:{code_document_rect.origin.x}px; position: relative"
 			class="h-full w-full overflow-hidden relative"
 		>
-			<BracketHighlight {code_document_rect} />
+			<BracketHighlight {code_document_rect} {active_window_uid} />
 		</div>
 		<div
 			style="
@@ -109,7 +112,7 @@
 			left:0px; position: absolute"
 			class="h-full w-full overflow-hidden absolute"
 		>
-			<DocsAnnotations />
+			<DocsAnnotations {active_window_uid} />
 		</div>
 	</div>
 {/if}

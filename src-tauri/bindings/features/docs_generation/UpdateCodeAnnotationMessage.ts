@@ -3,6 +3,7 @@ import type { LogicalFrame } from "../../geometry/LogicalFrame";
 
 export interface UpdateCodeAnnotationMessage {
   id: string;
+  window_uid: number;
   annotation_icon: LogicalFrame | null;
   annotation_codeblock: LogicalFrame | null;
 }
