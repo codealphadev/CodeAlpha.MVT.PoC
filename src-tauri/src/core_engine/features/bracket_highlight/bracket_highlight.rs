@@ -86,7 +86,7 @@ impl FeatureBase for BracketHighlight {
             &code_block_node,
             text_content,
             selected_text_range,
-        );
+        )?;
 
         let (line_opening_character, line_closing_character) =
             get_line_start_end_positions_and_indexes(
@@ -95,7 +95,7 @@ impl FeatureBase for BracketHighlight {
                 closing_bracket,
                 text_content,
                 selected_text_range,
-            );
+            )?;
 
         self.compute_results = Some(BracketHighlightComputeResults {
             opening_bracket,
@@ -103,6 +103,7 @@ impl FeatureBase for BracketHighlight {
             line_opening_char: line_opening_character,
             line_closing_char: line_closing_character,
         });
+
         Ok(())
     }
 
@@ -501,21 +502,43 @@ fn get_start_end_positions_and_indexes(
     node: &Node,
     text_content: &XcodeText,
     selected_text_range: &TextRange,
-) -> (PositionAndIndex, PositionAndIndex) {
-    let match_ranges = match get_indexes_of_first_and_last_char_in_node(
+) -> Result<(PositionAndIndex, PositionAndIndex), BracketHighlightError> {
+    let mut match_ranges = get_indexes_of_first_and_last_char_in_node(
         &node,
         &text_content,
         selected_text_range.index,
-    ) {
-        Ok(range) => range,
-        Err(_) => todo!(),
-    };
+    )?;
 
-    let box_positions: StartAndEndTextPositions = StartAndEndTextPositions {
+    let mut box_positions: StartAndEndTextPositions = StartAndEndTextPositions {
         start: TextPosition::from_TSPoint(&node.start_position()),
         end: TextPosition::from_TSPoint(&node.end_position()),
     };
-    return (
+
+    if node.kind() == "function_declaration" {
+        if let Some(function_declaration_parameters) =
+            special_case_function_declaration(node, text_content, selected_text_range)
+        {
+            match_ranges = (
+                function_declaration_parameters.0.index,
+                function_declaration_parameters.1.index,
+            );
+            box_positions = StartAndEndTextPositions {
+                start: function_declaration_parameters.0.position,
+                end: function_declaration_parameters.1.position,
+            };
+        } else {
+            // Skip function declaration node
+            if let Some(parent_node) = node.parent() {
+                return get_start_end_positions_and_indexes(
+                    &parent_node,
+                    text_content,
+                    selected_text_range,
+                );
+            }
+        }
+    }
+
+    return Ok((
         PositionAndIndex {
             position: box_positions.start,
             index: match_ranges.0,
@@ -524,7 +547,52 @@ fn get_start_end_positions_and_indexes(
             position: box_positions.end,
             index: match_ranges.1,
         },
-    );
+    ));
+}
+
+fn special_case_function_declaration(
+    node: &Node,
+    text_content: &XcodeText,
+    selected_text_range: &TextRange,
+) -> Option<(PositionAndIndex, PositionAndIndex)> {
+    assert!(node.kind() == "function_declaration");
+
+    let mut cursor = node.walk();
+
+    let mut start_position: Option<TextPosition> = None;
+    let mut end_position: Option<TextPosition> = None;
+
+    for child in node.children(&mut cursor) {
+        if child.kind() == "(" {
+            start_position = Some(TextPosition::from_TSPoint(&child.start_position()));
+        }
+
+        if child.kind() == ")" {
+            end_position = Some(TextPosition::from_TSPoint(&child.start_position()));
+        }
+    }
+
+    if let (Some(start_position), Some(end_position)) = (start_position, end_position) {
+        if let (Some(start_index), Some(end_index)) = (
+            start_position.as_TextIndex(&text_content),
+            end_position.as_TextIndex(&text_content),
+        ) {
+            if start_index <= selected_text_range.index && end_index >= selected_text_range.index {
+                return Some((
+                    PositionAndIndex {
+                        position: start_position,
+                        index: start_index,
+                    },
+                    PositionAndIndex {
+                        position: end_position,
+                        index: end_index,
+                    },
+                ));
+            }
+        }
+    }
+
+    None
 }
 
 fn get_line_start_end_positions_and_indexes(
@@ -533,7 +601,7 @@ fn get_line_start_end_positions_and_indexes(
     closing_bracket: PositionAndIndex,
     text_content: &XcodeText,
     selected_text_range: &TextRange,
-) -> (PositionAndIndex, PositionAndIndex) {
+) -> Result<(PositionAndIndex, PositionAndIndex), BracketHighlightError> {
     let is_touching_left_first_char = selected_text_range.index == opening_bracket.index;
 
     if is_touching_left_first_char {
@@ -547,5 +615,5 @@ fn get_line_start_end_positions_and_indexes(
             }
         }
     }
-    return (opening_bracket, closing_bracket);
+    return Ok((opening_bracket, closing_bracket));
 }
