@@ -86,7 +86,11 @@ impl FeatureBase for BracketHighlight {
             &code_block_node,
             text_content,
             selected_text_range,
-        )?;
+        )
+        .or_else(|e| {
+            self.compute_results = None;
+            Err(e)
+        })?;
 
         let (line_opening_character, line_closing_character) =
             get_line_start_end_positions_and_indexes(
@@ -95,7 +99,11 @@ impl FeatureBase for BracketHighlight {
                 closing_bracket,
                 text_content,
                 selected_text_range,
-            )?;
+            )
+            .or_else(|e| {
+                self.compute_results = None;
+                Err(e)
+            })?;
 
         self.compute_results = Some(BracketHighlightComputeResults {
             opening_bracket,
@@ -529,11 +537,15 @@ fn get_start_end_positions_and_indexes(
         } else {
             // Skip function declaration node
             if let Some(parent_node) = node.parent() {
-                return get_start_end_positions_and_indexes(
-                    &parent_node,
-                    text_content,
-                    selected_text_range,
-                );
+                if let Some(code_block_parent_node) = get_code_block_parent(parent_node, true) {
+                    return get_start_end_positions_and_indexes(
+                        &code_block_parent_node,
+                        text_content,
+                        selected_text_range,
+                    );
+                } else {
+                    return Err(BracketHighlightError::UnsupportedCodeblock);
+                }
             }
         }
     }
