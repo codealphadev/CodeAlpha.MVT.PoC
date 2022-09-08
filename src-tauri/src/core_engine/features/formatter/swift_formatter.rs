@@ -7,7 +7,7 @@ use crate::{
     core_engine::{
         events::EventRuleExecutionState,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
-        rules::FileOnDisk,
+        rules::TemporaryFileOnDisk,
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange,
     },
@@ -94,25 +94,25 @@ impl SwiftFormatter {
     }
 
     pub fn format(&self, code_document: &CodeDocument) -> Result<(), SwiftFormatError> {
-        let text_content = code_document
-            .text_content()
-            .as_ref()
-            .ok_or(SwiftFormatError::InsufficientContextForFormat)?
-            .clone();
-
-        let selected_text_range = code_document
-            .selected_text_range()
-            .as_ref()
-            .ok_or(SwiftFormatError::InsufficientContextForFormat)?
-            .clone();
-
         tauri::async_runtime::spawn({
+            let text_content = code_document
+                .text_content()
+                .as_ref()
+                .ok_or(SwiftFormatError::InsufficientContextForFormat)?
+                .clone();
+
+            let selected_text_range = code_document
+                .selected_text_range()
+                .as_ref()
+                .ok_or(SwiftFormatError::InsufficientContextForFormat)?
+                .clone();
+
             let file_path = code_document.file_path().clone();
 
             async move {
                 // Either get the path from the code document or copy the text content into a temp file.
                 let temp_file = match Self::create_temp_file(&text_content) {
-                    Ok(file_path) => file_path,
+                    Ok(temp_file) => temp_file,
                     Err(err) => {
                         EventRuleExecutionState::SwiftFormatFailed()
                             .publish_to_tauri(&app_handle());
@@ -123,7 +123,9 @@ impl SwiftFormatter {
 
                 let mut text_file_path = temp_file.path.to_string_lossy().to_string();
 
-                // If a valid swift file path is provided through AX api, we read the file from there.
+                // If a valid swift file path is provided through AX api, we read the file from disk.
+                // If we use the file path pointing to the file in the repository, swiftformat will pick up any
+                // local .swiftformat file and use that configuration.
                 if let Some(file_path) = file_path {
                     if let Some(extension) = PathBuf::from(&file_path).extension() {
                         if extension == "swift" {
@@ -192,11 +194,11 @@ impl SwiftFormatter {
         Ok(())
     }
 
-    fn create_temp_file(text_content: &XcodeText) -> Result<FileOnDisk, SwiftFormatError> {
+    fn create_temp_file(text_content: &XcodeText) -> Result<TemporaryFileOnDisk, SwiftFormatError> {
         let file_name = "codealpha_swiftformat.swift";
         let path_buf = std::env::temp_dir().join(file_name);
 
-        let file = FileOnDisk::new(path_buf, text_content.as_string());
+        let file = TemporaryFileOnDisk::new(path_buf, text_content.as_string());
         file.write()
             .map_err(|err| SwiftFormatError::GenericError(err.into()))?;
 
