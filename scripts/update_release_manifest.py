@@ -27,6 +27,6 @@ release = {
 print(release)
 
 f = open("manifest.json", "a")
-f.write(json.dumps(release))
+f.write(json.dumps(release, indent=2))
 
 print("Updated release manifest")
