@@ -10,7 +10,7 @@ use core_engine::CoreEngine;
 use parking_lot::Mutex;
 use platform::macos::setup_observers;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
-use tracing::{debug, info};
+use tracing::debug;
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
