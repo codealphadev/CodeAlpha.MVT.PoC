@@ -21,7 +21,7 @@ jobs:
           major_pattern: '(MAJOR)'
           minor_pattern: '(MINOR)'
           format: '${major}.${minor}.${patch}'
-          bump_each_commit: false
+          bump_each_commit: true
       - run: pip3 install -r scripts/requirements.txt
       - name: Update repo version
         env:
