@@ -53,9 +53,6 @@ jobs:
     runs-on: [self-hosted, adam]
     timeout-minutes: 60
     steps:
-      - name: needs.update_version.outputs.version
-        run: echo ${{ needs.update_version.outputs.version }}
-
       - name: 'Checkout source code'
         uses: actions/checkout@v3
         with:
