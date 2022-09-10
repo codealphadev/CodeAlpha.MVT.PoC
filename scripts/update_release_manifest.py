@@ -12,7 +12,7 @@ url = "https://storage.googleapis.com/codealpha-releases/{}/macos/CodeAlpha.app.
     os.environ['VERSION'])
 release = {
     "version": os.environ['VERSION'],
-    "pub_date": datetime.datetime.now().isoformat(),
+    "pub_date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "platforms": {
         "darwin-aarch64": {
             "signature": signature,
