@@ -13,9 +13,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
       - name: Git Semantic Version
         id: versioning
-        uses: PaulHatch/semantic-version@v4.0.2
+        uses: PaulHatch/semantic-version@v5.0.0-alpha2
         with:
           tag_prefix: 'v'
           major_pattern: '(MAJOR)'
@@ -25,16 +26,27 @@ jobs:
         run: |
           echo ${{ steps.versioning.outputs.version }}
           echo ${{ steps.versioning.outputs.major }}
-          echo ${{ steps.versioning.outputs.minor }}
-          echo ${{ steps.versioning.outputs.patch }}
           echo ${{ steps.versioning.outputs.version_tag }}
 
+      - name: Minor version for each merge
+        id: taggerDryRun
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          WITH_V: false
+          DRY_RUN: true
+          RELEASE_BRANCHES: 'main,cod-*'
+          DEFAULT_BUMP: patch
+
+      - name: Show the next version
+        run: |
+          echo ${{ steps.taggerDryRun.outputs.new_tag }}
+        
       - name: Install python dependencies
         run: pip3 install -r scripts/requirements.txt
 
       - name: Update repo version
         env:
-          VERSION: ${{ steps.versioning.outputs.version_tag }}
+          VERSION: ${{ steps.taggerDryRun.outputs.new_tag }}
         run: python3 ./scripts/update_repo_version.py
 
       - name: Update package-lock.json
@@ -44,14 +56,14 @@ jobs:
         run: cd src-tauri && cargo generate-lockfile && cd ..
 
       - name: Echo git status
-        run: git status
+        run: git --no-pager diff
 
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Update version to ${{ steps.versioning.outputs.version_tag }}
-          tagging_message: ${{ steps.versioning.outputs.version_tag }}
+          commit_message: Update version to v${{ steps.taggerDryRun.outputs.new_tag }}
+          tagging_message: v${{ steps.taggerDryRun.outputs.new_tag }}
     outputs:
-      version: ${{ steps.versioning.outputs.version_tag }}
+      version: v${{ steps.taggerDryRun.outputs.new_tag }}
 
   build_and_publish:
     needs: [update_version]
