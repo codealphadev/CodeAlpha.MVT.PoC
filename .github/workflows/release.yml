@@ -3,7 +3,7 @@ on: [workflow_dispatch]
 
 permissions:
   id-token: write # Make GitHub populate environment variables for OIDC with GCP
-  contents: write # Get access to repository
+  contents: write # Get access to  repository
 
 jobs:
   update_version:
