@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::create_dir_all,
     io::Write,
     path::PathBuf,
@@ -8,7 +9,7 @@ use tree_sitter::{Node, Parser, Tree};
 
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
-use super::swift_codeblock::SwiftCodeBlock;
+use super::{calculate_cognitive_complexities, swift_codeblock::SwiftCodeBlock, Complexities};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftSyntaxTreeError {
@@ -25,6 +26,7 @@ pub struct SwiftSyntaxTree {
     tree_sitter_tree: Option<Tree>,
     content: Option<XcodeText>,
     logging_folder: Option<PathBuf>,
+    node_metadata: HashMap<usize, Complexities>,
 }
 
 impl SwiftSyntaxTree {
@@ -39,20 +41,23 @@ impl SwiftSyntaxTree {
             tree_sitter_tree: None,
             content: None,
             logging_folder: None,
+            node_metadata: HashMap::new(),
         }
     }
 
     pub fn _reset(&mut self) {
         self.tree_sitter_tree = None;
         self.content = None;
+        self.node_metadata.clear();
     }
 
     pub fn parse(&mut self, content: &XcodeText) -> bool {
         let updated_tree = self.tree_sitter_parser.parse_utf16(content, None);
 
-        if updated_tree.is_some() {
-            self.tree_sitter_tree = updated_tree;
+        if let Some(tree) = updated_tree {
+            calculate_cognitive_complexities(&tree.root_node(), 0, &mut self.node_metadata);
             self.content = Some(content.to_owned());
+            self.tree_sitter_tree = Some(tree);
             return true;
         } else {
             return false;
