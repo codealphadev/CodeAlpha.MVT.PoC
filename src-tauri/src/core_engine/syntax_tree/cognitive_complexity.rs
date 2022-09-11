@@ -38,15 +38,22 @@ pub fn calculate_cognitive_complexities(
     mut nesting_depth: isize,
     output_complexities: &mut HashMap<usize, Complexities>,
 ) -> Complexities {
+    dbg!(node.kind());
     let mut cursor = node.walk();
     let mut complexity: Complexities = Complexities {
         nesting_complexity: 0,
         fundamental_complexity: 0,
     };
 
+    // TODO: Refactor, and handle recursion
     let mut cursor2 = node.walk();
     match cursor.node().kind() {
         "function_declaration" | "lambda_literal" => {
+            nesting_depth += 1;
+        }
+        "ternary_expression" => {
+            complexity.nesting_complexity += (nesting_depth - 1).max(0);
+            complexity.fundamental_complexity += 1;
             nesting_depth += 1;
         }
         "if_statement" => {
