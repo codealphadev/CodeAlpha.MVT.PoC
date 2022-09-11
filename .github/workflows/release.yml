@@ -22,7 +22,14 @@ jobs:
           major_pattern: '(MAJOR)'
           minor_pattern: '(MINOR)'
           format: '${major}.${minor}.${patch}'
-
+      -name: echo semver
+        run: |
+          echo ${{ steps.versioning.outputs.version }}
+          echo ${{ steps.versioning.outputs.major }}
+          echo ${{ steps.versioning.outputs.minor }}
+          echo ${{ steps.versioning.outputs.patch }}
+          echo ${{ steps.versioning.outputs.version_tag }}
+        
       - name: Install python dependencies
         run: pip3 install -r scripts/requirements.txt
 
