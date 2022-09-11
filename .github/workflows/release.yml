@@ -22,14 +22,13 @@ jobs:
           major_pattern: '(MAJOR)'
           minor_pattern: '(MINOR)'
           format: '${major}.${minor}.${patch}'
-          bump_each_commit: true
 
       - name: Install python dependencies
         run: pip3 install -r scripts/requirements.txt
 
       - name: Update repo version
         env:
-          VERSION: ${{ steps.versioning.outputs.version }}
+          VERSION: ${{ steps.versioning.outputs.version_tag }}
         run: python3 ./scripts/update_repo_version.py
 
       - name: Update package-lock.json
@@ -43,10 +42,10 @@ jobs:
 
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Update version to v${{ steps.versioning.outputs.version }}
-          tagging_message: v${{ steps.versioning.outputs.version }}
+          commit_message: Update version to ${{ steps.versioning.outputs.version_tag }}
+          tagging_message: ${{ steps.versioning.outputs.version_tag }}
     outputs:
-      version: ${{ steps.versioning.outputs.version }}
+      version: ${{ steps.versioning.outputs.version_tag }}
 
   build_and_publish:
     needs: [update_version]
@@ -94,9 +93,6 @@ jobs:
           rustup target add aarch64-apple-darwin
           rustup target add x86_64-apple-darwin
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.0.0
-
       - name: Build and Sign Tauri App
         env:
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
@@ -133,3 +129,5 @@ jobs:
           path: './manifest.json'
           destination: 'codealpha-releases'
           parent: false
+          headers: |-
+            cache-control: public, max-age=10
