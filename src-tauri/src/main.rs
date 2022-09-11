@@ -10,7 +10,7 @@ use core_engine::CoreEngine;
 use parking_lot::Mutex;
 use platform::macos::setup_observers;
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
-use tracing::info;
+use tracing::debug;
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
@@ -58,7 +58,6 @@ fn construct_tray_menu() -> SystemTrayMenu {
 fn main() {
     // Configure tracing
     TracingSubscriber::new();
-    info!("Starting Application");
 
     let system_tray = SystemTray::new().with_menu(construct_tray_menu());
 
@@ -67,6 +66,8 @@ fn main() {
         .setup(|app| {
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
+
+            debug!(app_version = ?app.package_info().version);
 
             // Setup the observers for AX interactions and mouse events
             setup_observers();

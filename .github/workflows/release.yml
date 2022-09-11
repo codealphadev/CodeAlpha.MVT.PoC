@@ -13,64 +13,107 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
       - name: Git Semantic Version
         id: versioning
-        uses: PaulHatch/semantic-version@v4.0.2
+        uses: PaulHatch/semantic-version@v5.0.0-alpha2
         with:
           tag_prefix: 'v'
           major_pattern: '(MAJOR)'
           minor_pattern: '(MINOR)'
-          format: '${major}.${minor}.${patch}'
+          version_format: '${major}.${minor}.${patch}'
           bump_each_commit: false
-      - run: pip3 install -r scripts/requirements.txt
+
+      - name: echo semver
+        run: |
+          echo ${{ steps.versioning.outputs.version }}
+          echo ${{ steps.versioning.outputs.major }}
+          echo ${{ steps.versioning.outputs.version_tag }}
+
+      - name: Minor version for each merge
+        id: taggerDryRun
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          WITH_V: false
+          DRY_RUN: true
+          RELEASE_BRANCHES: 'main,cod-*'
+          DEFAULT_BUMP: patch
+
+      - name: Show the next version
+        run: |
+          echo ${{ steps.taggerDryRun.outputs.new_tag }}
+        
+      - name: Install python dependencies
+        run: pip3 install -r scripts/requirements.txt
+
       - name: Update repo version
         env:
-          VERSION: ${{ steps.versioning.outputs.version }}
+          VERSION: ${{ steps.taggerDryRun.outputs.new_tag }}
         run: python3 ./scripts/update_repo_version.py
+
+      - name: Update package-lock.json
+        run: npm i --package-lock-only --ignore-scripts
+
+      - name: Update Cargo.lock
+        run: cd src-tauri && cargo generate-lockfile && cd ..
+
+      - name: Echo git status
+        run: git --no-pager diff
+
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Update version to v${{ steps.versioning.outputs.version }}
-          tagging_message: v${{ steps.versioning.outputs.version }}
+          commit_message: Update version to v${{ steps.taggerDryRun.outputs.new_tag }}
+          tagging_message: v${{ steps.taggerDryRun.outputs.new_tag }}
     outputs:
-      version: ${{ steps.versioning.outputs.version }}
+      version: v${{ steps.taggerDryRun.outputs.new_tag }}
 
   build_and_publish:
     needs: [update_version]
     runs-on: [self-hosted, adam]
     timeout-minutes: 60
     steps:
-      - name: 'Checkout'
+      - name: 'Checkout source code'
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - id: auth
-        name: Authenticate to Google Cloud
+
+      - run: git pull origin
+
+      - name: package.json version
+        run: cat package.json
+
+      - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v0.8.1
         with:
           workload_identity_provider: projects/767491075312/locations/global/workloadIdentityPools/codealpha-pool-2/providers/codealpha-gh-provider
           service_account: release-creation@client-backend-x.iam.gserviceaccount.com
-      - id: 'fetch-tauri-private-key-secrets'
+
+      - name: Fetch Tauri private key secrets
+        id: 'fetch-tauri-private-key-secrets'
         uses: 'google-github-actions/get-secretmanager-secrets@v0.5.0'
         with:
           secrets: |-
             private-key:767491075312/tauri_private_key
             private-key-pw:767491075312/tauri_key_pw
+
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      - name: Npm prepare
-        run: npm run prepare
+
       - name: Install Rust stable
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
       - name: Install dependencies
         run: |
           npm ci --loglevel verbose
           rustup target add aarch64-apple-darwin
           rustup target add x86_64-apple-darwin
-      - name: Build
+
+      - name: Build and Sign Tauri App
         env:
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -81,20 +124,30 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key }}
           TAURI_KEY_PASSWORD: ${{ steps.fetch-tauri-private-key-secrets.outputs.private-key-pw }}
         run: npm run build
-      - id: 'upload-file'
+
+      - name: Upload dmg
         uses: 'google-github-actions/upload-cloud-storage@v0.10.2'
         with:
           path: './src-tauri/target/universal-apple-darwin/release/bundle/dmg'
           destination: 'codealpha-releases/${{needs.update_version.outputs.version}}'
           glob: '*.dmg'
-      - name: Update manifest
+
+      - name: Upload app and updater package
+        uses: 'google-github-actions/upload-cloud-storage@v0.10.2'
+        with:
+          path: './src-tauri/target/universal-apple-darwin/release/bundle/macos'
+          destination: 'codealpha-releases/${{needs.update_version.outputs.version}}'
+
+      - name: Create manifest
         env:
           VERSION: ${{needs.update_version.outputs.version}}
-          URL: ${{ steps.upload-file.outputs.uploaded }}
         run: python3 ./scripts/update_release_manifest.py
-      - id: 'upload-release-manifest'
+
+      - name: Upload manifest
         uses: 'google-github-actions/upload-cloud-storage@v0.10.2'
         with:
           path: './manifest.json'
           destination: 'codealpha-releases'
           parent: false
+          headers: |-
+            cache-control: public, max-age=10
