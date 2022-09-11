@@ -6,7 +6,7 @@ use parking_lot::Mutex;
 use serde_json::json;
 use tracing_serde::AsSerde;
 
-use tracing::{error, metadata::LevelFilter, Level, Subscriber};
+use tracing::{error, metadata::LevelFilter, Level, Subscriber, info};
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, Layer};
 
 use super::gcp::logging::GcpLogging;
@@ -117,6 +117,8 @@ impl TracingSubscriber {
             );
             default_panic(panic_info);
         }));
+
+        info!("Starting Tracing");
     }
 }
 
