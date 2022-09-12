@@ -268,6 +268,7 @@ impl DocsGenerator {
         let last_char_pos = codeblock.get_last_char_position();
 
         Ok(CodeBlock {
+            kind: codeblock.codeblock_type,
             first_char_pos,
             last_char_pos,
             text,
