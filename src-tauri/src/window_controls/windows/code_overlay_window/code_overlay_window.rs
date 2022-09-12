@@ -73,7 +73,7 @@ impl CodeOverlayWindow {
         Some(())
     }
 
-    fn set_macos_properties(&self) -> Option<()> {
+    pub fn set_macos_properties(&self) -> Option<()> {
         let ns_window_ptr_overlay = self
             .app_handle
             .get_window(&AppWindow::CodeOverlay.to_string())?
