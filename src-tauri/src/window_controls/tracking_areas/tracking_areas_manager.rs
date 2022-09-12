@@ -19,7 +19,7 @@ use crate::{
             },
             EventWindowControls,
         },
-        utils::{get_position, get_size},
+        utils::{get_position, get_size, get_window_level},
     },
 };
 
@@ -386,20 +386,31 @@ fn check_code_overlay_visible() -> bool {
 fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> Option<bool> {
     use strum::IntoEnumIterator;
 
-    for app_window in AppWindow::iter() {
-        if app_window == AppWindow::CodeOverlay {
-            continue;
-        }
+    if let Some(overlay_level) = get_window_level(AppWindow::CodeOverlay) {
+        for app_window in AppWindow::iter() {
+            if app_window == AppWindow::CodeOverlay {
+                continue;
+            }
 
-        if let (Some(origin), Some(size)) = (get_position(app_window), get_size(app_window)) {
-            if mouse_x >= origin.x
-                && mouse_x <= origin.x + size.width
-                && mouse_y >= origin.y
-                && mouse_y <= origin.y + size.height
-            {
-                return Some(true);
+            if let Some(window_level) = get_window_level(app_window) {
+                // Only check if the window is above the overlay window.
+                if window_level > overlay_level {
+                    if let (Some(origin), Some(size)) =
+                        (get_position(app_window), get_size(app_window))
+                    {
+                        if mouse_x >= origin.x
+                            && mouse_x <= origin.x + size.width
+                            && mouse_y >= origin.y
+                            && mouse_y <= origin.y + size.height
+                        {
+                            return Some(true);
+                        }
+                    }
+                }
             }
         }
+    } else {
+        panic!("No window level for: AppWindow::CodeOverlay");
     }
 
     Some(false)
