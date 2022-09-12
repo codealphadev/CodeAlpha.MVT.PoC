@@ -95,3 +95,5 @@ features = [ "serde-compat", "format", "uuid-impl",]
 version = "1.0.0"
 features = ["isolation"]
 
+[patch.crates-io]
+tao = { git = 'https://github.com/codealphadev/tao', branch="0.12.2"}
