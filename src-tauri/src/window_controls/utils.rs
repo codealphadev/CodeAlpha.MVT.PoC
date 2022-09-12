@@ -1,3 +1,5 @@
+use cocoa::base::id;
+use objc::{msg_send, sel, sel_impl};
 use tauri::{window::WindowBuilder, Error, Manager, WindowUrl};
 
 use crate::{
@@ -5,6 +7,19 @@ use crate::{
     utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::config::{default_properties, AppWindow},
 };
+
+pub fn get_window_level(window_label: AppWindow) -> Option<i64> {
+    let tauri_window = app_handle().get_window(&window_label.to_string())?;
+
+    if let Ok(ns_window_ptr) = tauri_window.ns_window() {
+        unsafe {
+            let window_level: i64 = msg_send![ns_window_ptr as id, level];
+            return Some(window_level);
+        }
+    }
+
+    None
+}
 
 pub fn get_position(window_label: AppWindow) -> Option<LogicalPosition> {
     let tauri_window = app_handle().get_window(&window_label.to_string())?;
