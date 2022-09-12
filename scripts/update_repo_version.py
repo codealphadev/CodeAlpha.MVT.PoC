@@ -18,7 +18,10 @@ with open(tauri_conf_file_path, "r") as jsonFile:
 data["package"]["version"] = os.environ['VERSION']
 with open(tauri_conf_file_path, "w") as jsonFile:
     jsonFile.write(json.dumps(data, indent=2) + '\n')
+
 cargo_toml_file_path = "./src-tauri/Cargo.toml"
+with open(cargo_toml_file_path, "r") as tomlFile:
+    data = toml.load(tomlFile)
 data['package']['version'] = os.environ['VERSION']
 with open(cargo_toml_file_path, "w") as tomlFile:
     tomlFile.write(toml.dumps(data) + '\n')

@@ -35,6 +35,9 @@ jobs:
           VERSION: ${{ steps.new_version.outputs.new_tag }}
         run: python3 ./scripts/update_repo_version.py
 
+      - name: Echo git status
+        run: git --no-pager diff
+
       - name: Update package-lock.json
         run: npm i --package-lock-only --ignore-scripts
 
