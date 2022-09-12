@@ -20,7 +20,7 @@ jobs:
         env:
           WITH_V: false
           DRY_RUN: true
-          RELEASE_BRANCHES: '*'
+          RELEASE_BRANCHES: 'main,cod-*'
           DEFAULT_BUMP: patch
 
       - name: Show the next version
@@ -62,9 +62,6 @@ jobs:
           fetch-depth: 0
 
       - run: git pull origin
-
-      - name: package.json version
-        run: cat package.json
 
       - name: Authenticate to Google Cloud
         id: auth
