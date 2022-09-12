@@ -13,7 +13,8 @@ use crate::{
             },
             EventDocsGeneration, EventRuleExecutionState,
         },
-        features::docs_generation::mintlify_documentation,
+        features::docs_generation::get_docstring_for_explanation,
+        syntax_tree::SwiftCodeBlockType,
         utils::XcodeText,
         TextPosition, TextRange, WindowUid,
     },
@@ -28,7 +29,7 @@ use crate::{
     },
 };
 
-use super::docs_generator::DocsGenerationError;
+use super::{docs_generator::DocsGenerationError, fetch_node_explanation};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DocsGenerationTaskState {
@@ -41,6 +42,7 @@ pub enum DocsGenerationTaskState {
 pub struct CodeBlock {
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,
+    pub kind: SwiftCodeBlockType,
     pub text: XcodeText,
 }
 
@@ -126,34 +128,32 @@ impl DocsGenerationTask {
             let docs_insertion_point = self.docs_insertion_point;
             let task_state = self.task_state.clone();
             let task_id = self.id();
+            let kind = self.codeblock.kind.clone();
             async move {
-                let mut mintlify_response =
-                    mintlify_documentation(&codeblock_text_string, None).await;
+                let mut response = fetch_node_explanation(&codeblock_text_string, kind, None).await;
 
-                if let Ok(mintlify_response) = &mut mintlify_response {
+                if let Ok(response) = &mut response {
+                    let docstring = get_docstring_for_explanation(response);
                     // Paste it at the docs insertion point
                     replace_range_with_clipboard_text(
                         &app_handle(),
                         &GetVia::Current,
                         &docs_insertion_point,
-                        Some(&mintlify_response.docstring),
+                        Some(&docstring),
                         true,
                     )
                     .await;
 
                     EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
                         id: task_id,
-                        text: mintlify_response.preview.to_owned(),
+                        text: response.summary.to_owned(),
                     })
                     .publish_to_tauri(&app_handle());
 
                     // Notifiy the frontend that the task is finished
                     EventRuleExecutionState::DocsGenerationFinished()
                         .publish_to_tauri(&app_handle());
-                    debug!(
-                        mintlify_docstring = mintlify_response.docstring,
-                        "DocsGenerationFinished"
-                    );
+                    debug!(summary = response.summary, "DocsGenerationFinished");
                 } else {
                     EventRuleExecutionState::DocsGenerationFailed().publish_to_tauri(&app_handle());
                     debug!("DocsGenerationFailed");

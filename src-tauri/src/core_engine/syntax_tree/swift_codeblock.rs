@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tree_sitter::Node;
 
@@ -12,6 +13,7 @@ pub enum SwiftCodeblockError {
     GenericError(#[source] anyhow::Error),
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SwiftCodeBlockType {
     For,
     If,
