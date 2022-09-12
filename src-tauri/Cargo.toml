@@ -1,6 +1,6 @@
 [package]
 name = "CodeAlpha"
-version = "0.0.2"
+version = "0.0.3"
 description = "CodeAlpha"
 authors = [ "Adrian Hupka, Daniel Owens, Adam Nyberg",]
 license = ""
@@ -94,3 +94,4 @@ features = [ "serde-compat", "format", "uuid-impl",]
 [build-dependencies.tauri-build]
 version = "1.0.0"
 features = [ "isolation",]
+
