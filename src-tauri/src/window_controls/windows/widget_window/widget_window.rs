@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+use cocoa::base::id;
+
+use objc::{msg_send, sel, sel_impl};
+
 use parking_lot::Mutex;
 use tauri::Manager;
 use window_shadows::set_shadow;
@@ -97,6 +101,22 @@ impl WidgetWindow {
             .app_handle
             .get_window(&AppWindow::Widget.to_string())?
             .hide();
+
+        Some(())
+    }
+
+    pub fn set_macos_properties(&self) -> Option<()> {
+        let ns_window_ptr_widget = self
+            .app_handle
+            .get_window(&AppWindow::Widget.to_string())?
+            .ns_window();
+
+        if let Ok(ns_window_ptr_widget) = ns_window_ptr_widget {
+            unsafe {
+                // Prevent the widget from causing our application to take focus.
+                let _: () = msg_send![ns_window_ptr_widget as id, _setPreventsActivation: true];
+            }
+        }
 
         Some(())
     }

@@ -51,11 +51,17 @@ pub struct WindowManager {
 impl WindowManager {
     pub fn new() -> Result<Self, tauri::Error> {
         // Instantiate app windows. If this fails, the app will not work.
-        let widget_window = Arc::new(Mutex::new(WidgetWindow::new()?));
-        WidgetWindow::start_event_listeners(&widget_window);
+        let widget_window = WidgetWindow::new()?;
+        widget_window.set_macos_properties();
 
-        let code_overlay_window = Arc::new(Mutex::new(CodeOverlayWindow::new()?));
-        CodeOverlayWindow::start_event_listeners(&code_overlay_window);
+        let widget_window_arc = Arc::new(Mutex::new(widget_window));
+        WidgetWindow::start_event_listeners(&widget_window_arc);
+
+        let code_overlay_window = CodeOverlayWindow::new()?;
+        code_overlay_window.set_macos_properties();
+
+        let code_overlay_window_arc = Arc::new(Mutex::new(code_overlay_window));
+        CodeOverlayWindow::start_event_listeners(&code_overlay_window_arc);
 
         let tracking_areas_manager = Arc::new(Mutex::new(TrackingAreasManager::new()));
         TrackingAreasManager::start_event_listeners(&tracking_areas_manager);
