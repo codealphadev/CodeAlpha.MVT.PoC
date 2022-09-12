@@ -14,39 +14,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Git Semantic Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.0.0-alpha2
-        with:
-          tag_prefix: 'v'
-          major_pattern: '(MAJOR)'
-          minor_pattern: '(MINOR)'
-          format: '${major}.${minor}.${patch}'
-      - name: echo semver
-        run: |
-          echo ${{ steps.versioning.outputs.version }}
-          echo ${{ steps.versioning.outputs.major }}
-          echo ${{ steps.versioning.outputs.version_tag }}
-
-      - name: Minor version for each merge
-        id: taggerDryRun
-        uses: anothrNick/github-tag-action@1.36.0
+      - name: Generate new version
+        id: new_version
+        uses: anothrNick/github-tag-action@1.36.0 # !!!! Newer versions buggy
         env:
           WITH_V: false
           DRY_RUN: true
-          RELEASE_BRANCHES: 'main,cod-*'
+          RELEASE_BRANCHES: '*'
           DEFAULT_BUMP: patch
 
       - name: Show the next version
         run: |
-          echo ${{ steps.taggerDryRun.outputs.new_tag }}
+          echo ${{ steps.new_version.outputs.new_tag }}
         
       - name: Install python dependencies
         run: pip3 install -r scripts/requirements.txt
 
       - name: Update repo version
         env:
-          VERSION: ${{ steps.taggerDryRun.outputs.new_tag }}
+          VERSION: ${{ steps.new_version.outputs.new_tag }}
         run: python3 ./scripts/update_repo_version.py
 
       - name: Update package-lock.json
@@ -60,10 +46,10 @@ jobs:
 
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Update version to v${{ steps.taggerDryRun.outputs.new_tag }}
-          tagging_message: v${{ steps.taggerDryRun.outputs.new_tag }}
+          commit_message: Update version to v${{ steps.new_version.outputs.new_tag }}
+          tagging_message: v${{ steps.new_version.outputs.new_tag }}
     outputs:
-      version: v${{ steps.taggerDryRun.outputs.new_tag }}
+      version: v${{ steps.new_version.outputs.new_tag }}
 
   build_and_publish:
     needs: [update_version]
