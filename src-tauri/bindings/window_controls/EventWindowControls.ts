@@ -3,11 +3,16 @@ import type { DarkModeUpdateMessage } from "./DarkModeUpdateMessage";
 import type { HideAppWindowMessage } from "./HideAppWindowMessage";
 import type { ShowAppWindowMessage } from "./ShowAppWindowMessage";
 import type { TrackingAreaClickedMessage } from "./TrackingAreaClickedMessage";
+import type { TrackingAreaClickedOutsideMessage } from "./TrackingAreaClickedOutsideMessage";
 import type { TrackingAreaEnteredMessage } from "./TrackingAreaEnteredMessage";
 import type { TrackingAreaExitedMessage } from "./TrackingAreaExitedMessage";
 
 export type EventWindowControls =
   | { event: "TrackingAreaClicked"; payload: TrackingAreaClickedMessage }
+  | {
+    event: "TrackingAreaClickedOutside";
+    payload: TrackingAreaClickedOutsideMessage;
+  }
   | { event: "TrackingAreaEntered"; payload: TrackingAreaEnteredMessage }
   | { event: "TrackingAreaExited"; payload: TrackingAreaExitedMessage }
   | { event: "AppWindowHide"; payload: HideAppWindowMessage }

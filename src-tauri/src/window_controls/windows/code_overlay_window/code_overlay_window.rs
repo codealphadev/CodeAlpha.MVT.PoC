@@ -10,7 +10,10 @@ use window_shadows::set_shadow;
 use crate::{
     app_handle,
     utils::geometry::{LogicalPosition, LogicalSize},
-    window_controls::{config::AppWindow, utils::create_default_window_builder},
+    window_controls::{
+        config::{AppWindow, WindowLevel},
+        utils::create_default_window_builder,
+    },
 };
 
 use super::listeners::window_control_events_listener;
@@ -49,28 +52,17 @@ impl CodeOverlayWindow {
             .get_window(&AppWindow::CodeOverlay.to_string())?
             .ns_window();
 
-        let ns_window_ptr_widget = self
-            .app_handle
-            .get_window(&AppWindow::Widget.to_string())?
-            .ns_window();
-
-        if let (Ok(ns_window_ptr_overlay), Ok(ns_window_ptr_widget)) =
-            (ns_window_ptr_overlay, ns_window_ptr_widget)
-        {
-            // Setting the mouse events to be ignored for the overlay window.
+        if let Ok(ns_window_ptr_overlay) = ns_window_ptr_overlay {
             unsafe {
+                // Setting the mouse events to be ignored for the overlay window.
                 if !msg_send![ns_window_ptr_overlay as id, ignoresMouseEvents] {
                     let _: () = msg_send![ns_window_ptr_overlay as id, setIgnoresMouseEvents: true];
                 }
-            }
 
-            // Ordering the widget (and its parent windows) to have a Level bigger than CodeOverlay. This prevents overlap.
-            unsafe {
-                let overlay_window_level: i64 = msg_send![ns_window_ptr_overlay as id, level];
-
+                // Set the code overlay's window level
                 let _: () = msg_send![
-                    ns_window_ptr_widget as id,
-                    setLevel: overlay_window_level + 2 as NSInteger // +2 because other prompts are +1 and the widget should stay above
+                    ns_window_ptr_overlay as id,
+                    setLevel: WindowLevel::CodeOverlay as NSInteger
                 ];
             }
         }

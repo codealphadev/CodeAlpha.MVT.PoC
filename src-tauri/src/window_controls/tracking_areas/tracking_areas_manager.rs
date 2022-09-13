@@ -188,6 +188,18 @@ impl TrackingAreasManager {
                         duration_in_area_ms: None,
                     });
                 }
+            } else {
+                // Check if tracking area subscribed to MouseClickedOutside event.
+                if Self::evaluate_event_subscriptions(
+                    &TrackingEventType::MouseClickedOutside,
+                    &tracking_area.0.event_subscriptions,
+                ) {
+                    tracking_results.push(TrackingEvent {
+                        area: tracking_area.0.clone(),
+                        event_type: TrackingEventType::MouseClickedOutside,
+                        duration_in_area_ms: None,
+                    });
+                }
             }
         }
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cocoa::base::id;
+use cocoa::{base::id, foundation::NSInteger};
 
 use objc::{msg_send, sel, sel_impl};
 
@@ -12,7 +12,7 @@ use crate::{
     app_handle,
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::{default_properties, AppWindow},
+        config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
     },
 };
@@ -64,6 +64,12 @@ impl WidgetWindow {
             unsafe {
                 // Prevent the widget from causing our application to take focus.
                 let _: () = msg_send![ns_window_ptr_widget as id, _setPreventsActivation: true];
+
+                // Set the widget's window level
+                let _: () = msg_send![
+                    ns_window_ptr_widget as id,
+                    setLevel: WindowLevel::Widget as NSInteger
+                ];
             }
         }
 
