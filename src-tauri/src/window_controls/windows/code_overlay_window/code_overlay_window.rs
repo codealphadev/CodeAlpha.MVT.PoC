@@ -43,36 +43,6 @@ impl CodeOverlayWindow {
         Ok(Self { app_handle })
     }
 
-    pub fn start_event_listeners(code_overlay_window: &Arc<Mutex<CodeOverlayWindow>>) {
-        window_control_events_listener(code_overlay_window);
-    }
-
-    pub fn show(&self, position: &LogicalPosition, size: &LogicalSize) -> Option<()> {
-        let tauri_window = self
-            .app_handle
-            .get_window(&AppWindow::CodeOverlay.to_string())?;
-
-        tauri_window.set_size(size.as_tauri_LogicalSize()).ok()?;
-        tauri_window
-            .set_position(position.as_tauri_LogicalPosition())
-            .ok()?;
-
-        self.set_macos_properties()?;
-
-        tauri_window.show().ok()?;
-
-        Some(())
-    }
-
-    pub fn hide(&self) -> Option<()> {
-        _ = self
-            .app_handle
-            .get_window(&AppWindow::CodeOverlay.to_string())?
-            .hide();
-
-        Some(())
-    }
-
     pub fn set_macos_properties(&self) -> Option<()> {
         let ns_window_ptr_overlay = self
             .app_handle
@@ -100,10 +70,40 @@ impl CodeOverlayWindow {
 
                 let _: () = msg_send![
                     ns_window_ptr_widget as id,
-                    setLevel: overlay_window_level + 1 as NSInteger
+                    setLevel: overlay_window_level + 2 as NSInteger // +2 because other prompts are +1 and the widget should stay above
                 ];
             }
         }
+
+        Some(())
+    }
+
+    pub fn start_event_listeners(code_overlay_window: &Arc<Mutex<CodeOverlayWindow>>) {
+        window_control_events_listener(code_overlay_window);
+    }
+
+    pub fn show(&self, position: &LogicalPosition, size: &LogicalSize) -> Option<()> {
+        let tauri_window = self
+            .app_handle
+            .get_window(&AppWindow::CodeOverlay.to_string())?;
+
+        tauri_window.set_size(size.as_tauri_LogicalSize()).ok()?;
+        tauri_window
+            .set_position(position.as_tauri_LogicalPosition())
+            .ok()?;
+
+        self.set_macos_properties()?;
+
+        tauri_window.show().ok()?;
+
+        Some(())
+    }
+
+    pub fn hide(&self) -> Option<()> {
+        _ = self
+            .app_handle
+            .get_window(&AppWindow::CodeOverlay.to_string())?
+            .hide();
 
         Some(())
     }

@@ -24,7 +24,8 @@ use crate::{
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
+        config::AppWindow, EventTrackingArea, TrackingArea, TrackingEventSubscription,
+        TrackingEventType,
     },
 };
 
@@ -186,6 +187,7 @@ impl DocsGenerationTask {
                 TrackingEventType::MouseEntered,
                 TrackingEventType::MouseExited,
             ]),
+            app_window: AppWindow::CodeOverlay,
         };
 
         // 3. Publish to the tracking area manager with its original GLOBAL coordinates
