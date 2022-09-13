@@ -14,6 +14,14 @@ pub enum AppWindow {
     CodeOverlay,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub enum WindowLevel {
+    CodeOverlay = 5,
+    Widget = 6,
+    FloatingCard = 7,
+    ConfigWindow = 8,
+}
+
 impl std::fmt::Display for AppWindow {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
