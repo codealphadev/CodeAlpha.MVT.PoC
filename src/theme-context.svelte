@@ -25,9 +25,9 @@
       }
     });
 
+
     const { setTheme } = getContext('theme');
 
-  
   
     const setRootCssVars = (themeName: ThemeName) => {
         const theme = themes[themeName];
@@ -53,15 +53,14 @@
             break;
         }
     });
-
-    onMount(() => {
-      setRootCssVars(_currentTheme);
-      listenToWindowControlsEvents();
-    });
   };
+  onMount(() => {
+    
+    listenToWindowControlsEvents();
+    setRootCssVars(_currentTheme);
+  });
 
   </script>
-  
   <slot>
     <!-- content will go here -->
   </slot>
