@@ -10,7 +10,7 @@ use crate::{
     app_handle,
     core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     platform::macos::models::viewport::ViewportPropertiesUpdateMessage,
-    utils::geometry::LogicalFrame,
+    utils::geometry::{LogicalFrame, LogicalPosition},
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
@@ -269,23 +269,41 @@ impl WindowManager {
         Some(())
     }
 
-    pub fn update_app_windows(&self, update_msg: &ViewportPropertiesUpdateMessage) -> Option<()> {
-        {
-            let mut editor_windows = self.editor_windows.try_lock()?;
-            let editor_window =
-                editor_windows.get_mut(&update_msg.viewport_properties.window_uid)?;
+    pub fn update_app_windows(
+        &self,
+        update_editor_props: Option<ViewportPropertiesUpdateMessage>,
+        update_window_position: Option<LogicalPosition>,
+    ) -> Option<()> {
+        if let Some(update_editor_props) = update_editor_props {
+            {
+                let mut editor_windows = self.editor_windows.try_lock()?;
+                let editor_window =
+                    editor_windows.get_mut(&update_editor_props.viewport_properties.window_uid)?;
 
-            editor_window.set_viewport(Some(update_msg.viewport_properties.clone()));
-            editor_window
-                .set_code_document(Some(update_msg.code_document_frame_properties.clone()));
+                editor_window.set_viewport(Some(update_editor_props.viewport_properties.clone()));
+                editor_window.set_code_document(Some(
+                    update_editor_props.code_document_frame_properties.clone(),
+                ));
+            }
+
+            EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
+                app_windows: vec![AppWindow::Explain],
+                viewport: Some(update_editor_props.viewport_properties.clone()),
+                code_document: Some(update_editor_props.code_document_frame_properties.clone()),
+                window_position: None,
+            })
+            .publish_to_tauri(&app_handle());
         }
 
-        EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
-            app_windows: vec![AppWindow::Explain],
-            viewport: update_msg.viewport_properties.clone(),
-            code_document: update_msg.code_document_frame_properties.clone(),
-        })
-        .publish_to_tauri(&app_handle());
+        if let Some(update_window_position) = update_window_position {
+            EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
+                app_windows: vec![AppWindow::Explain],
+                viewport: None,
+                code_document: None,
+                window_position: Some(update_window_position.clone()),
+            })
+            .publish_to_tauri(&app_handle());
+        }
 
         Some(())
     }
