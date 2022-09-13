@@ -39,6 +39,9 @@ pub fn window_control_events_listener(widget_window: &Arc<Mutex<WidgetWindow>>) 
             EventWindowControls::TrackingAreaClickedOutside(_) => {
                 // Do Nothing here
             }
+            EventWindowControls::AppWindowUpdate(_) => {
+                // Do Nothing here
+            }
         }
     });
 }

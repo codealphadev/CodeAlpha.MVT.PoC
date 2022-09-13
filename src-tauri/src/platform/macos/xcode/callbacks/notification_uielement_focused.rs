@@ -2,7 +2,7 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
 use crate::platform::macos::{
-    get_viewport_frame,
+    get_minimal_viewport_properties, get_viewport_frame,
     internal::get_uielement_frame,
     models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
     xcode::XCodeObserverState,
@@ -16,6 +16,14 @@ pub fn notify_uielement_focused(
     uielement_element: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
+    let (viewport_props, code_doc_props) = if let Ok((viewport_props, code_doc_props)) =
+        get_minimal_viewport_properties(&GetVia::Current)
+    {
+        (Some(viewport_props), Some(code_doc_props))
+    } else {
+        (None, None)
+    };
+
     let window_element = if let Ok(window) = uielement_element.attribute(&AXAttribute::window()) {
         window
     } else {
@@ -25,6 +33,8 @@ pub fn notify_uielement_focused(
             focused_ui_element: FocusedUIElement::Other,
             textarea_position: None,
             textarea_size: None,
+            viewport: viewport_props,
+            code_document: code_doc_props,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
         return Ok(());
@@ -45,6 +55,8 @@ pub fn notify_uielement_focused(
             textarea_position: None,
             textarea_size: None,
             pid: Some(window.1.pid()?),
+            viewport: viewport_props,
+            code_document: code_doc_props,
         };
 
         let role = uielement_element.attribute(&AXAttribute::role())?;
@@ -97,12 +109,15 @@ pub fn notify_uielement_focused(
         // Case: window not found in the list; introduced after observing COD-282
         // This case happens when a modal is opening on top of code in the textarea. Even though this modal belongs to a valid window,
         // we ignore said window because it does not contain any code text fields.
+
         AXEventXcode::EditorUIElementFocused(EditorUIElementFocusedMessage {
             window_uid: None,
             pid: None,
             focused_ui_element: FocusedUIElement::Other,
             textarea_position: None,
             textarea_size: None,
+            viewport: viewport_props,
+            code_document: code_doc_props,
         })
         .publish_to_tauri(&xcode_observer_state.app_handle);
         return Ok(());

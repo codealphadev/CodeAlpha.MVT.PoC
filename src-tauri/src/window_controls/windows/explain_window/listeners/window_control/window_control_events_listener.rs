@@ -9,7 +9,9 @@ use crate::{
     window_controls::{events::EventWindowControls, windows::ExplainWindow},
 };
 
-use super::handlers::{on_click_outside_tracking_area, on_hide_app_window, on_show_app_window};
+use super::handlers::{
+    on_click_outside_tracking_area, on_hide_app_window, on_show_app_window, on_update_app_window,
+};
 
 pub fn window_control_events_listener(explain_window: &Arc<Mutex<ExplainWindow>>) {
     let explain_window = (explain_window).clone();
@@ -38,6 +40,9 @@ pub fn window_control_events_listener(explain_window: &Arc<Mutex<ExplainWindow>>
             }
             EventWindowControls::TrackingAreaClickedOutside(msg) => {
                 on_click_outside_tracking_area(&explain_window, &msg);
+            }
+            EventWindowControls::AppWindowUpdate(msg) => {
+                on_update_app_window(&explain_window, &msg);
             }
         }
     });

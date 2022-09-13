@@ -1,4 +1,5 @@
 use accessibility::{AXAttribute, AXUIElement};
+use anyhow::anyhow;
 use core_foundation::array::CFArray;
 use core_graphics::geometry::CGRect;
 use serde::{Deserialize, Serialize};
@@ -246,4 +247,30 @@ fn get_viewport_folding_ribbon_frame(
     }
 
     Err(XcodeError::UIElementNotFound)
+}
+
+pub fn get_minimal_viewport_properties(
+    get_via: &GetVia,
+) -> Result<(ViewportProperties, CodeDocumentFrameProperties), XcodeError> {
+    let textarea_uielement = get_textarea_uielement(get_via)?;
+    let code_doc_frame = get_uielement_frame(&textarea_uielement)?;
+
+    let viewport = LAST_KNOWN_VIEWPORT_FRAME
+        .lock()
+        .ok_or(XcodeError::GenericError(anyhow!(
+            "Viewport frame not known."
+        )))?;
+
+    Ok((
+        ViewportProperties {
+            dimensions: viewport.1,
+            annotation_section: None,
+            code_section: None,
+            window_uid: viewport.0,
+        },
+        CodeDocumentFrameProperties {
+            dimensions: code_doc_frame,
+            text_offset: None,
+        },
+    ))
 }

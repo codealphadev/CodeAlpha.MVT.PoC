@@ -44,6 +44,9 @@ pub fn on_resize_editor_window(
                 },
             },
         );
+
+        editor_window.set_viewport(Some(resize_msg.viewport.clone()));
+        editor_window.set_code_document(Some(resize_msg.code_document.clone()));
     }
 
     window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());

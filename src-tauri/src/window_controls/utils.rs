@@ -47,6 +47,14 @@ pub fn get_size(window_label: AppWindow) -> Option<LogicalSize> {
     ))
 }
 
+pub fn is_visible(window_label: AppWindow) -> Result<bool, tauri::Error> {
+    let tauri_window = app_handle()
+        .get_window(&window_label.to_string())
+        .ok_or(tauri::Error::AssetNotFound("Window not found".to_string()))?;
+
+    tauri_window.is_visible()
+}
+
 pub fn create_default_window_builder(
     handle: &tauri::AppHandle,
     window_label: AppWindow,

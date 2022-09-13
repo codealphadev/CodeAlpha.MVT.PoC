@@ -5,6 +5,7 @@ use crate::{
     platform::macos::{
         get_dark_mode,
         models::editor::{EditorWindowCreatedMessage, FocusedUIElement},
+        CodeDocumentFrameProperties, ViewportProperties,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
@@ -59,6 +60,9 @@ pub struct EditorWindow {
     v_boundary: VerticalBoundary,
 
     dark_mode: Option<bool>,
+
+    viewport_props: Option<ViewportProperties>,
+    code_document_props: Option<CodeDocumentFrameProperties>,
 }
 
 impl EditorWindow {
@@ -78,6 +82,8 @@ impl EditorWindow {
             h_boundary: HorizontalBoundary::Right,
             v_boundary: VerticalBoundary::Bottom,
             widget_position: None,
+            viewport_props: None,
+            code_document_props: None,
         };
         editor_window.check_and_update_dark_mode().ok();
         editor_window
@@ -119,6 +125,26 @@ impl EditorWindow {
 
     pub fn focused_ui_element(&self) -> Option<&FocusedUIElement> {
         self.focused_ui_element.as_ref()
+    }
+
+    pub fn viewport(&self) -> Option<ViewportProperties> {
+        self.viewport_props.clone()
+    }
+
+    pub fn set_viewport(&mut self, viewport: Option<ViewportProperties>) {
+        if viewport.is_some() {
+            self.viewport_props = viewport;
+        }
+    }
+
+    pub fn code_document(&self) -> Option<CodeDocumentFrameProperties> {
+        self.code_document_props.clone()
+    }
+
+    pub fn set_code_document(&mut self, code_document: Option<CodeDocumentFrameProperties>) {
+        if code_document.is_some() {
+            self.code_document_props = code_document;
+        }
     }
 
     fn set_textarea_dimensions(
