@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::core_engine::features::NodeExplanation;
+use crate::{
+    core_engine::{features::NodeExplanation, WindowUid},
+    utils::geometry::LogicalFrame,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/docs_generation/")]

@@ -130,12 +130,6 @@ impl NodeAnnotation {
             async move {
                 let response = fetch_node_explanation(&codeblock_text_string, kind, None).await;
 
-                EventRuleExecutionState::NodeExplanationFetched(NodeExplanationFetchedMessage {
-                    window_uid: tracking_area.window_uid,
-                    annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
-                })
-                .publish_to_tauri(&app_handle());
-
                 if let Ok(response) = response {
                     (*explanation.lock()) = Some(response.clone());
                     // Notify the frontend that loading has finished
@@ -143,6 +137,8 @@ impl NodeAnnotation {
                         .publish_to_tauri(&app_handle());
 
                     EventDocsGeneration::NodeExplanationFetched(NodeExplanationFetchedMessage {
+                        window_uid: tracking_area.window_uid,
+                        annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
                         explanation: response,
                         name: "Dummy name".to_string(), // TODO
                     })
