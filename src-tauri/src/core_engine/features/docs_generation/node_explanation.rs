@@ -1,3 +1,5 @@
+use std::env;
+
 use serde::{Deserialize, Serialize};
 use tauri::async_runtime::block_on;
 
@@ -44,6 +46,14 @@ pub async fn fetch_node_explanation(
         "".to_string()
     };
 
+    let url;
+    let env_url = env::var("CODEALPHA_CLOUD_BACKEND_URL");
+    if env_url.is_ok() {
+        url = env_url.unwrap();
+    } else {
+        url = "https://europe-west1-analyze-text-dev.cloudfunctions.net/analyze-code".to_string();
+    }
+
     let req_body = NodeExplanationRequest {
         apiKey: "-RWsev7z_qgP!Qinp_8cbmwgP9jg4AQBkfz".to_string(),
         code: code.clone(),
@@ -52,7 +62,7 @@ pub async fn fetch_node_explanation(
     };
 
     let response = reqwest::Client::new()
-        .post("https://europe-west1-analyze-text-dev.cloudfunctions.net/node-explanation")
+        .post(url)
         .json(&req_body)
         .send()
         .await?;
