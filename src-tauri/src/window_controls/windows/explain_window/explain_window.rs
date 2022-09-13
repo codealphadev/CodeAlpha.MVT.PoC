@@ -9,26 +9,30 @@ use window_shadows::set_shadow;
 
 use crate::{
     app_handle,
+    platform::macos::{CodeDocumentFrameProperties, ViewportProperties},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         models::TrackingAreaClickedOutsideMessage,
-        utils::{create_default_window_builder, get_position, get_size},
+        utils::create_default_window_builder,
         EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };
 
 use super::listeners::window_control_events_listener;
 
-static Y_OFFSET: f64 = 16.;
+static Y_OFFSET: f64 = 0.;
 
 #[derive(Clone, Debug)]
 pub struct ExplainWindow {
     app_handle: tauri::AppHandle,
     tracking_area: Option<TrackingArea>,
-    editor_textarea: Option<LogicalFrame>,
-    monitor_frame: Option<LogicalFrame>,
-    window_frame: LogicalFrame,
+    window_size: LogicalSize,
+    window_origin_local: Option<LogicalPosition>, // The origin of the window relative to the code document frame.
+    viewport_props: Option<ViewportProperties>,
+    code_document_props: Option<CodeDocumentFrameProperties>,
+    monitor: Option<LogicalFrame>,
+    annotation_area: Option<LogicalFrame>, // The origin of the annotation area relative to the viewport frame.
 }
 
 impl ExplainWindow {
@@ -49,15 +53,15 @@ impl ExplainWindow {
         Ok(Self {
             app_handle,
             tracking_area: None,
-            editor_textarea: None,
-            monitor_frame: None,
-            window_frame: LogicalFrame {
-                origin: LogicalPosition { x: 0., y: 0. },
-                size: LogicalSize {
-                    width: default_properties::size(&AppWindow::Explain).0,
-                    height: default_properties::size(&AppWindow::Explain).1,
-                },
+            monitor: None,
+            window_size: LogicalSize {
+                width: default_properties::size(&AppWindow::Explain).0,
+                height: default_properties::size(&AppWindow::Explain).1,
             },
+            viewport_props: None,
+            code_document_props: None,
+            window_origin_local: None,
+            annotation_area: None,
         })
     }
 
@@ -89,102 +93,50 @@ impl ExplainWindow {
 
     pub fn show(
         &mut self,
-        annotation_anchor: Option<LogicalFrame>,
-        editor_textarea: &LogicalFrame,
-        monitor_frame: &LogicalFrame,
+        annotation_area: Option<LogicalFrame>,
+        viewport: &ViewportProperties,
+        code_document: &CodeDocumentFrameProperties,
+        monitor: &LogicalFrame,
     ) -> Option<()> {
-        self.editor_textarea.replace(editor_textarea.to_owned());
-        self.monitor_frame.replace(editor_textarea.to_owned());
-        self.window_frame = LogicalFrame {
-            origin: get_position(AppWindow::Explain)?,
-            size: get_size(AppWindow::Explain)?,
-        };
+        self.monitor.replace(monitor.to_owned());
+        self.viewport_props.replace(viewport.to_owned());
+        self.code_document_props.replace(code_document.to_owned());
 
-        // 0. Start with the optimal position
-        let mut optimal_position = self.window_frame.origin;
-        if let Some(anchor) = annotation_anchor {
-            optimal_position = LogicalPosition {
-                x: anchor.origin.x - self.window_frame.size.width,
-                y: anchor.origin.y - Y_OFFSET,
-            };
-        }
-
-        println!("optimal_position: {:?}", optimal_position);
-
-        // 1. Derive valid area of the screen where to put the explain window.
-        let valid_monitor_area = LogicalFrame {
-            origin: LogicalPosition {
-                x: monitor_frame.origin.x,
-                y: f64::max(monitor_frame.origin.y, editor_textarea.origin.y),
-            },
-            size: LogicalSize {
-                width: monitor_frame.size.width,
-                height: f64::min(
-                    editor_textarea.size.height,
-                    monitor_frame.size.height
-                        - f64::abs(editor_textarea.origin.y - monitor_frame.origin.y),
-                ),
-            },
-        };
-
-        println!("valid_monitor_area: {:?}", valid_monitor_area);
-
-        // 2. Compute the diff to prevent drawing off-screen.
-        let (offscreen_dist_x, offscreen_dist_y) =
-            Self::calc_off_screen_distance(&self.window_frame, &valid_monitor_area);
-
-        if let Some(offscreen_dist_x) = offscreen_dist_x {
-            optimal_position.x += offscreen_dist_x;
-        }
-
-        if let Some(offscreen_dist_y) = offscreen_dist_y {
-            optimal_position.y += offscreen_dist_y;
-        }
-
-        println!(
-            "offscreen_dist_x: {:?}, offscreen_dist_y: {:?}",
-            offscreen_dist_x, offscreen_dist_y
-        );
-
-        // 3. Check if there is overlap between the repositioned explain window and the annotation frame.
-        if let Some(anchor) = annotation_anchor {
-            if Self::intersection_area(&self.window_frame, &anchor).is_some() {
-                // 3.1. If there is overlap, check if there is enough space above the annotation frame.
-                if self.window_frame.size.height <= valid_monitor_area.origin.y - anchor.origin.y {
-                    // 3.1.1. If there is enough space, move the explain window above the annotation frame.
-                    optimal_position.y = anchor.origin.y - self.window_frame.size.height;
-                } else {
-                    // 3.1.2. If there is not enough space, move the explain window below the annotation frame.
-                    optimal_position.y = anchor.origin.y + anchor.size.height;
-                }
+        if let Some(annotation_area) = annotation_area {
+            // Update the explain window's origin in local coordinates relative to code document frame.
+            let local_origin = LogicalPosition {
+                x: annotation_area.origin.x - self.window_size.width,
+                y: annotation_area.origin.y - Y_OFFSET,
             }
+            .to_local(&self.get_coordinate_system_origin()?);
+
+            self.window_origin_local.replace(local_origin);
+
+            // Only set the annotation area if it's not None to not throw away a previously known annotation area.
+            self.annotation_area
+                .replace(annotation_area.to_local(&self.get_coordinate_system_origin()?));
         }
 
-        println!("updated optimal_position: {:?}", optimal_position);
+        // Derive an origin for the explain window following a set of positioning rules.
+        let corrected_window_origin_global = self.corrected_window_origin_global()?;
 
-        self.window_frame = LogicalFrame {
-            origin: optimal_position,
-            size: self.window_frame.size,
-        };
-
-        // 4. Create Tracking Area to detect clicks outside the explain window.
-        self.create_tracking_area()?;
+        // Create Tracking Area to detect clicks outside the explain window.
+        self.create_tracking_area(&LogicalFrame {
+            origin: corrected_window_origin_global,
+            size: self.window_size,
+        })?;
 
         let tauri_window = self
             .app_handle
             .get_window(&AppWindow::Explain.to_string())?;
 
         tauri_window
-            .set_position(self.window_frame.origin.as_tauri_LogicalPosition())
+            .set_position(corrected_window_origin_global.as_tauri_LogicalPosition())
             .ok()?;
 
         set_shadow(&tauri_window, false).expect("Unsupported platform!");
 
-        println!("showing explain window");
-
         tauri_window.show().ok()?;
-
-        println!("showed explain window");
 
         Some(())
     }
@@ -192,7 +144,6 @@ impl ExplainWindow {
     pub fn hide(&mut self) -> Option<()> {
         if let Some(tracking_area) = self.tracking_area.as_ref() {
             EventTrackingArea::Remove(vec![tracking_area.id]).publish_to_tauri(&app_handle());
-            self.tracking_area = None;
         }
 
         _ = self
@@ -200,7 +151,116 @@ impl ExplainWindow {
             .get_window(&AppWindow::Explain.to_string())?
             .hide();
 
+        // Reset properties
+        self.window_origin_local = None;
+        self.annotation_area = None;
+        self.monitor = None;
+        self.tracking_area = None;
+
         Some(())
+    }
+
+    pub fn update(
+        &mut self,
+        viewport: &ViewportProperties,
+        code_document: &CodeDocumentFrameProperties,
+    ) -> Option<()> {
+        self.viewport_props.replace(viewport.to_owned());
+        self.code_document_props.replace(code_document.to_owned());
+
+        // Derive an origin for the explain window following a set of positioning rules.
+        let corrected_global_origin = self.corrected_window_origin_global()?;
+
+        // Create Tracking Area to detect clicks outside the explain window.
+        self.update_tracking_area(&LogicalFrame {
+            origin: corrected_global_origin,
+            size: self.window_size,
+        })?;
+
+        let tauri_window = self
+            .app_handle
+            .get_window(&AppWindow::Explain.to_string())?;
+
+        tauri_window
+            .set_position(corrected_global_origin.as_tauri_LogicalPosition())
+            .ok()?;
+
+        Some(())
+    }
+
+    fn corrected_window_origin_global(&self) -> Option<LogicalPosition> {
+        // 1. Derive valid area of the screen where to put the explain window.
+        let valid_monitor_area = LogicalFrame {
+            origin: LogicalPosition {
+                x: self.monitor?.origin.x,
+                y: f64::max(
+                    self.monitor?.origin.y,
+                    self.viewport_props.as_ref()?.dimensions.origin.y,
+                ),
+            },
+            size: LogicalSize {
+                width: self.monitor?.size.width,
+                height: f64::min(
+                    self.viewport_props.as_ref()?.dimensions.size.height,
+                    self.monitor?.size.height
+                        - f64::abs(
+                            self.viewport_props.as_ref()?.dimensions.origin.y
+                                - self.monitor?.origin.y,
+                        ),
+                ),
+            },
+        };
+
+        let mut corrected_global_origin = self
+            .window_origin_local?
+            .to_global(&self.get_coordinate_system_origin()?);
+
+        // 2. Compute the diff to prevent drawing off-screen.
+        let (offscreen_dist_x, offscreen_dist_y) = Self::calc_off_screen_distance(
+            &LogicalFrame {
+                origin: corrected_global_origin,
+                size: self.window_size,
+            },
+            &valid_monitor_area,
+        );
+
+        if let Some(offscreen_dist_x) = offscreen_dist_x {
+            corrected_global_origin.x += offscreen_dist_x;
+        }
+
+        if let Some(offscreen_dist_y) = offscreen_dist_y {
+            corrected_global_origin.y += offscreen_dist_y;
+        }
+
+        let annotation_area_global = self
+            .annotation_area?
+            .to_global(&self.get_coordinate_system_origin()?);
+
+        // 3. Check if there is overlap between the repositioned explain window and the annotation frame.
+        if Self::intersection_area(
+            &LogicalFrame {
+                origin: corrected_global_origin,
+                size: self.window_size,
+            },
+            &annotation_area_global,
+        )
+        .is_some()
+        {
+            // 3.1. If there is overlap, check if there is enough space above the annotation frame.
+            if self.window_size.height
+                <= f64::abs(annotation_area_global.origin.y - valid_monitor_area.origin.y)
+            {
+                // 3.1.1. If there is enough space, move the explain window above the annotation frame.
+                corrected_global_origin.y =
+                    annotation_area_global.origin.y - self.window_size.height;
+            } else {
+                // 3.1.2. If there is not enough space, move the explain window below the annotation frame.
+                corrected_global_origin.y =
+                    annotation_area_global.origin.y + annotation_area_global.size.height;
+            }
+        }
+
+        Some(corrected_global_origin)
     }
 
     pub fn clicked_outside(
@@ -216,11 +276,22 @@ impl ExplainWindow {
         Some(())
     }
 
-    fn create_tracking_area(&mut self) -> Option<()> {
+    fn update_tracking_area(&mut self, updated_tracking_rect: &LogicalFrame) -> Option<()> {
+        let mut tracking_area = self.tracking_area.as_ref()?.clone();
+        tracking_area.rectangles = vec![updated_tracking_rect.to_owned()];
+
+        EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
+
+        self.tracking_area.replace(tracking_area);
+
+        Some(())
+    }
+
+    fn create_tracking_area(&mut self, tracking_rect: &LogicalFrame) -> Option<()> {
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
             window_uid: 0,
-            rectangles: vec![self.window_frame],
+            rectangles: vec![tracking_rect.to_owned()],
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClickedOutside,
             ]),
@@ -235,15 +306,19 @@ impl ExplainWindow {
         Some(())
     }
 
+    fn get_coordinate_system_origin(&self) -> Option<LogicalPosition> {
+        Some(LogicalPosition {
+            x: self.viewport_props.as_ref()?.dimensions.origin.x,
+            y: self.code_document_props.as_ref()?.dimensions.origin.y,
+        })
+    }
+
     pub fn calc_off_screen_distance(
         window: &LogicalFrame,
         valid_monitor_area: &LogicalFrame,
     ) -> (Option<f64>, Option<f64>) {
         let mut dist_x: Option<f64> = None;
         let mut dist_y: Option<f64> = None;
-
-        println!("window: {:?}", window);
-        println!("valid_monitor_area: {:?}", valid_monitor_area);
 
         // prevent widget from going off-screen
         if window.origin.x < valid_monitor_area.origin.x {
@@ -295,7 +370,7 @@ impl ExplainWindow {
         let y_max = f64::min(a_y_max, b_y_max);
         let width = x_max - x_min;
         let height = y_max - y_min;
-        if width < 0.0 || height < 0.0 {
+        if width <= 0.0 || height <= 0.0 {
             return None;
         }
 

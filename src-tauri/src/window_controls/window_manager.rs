@@ -9,6 +9,7 @@ use parking_lot::Mutex;
 use crate::{
     app_handle,
     core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
+    platform::macos::models::viewport::ViewportPropertiesUpdateMessage,
     utils::geometry::LogicalFrame,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
@@ -19,7 +20,11 @@ use super::{
         models::app_window::{HideAppWindowMessage, ShowAppWindowMessage},
         EventWindowControls,
     },
-    listeners::{app_listener, rule_execution_listener, user_interaction_listener, xcode_listener},
+    listeners::{
+        app_listener, rule_execution_listener, user_interaction_listener, viewport_update_listener,
+        xcode_listener,
+    },
+    models::app_window::UpdateAppWindowMessage,
     windows::{CodeOverlayWindow, EditorWindow, ExplainWindow, WidgetWindow},
     TrackingAreasManager,
 };
@@ -171,6 +176,8 @@ impl WindowManager {
             widget_position: editor_window.widget_position(true),
             monitor: editor_window.get_monitor(&self.app_handle)?,
             explain_window_anchor,
+            viewport: editor_window.viewport()?,
+            code_document: editor_window.code_document()?,
         })
         .publish_to_tauri(&app_handle());
 
@@ -254,6 +261,29 @@ impl WindowManager {
             widget_position: editor_window.widget_position(true),
             monitor: editor_window.get_monitor(&app_handle())?,
             explain_window_anchor: None,
+            viewport: editor_window.viewport()?,
+            code_document: editor_window.code_document()?,
+        })
+        .publish_to_tauri(&app_handle());
+
+        Some(())
+    }
+
+    pub fn update_app_windows(&self, update_msg: &ViewportPropertiesUpdateMessage) -> Option<()> {
+        {
+            let mut editor_windows = self.editor_windows.try_lock()?;
+            let editor_window =
+                editor_windows.get_mut(&update_msg.viewport_properties.window_uid)?;
+
+            editor_window.set_viewport(Some(update_msg.viewport_properties.clone()));
+            editor_window
+                .set_code_document(Some(update_msg.code_document_frame_properties.clone()));
+        }
+
+        EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
+            app_windows: vec![AppWindow::Explain],
+            viewport: update_msg.viewport_properties.clone(),
+            code_document: update_msg.code_document_frame_properties.clone(),
         })
         .publish_to_tauri(&app_handle());
 
@@ -265,6 +295,7 @@ impl WindowManager {
         user_interaction_listener(window_manager);
         xcode_listener(window_manager);
         rule_execution_listener(window_manager);
+        viewport_update_listener(window_manager);
     }
 }
 

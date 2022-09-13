@@ -31,6 +31,9 @@ pub fn on_editor_ui_element_focus_change(
             unpack_logical_position_tauri(focus_msg.textarea_position),
             unpack_logical_size_tauri(focus_msg.textarea_size),
         );
+
+        editor_window.set_viewport(focus_msg.viewport.clone());
+        editor_window.set_code_document(focus_msg.code_document.clone());
     }
 
     let mut need_temporary_hide = false;

@@ -4,7 +4,7 @@ use core_foundation::string::CFString;
 use crate::{
     app_handle,
     platform::macos::{
-        get_textarea_uielement,
+        get_minimal_viewport_properties, get_textarea_uielement,
         models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
         xcode::{callbacks::notify_textarea_selected_text_changed, XCodeObserverState},
         AXEventXcode, GetVia,
@@ -69,12 +69,23 @@ fn check_event_received_due_to_xcode_dev_panel_closed(uielement: &AXUIElement) {
             if let Ok(uielement_value) = uielement.value() {
                 if let Some(uielement_value_str) = uielement_value.downcast::<CFString>() {
                     if uielement_value_str.to_string() == "No Selection" {
+                        let (viewport_props, code_doc_props) =
+                            if let Ok((viewport_props, code_doc_props)) =
+                                get_minimal_viewport_properties(&GetVia::Current)
+                            {
+                                (Some(viewport_props), Some(code_doc_props))
+                            } else {
+                                (None, None)
+                            };
+
                         AXEventXcode::EditorUIElementFocused(EditorUIElementFocusedMessage {
                             window_uid: None,
                             pid: None,
                             focused_ui_element: FocusedUIElement::Other,
                             textarea_position: None,
                             textarea_size: None,
+                            viewport: viewport_props,
+                            code_document: code_doc_props,
                         })
                         .publish_to_tauri(&app_handle());
                     }

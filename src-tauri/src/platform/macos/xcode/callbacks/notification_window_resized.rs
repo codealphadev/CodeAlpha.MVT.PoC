@@ -5,8 +5,9 @@ use core_graphics_types::geometry::CGSize;
 
 use crate::{
     platform::macos::{
-        get_viewport_frame, models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState,
-        AXEventXcode, GetVia,
+        get_minimal_viewport_properties, get_viewport_frame,
+        models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState, AXEventXcode,
+        GetVia,
     },
     utils::geometry::LogicalSize,
 };
@@ -46,6 +47,9 @@ pub fn notify_window_resized(
         let size = size_ax_value.get_value::<CGSize>()?;
 
         // Set editor window dimensions
+        let (viewport_props, code_doc_props) = get_minimal_viewport_properties(&GetVia::Current)
+            .map_err(|_| accessibility::Error::NotFound)?;
+
         let mut resize_msg = EditorWindowResizedMessage {
             window_uid: window.0,
             window_position: tauri::LogicalPosition {
@@ -62,6 +66,8 @@ pub fn notify_window_resized(
                 width: origin.x - window.2.x,
                 height: origin.y - window.2.y,
             },
+            viewport: viewport_props,
+            code_document: code_doc_props,
         };
 
         if "AXScrollBar" == ui_element.role()? {
