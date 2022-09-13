@@ -2,27 +2,25 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use parking_lot::Mutex;
-use tracing::debug;
+use tracing::error;
 
 use crate::{
     app_handle,
     core_engine::{
         events::{
             models::{
-                DocsGeneratedMessage, NodeExplanationFetchedMessage, RemoveCodeAnnotationMessage,
-                UpdateCodeAnnotationMessage,
+                NodeExplanationFetchedMessage, RemoveNodeAnnotationMessage,
+                UpdateNodeAnnotationMessage,
             },
             EventDocsGeneration, EventRuleExecutionState,
         },
-        features::docs_generation::get_docstring_for_explanation,
         syntax_tree::SwiftCodeBlockType,
         utils::XcodeText,
         TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
         get_bounds_for_TextRange, get_code_document_frame_properties, get_viewport_frame,
-        get_viewport_properties, xcode::actions::replace_range_with_clipboard_text, GetVia,
-        ViewportProperties,
+        get_viewport_properties, GetVia, ViewportProperties,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
@@ -31,12 +29,12 @@ use crate::{
     },
 };
 
-use super::{docs_generator::DocsGenerationError, fetch_node_explanation};
+use super::{docs_generator::DocsGenerationError, fetch_node_explanation, NodeExplanationResponse};
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum DocsGenerationTaskState {
-    Prepared,
-    Processing,
+pub enum NodeAnnotationState {
+    New,
+    FetchingExplanation,
     Finished,
 }
 
@@ -49,40 +47,37 @@ pub struct CodeBlock {
 }
 
 #[derive(Debug, Clone)]
-pub struct DocsGenerationTask {
+pub struct NodeAnnotation {
     tracking_area: TrackingArea,
-    docs_insertion_point: TextRange,
     codeblock: CodeBlock,
-    task_state: Arc<Mutex<DocsGenerationTaskState>>,
+    state: Arc<Mutex<NodeAnnotationState>>,
+    explanation: Arc<Mutex<Option<NodeExplanationResponse>>>,
 }
 
-impl PartialEq for DocsGenerationTask {
+impl PartialEq for NodeAnnotation {
     fn eq(&self, other: &Self) -> bool {
-        self.tracking_area.eq_props(&other.tracking_area)
-            && self.docs_insertion_point == other.docs_insertion_point
-            && self.codeblock == other.codeblock
+        self.tracking_area.eq_props(&other.tracking_area) && self.codeblock == other.codeblock
     }
 }
 
-impl DocsGenerationTask {
+impl NodeAnnotation {
     pub fn new(
         codeblock: CodeBlock,
         text_content: &XcodeText,
-        docs_insertion_point: TextRange,
         window_uid: WindowUid,
     ) -> Result<Self, DocsGenerationError> {
-        let tracking_area = Self::create_task_tracking_area(text_content, &codeblock, window_uid)?;
+        let tracking_area = Self::create_tracking_area(text_content, &codeblock, window_uid)?;
 
         Ok(Self {
             tracking_area,
             codeblock,
-            task_state: Arc::new(Mutex::new(DocsGenerationTaskState::Prepared)),
-            docs_insertion_point,
+            state: Arc::new(Mutex::new(NodeAnnotationState::New)),
+            explanation: Arc::new(Mutex::new(None)),
         })
     }
 
-    pub fn task_state(&self) -> DocsGenerationTaskState {
-        (*self.task_state.lock()).clone()
+    pub fn state(&self) -> NodeAnnotationState {
+        (*self.state.lock()).clone()
     }
 
     pub fn id(&self) -> uuid::Uuid {
@@ -105,7 +100,7 @@ impl DocsGenerationTask {
             Self::calculate_annotation_bounds(text, &self.codeblock)?;
 
         // 3. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
-        EventDocsGeneration::UpdateCodeAnnotation(UpdateCodeAnnotationMessage {
+        EventDocsGeneration::UpdateNodeAnnotation(UpdateNodeAnnotationMessage {
             id: self.tracking_area.id,
             annotation_icon: annotation_rect_opt
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
@@ -118,63 +113,43 @@ impl DocsGenerationTask {
         Ok(())
     }
 
-    pub fn generate_documentation(&self) -> Result<(), DocsGenerationError> {
-        let mut task_state = (self.task_state).lock();
-        *task_state = DocsGenerationTaskState::Processing;
+    pub fn fetch_node_explanation(&self) -> Result<(), DocsGenerationError> {
+        let mut state = (self.state).lock();
+        *state = NodeAnnotationState::FetchingExplanation;
 
         EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
 
         tauri::async_runtime::spawn({
             let codeblock_text_string = String::from_utf16(&self.codeblock.text)
                 .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
-            let docs_insertion_point = self.docs_insertion_point;
-            let task_state = self.task_state.clone();
-            let task_id = self.id();
+            let state = self.state.clone();
+            let explanation = self.explanation.clone();
+            let tracking_area = self.tracking_area.clone();
+            let kind = self.codeblock.kind.clone();
             async move {
-                let mut response = fetch_node_explanation(&codeblock_text_string, kind, None).await;
+                let response = fetch_node_explanation(&codeblock_text_string, kind, None).await;
 
-                if let Ok(response) = &mut response {
-                    let docstring = get_docstring_for_explanation(response);
-                    // Paste it at the docs insertion point
-                    replace_range_with_clipboard_text(
-                        &app_handle(),
-                        &GetVia::Current,
-                        &docs_insertion_point,
-                        Some(&docstring),
-                        true,
-                    )
-                    .await;
+                EventRuleExecutionState::NodeExplanationFetched(NodeExplanationFetchedMessage {
+                    window_uid: tracking_area.window_uid,
+                    annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
+                })
+                .publish_to_tauri(&app_handle());
 
-                    EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
-                        id: task_id,
-                        text: response.summary.to_owned(),
-                    })
-                    .publish_to_tauri(&app_handle());
-
-                    EventRuleExecutionState::NodeExplanationFetched(
-                        NodeExplanationFetchedMessage {
-                            window_uid: tracking_area.window_uid,
-                            annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
-                        },
-                    )
-                    .publish_to_tauri(&app_handle());
-
-                    // Notifiy the frontend that the task is finished
-                    EventRuleExecutionState::DocsGenerationFinished()
-                        .publish_to_tauri(&app_handle());
-                    debug!(summary = response.summary, "DocsGenerationFinished");
+                if let Ok(response) = response {
+                    (*explanation.lock()) = Some(response);
                 } else {
                     EventRuleExecutionState::DocsGenerationFailed().publish_to_tauri(&app_handle());
-                    debug!("DocsGenerationFailed");
+                    (*explanation.lock()) = None;
+                    error!("Fetching node explanation failed");
                 }
-                (*task_state.lock()) = DocsGenerationTaskState::Finished;
+                (*state.lock()) = NodeAnnotationState::Finished;
             }
         });
 
         Ok(())
     }
 
-    pub fn create_task_tracking_area(
+    pub fn create_tracking_area(
         text: &XcodeText,
         code_block: &CodeBlock,
         window_uid: WindowUid,
@@ -204,7 +179,7 @@ impl DocsGenerationTask {
         Ok(tracking_area)
     }
 
-    pub fn update_task_tracking_area(
+    pub fn update_annotation_tracking_area(
         &mut self,
         text: &XcodeText,
     ) -> Result<(), DocsGenerationError> {
@@ -232,7 +207,7 @@ impl DocsGenerationTask {
 
             Ok(())
         } else {
-            Err(DocsGenerationError::DocsGenTaskUpdateFailed)
+            Err(DocsGenerationError::NodeAnnotationUpdateFailed)
         }
     }
 
@@ -331,9 +306,9 @@ impl DocsGenerationTask {
     }
 }
 
-impl Drop for DocsGenerationTask {
+impl Drop for NodeAnnotation {
     fn drop(&mut self) {
-        EventDocsGeneration::RemoveCodeAnnotation(RemoveCodeAnnotationMessage {
+        EventDocsGeneration::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
             id: self.id(),
             window_uid: self.tracking_area.window_uid,
         })

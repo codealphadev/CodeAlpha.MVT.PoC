@@ -17,8 +17,8 @@ use core_foundation::{
 use crate::platform::macos::app::AppObserverState;
 
 use super::{
-    notifiy_app_activated, notifiy_app_deactivated, notify_uielement_focused,
-    notify_window_focused, notify_window_moved,
+    notify_app_activated, notify_app_deactivated, notify_uielement_focused, notify_window_focused,
+    notify_window_moved,
 };
 
 // This file contains the callback function that is registered with the AXObserver
@@ -44,16 +44,16 @@ pub unsafe extern "C" fn callback_app_notifications(
             let _ = notify_window_focused(&element, &mut (*context));
         }
         kAXApplicationActivatedNotification => {
-            let _ = notifiy_app_activated(&element, &mut (*context));
+            let _ = notify_app_activated(&element, &mut (*context));
         }
         kAXApplicationDeactivatedNotification => {
-            let _ = notifiy_app_deactivated(&element, &mut (*context));
+            let _ = notify_app_deactivated(&element, &mut (*context));
         }
         kAXApplicationHiddenNotification => {
-            let _ = notifiy_app_deactivated(&element, &mut (*context));
+            let _ = notify_app_deactivated(&element, &mut (*context));
         }
         kAXApplicationShownNotification => {
-            let _ = notifiy_app_activated(&element, &mut (*context));
+            let _ = notify_app_activated(&element, &mut (*context));
         }
         kAXWindowMovedNotification => {
             let _ = notify_window_moved(&element, &mut (*context));

@@ -185,7 +185,7 @@ impl SwiftFormatter {
                     _ = send_event_mouse_wheel(scroll_delta);
                 }
 
-                // 6. Notifiy the frontend that the file has been formatted successfully
+                // 6. Notify the frontend that the file has been formatted successfully
                 EventRuleExecutionState::SwiftFormatFinished().publish_to_tauri(&app_handle());
                 debug!("SwiftFormatFinished");
             }

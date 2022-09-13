@@ -3,7 +3,7 @@
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
-	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
+	import DocsAnnotations from '../components/code-overlay/docs-generation/node-annotations.svelte';
 	import type { EventViewport } from '../../src-tauri/bindings/macOS_specific/EventViewport';
 
 	import { convert_global_frame_to_local } from '../utils';
