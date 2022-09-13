@@ -32,7 +32,7 @@ fn on_viewport_update(
 ) -> Option<()> {
     let window_manager = &mut window_manager.lock();
 
-    window_manager.update_app_windows(update_msg)?;
+    window_manager.update_app_windows(Some(update_msg.to_owned()), None)?;
 
     Some(())
 }
