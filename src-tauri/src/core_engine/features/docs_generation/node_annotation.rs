@@ -40,6 +40,7 @@ pub enum NodeAnnotationState {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeBlock {
+    pub parameter_names: Option<Vec<String>>, // TODO: Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,
     pub kind: SwiftCodeBlockKind,
@@ -136,13 +137,17 @@ impl NodeAnnotation {
                     EventRuleExecutionState::DocsGenerationFinished()
                         .publish_to_tauri(&app_handle());
 
-                    EventDocsGeneration::NodeExplanationFetched(NodeExplanationFetchedMessage {
+                    let message = NodeExplanationFetchedMessage {
                         window_uid: tracking_area.window_uid,
                         annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
                         explanation: response,
                         name: "Dummy name".to_string(), // TODO
-                    })
-                    .publish_to_tauri(&app_handle());
+                    };
+                    EventDocsGeneration::NodeExplanationFetched(message.clone())
+                        .publish_to_tauri(&app_handle());
+                    EventRuleExecutionState::NodeExplanationFetched(message)
+                        .publish_to_tauri(&app_handle());
+                    println!("Finished loading explanation");
                 } else {
                     EventRuleExecutionState::DocsGenerationFailed().publish_to_tauri(&app_handle());
                     (*explanation.lock()) = None;

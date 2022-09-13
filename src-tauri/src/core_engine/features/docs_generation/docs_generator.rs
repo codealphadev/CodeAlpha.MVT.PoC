@@ -4,7 +4,7 @@ use crate::{
     core_engine::{
         core_engine::WindowUid,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
-        syntax_tree::{SwiftCodeBlock, SwiftSyntaxTree},
+        syntax_tree::{SwiftCodeBlock, SwiftCodeBlockKind, SwiftSyntaxTree},
         utils::XcodeText,
         CodeDocument, TextRange,
     },
@@ -255,6 +255,8 @@ impl DocsGenerator {
         self.node_annotations.clear();
     }
 
+    //fn get_parameter_names_from_function_node(node: &Node) {}
+
     fn derive_codeblock(
         selected_text_range: &TextRange,
         syntax_tree: &SwiftSyntaxTree,
@@ -270,7 +272,13 @@ impl DocsGenerator {
         let first_char_pos = codeblock.get_first_char_position();
         let last_char_pos = codeblock.get_last_char_position();
 
+        let parameter_names = match codeblock.codeblock_kind {
+            SwiftCodeBlockKind::Function => None, //get_parameter_names_from_function_node(&codeblock.node),
+            _ => None,
+        };
+
         Ok(CodeBlock {
+            parameter_names,
             kind: codeblock.codeblock_kind,
             first_char_pos,
             last_char_pos,
