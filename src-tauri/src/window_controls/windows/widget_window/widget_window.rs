@@ -54,6 +54,22 @@ impl WidgetWindow {
         })
     }
 
+    pub fn set_macos_properties(&self) -> Option<()> {
+        let ns_window_ptr_widget = self
+            .app_handle
+            .get_window(&AppWindow::Widget.to_string())?
+            .ns_window();
+
+        if let Ok(ns_window_ptr_widget) = ns_window_ptr_widget {
+            unsafe {
+                // Prevent the widget from causing our application to take focus.
+                let _: () = msg_send![ns_window_ptr_widget as id, _setPreventsActivation: true];
+            }
+        }
+
+        Some(())
+    }
+
     pub fn start_event_listeners(widget_window: &Arc<Mutex<WidgetWindow>>) {
         window_control_events_listener(widget_window);
     }
@@ -101,22 +117,6 @@ impl WidgetWindow {
             .app_handle
             .get_window(&AppWindow::Widget.to_string())?
             .hide();
-
-        Some(())
-    }
-
-    pub fn set_macos_properties(&self) -> Option<()> {
-        let ns_window_ptr_widget = self
-            .app_handle
-            .get_window(&AppWindow::Widget.to_string())?
-            .ns_window();
-
-        if let Ok(ns_window_ptr_widget) = ns_window_ptr_widget {
-            unsafe {
-                // Prevent the widget from causing our application to take focus.
-                let _: () = msg_send![ns_window_ptr_widget as id, _setPreventsActivation: true];
-            }
-        }
 
         Some(())
     }

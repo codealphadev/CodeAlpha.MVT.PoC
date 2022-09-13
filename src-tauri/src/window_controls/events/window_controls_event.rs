@@ -7,7 +7,8 @@ use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 use super::models::{
     app_window::{HideAppWindowMessage, ShowAppWindowMessage},
     dark_mode::DarkModeUpdateMessage,
-    TrackingAreaClickedMessage, TrackingAreaEnteredMessage, TrackingAreaExitedMessage,
+    TrackingAreaClickedMessage, TrackingAreaClickedOutsideMessage, TrackingAreaEnteredMessage,
+    TrackingAreaExitedMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
@@ -15,6 +16,7 @@ use super::models::{
 #[serde(tag = "event", content = "payload")]
 pub enum EventWindowControls {
     TrackingAreaClicked(TrackingAreaClickedMessage),
+    TrackingAreaClickedOutside(TrackingAreaClickedOutsideMessage),
     TrackingAreaEntered(TrackingAreaEnteredMessage),
     TrackingAreaExited(TrackingAreaExitedMessage),
     AppWindowHide(HideAppWindowMessage),
@@ -40,6 +42,7 @@ impl EventWindowControls {
             EventWindowControls::AppWindowHide(_) => publish_to_frontend = false,
             EventWindowControls::AppWindowShow(_) => publish_to_frontend = false,
             EventWindowControls::DarkModeUpdate(_) => publish_to_frontend = true,
+            EventWindowControls::TrackingAreaClickedOutside(_) => publish_to_frontend = true,
         }
 
         // Emit to CodeOverlay window

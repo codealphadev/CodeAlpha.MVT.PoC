@@ -14,6 +14,7 @@ use crate::{
             },
             EventWindowControls,
         },
+        models::TrackingAreaClickedOutsideMessage,
         utils::{get_position, get_size, get_window_level},
     },
 };
@@ -208,6 +209,7 @@ impl TrackingAreasManager {
                         EventWindowControls::TrackingAreaEntered(TrackingAreaEnteredMessage {
                             id: area.id,
                             window_uid: area.window_uid,
+                            app_window: area.app_window,
                         })
                         .publish_to_tauri(&self.app_handle);
                     }
@@ -222,6 +224,7 @@ impl TrackingAreasManager {
                             id: area.id,
                             window_uid: area.window_uid,
                             duration_ms,
+                            app_window: area.app_window,
                         })
                         .publish_to_tauri(&self.app_handle);
                     }
@@ -239,7 +242,18 @@ impl TrackingAreasManager {
                             id: area.id,
                             window_uid: area.window_uid,
                             duration_ms,
+                            app_window: area.app_window,
                         })
+                        .publish_to_tauri(&self.app_handle);
+                    }
+                    TrackingEventType::MouseClickedOutside => {
+                        EventWindowControls::TrackingAreaClickedOutside(
+                            TrackingAreaClickedOutsideMessage {
+                                id: area.id,
+                                window_uid: area.window_uid,
+                                app_window: area.app_window,
+                            },
+                        )
                         .publish_to_tauri(&self.app_handle);
                     }
                 }

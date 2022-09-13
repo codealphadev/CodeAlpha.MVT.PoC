@@ -18,47 +18,11 @@ pub fn xcode_listener(tracking_area_manager_arc: &Arc<Mutex<TrackingAreasManager
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
             match axevent_xcode {
-                AXEventXcode::EditorUIElementFocused(_) => {
-                    // Do Nothing here (yet)
-                }
-                AXEventXcode::EditorWindowCreated(_) => {
-                    // Do Nothing here (yet)
-                }
-                AXEventXcode::EditorWindowDestroyed(_) => {
-                    // Do Nothing here (yet)
-                }
-                AXEventXcode::EditorWindowResized(_) => {
-                    // Do Nothing here (yet)
-                }
                 AXEventXcode::EditorWindowMoved(msg) => {
                     on_move_editor_window(&tracking_area_manager_arc, &msg)
                 }
-                AXEventXcode::EditorAppActivated(_) => {
-                    // Do Nothing here (yet)
-                }
-                AXEventXcode::EditorAppDeactivated(_) => {
-                    // Do Nothing here (yet)
-                }
-                AXEventXcode::EditorAppClosed(_) => {
-                    // Do Nothing here (yet)
-                }
-                AXEventXcode::EditorTextareaScrolled(_) => {
-                    // Do Nothing here
-                }
-                AXEventXcode::EditorTextareaZoomed(_) => {
-                    // Do Nothing here (yet)
-                }
-                AXEventXcode::EditorTextareaContentChanged(_) => {
-                    // Do Nothing here
-                }
-                AXEventXcode::EditorTextareaSelectedTextChanged(_) => {
-                    // Do Nothing here
-                }
-                AXEventXcode::EditorShortcutPressed(_) => {
-                    // Do Nothing here
-                }
-                AXEventXcode::EditorWindowMinimized(_) => {
-                    // Do Nothing here (yet)
+                _ => {
+                    // Do Nothing
                 }
             }
         }
