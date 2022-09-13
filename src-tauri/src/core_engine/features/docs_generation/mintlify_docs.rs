@@ -1,3 +1,5 @@
+use std::env;
+
 use serde::{Deserialize, Serialize};
 use tauri::async_runtime::block_on;
 
@@ -48,8 +50,16 @@ pub async fn mintlify_documentation(
         context: ctx_string,
     };
 
+    let url;
+    let env_url = env::var("CODEALPHA_CLOUD_BACKEND_URL");
+    if env_url.is_ok() {
+        url = env_url.unwrap();
+    } else {
+        url = "https://europe-west1-analyze-text-dev.cloudfunctions.net/analyze-code".to_string();
+    }
+
     let response = reqwest::Client::new()
-        .post("https://europe-west1-analyze-text-dev.cloudfunctions.net/analyze-code")
+        .post(url)
         .json(&req_body)
         .send()
         .await?;
