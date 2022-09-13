@@ -13,7 +13,7 @@ import CodeOverlay from './pages/code-overlay.svelte';
 		<Route path="/widget">
 			<Widget />
 		</Route>
-		<Route path="/code-overlay">
+		<Route path="/codeoverlay">
 			<CodeOverlay />
 		</Route>
 		<Route path="/node-explainer">
