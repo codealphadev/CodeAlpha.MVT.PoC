@@ -6,6 +6,7 @@ import type { TrackingAreaClickedMessage } from "./TrackingAreaClickedMessage";
 import type { TrackingAreaClickedOutsideMessage } from "./TrackingAreaClickedOutsideMessage";
 import type { TrackingAreaEnteredMessage } from "./TrackingAreaEnteredMessage";
 import type { TrackingAreaExitedMessage } from "./TrackingAreaExitedMessage";
+import type { UpdateAppWindowMessage } from "./UpdateAppWindowMessage";
 
 export type EventWindowControls =
   | { event: "TrackingAreaClicked"; payload: TrackingAreaClickedMessage }
@@ -17,4 +18,5 @@ export type EventWindowControls =
   | { event: "TrackingAreaExited"; payload: TrackingAreaExitedMessage }
   | { event: "AppWindowHide"; payload: HideAppWindowMessage }
   | { event: "AppWindowShow"; payload: ShowAppWindowMessage }
+  | { event: "AppWindowUpdate"; payload: UpdateAppWindowMessage }
   | { event: "DarkModeUpdate"; payload: DarkModeUpdateMessage };

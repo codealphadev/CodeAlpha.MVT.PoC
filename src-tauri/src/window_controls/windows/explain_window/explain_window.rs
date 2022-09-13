@@ -15,6 +15,7 @@ use crate::{
         config::{default_properties, AppWindow, WindowLevel},
         models::TrackingAreaClickedOutsideMessage,
         utils::create_default_window_builder,
+        windows::EditorWindow,
         EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };
@@ -162,6 +163,31 @@ impl ExplainWindow {
 
     pub fn update(
         &mut self,
+        viewport: &Option<ViewportProperties>,
+        code_document: &Option<CodeDocumentFrameProperties>,
+        window_position_global: &Option<LogicalPosition>,
+    ) -> Option<()> {
+        if let (Some(viewport), Some(code_document)) = (viewport, code_document) {
+            self.update_editor_properties(viewport, code_document)?;
+        }
+
+        if let Some(position_global) = window_position_global {
+            self.update_window_origin_local(&position_global)?;
+        }
+
+        Some(())
+    }
+
+    fn update_window_origin_local(&mut self, window_origin_global: &LogicalPosition) -> Option<()> {
+        let local_origin = window_origin_global.to_local(&self.get_coordinate_system_origin()?);
+
+        self.window_origin_local.replace(local_origin);
+
+        Some(())
+    }
+
+    fn update_editor_properties(
+        &mut self,
         viewport: &ViewportProperties,
         code_document: &CodeDocumentFrameProperties,
     ) -> Option<()> {
@@ -237,12 +263,12 @@ impl ExplainWindow {
             .to_global(&self.get_coordinate_system_origin()?);
 
         // 3. Check if there is overlap between the repositioned explain window and the annotation frame.
-        if Self::intersection_area(
-            &LogicalFrame {
+        if EditorWindow::intersection_area(
+            LogicalFrame {
                 origin: corrected_global_origin,
                 size: self.window_size,
             },
-            &annotation_area_global,
+            annotation_area_global,
         )
         .is_some()
         {
@@ -307,6 +333,8 @@ impl ExplainWindow {
     }
 
     fn get_coordinate_system_origin(&self) -> Option<LogicalPosition> {
+        // To prevent the window from scrolling horizontally when the user scrolls the code document,
+        // we define an artificial coordinate system origin.
         Some(LogicalPosition {
             x: self.viewport_props.as_ref()?.dimensions.origin.x,
             y: self.code_document_props.as_ref()?.dimensions.origin.y,
@@ -347,33 +375,5 @@ impl ExplainWindow {
         }
 
         (dist_x, dist_y)
-    }
-
-    fn intersection_area(rect_a: &LogicalFrame, rect_b: &LogicalFrame) -> Option<f64> {
-        let (a_x_min, a_y_min, a_x_max, a_y_max) = (
-            rect_a.origin.x,
-            rect_a.origin.y,
-            rect_a.origin.x + rect_a.size.width,
-            rect_a.origin.y + rect_a.size.height,
-        );
-
-        let (b_x_min, b_y_min, b_x_max, b_y_max) = (
-            rect_b.origin.x,
-            rect_b.origin.y,
-            rect_b.origin.x + rect_b.size.width,
-            rect_b.origin.y + rect_b.size.height,
-        );
-
-        let x_min = f64::max(a_x_min, b_x_min);
-        let y_min = f64::max(a_y_min, b_y_min);
-        let x_max = f64::min(a_x_max, b_x_max);
-        let y_max = f64::min(a_y_max, b_y_max);
-        let width = x_max - x_min;
-        let height = y_max - y_min;
-        if width <= 0.0 || height <= 0.0 {
-            return None;
-        }
-
-        Some(width * height)
     }
 }

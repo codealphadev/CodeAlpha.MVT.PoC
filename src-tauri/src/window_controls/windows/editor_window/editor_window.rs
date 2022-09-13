@@ -494,7 +494,7 @@ impl EditorWindow {
         return local_position;
     }
 
-    fn intersection_area(rect_a: LogicalFrame, rect_b: LogicalFrame) -> Option<f64> {
+    pub fn intersection_area(rect_a: LogicalFrame, rect_b: LogicalFrame) -> Option<f64> {
         let (a_x_min, a_y_min, a_x_max, a_y_max) = (
             rect_a.origin.x,
             rect_a.origin.y,
@@ -515,7 +515,7 @@ impl EditorWindow {
         let y_max = f64::min(a_y_max, b_y_max);
         let width = x_max - x_min;
         let height = y_max - y_min;
-        if width < 0.0 || height < 0.0 {
+        if width <= 0.0 || height <= 0.0 {
             return None;
         }
 

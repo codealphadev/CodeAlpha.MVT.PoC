@@ -3,6 +3,7 @@ use ts_rs::TS;
 
 use crate::{
     platform::macos::{CodeDocumentFrameProperties, ViewportProperties},
+    utils::geometry::LogicalPosition,
     window_controls::config::AppWindow,
 };
 
@@ -10,6 +11,7 @@ use crate::{
 #[ts(export, export_to = "bindings/window_controls/")]
 pub struct UpdateAppWindowMessage {
     pub app_windows: Vec<AppWindow>,
-    pub viewport: ViewportProperties,
-    pub code_document: CodeDocumentFrameProperties,
+    pub viewport: Option<ViewportProperties>,
+    pub code_document: Option<CodeDocumentFrameProperties>,
+    pub window_position: Option<LogicalPosition>,
 }
