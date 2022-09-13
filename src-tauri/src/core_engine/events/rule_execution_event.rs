@@ -4,6 +4,8 @@ use ts_rs::TS;
 
 use crate::utils::messaging::ChannelList;
 
+use super::models::NodeExplanationFetchedMessage;
+
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[ts(export, export_to = "bindings/rule_execution_state/")]
 #[serde(tag = "event", content = "payload")]
@@ -13,6 +15,7 @@ pub enum EventRuleExecutionState {
     DocsGenerationStarted(),
     DocsGenerationFailed(),
     DocsGenerationFinished(),
+    NodeExplanationFetched(NodeExplanationFetchedMessage),
 }
 
 impl EventRuleExecutionState {

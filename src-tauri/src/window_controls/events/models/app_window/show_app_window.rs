@@ -12,5 +12,6 @@ pub struct ShowAppWindowMessage {
     pub app_windows: Vec<AppWindow>,
     pub editor_textarea: LogicalFrame,
     pub widget_position: Option<LogicalPosition>,
+    pub explain_window_anchor: Option<LogicalFrame>,
     pub monitor: LogicalFrame,
 }

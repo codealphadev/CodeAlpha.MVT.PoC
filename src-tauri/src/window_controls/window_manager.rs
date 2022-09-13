@@ -19,8 +19,8 @@ use super::{
         models::app_window::{HideAppWindowMessage, ShowAppWindowMessage},
         EventWindowControls,
     },
-    listeners::{app_listener, user_interaction_listener, xcode_listener},
-    windows::{CodeOverlayWindow, EditorWindow, WidgetWindow},
+    listeners::{app_listener, rule_execution_listener, user_interaction_listener, xcode_listener},
+    windows::{CodeOverlayWindow, EditorWindow, ExplainWindow, WidgetWindow},
     TrackingAreasManager,
 };
 
@@ -63,8 +63,14 @@ impl WindowManager {
         let code_overlay_window_arc = Arc::new(Mutex::new(code_overlay_window));
         CodeOverlayWindow::start_event_listeners(&code_overlay_window_arc);
 
-        let tracking_areas_manager = Arc::new(Mutex::new(TrackingAreasManager::new()));
-        TrackingAreasManager::start_event_listeners(&tracking_areas_manager);
+        let explain_window = ExplainWindow::new()?;
+        explain_window.set_macos_properties();
+
+        let explain_window_arc = Arc::new(Mutex::new(explain_window));
+        ExplainWindow::start_event_listeners(&explain_window_arc);
+
+        let tracking_areas_manager_arc = Arc::new(Mutex::new(TrackingAreasManager::new()));
+        TrackingAreasManager::start_event_listeners(&tracking_areas_manager_arc);
 
         Ok(Self {
             app_handle: app_handle(),
@@ -127,6 +133,7 @@ impl WindowManager {
         &self,
         app_windows: Vec<AppWindow>,
         editor_id: Option<Uid>,
+        explain_window_anchor: Option<LogicalFrame>,
     ) -> Option<()> {
         // If no editor id is given, the app windows are being shown in relation to the currently
         // focused editor window.
@@ -163,6 +170,7 @@ impl WindowManager {
             },
             widget_position: editor_window.widget_position(true),
             monitor: editor_window.get_monitor(&self.app_handle)?,
+            explain_window_anchor,
         })
         .publish_to_tauri(&app_handle());
 
@@ -245,6 +253,7 @@ impl WindowManager {
             },
             widget_position: editor_window.widget_position(true),
             monitor: editor_window.get_monitor(&app_handle())?,
+            explain_window_anchor: None,
         })
         .publish_to_tauri(&app_handle());
 
@@ -255,6 +264,7 @@ impl WindowManager {
         app_listener(window_manager);
         user_interaction_listener(window_manager);
         xcode_listener(window_manager);
+        rule_execution_listener(window_manager);
     }
 }
 
