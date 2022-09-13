@@ -8,6 +8,9 @@
   import type { ChannelList } from '../src-tauri/bindings/ChannelList';
   import type { EventWindowControls } from '../src-tauri/bindings/window_controls/EventWindowControls';
 
+    interface ThemeContext {
+      setTheme: (theme: ThemeName) => void;
+    }
   
     let _currentTheme: ThemeName = 'light';
   
@@ -25,10 +28,7 @@
       }
     });
 
-
-    const { setTheme } = getContext('theme');
-
-  
+    const { setTheme } = getContext<ThemeContext>('theme');
     const setRootCssVars = (themeName: ThemeName) => {
         const theme = themes[themeName];
       for (const colorName of colorNames) {
