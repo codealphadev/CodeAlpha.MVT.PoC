@@ -5,7 +5,7 @@ use ts_rs::TS;
 use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
 use super::models::{
-    app_window::{HideAppWindowMessage, ShowAppWindowMessage},
+    app_window::{HideAppWindowMessage, ShowAppWindowMessage, UpdateAppWindowMessage},
     dark_mode::DarkModeUpdateMessage,
     TrackingAreaClickedMessage, TrackingAreaClickedOutsideMessage, TrackingAreaEnteredMessage,
     TrackingAreaExitedMessage,
@@ -21,6 +21,7 @@ pub enum EventWindowControls {
     TrackingAreaExited(TrackingAreaExitedMessage),
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
+    AppWindowUpdate(UpdateAppWindowMessage),
     DarkModeUpdate(DarkModeUpdateMessage),
 }
 
@@ -41,6 +42,7 @@ impl EventWindowControls {
             EventWindowControls::TrackingAreaExited(_) => publish_to_frontend = true,
             EventWindowControls::AppWindowHide(_) => publish_to_frontend = false,
             EventWindowControls::AppWindowShow(_) => publish_to_frontend = false,
+            EventWindowControls::AppWindowUpdate(_) => publish_to_frontend = false,
             EventWindowControls::DarkModeUpdate(_) => publish_to_frontend = true,
             EventWindowControls::TrackingAreaClickedOutside(_) => publish_to_frontend = true,
         }

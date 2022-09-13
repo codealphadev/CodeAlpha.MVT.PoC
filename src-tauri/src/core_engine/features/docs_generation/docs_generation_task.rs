@@ -135,14 +135,14 @@ impl DocsGenerationTask {
 
                 if let Ok(mintlify_response) = &mut mintlify_response {
                     // Paste it at the docs insertion point
-                    replace_range_with_clipboard_text(
-                        &app_handle(),
-                        &GetVia::Current,
-                        &docs_insertion_point,
-                        Some(&mintlify_response.docstring),
-                        true,
-                    )
-                    .await;
+                    // replace_range_with_clipboard_text(
+                    //     &app_handle(),
+                    //     &GetVia::Current,
+                    //     &docs_insertion_point,
+                    //     Some(&mintlify_response.docstring),
+                    //     true,
+                    // )
+                    // .await;
 
                     EventDocsGeneration::DocsGenerated(DocsGeneratedMessage {
                         id: task_id,

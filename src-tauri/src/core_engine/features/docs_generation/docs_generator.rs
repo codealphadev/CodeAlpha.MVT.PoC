@@ -132,7 +132,7 @@ impl DocsGenerator {
                     false
                 }
             }
-            CoreEngineTrigger::OnVisibleTextRangeChange => true,
+            CoreEngineTrigger::OnVisibleTextRangeChange => false,
             CoreEngineTrigger::OnViewportMove => true,
             CoreEngineTrigger::OnViewportDimensionsChange => true,
 

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::platform::macos::{CodeDocumentFrameProperties, ViewportProperties};
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum FocusedUIElement {
     Textarea,
@@ -13,4 +15,6 @@ pub struct EditorUIElementFocusedMessage {
     pub focused_ui_element: FocusedUIElement,
     pub textarea_position: Option<tauri::LogicalPosition<f64>>,
     pub textarea_size: Option<tauri::LogicalSize<f64>>,
+    pub viewport: Option<ViewportProperties>,
+    pub code_document: Option<CodeDocumentFrameProperties>,
 }

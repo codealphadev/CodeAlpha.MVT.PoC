@@ -15,7 +15,7 @@ use crate::{
             EventWindowControls,
         },
         models::TrackingAreaClickedOutsideMessage,
-        utils::{get_position, get_size, get_window_level},
+        utils::{get_position, get_size, get_window_level, is_visible},
     },
 };
 
@@ -302,9 +302,11 @@ fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> Option<bo
                 continue;
             }
 
-            if let Some(window_level) = get_window_level(app_window) {
+            if let (Some(window_level), Ok(window_visible)) =
+                (get_window_level(app_window), is_visible(app_window))
+            {
                 // Only check if the window is above the overlay window.
-                if window_level > overlay_level {
+                if window_visible && window_level > overlay_level {
                     if let (Some(origin), Some(size)) =
                         (get_position(app_window), get_size(app_window))
                     {

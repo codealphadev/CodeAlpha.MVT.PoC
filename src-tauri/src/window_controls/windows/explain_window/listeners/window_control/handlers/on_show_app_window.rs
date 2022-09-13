@@ -2,11 +2,8 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::{
-    utils::geometry::LogicalFrame,
-    window_controls::{
-        config::AppWindow, events::models::app_window::ShowAppWindowMessage, windows::ExplainWindow,
-    },
+use crate::window_controls::{
+    config::AppWindow, events::models::app_window::ShowAppWindowMessage, windows::ExplainWindow,
 };
 
 pub fn on_show_app_window(
@@ -19,10 +16,8 @@ pub fn on_show_app_window(
         if explain_window
             .show(
                 show_msg.explain_window_anchor,
-                &LogicalFrame {
-                    origin: show_msg.editor_textarea.origin.to_owned(),
-                    size: show_msg.editor_textarea.size.to_owned(),
-                },
+                &show_msg.viewport,
+                &show_msg.code_document,
                 &show_msg.monitor,
             )
             .is_none()
