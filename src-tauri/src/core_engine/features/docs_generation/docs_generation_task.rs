@@ -9,7 +9,8 @@ use crate::{
     core_engine::{
         events::{
             models::{
-                DocsGeneratedMessage, RemoveCodeAnnotationMessage, UpdateCodeAnnotationMessage,
+                DocsGeneratedMessage, NodeExplanationFetchedMessage, RemoveCodeAnnotationMessage,
+                UpdateCodeAnnotationMessage,
             },
             EventDocsGeneration, EventRuleExecutionState,
         },
@@ -127,6 +128,7 @@ impl DocsGenerationTask {
             let docs_insertion_point = self.docs_insertion_point;
             let task_state = self.task_state.clone();
             let task_id = self.id();
+            let tracking_area = self.tracking_area.clone();
             async move {
                 let mut mintlify_response =
                     mintlify_documentation(&codeblock_text_string, None).await;
@@ -146,6 +148,14 @@ impl DocsGenerationTask {
                         id: task_id,
                         text: mintlify_response.preview.to_owned(),
                     })
+                    .publish_to_tauri(&app_handle());
+
+                    EventRuleExecutionState::NodeExplanationFetched(
+                        NodeExplanationFetchedMessage {
+                            window_uid: tracking_area.window_uid,
+                            annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
+                        },
+                    )
                     .publish_to_tauri(&app_handle());
 
                     // Notifiy the frontend that the task is finished

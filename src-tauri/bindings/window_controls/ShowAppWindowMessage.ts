@@ -7,5 +7,6 @@ export interface ShowAppWindowMessage {
   app_windows: Array<AppWindow>;
   editor_textarea: LogicalFrame;
   widget_position: LogicalPosition | null;
+  explain_window_anchor: LogicalFrame | null;
   monitor: LogicalFrame;
 }

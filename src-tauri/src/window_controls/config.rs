@@ -10,7 +10,7 @@ pub enum AppWindow {
     Analytics,
     Widget,
     Content,
-    Repair,
+    Explain,
     CodeOverlay,
 }
 
@@ -30,14 +30,18 @@ impl std::fmt::Display for AppWindow {
 
 impl AppWindow {
     pub fn hidden_on_core_engine_inactive() -> Vec<AppWindow> {
-        vec![AppWindow::CodeOverlay, AppWindow::Repair]
+        vec![AppWindow::CodeOverlay, AppWindow::Explain]
     }
 
     pub fn hidden_on_focus_lost() -> Vec<AppWindow> {
-        vec![AppWindow::Widget, AppWindow::CodeOverlay, AppWindow::Repair]
+        vec![
+            AppWindow::Widget,
+            AppWindow::CodeOverlay,
+            AppWindow::Explain,
+        ]
     }
     pub fn hiddon_on_zoom_level_change() -> Vec<AppWindow> {
-        vec![AppWindow::CodeOverlay, AppWindow::Repair]
+        vec![AppWindow::CodeOverlay, AppWindow::Explain]
     }
 
     pub fn shown_on_focus_gained() -> Vec<AppWindow> {
@@ -70,8 +74,8 @@ pub mod default_properties {
             AppWindow::Content => {
                 format!("{}{}", r"\", AppWindow::Content.to_string().to_lowercase())
             }
-            AppWindow::Repair => {
-                format!("{}{}", r"\", AppWindow::Repair.to_string().to_lowercase())
+            AppWindow::Explain => {
+                format!("{}{}", r"\", AppWindow::Explain.to_string().to_lowercase())
             }
             AppWindow::CodeOverlay => {
                 format!(
@@ -92,7 +96,7 @@ pub mod default_properties {
             AppWindow::Analytics => "CodeAlpha - Analytics".to_string(),
             AppWindow::Widget => "CodeAlpha - Widget".to_string(),
             AppWindow::Content => "CodeAlpha - Guide".to_string(),
-            AppWindow::Repair => "CodeAlpha - Explanation".to_string(),
+            AppWindow::Explain => "CodeAlpha - Explanation".to_string(),
             AppWindow::CodeOverlay => "CodeAlpha - CodeOverlay".to_string(),
         }
     }
@@ -103,7 +107,7 @@ pub mod default_properties {
             AppWindow::Analytics => (1280.0, 786.0),
             AppWindow::Widget => (48.0, 48.0),
             AppWindow::Content => (322.0, 398.0),
-            AppWindow::Repair => (513.0, 500.0),
+            AppWindow::Explain => (300.0, 200.0),
             AppWindow::CodeOverlay => (1.0, 1.0),
         }
     }
@@ -114,7 +118,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
-            AppWindow::Repair => false,
+            AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
         }
     }
@@ -124,7 +128,7 @@ pub mod default_properties {
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
             AppWindow::Content => true,
-            AppWindow::Repair => true,
+            AppWindow::Explain => false,
             AppWindow::CodeOverlay => true,
         }
     }
@@ -135,7 +139,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
-            AppWindow::Repair => false,
+            AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
         }
     }
@@ -146,7 +150,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
             AppWindow::Content => false,
-            AppWindow::Repair => true,
+            AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
         }
     }
@@ -157,7 +161,7 @@ pub mod default_properties {
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
             AppWindow::Content => true,
-            AppWindow::Repair => true,
+            AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
         }
     }
@@ -168,7 +172,7 @@ pub mod default_properties {
             AppWindow::Analytics => true,
             AppWindow::Widget => true,
             AppWindow::Content => true,
-            AppWindow::Repair => true,
+            AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
         }
     }

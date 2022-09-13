@@ -30,6 +30,7 @@ pub fn on_activate_editor_app(
         window_manager.show_app_windows(
             AppWindow::shown_on_focus_gained(),
             Some(activated_msg.window_uid),
+            None,
         );
     }
 

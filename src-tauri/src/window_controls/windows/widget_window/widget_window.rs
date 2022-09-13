@@ -39,10 +39,7 @@ impl WidgetWindow {
             .get_window(&AppWindow::Widget.to_string())
             .is_none()
         {
-            let window_builder = create_default_window_builder(&app_handle, AppWindow::Widget)?;
-            let window = window_builder.build()?;
-
-            set_shadow(&window, false).expect("Unsupported platform!");
+            create_default_window_builder(&app_handle, AppWindow::Widget)?.build()?;
         }
 
         Ok(Self {
@@ -108,6 +105,7 @@ impl WidgetWindow {
             corrected_position.y += offscreen_dist_y;
         }
 
+        // Needs to be reset on each show.
         set_shadow(&tauri_window, true).expect("Unsupported platform!");
 
         tauri_window
