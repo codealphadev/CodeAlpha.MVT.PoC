@@ -2,7 +2,7 @@
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { EventDocsGeneration } from '../../../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
-	import type { UpdateCodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/UpdateCodeAnnotationMessage';
+	import type { UpdateNodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/UpdateNodeAnnotationMessage';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
@@ -11,8 +11,8 @@
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
 
-	type CodeAnnotation = UpdateCodeAnnotationMessage;
-	let annotation: CodeAnnotation | undefined;
+	type NodeAnnotation = UpdateNodeAnnotationMessage;
+	let annotation: NodeAnnotation | undefined;
 
 	export let active_window_uid: number;
 
@@ -21,18 +21,17 @@
 
 	let processing_timeout = 15000; // ms
 
-	const listenToCodeAnnotationEvents = async () => {
-		// Listener for docs generation feature
+	const listenToNodeAnnotationEvents = async () => {
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
-			) as EventDocsGeneration;
+		) as EventDocsGeneration;
 			switch (event_type) {
-				case 'UpdateCodeAnnotation':
+				case 'UpdateNodeAnnotation':
 					annotation = payload;
 					break;
-				case 'RemoveCodeAnnotation':
+				case 'RemoveNodeAnnotation':
 					if (annotation?.id === payload.id) {
 						annotation = undefined;
 					}
@@ -43,7 +42,7 @@
 		});
 	};
 
-	listenToCodeAnnotationEvents();
+	listenToNodeAnnotationEvents();
 
 	const listenToDocsGenerationEvents = async () => {
 		// Listen for rule execution events to determine if the processing icon should be displayed

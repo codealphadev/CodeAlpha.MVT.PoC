@@ -5,7 +5,7 @@ use crate::{core_engine::WindowUid, utils::geometry::LogicalFrame};
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/docs_generation/")]
-pub struct UpdateCodeAnnotationMessage {
+pub struct UpdateNodeAnnotationMessage {
     pub id: uuid::Uuid,
     pub window_uid: WindowUid,
     pub annotation_icon: Option<LogicalFrame>,
@@ -14,7 +14,7 @@ pub struct UpdateCodeAnnotationMessage {
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/docs_generation/")]
-pub struct RemoveCodeAnnotationMessage {
+pub struct RemoveNodeAnnotationMessage {
     pub id: uuid::Uuid,
     pub window_uid: WindowUid,
 }

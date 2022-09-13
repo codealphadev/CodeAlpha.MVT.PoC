@@ -5,15 +5,15 @@ use ts_rs::TS;
 use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
 use super::models::{
-    DocsGeneratedMessage, RemoveCodeAnnotationMessage, UpdateCodeAnnotationMessage,
+    DocsGeneratedMessage, RemoveNodeAnnotationMessage, UpdateNodeAnnotationMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[serde(tag = "event", content = "payload")]
 #[ts(export, export_to = "bindings/features/docs_generation/")]
 pub enum EventDocsGeneration {
-    UpdateCodeAnnotation(UpdateCodeAnnotationMessage),
-    RemoveCodeAnnotation(RemoveCodeAnnotationMessage),
+    UpdateNodeAnnotation(UpdateNodeAnnotationMessage),
+    RemoveNodeAnnotation(RemoveNodeAnnotationMessage),
     DocsGenerated(DocsGeneratedMessage),
 }
 

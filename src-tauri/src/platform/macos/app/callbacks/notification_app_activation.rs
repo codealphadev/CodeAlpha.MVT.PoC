@@ -13,7 +13,7 @@ use crate::{
 
 /// Notify Tauri that our app has been activated, which means focus has moved to our app from a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
-pub fn notifiy_app_activated(
+pub fn notify_app_activated(
     app_element: &AXUIElement,
     app_state: &AppObserverState,
 ) -> Result<(), Error> {
@@ -39,7 +39,7 @@ pub fn notifiy_app_activated(
 
 /// Notify Tauri that our app has been deactivated, which means focus has moved away from our app to a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
-pub fn notifiy_app_deactivated(
+pub fn notify_app_deactivated(
     app_element: &AXUIElement,
     app_state: &AppObserverState,
 ) -> Result<(), Error> {

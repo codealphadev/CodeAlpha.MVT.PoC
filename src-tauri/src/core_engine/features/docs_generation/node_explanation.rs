@@ -5,7 +5,7 @@ use tauri::async_runtime::block_on;
 
 use crate::core_engine::syntax_tree::SwiftCodeBlockType;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 // TODO: Add function parameters
 pub struct NodeExplanationResponse {
     pub summary: String,
@@ -27,12 +27,6 @@ pub fn _fetch_node_explanation(
 ) -> Option<NodeExplanationResponse> {
     let handle = fetch_node_explanation(code, kind, context);
     block_on(handle).ok()
-}
-
-pub fn get_docstring_for_explanation(explanation: &NodeExplanationResponse) -> String {
-    let mut docstring = explanation.summary.replace("\n", "\n/// ");
-    docstring.insert_str(0, "/// ");
-    docstring
 }
 
 pub async fn fetch_node_explanation(
