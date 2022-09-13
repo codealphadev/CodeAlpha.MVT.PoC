@@ -45,8 +45,11 @@ pub fn on_editor_ui_element_focus_change(
             }
         } else {
             if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-                window_manager
-                    .show_app_windows(AppWindow::shown_on_focus_gained(), Some(ui_element_hash));
+                window_manager.show_app_windows(
+                    AppWindow::shown_on_focus_gained(),
+                    Some(ui_element_hash),
+                    None,
+                );
             } else {
                 window_manager.hide_app_windows(AppWindow::hidden_on_focus_lost());
             }
@@ -54,8 +57,11 @@ pub fn on_editor_ui_element_focus_change(
     } else {
         // Case: app was started while focus was already on a valid editor textarea.
         if focus_msg.focused_ui_element == FocusedUIElement::Textarea {
-            window_manager
-                .show_app_windows(AppWindow::shown_on_focus_gained(), Some(ui_element_hash));
+            window_manager.show_app_windows(
+                AppWindow::shown_on_focus_gained(),
+                Some(ui_element_hash),
+                None,
+            );
         }
     }
 

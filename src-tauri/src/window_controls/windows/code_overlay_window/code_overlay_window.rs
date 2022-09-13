@@ -84,8 +84,6 @@ impl CodeOverlayWindow {
             .set_position(position.as_tauri_LogicalPosition())
             .ok()?;
 
-        self.set_macos_properties()?;
-
         tauri_window.show().ok()?;
 
         Some(())

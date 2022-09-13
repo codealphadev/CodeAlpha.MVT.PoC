@@ -5,5 +5,5 @@ export type AppWindow =
   | "Analytics"
   | "Widget"
   | "Content"
-  | "Repair"
+  | "Explain"
   | "CodeOverlay";
