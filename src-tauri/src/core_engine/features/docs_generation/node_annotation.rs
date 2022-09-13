@@ -14,7 +14,7 @@ use crate::{
             },
             EventDocsGeneration, EventRuleExecutionState,
         },
-        syntax_tree::SwiftCodeBlockType,
+        syntax_tree::SwiftCodeBlockKind,
         utils::XcodeText,
         TextPosition, TextRange, WindowUid,
     },
@@ -29,7 +29,7 @@ use crate::{
     },
 };
 
-use super::{docs_generator::DocsGenerationError, fetch_node_explanation, NodeExplanationResponse};
+use super::{docs_generator::DocsGenerationError, fetch_node_explanation, NodeExplanation};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NodeAnnotationState {
@@ -42,7 +42,7 @@ pub enum NodeAnnotationState {
 pub struct CodeBlock {
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,
-    pub kind: SwiftCodeBlockType,
+    pub kind: SwiftCodeBlockKind,
     pub text: XcodeText,
 }
 
@@ -51,7 +51,7 @@ pub struct NodeAnnotation {
     tracking_area: TrackingArea,
     codeblock: CodeBlock,
     state: Arc<Mutex<NodeAnnotationState>>,
-    explanation: Arc<Mutex<Option<NodeExplanationResponse>>>,
+    explanation: Arc<Mutex<Option<NodeExplanation>>>,
 }
 
 impl PartialEq for NodeAnnotation {
@@ -126,6 +126,7 @@ impl NodeAnnotation {
             let explanation = self.explanation.clone();
             let tracking_area = self.tracking_area.clone();
             let kind = self.codeblock.kind.clone();
+
             async move {
                 let response = fetch_node_explanation(&codeblock_text_string, kind, None).await;
 
@@ -136,7 +137,16 @@ impl NodeAnnotation {
                 .publish_to_tauri(&app_handle());
 
                 if let Ok(response) = response {
-                    (*explanation.lock()) = Some(response);
+                    (*explanation.lock()) = Some(response.clone());
+                    // Notify the frontend that loading has finished
+                    EventRuleExecutionState::DocsGenerationFinished()
+                        .publish_to_tauri(&app_handle());
+
+                    EventDocsGeneration::NodeExplanationFetched(NodeExplanationFetchedMessage {
+                        explanation: response,
+                        name: "Dummy name".to_string(), // TODO
+                    })
+                    .publish_to_tauri(&app_handle());
                 } else {
                     EventRuleExecutionState::DocsGenerationFailed().publish_to_tauri(&app_handle());
                     (*explanation.lock()) = None;

@@ -5,7 +5,7 @@ use ts_rs::TS;
 use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
 use super::models::{
-    DocsGeneratedMessage, RemoveNodeAnnotationMessage, UpdateNodeAnnotationMessage,
+    NodeExplanationFetchedMessage, RemoveNodeAnnotationMessage, UpdateNodeAnnotationMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
@@ -14,7 +14,7 @@ use super::models::{
 pub enum EventDocsGeneration {
     UpdateNodeAnnotation(UpdateNodeAnnotationMessage),
     RemoveNodeAnnotation(RemoveNodeAnnotationMessage),
-    DocsGenerated(DocsGeneratedMessage),
+    NodeExplanationFetched(NodeExplanationFetchedMessage),
 }
 
 impl EventDocsGeneration {

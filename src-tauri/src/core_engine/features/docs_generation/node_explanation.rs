@@ -2,38 +2,48 @@ use std::env;
 
 use serde::{Deserialize, Serialize};
 use tauri::async_runtime::block_on;
+use ts_rs::TS;
 
-use crate::core_engine::syntax_tree::SwiftCodeBlockType;
+use crate::core_engine::syntax_tree::SwiftCodeBlockKind;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
+#[ts(export, export_to = "bindings/features/docs_generation/")]
+pub struct FunctionParameter {
+    pub name: String,
+    pub explanation: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
+#[ts(export, export_to = "bindings/features/docs_generation/")]
 // TODO: Add function parameters
-pub struct NodeExplanationResponse {
+pub struct NodeExplanation {
     pub summary: String,
-    pub kind: SwiftCodeBlockType,
+    pub kind: SwiftCodeBlockKind,
+    pub parameters: Option<Vec<FunctionParameter>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NodeExplanationRequest {
     apiKey: String,
-    kind: SwiftCodeBlockType,
+    kind: SwiftCodeBlockKind,
     code: String,
     context: String,
 }
 
 pub fn _fetch_node_explanation(
     code: &String,
-    kind: SwiftCodeBlockType,
+    kind: SwiftCodeBlockKind,
     context: Option<String>,
-) -> Option<NodeExplanationResponse> {
+) -> Option<NodeExplanation> {
     let handle = fetch_node_explanation(code, kind, context);
     block_on(handle).ok()
 }
 
 pub async fn fetch_node_explanation(
     code: &String,
-    kind: SwiftCodeBlockType,
+    kind: SwiftCodeBlockKind,
     context: Option<String>,
-) -> Result<NodeExplanationResponse, reqwest::Error> {
+) -> Result<NodeExplanation, reqwest::Error> {
     let ctx_string = if let Some(context) = context {
         context
     } else {
@@ -67,7 +77,7 @@ pub async fn fetch_node_explanation(
 #[cfg(test)]
 mod tests_node_explanation_port {
 
-    use crate::core_engine::syntax_tree::SwiftCodeBlockType;
+    use crate::core_engine::syntax_tree::SwiftCodeBlockKind;
 
     use super::_fetch_node_explanation;
 
@@ -76,7 +86,7 @@ mod tests_node_explanation_port {
     fn test_fetch_node_explanation() {
         let resp = _fetch_node_explanation(
             &"print(\"Hello World\")".to_string(),
-            SwiftCodeBlockType::Function,
+            SwiftCodeBlockKind::Function,
             Some("print(\"Hello World\")".to_string()),
         );
         assert!(resp.is_some());
@@ -87,7 +97,7 @@ mod tests_node_explanation_port {
     fn test_fetch_node_explanation_without_context() {
         let resp = _fetch_node_explanation(
             &"print(\"Hello World\")".to_string(),
-            SwiftCodeBlockType::Function,
+            SwiftCodeBlockKind::Function,
             None,
         );
         assert!(resp.is_some());
