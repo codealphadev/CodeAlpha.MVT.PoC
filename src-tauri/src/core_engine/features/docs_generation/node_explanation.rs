@@ -25,9 +25,11 @@ pub struct NodeExplanation {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NodeExplanationRequest {
     apiKey: String,
+    version: String,
     kind: SwiftCodeBlockKind,
     code: String,
     context: String,
+    method: String,
 }
 
 pub fn _fetch_node_explanation(
@@ -59,6 +61,8 @@ pub async fn fetch_node_explanation(
     }
 
     let req_body = NodeExplanationRequest {
+        version: "v1".to_string(),
+        method: "explain".to_string(),
         apiKey: "-RWsev7z_qgP!Qinp_8cbmwgP9jg4AQBkfz".to_string(),
         code: code.clone(),
         kind,
@@ -70,7 +74,9 @@ pub async fn fetch_node_explanation(
         .json(&req_body)
         .send()
         .await?;
-    let parsed_response = response.json().await?;
+
+    let parsed_response: NodeExplanation = response.json().await?;
+    dbg!(parsed_response.clone());
     Ok(parsed_response)
 }
 

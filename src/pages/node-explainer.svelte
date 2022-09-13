@@ -10,14 +10,15 @@
   let explanation: NodeExplanation | undefined = undefined;
   let node_name: string | undefined = undefined;
   $: summary = explanation ? DOMPurify.sanitize(marked.parse(explanation.summary)) : undefined;
-
+  
 	const listenToNodeAnnotationEvents = async () => {
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
 		await listen(DocsGenerationChannel, (event) => {
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
 		) as EventDocsGeneration;
-			switch (event_type) {
+
+    switch (event_type) {
 				case 'NodeExplanationFetched':
 					explanation = payload.explanation;
           node_name = payload.name;
