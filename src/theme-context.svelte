@@ -1,9 +1,14 @@
 <script lang="ts">
-    import { setContext, onMount } from "svelte";
-    import { writable } from "svelte/store";
+  import { setContext, onMount } from "svelte";
+  import { writable } from "svelte/store";
 
-    import { themes, ThemeName, colorNames, mapColorNameToCssVarString} from "./themes"
-    
+  import { themes, ThemeName, colorNames, mapColorNameToCssVarString} from "./themes"
+  import { getContext } from 'svelte';
+  import { listen } from '@tauri-apps/api/event';
+  import type { ChannelList } from '../src-tauri/bindings/ChannelList';
+  import type { EventWindowControls } from '../src-tauri/bindings/window_controls/EventWindowControls';
+
+  
     let _currentTheme: ThemeName = 'light';
   
     // set up Theme store, holding current theme object
@@ -19,10 +24,10 @@
         setRootCssVars(_currentTheme);
       }
     });
+
+    const { setTheme } = getContext('theme');
+
   
-    onMount(() => {
-      setRootCssVars(_currentTheme);
-    });
   
     const setRootCssVars = (themeName: ThemeName) => {
         const theme = themes[themeName];
@@ -33,6 +38,28 @@
       }
       document.documentElement.style.setProperty("--theme-name", themeName);
     };
+    
+    const listenToWindowControlsEvents = async () => {
+      let WindowControlsChannel: ChannelList = 'EventWindowControls';
+      await listen(WindowControlsChannel, (e) => {
+        const { event, payload } = JSON.parse(e.payload as string) as EventWindowControls;
+
+        switch (event) {
+          case 'DarkModeUpdate':
+            setTheme(payload.dark_mode ? 'dark' : 'light');
+            break;
+
+          default:
+            break;
+        }
+    });
+
+    onMount(() => {
+      setRootCssVars(_currentTheme);
+      listenToWindowControlsEvents();
+    });
+  };
+
   </script>
   
   <slot>

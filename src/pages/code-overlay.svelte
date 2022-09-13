@@ -2,15 +2,12 @@
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
-	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
 	import DocsAnnotations from '../components/code-overlay/docs-generation/docs-annotations.svelte';
 	import type { EventViewport } from '../../src-tauri/bindings/macOS_specific/EventViewport';
 
-	import { getContext } from 'svelte';
 	import { convert_global_frame_to_local } from '../utils';
 
-	const { setTheme } = getContext('theme');
 
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
 	let annotation_section: LogicalFrame | null = null; // Relative to viewport
@@ -67,23 +64,8 @@
 		});
 	};
 
-	const listenToWindowEvents = async () => {
-		let WindowControlsChannel: ChannelList = 'EventWindowControls';
-		await listen(WindowControlsChannel, (e) => {
-			const { event, payload } = JSON.parse(e.payload as string) as EventWindowControls;
+	
 
-			switch (event) {
-				case 'DarkModeUpdate':
-					setTheme(payload.dark_mode ? 'dark' : 'light');
-					break;
-
-				default:
-					break;
-			}
-		});
-	};
-
-	listenToWindowEvents();
 	listenToViewportEvents();
 </script>
 

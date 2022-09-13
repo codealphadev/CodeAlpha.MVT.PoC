@@ -1,7 +1,7 @@
 const CodeAlphaOrange = '#fc7456';
 
 export type ThemeName = 'light' | 'dark';
-export const colorNames = ['primary', 'secondary', 'inactive', 'contrast'] as const;
+export const colorNames = ['primary', 'secondary', 'inactive', 'contrast', 'background'] as const;
 
 export type ColorName = typeof colorNames[number];
 export interface Theme {
@@ -13,6 +13,7 @@ export interface Theme {
 export const themes: { [name in ThemeName]: Theme } = {
 	light: {
 		colors: {
+			background: '#ffffff',
 			primary: CodeAlphaOrange,
 			secondary: '#555555',
 			inactive: '#bbbbbb80',
@@ -21,6 +22,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 	},
 	dark: {
 		colors: {
+			background: '#222222',
 			primary: CodeAlphaOrange,
 			secondary: '#aaaaaa',
 			inactive: '#80808080',
