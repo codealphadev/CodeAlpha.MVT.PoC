@@ -78,6 +78,18 @@
 			<div class="mt-2 max-w-xl text-sm text-secondary">
 				<p>{@html summary}</p>
 			</div>
+      {#if explanation.parameters}
+        <ul class="divide-y divide-secondary">
+          {#each explanation.parameters as parameter}
+          <li class="py-2 text-sm">
+            <span class="font-mono">{parameter.name}</span>
+            <span class="text-secondary">
+            {@html DOMPurify.sanitize(marked.parse(parameter.explanation))}</span>
+          </li>
+          {/each}
+        
+        </ul>
+      {/if}
 		</div>
 	</div>
 {/if}

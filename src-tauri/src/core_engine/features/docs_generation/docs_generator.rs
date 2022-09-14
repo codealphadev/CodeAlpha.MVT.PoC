@@ -274,7 +274,11 @@ impl DocsGenerator {
 
         let name = codeblock.get_name();
         let parameter_names = match codeblock.codeblock_kind {
-            SwiftCodeBlockKind::Function => None, //get_parameter_names_from_function_node(&codeblock.node),
+            SwiftCodeBlockKind::Function => Some(
+                codeblock
+                    .get_function_parameter_names()
+                    .map_err(|err| DocsGenerationError::GenericError(err.into()))?,
+            ),
             _ => None,
         };
 
