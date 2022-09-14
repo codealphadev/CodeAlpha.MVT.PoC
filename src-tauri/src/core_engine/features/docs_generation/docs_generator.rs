@@ -272,12 +272,14 @@ impl DocsGenerator {
         let first_char_pos = codeblock.get_first_char_position();
         let last_char_pos = codeblock.get_last_char_position();
 
+        let name = codeblock.get_name();
         let parameter_names = match codeblock.codeblock_kind {
             SwiftCodeBlockKind::Function => None, //get_parameter_names_from_function_node(&codeblock.node),
             _ => None,
         };
 
         Ok(CodeBlock {
+            name,
             parameter_names,
             kind: codeblock.codeblock_kind,
             first_char_pos,

@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use tree_sitter::Node;
+use tree_sitter::{Node, TreeCursor};
 use ts_rs::TS;
 
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
@@ -37,7 +37,7 @@ impl FromStr for SwiftCodeBlockKind {
             "for_statement" => Ok(SwiftCodeBlockKind::For),
             "if_statement" => Ok(SwiftCodeBlockKind::If),
             "else_statement" => Ok(SwiftCodeBlockKind::Else),
-            "class_body" => Ok(SwiftCodeBlockKind::Class),
+            "class_declaration" => Ok(SwiftCodeBlockKind::Class),
             "function_declaration" => Ok(SwiftCodeBlockKind::Function),
             "switch_statement" => Ok(SwiftCodeBlockKind::Switch),
             "while_statement" => Ok(SwiftCodeBlockKind::While),
@@ -64,6 +64,14 @@ impl<'a> SwiftCodeBlock<'a> {
             node,
         })
     }
+    pub fn get_name(&self) -> Option<String> {
+        dbg!(self.node.to_sexp());
+        dbg!(self.codeblock_kind.clone());
+        let x = self.node.child_by_field_name("name")?;
+        get_text_for_node(&x, &self.text)
+            .ok()
+            .map(|text| String::from_utf16_lossy(&text))
+    }
 
     pub fn get_first_char_position(&self) -> TextPosition {
         TextPosition::from_TSPoint(&self.node.start_position())
@@ -74,20 +82,24 @@ impl<'a> SwiftCodeBlock<'a> {
     }
 
     pub fn get_codeblock_text(&self) -> Result<XcodeText, SwiftCodeblockError> {
-        if let Some(code_block_range) = TextRange::from_StartEndTSPoint(
-            &self.text,
-            &self.node.start_position(),
-            &self.node.end_position(),
-        ) {
-            Ok(XcodeText::from_array(
-                &self.text
-                    [code_block_range.index..code_block_range.index + code_block_range.length],
-            ))
-        } else {
-            Err(SwiftCodeblockError::GenericError(anyhow!(
-                "get_codeblock_text: TextRange::from_StartEndTSPoint failed for: {:?}",
-                self.node
-            )))
-        }
+        get_text_for_node(&self.node, &self.text)
+    }
+}
+
+fn get_text_for_node(
+    node: &Node,
+    text_content: &XcodeText,
+) -> Result<XcodeText, SwiftCodeblockError> {
+    if let Some(code_block_range) =
+        TextRange::from_StartEndTSPoint(&text_content, &node.start_position(), &node.end_position())
+    {
+        Ok(XcodeText::from_array(
+            &text_content[code_block_range.index..code_block_range.index + code_block_range.length],
+        ))
+    } else {
+        Err(SwiftCodeblockError::GenericError(anyhow!(
+            "get_codeblock_text: TextRange::from_StartEndTSPoint failed for: {:?}",
+            node
+        )))
     }
 }

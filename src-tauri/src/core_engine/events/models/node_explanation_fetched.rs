@@ -10,7 +10,7 @@ use crate::{
 #[ts(export, export_to = "bindings/features/docs_generation/")]
 pub struct NodeExplanationFetchedMessage {
     pub explanation: NodeExplanation,
-    pub name: String,
+    pub name: Option<String>,
     pub window_uid: WindowUid,
     pub annotation_frame: Option<LogicalFrame>,
 }
