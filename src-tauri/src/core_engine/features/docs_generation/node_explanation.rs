@@ -17,7 +17,6 @@ pub struct FunctionParameter {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
 #[ts(export, export_to = "bindings/features/docs_generation/")]
-// TODO: Add function parameters
 pub struct NodeExplanation {
     pub summary: String,
     pub kind: SwiftCodeBlockKind,

@@ -41,7 +41,7 @@ pub enum NodeAnnotationState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeBlock {
     pub name: Option<String>,
-    pub parameter_names: Option<Vec<String>>, // TODO: Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
+    pub parameter_names: Option<Vec<String>>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,
     pub kind: SwiftCodeBlockKind,
