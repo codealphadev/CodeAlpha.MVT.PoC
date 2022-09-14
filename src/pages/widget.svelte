@@ -20,9 +20,9 @@
 	let show_alternate_icon_duration = 2000; // ms
 
 	const clickAction = async () => {
+		app_active = !app_active;
+		await invoke('cmd_toggle_app_activation', { appActive: app_active });
 		if (ghostClickAlreadyHappened) {
-			app_active = !app_active;
-			await invoke('cmd_toggle_app_activation', { appActive: app_active });
 		} else {
 			// Case "Ghostclick happened"
 			ghostClickAlreadyHappened = true;
@@ -71,10 +71,31 @@
 		});
 	};
 
+	let startX: number | undefined = undefined;
+	let startY: number | undefined = undefined;
+	const minimum_move_distance_to_fire_click = 10;
 	listenTauriEvents();
+
+	function handleMouseDown(event: MouseEvent) {
+		startX = event.screenX;
+		startY = event.screenY;
+	}
+
+	function handleMouseUp(event: MouseEvent) {
+		if (startX === undefined || startY === undefined) {
+			clickAction();
+			return;
+		}
+		const diffX = Math.abs(event.screenX - startX);
+		const diffY = Math.abs(event.screenY - startY);
+
+		if (diffX < minimum_move_distance_to_fire_click && diffY < minimum_move_distance_to_fire_click) {
+			clickAction();
+		}
+	}
 </script>
 
-<div class="relative overflow-hidden w-full h-full">
+<div class="relative overflow-hidden w-full h-full" >
 	{#if app_active === false}
 		<WidgetBackgroundGreyscale />
 	{:else}
@@ -112,5 +133,5 @@
 			</div>
 		</div>
 	</div>
-	<div data-tauri-drag-region on:click={clickAction} class="absolute bottom-0 right-0 w-12 h-12" />
+	<div data-tauri-drag-region  class="absolute bottom-0 right-0 w-12 h-12" on:mousedown={handleMouseDown} on:mouseup={handleMouseUp} />
 </div>
