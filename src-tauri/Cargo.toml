@@ -59,7 +59,7 @@ version = "0.8.2"
 features = [ "v4", "serde",]
 
 [dependencies.tokio]
-version = "1.17.0"
+version = "1.21.1"
 features = [ "time",]
 
 [dependencies.strum]
