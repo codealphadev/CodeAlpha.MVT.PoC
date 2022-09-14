@@ -65,8 +65,6 @@ impl<'a> SwiftCodeBlock<'a> {
         })
     }
     pub fn get_name(&self) -> Option<String> {
-        dbg!(self.node.to_sexp());
-        dbg!(self.codeblock_kind.clone());
         let x = self.node.child_by_field_name("name")?;
         get_text_for_node(&x, &self.text)
             .ok()

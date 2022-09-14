@@ -76,7 +76,6 @@ pub async fn fetch_node_explanation(
         .await?;
 
     let parsed_response: NodeExplanation = response.json().await?;
-    dbg!(parsed_response.clone());
     Ok(parsed_response)
 }
 

@@ -36,7 +36,7 @@
 </script>
 
 {#if explanation !== undefined} 
-<div class="shadow rounded-lg bg-background">
+<div data-tauri-drag-region class="shadow rounded-lg bg-background">
     <div class="p-4 sm:p-6">
       <NodeExplainerHeader kind={explanation.kind} name={node_name}/>
       <div class="mt-2 max-w-xl text-sm text-secondary">
