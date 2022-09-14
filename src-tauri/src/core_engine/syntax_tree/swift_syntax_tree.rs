@@ -17,6 +17,8 @@ pub enum SwiftSyntaxTreeError {
     NoTreesitterNodeFound,
     #[error("No valid codeblock could be derived from the provided text range.")]
     NoValidCodeblockFound,
+    #[error("Metadata could not be found for node.")]
+    NoMetadataFoundForNode,
     #[error("At this point, no valid tree is available.")]
     NoTreeParsed,
 }
@@ -62,6 +64,12 @@ impl SwiftSyntaxTree {
         } else {
             return false;
         }
+    }
+
+    pub fn get_node_complexity(&self, node: &Node) -> Result<&Complexities, SwiftSyntaxTreeError> {
+        self.node_metadata
+            .get(&node.id())
+            .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)
     }
 
     pub fn get_selected_code_node(

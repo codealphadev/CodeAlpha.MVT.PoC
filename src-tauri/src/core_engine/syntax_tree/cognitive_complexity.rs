@@ -9,7 +9,7 @@ pub struct Complexities {
 }
 
 impl Complexities {
-    pub fn _complexity(&self) -> isize {
+    pub fn get_total_complexity(&self) -> isize {
         self.nesting_complexity + self.fundamental_complexity
     }
 }
@@ -38,7 +38,6 @@ pub fn calculate_cognitive_complexities(
     mut nesting_depth: isize,
     output_complexities: &mut HashMap<usize, Complexities>,
 ) -> Complexities {
-    dbg!(node.kind());
     let mut cursor = node.walk();
     let mut complexity: Complexities = Complexities {
         nesting_complexity: 0,
