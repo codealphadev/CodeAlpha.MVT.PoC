@@ -166,6 +166,7 @@ impl ExplainWindow {
         viewport: &Option<ViewportProperties>,
         code_document: &Option<CodeDocumentFrameProperties>,
         window_position_global: &Option<LogicalPosition>,
+        window_size: &Option<LogicalSize>,
     ) -> Option<()> {
         if let (Some(viewport), Some(code_document)) = (viewport, code_document) {
             self.update_editor_properties(viewport, code_document)?;
@@ -173,6 +174,18 @@ impl ExplainWindow {
 
         if let Some(position_global) = window_position_global {
             self.update_window_origin_local(&position_global)?;
+        }
+
+        if let Some(window_size) = window_size {
+            self.window_size = window_size.to_owned();
+
+            let tauri_window = self
+                .app_handle
+                .get_window(&AppWindow::Explain.to_string())?;
+
+            tauri_window
+                .set_size(window_size.as_tauri_LogicalSize())
+                .ok()?;
         }
 
         Some(())
