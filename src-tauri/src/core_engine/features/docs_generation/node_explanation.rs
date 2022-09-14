@@ -9,14 +9,14 @@ use crate::core_engine::syntax_tree::SwiftCodeBlockKind;
 use super::node_annotation::CodeBlock;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
-#[ts(export, export_to = "bindings/features/docs_generation/")]
+#[ts(export, export_to = "bindings/features/node_explanation/")]
 pub struct FunctionParameter {
     pub name: String,
     pub explanation: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
-#[ts(export, export_to = "bindings/features/docs_generation/")]
+#[ts(export, export_to = "bindings/features/node_explanation/")]
 pub struct NodeExplanation {
     pub summary: String,
     pub kind: SwiftCodeBlockKind,

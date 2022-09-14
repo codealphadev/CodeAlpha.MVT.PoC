@@ -17,7 +17,7 @@ pub enum SwiftCodeBlockError {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/features/docs_generation/")]
+#[ts(export, export_to = "bindings/features/node_explanation/")]
 
 pub enum SwiftCodeBlockKind {
     For,

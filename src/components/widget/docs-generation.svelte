@@ -4,7 +4,7 @@
 	export let event: String | null = null;
 </script>
 
-{#if event && event == 'DocsGenerationFailed'}
+{#if event && event == 'NodeExplanationFailed'}
 	<div class="shake-animation">
 		<IconDocsGen fill="#FD7A58" blur={false} />
 	</div>

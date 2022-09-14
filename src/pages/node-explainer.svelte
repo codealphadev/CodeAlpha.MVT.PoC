@@ -2,16 +2,19 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
-	import type { EventDocsGeneration } from '../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
 	import type { NodeExplanation } from '../../src-tauri/bindings/features/docs_generation/NodeExplanation';
 	import { listen } from '@tauri-apps/api/event';
 	import NodeExplainerHeader from '../components/node-explainer/node-explainer-header.svelte';
 	import { afterUpdate } from 'svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import type { AppWindow } from '../../src-tauri/bindings/AppWindow';
+	import ComplexitySection from '../components/node-explainer/complexity-section.svelte';	
+	import type { NodeExplanationEvent } from '../../src-tauri/bindings/features/node_explanation/NodeExplanationEvent';
+	import ParametersSection from '../components/node-explainer/parameters-section.svelte';
 
 	let explanation: NodeExplanation | undefined = undefined;
-	let node_name: string | undefined = undefined;
+	let complexity: number | null = null;
+	let node_name: string | null = null;
 	$: summary = explanation ? DOMPurify.sanitize(marked.parse(explanation.summary)) : undefined;
 
 	let dom_id = 'explain-window-container';
@@ -48,18 +51,19 @@
 	};
 
 	const listenToNodeAnnotationEvents = async () => {
-		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
+		let node_explanation_channel: ChannelList = 'NodeExplanationEvent';
 		console.log('started listening');
-		await listen(DocsGenerationChannel, (event) => {
+		await listen(node_explanation_channel, (event) => {
 			console.log(event);
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
-			) as EventDocsGeneration;
+			) as NodeExplanationEvent;
 
 			switch (event_type) {
-				case 'NodeExplanationFetched':
+				case 'UpdateNodeExplanation':
 					explanation = payload.explanation;
 					node_name = payload.name;
+					complexity = payload.complexity
 					break;
 				default:
 					break;
@@ -78,18 +82,12 @@
 			<div class="mt-2 max-w-xl text-sm text-secondary">
 				<p>{@html summary}</p>
 			</div>
-      {#if explanation.parameters}
-        <ul class="divide-y divide-secondary">
-          {#each explanation.parameters as parameter}
-          <li class="py-2 text-sm">
-            <span class="font-mono">{parameter.name}</span>
-            <span class="text-secondary">
-            {@html DOMPurify.sanitize(marked.parse(parameter.explanation))}</span>
-          </li>
-          {/each}
-        
-        </ul>
-      {/if}
+			{#if explanation.parameters}
+				<ParametersSection parameters={explanation.parameters}/>
+			{/if}
+			{#if complexity}
+				<ComplexitySection complexity={complexity}/>
+			{/if}
 		</div>
 	</div>
 {/if}

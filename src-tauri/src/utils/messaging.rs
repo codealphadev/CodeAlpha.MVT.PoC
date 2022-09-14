@@ -15,9 +15,10 @@ pub enum ChannelList {
     EventTrackingAreas,
     EventUserInteractions,
     EventWindowControls,
-    EventDocsGeneration,
+    NodeAnnotationEvent,
     RuleResults,
     EventViewport,
+    NodeExplanationEvent,
 }
 impl fmt::Display for ChannelList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -30,9 +31,10 @@ impl fmt::Display for ChannelList {
             ChannelList::EventTrackingAreas => write!(f, "EventTrackingAreas"),
             ChannelList::EventUserInteractions => write!(f, "EventUserInteractions"),
             ChannelList::EventWindowControls => write!(f, "EventWindowControls"),
-            ChannelList::EventDocsGeneration => write!(f, "EventDocsGeneration"),
+            ChannelList::NodeAnnotationEvent => write!(f, "NodeAnnotationEvent"),
             ChannelList::RuleResults => write!(f, "RuleResults"),
             ChannelList::EventViewport => write!(f, "EventViewport"),
+            ChannelList::NodeExplanationEvent => write!(f, "NodeExplanationEvent"),
         }
     }
 }

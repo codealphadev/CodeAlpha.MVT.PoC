@@ -50,17 +50,17 @@
 						ruleExecutionState = null;
 					}, show_alternate_icon_duration);
 					break;
-				case 'DocsGenerationStarted':
+				case 'NodeExplanationStarted':
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, processing_timeout);
 					break;
-				case 'DocsGenerationFailed':
+				case 'NodeExplanationFailed':
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, show_alternate_icon_duration);
 					break;
-				case 'DocsGenerationFinished':
+				case 'NodeExplanationFetched':
 					setTimeout(async () => {
 						ruleExecutionState = null;
 					}, show_alternate_icon_duration);
@@ -117,11 +117,11 @@
 					<div in:fade={{ duration: 200 }}>
 						<SwiftFormat event={ruleExecutionState.event} />
 					</div>
-				{:else if ruleExecutionState != null && (ruleExecutionState.event === 'DocsGenerationFinished' || ruleExecutionState.event === 'DocsGenerationFailed')}
+				{:else if ruleExecutionState != null && (ruleExecutionState.event === 'NodeExplanationFetched' || ruleExecutionState.event === 'NodeExplanationFailed')}
 					<div in:fade={{ duration: 200 }}>
 						<DocsGeneration event={ruleExecutionState.event} />
 					</div>
-				{:else if ruleExecutionState != null && ruleExecutionState.event === 'DocsGenerationStarted'}
+				{:else if ruleExecutionState != null && ruleExecutionState.event === 'NodeExplanationStarted'}
 					<div in:fade={{ duration: 200 }}>
 						<WidgetProcessing />
 					</div>
