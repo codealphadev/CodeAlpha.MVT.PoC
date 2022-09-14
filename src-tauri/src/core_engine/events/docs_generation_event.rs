@@ -33,5 +33,12 @@ impl EventDocsGeneration {
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );
+
+        // Emit to frontend
+        _ = app_handle.emit_to(
+            &AppWindow::Explain.to_string(),
+            event_name.as_str(),
+            Some(serde_json::to_string(self).unwrap()),
+        );
     }
 }

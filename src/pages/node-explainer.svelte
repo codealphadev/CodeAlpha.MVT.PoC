@@ -13,7 +13,9 @@
   
 	const listenToNodeAnnotationEvents = async () => {
 		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
-		await listen(DocsGenerationChannel, (event) => {
+		console.log('started listening');
+    await listen(DocsGenerationChannel, (event) => {
+      console.log(event);
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
 		) as EventDocsGeneration;

@@ -128,7 +128,7 @@ pub mod default_properties {
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
             AppWindow::Content => true,
-            AppWindow::Explain => false,
+            AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
         }
     }

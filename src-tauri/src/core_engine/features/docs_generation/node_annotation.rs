@@ -40,6 +40,7 @@ pub enum NodeAnnotationState {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeBlock {
+    pub name: Option<String>,
     pub parameter_names: Option<Vec<String>>, // TODO: Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,
@@ -127,7 +128,7 @@ impl NodeAnnotation {
             let explanation = self.explanation.clone();
             let tracking_area = self.tracking_area.clone();
             let kind = self.codeblock.kind.clone();
-
+            let name = self.codeblock.name.clone();
             async move {
                 let response = fetch_node_explanation(&codeblock_text_string, kind, None).await;
 
@@ -141,7 +142,7 @@ impl NodeAnnotation {
                         window_uid: tracking_area.window_uid,
                         annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
                         explanation: response,
-                        name: "Dummy name".to_string(), // TODO
+                        name,
                     };
                     EventDocsGeneration::NodeExplanationFetched(message.clone())
                         .publish_to_tauri(&app_handle());
