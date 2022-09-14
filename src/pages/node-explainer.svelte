@@ -72,7 +72,7 @@
 
 {#if explanation !== undefined}
 	<div data-tauri-drag-region class="absolute w-full h-full" />
-	<div id={dom_id} class="rounded-lg bg-background">
+	<div id={dom_id} class="rounded-lg bg-background overflow-hidden">
 		<div class="p-4 sm:p-6">
 			<NodeExplainerHeader kind={explanation.kind} name={node_name} />
 			<div class="mt-2 max-w-xl text-sm text-secondary">
