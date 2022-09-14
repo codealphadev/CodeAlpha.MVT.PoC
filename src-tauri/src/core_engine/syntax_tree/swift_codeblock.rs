@@ -79,8 +79,10 @@ impl<'a> SwiftCodeBlock<'a> {
             .filter(|node| node.kind() == "parameter")
         {
             let internal_name = get_internal_name_for_parameter(&node, &self.text).ok();
-            if let Some(internal_name) = internal_name {
-                result.push(String::from_utf16_lossy(&internal_name));
+            if let Some(internal_name) = internal_name.map(|name| String::from_utf16_lossy(&name)) {
+                if internal_name != "_" {
+                    result.push(internal_name);
+                }
             }
         }
         Ok(result)
