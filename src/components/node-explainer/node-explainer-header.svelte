@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { SwiftCodeBlockKind } from "../../../src-tauri/bindings/features/docs_generation/SwiftCodeBlockKind";
-    export let name: string | undefined;
+    export let name: string | null;
     export let kind: SwiftCodeBlockKind;
 </script>
 

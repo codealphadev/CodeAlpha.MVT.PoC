@@ -10,9 +10,9 @@ use crate::{
         events::{
             models::{
                 NodeExplanationFetchedMessage, RemoveNodeAnnotationMessage,
-                UpdateNodeAnnotationMessage,
+                UpdateNodeAnnotationMessage, UpdateNodeExplanationMessage,
             },
-            EventDocsGeneration, EventRuleExecutionState,
+            EventRuleExecutionState, NodeAnnotationEvent, NodeExplanationEvent,
         },
         syntax_tree::SwiftCodeBlockKind,
         utils::XcodeText,
@@ -102,7 +102,7 @@ impl NodeAnnotation {
             Self::calculate_annotation_bounds(text, &self.codeblock)?;
 
         // 3. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
-        EventDocsGeneration::UpdateNodeAnnotation(UpdateNodeAnnotationMessage {
+        NodeAnnotationEvent::UpdateNodeAnnotation(UpdateNodeAnnotationMessage {
             id: self.tracking_area.id,
             annotation_icon: annotation_rect_opt
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
@@ -119,7 +119,7 @@ impl NodeAnnotation {
         let mut state = (self.state).lock();
         *state = NodeAnnotationState::FetchingExplanation;
 
-        EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
+        EventRuleExecutionState::NodeExplanationStarted().publish_to_tauri(&app_handle());
 
         tauri::async_runtime::spawn({
             let state = self.state.clone();
@@ -134,22 +134,25 @@ impl NodeAnnotation {
                 if let Ok(response) = response {
                     (*explanation.lock()) = Some(response.clone());
                     // Notify the frontend that loading has finished
-                    EventRuleExecutionState::DocsGenerationFinished()
-                        .publish_to_tauri(&app_handle());
 
-                    let message = NodeExplanationFetchedMessage {
-                        window_uid: tracking_area.window_uid,
-                        annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
+                    NodeExplanationEvent::UpdateNodeExplanation(UpdateNodeExplanationMessage {
                         explanation: response,
                         name,
-                    };
-                    EventDocsGeneration::NodeExplanationFetched(message.clone())
-                        .publish_to_tauri(&app_handle());
-                    EventRuleExecutionState::NodeExplanationFetched(message)
-                        .publish_to_tauri(&app_handle());
+                        complexity: None,
+                    })
+                    .publish_to_tauri(&app_handle());
+
+                    EventRuleExecutionState::NodeExplanationFetched(
+                        NodeExplanationFetchedMessage {
+                            window_uid: tracking_area.window_uid,
+                            annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
+                        },
+                    )
+                    .publish_to_tauri(&app_handle());
                     println!("Finished loading explanation");
                 } else {
-                    EventRuleExecutionState::DocsGenerationFailed().publish_to_tauri(&app_handle());
+                    EventRuleExecutionState::NodeExplanationFailed()
+                        .publish_to_tauri(&app_handle());
                     (*explanation.lock()) = None;
                     error!("Fetching node explanation failed");
                 }
@@ -319,7 +322,7 @@ impl NodeAnnotation {
 
 impl Drop for NodeAnnotation {
     fn drop(&mut self) {
-        EventDocsGeneration::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
+        NodeAnnotationEvent::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
             id: self.id(),
             window_uid: self.tracking_area.window_uid,
         })

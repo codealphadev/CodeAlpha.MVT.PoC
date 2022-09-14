@@ -2,24 +2,20 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use ts_rs::TS;
 
-use crate::utils::messaging::ChannelList;
+use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
-use super::models::NodeExplanationFetchedMessage;
+use super::models::UpdateNodeExplanationMessage;
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
-#[ts(export, export_to = "bindings/rule_execution_state/")]
 #[serde(tag = "event", content = "payload")]
-pub enum EventRuleExecutionState {
-    SwiftFormatFinished(),
-    SwiftFormatFailed(),
-    NodeExplanationStarted(),
-    NodeExplanationFailed(),
-    NodeExplanationFetched(NodeExplanationFetchedMessage),
+#[ts(export, export_to = "bindings/features/node_explanation/")]
+pub enum NodeExplanationEvent {
+    UpdateNodeExplanation(UpdateNodeExplanationMessage),
 }
 
-impl EventRuleExecutionState {
+impl NodeExplanationEvent {
     pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
-        let event_name = ChannelList::EventRuleExecutionState.to_string();
+        let event_name = ChannelList::NodeExplanationEvent.to_string();
 
         // Emit to rust listeners
         app_handle.trigger_global(
@@ -27,7 +23,9 @@ impl EventRuleExecutionState {
             Some(serde_json::to_string(self).unwrap()),
         );
 
-        _ = app_handle.emit_all(
+        // Emit to Explain FE
+        _ = app_handle.emit_to(
+            &AppWindow::Explain.to_string(),
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
-	import type { EventDocsGeneration } from '../../../../src-tauri/bindings/features/docs_generation/EventDocsGeneration';
+	import type { NodeAnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/NodeAnnotationEvent';
 	import type { UpdateNodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/UpdateNodeAnnotationMessage';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
@@ -22,11 +22,13 @@
 	let processing_timeout = 15000; // ms
 
 	const listenToNodeAnnotationEvents = async () => {
-		let DocsGenerationChannel: ChannelList = 'EventDocsGeneration';
-		await listen(DocsGenerationChannel, (event) => {
+		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
+		await listen(node_annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
-		) as EventDocsGeneration;
+			
+		) as NodeAnnotationEvent;
+			console.log(payload, event_type);
 			switch (event_type) {
 				case 'UpdateNodeAnnotation':
 					annotation = payload;
@@ -50,16 +52,16 @@
 			const ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
 
 			switch (ruleExecutionState.event) {
-				case 'DocsGenerationStarted':
+				case 'NodeExplanationStarted':
 					is_processing = true;
 					setTimeout(async () => {
 						is_processing = false;
 					}, processing_timeout);
 					break;
-				case 'DocsGenerationFinished':
+				case 'NodeExplanationFetched':
 					is_processing = false;
 					break;
-				case 'DocsGenerationFailed':
+				case 'NodeExplanationFailed':
 					is_processing = false;
 					break;
 				default:
