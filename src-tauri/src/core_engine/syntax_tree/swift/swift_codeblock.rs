@@ -63,8 +63,8 @@ impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
         match kind {
             "function_declaration" => SwiftFunction::new(node, node_metadata, text_content),
             "class_declaration" => SwiftClass::new(node, node_metadata, text_content),
-            "for_statement" | "if_statement" | "else_statement" | "switch_statement"
-            | "while_statement" | "do_statement" | "guard_statement" => {
+            "for_statement" | "if_statement" | "switch_statement" | "while_statement"
+            | "do_statement" | "guard_statement" => {
                 SwiftGenericCodeBlock::new(node, node_metadata, text_content)
             }
             _ => Err(SwiftCodeBlockError::UnsupportedCodeblock),
