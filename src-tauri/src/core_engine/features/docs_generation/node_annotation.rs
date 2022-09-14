@@ -122,15 +122,14 @@ impl NodeAnnotation {
         EventRuleExecutionState::DocsGenerationStarted().publish_to_tauri(&app_handle());
 
         tauri::async_runtime::spawn({
-            let codeblock_text_string = String::from_utf16(&self.codeblock.text)
-                .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
             let state = self.state.clone();
             let explanation = self.explanation.clone();
             let tracking_area = self.tracking_area.clone();
-            let kind = self.codeblock.kind.clone();
             let name = self.codeblock.name.clone();
+
+            let codeblock = self.codeblock.clone();
             async move {
-                let response = fetch_node_explanation(&codeblock_text_string, kind, None).await;
+                let response = fetch_node_explanation(&codeblock, None).await;
 
                 if let Ok(response) = response {
                     (*explanation.lock()) = Some(response.clone());
