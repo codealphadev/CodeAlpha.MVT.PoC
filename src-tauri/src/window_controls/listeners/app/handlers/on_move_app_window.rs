@@ -3,8 +3,10 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    platform::macos::models::app::AppWindowMovedMessage, utils::geometry::LogicalPosition,
-    window_controls::config::AppWindow, window_controls::WindowManager,
+    platform::macos::{models::app::AppWindowMovedMessage, pressed_mouse_buttons},
+    utils::geometry::LogicalPosition,
+    window_controls::config::AppWindow,
+    window_controls::WindowManager,
 };
 
 pub fn on_move_app_window(
@@ -37,12 +39,16 @@ pub fn on_move_app_window(
         AppWindow::Explain => {
             let window_manager = window_manager.lock();
 
-            window_manager.update_app_windows(
-                None,
-                Some(LogicalPosition::from_tauri_LogicalPosition(
-                    &move_msg.window_position,
-                )),
-            );
+            // For this window, we only want to register movement caused by dragging the window
+            // Therefore we check if a mouse button is pressed.
+            if pressed_mouse_buttons().is_some() {
+                window_manager.update_app_windows(
+                    None,
+                    Some(LogicalPosition::from_tauri_LogicalPosition(
+                        &move_msg.window_position,
+                    )),
+                );
+            }
         }
         AppWindow::CodeOverlay => {
             // Do Nothing, for now.

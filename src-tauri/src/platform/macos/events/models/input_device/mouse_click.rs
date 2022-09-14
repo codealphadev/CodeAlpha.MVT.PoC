@@ -7,6 +7,7 @@ pub enum MouseButton {
     Left,
     Right,
     Other,
+    None,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]

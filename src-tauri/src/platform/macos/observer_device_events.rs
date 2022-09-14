@@ -3,6 +3,7 @@ use core_graphics::event::{
     CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
     EventField,
 };
+use objc::{msg_send, runtime::Class, sel, sel_impl};
 use rdev::{simulate, EventType};
 
 use crate::{
@@ -115,10 +116,64 @@ fn notification_mouse_click_event(event_type: CGEventType, event: &CGEvent) {
         y: event_location.y.round() as f64,
     };
 
+    let (button, click_type) = map_mouse_buttons(event_type);
+
+    if let (Some(button), Some(click_type)) = (button, click_type) {
+        EventInputDevice::MouseClick(MouseClickMessage {
+            button,
+            click_type,
+            cursor_position,
+        })
+        .publish_to_tauri(&app_handle());
+    }
+}
+
+pub fn send_event_mouse_wheel(delta: LogicalSize) -> Result<bool, XcodeError> {
+    if is_focused_uielement_xcode_editor_textarea()? {
+        let event_type = EventType::Wheel {
+            delta_x: delta.width as i64,
+            delta_y: delta.height as i64,
+        };
+
+        match simulate(&event_type) {
+            Ok(()) => {
+                return Ok(true);
+            }
+            Err(_) => {
+                println!("We could not send {:?}", event_type);
+            }
+        }
+    }
+    Ok(false)
+}
+
+pub fn pressed_mouse_buttons() -> Option<MouseClickMessage> {
+    let ns_event = Class::get("NSEvent").unwrap();
+
+    let mouse_button_id: CGEventType = unsafe { msg_send![ns_event, pressedMouseButtons] };
+    let mouse_position = enigo::Enigo::mouse_location();
+
+    let (button, click_type) = map_mouse_buttons(mouse_button_id);
+
+    if let (Some(button), Some(click_type)) = (button, click_type) {
+        return Some(MouseClickMessage {
+            button,
+            click_type,
+            cursor_position: LogicalPosition {
+                x: mouse_position.0 as f64,
+                y: mouse_position.1 as f64,
+            },
+        });
+    }
+
+    None
+}
+
+fn map_mouse_buttons(mouse_button: CGEventType) -> (Option<MouseButton>, Option<ClickType>) {
     let mut button: Option<MouseButton> = None;
     let mut click_type: Option<ClickType> = None;
 
-    match event_type {
+    match mouse_button {
         CGEventType::LeftMouseDown => {
             button = Some(MouseButton::Left);
             click_type = Some(ClickType::Down);
@@ -158,31 +213,5 @@ fn notification_mouse_click_event(event_type: CGEventType, event: &CGEvent) {
         _ => {}
     }
 
-    if let (Some(button), Some(click_type)) = (button, click_type) {
-        EventInputDevice::MouseClick(MouseClickMessage {
-            button,
-            click_type,
-            cursor_position,
-        })
-        .publish_to_tauri(&app_handle());
-    }
-}
-
-pub fn send_event_mouse_wheel(delta: LogicalSize) -> Result<bool, XcodeError> {
-    if is_focused_uielement_xcode_editor_textarea()? {
-        let event_type = EventType::Wheel {
-            delta_x: delta.width as i64,
-            delta_y: delta.height as i64,
-        };
-
-        match simulate(&event_type) {
-            Ok(()) => {
-                return Ok(true);
-            }
-            Err(_) => {
-                println!("We could not send {:?}", event_type);
-            }
-        }
-    }
-    Ok(false)
+    (button, click_type)
 }

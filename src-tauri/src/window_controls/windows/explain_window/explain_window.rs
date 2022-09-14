@@ -169,7 +169,7 @@ impl ExplainWindow {
         window_size: &Option<LogicalSize>,
     ) -> Option<()> {
         if let (Some(viewport), Some(code_document)) = (viewport, code_document) {
-            self.update_editor_properties(viewport, code_document)?;
+            self.update_editor_properties(viewport, code_document);
         }
 
         if let Some(position_global) = window_position_global {
@@ -348,6 +348,7 @@ impl ExplainWindow {
     fn get_coordinate_system_origin(&self) -> Option<LogicalPosition> {
         // To prevent the window from scrolling horizontally when the user scrolls the code document,
         // we define an artificial coordinate system origin.
+
         Some(LogicalPosition {
             x: self.viewport_props.as_ref()?.dimensions.origin.x,
             y: self.code_document_props.as_ref()?.dimensions.origin.y,
