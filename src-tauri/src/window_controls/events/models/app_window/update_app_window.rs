@@ -3,7 +3,7 @@ use ts_rs::TS;
 
 use crate::{
     platform::macos::{CodeDocumentFrameProperties, ViewportProperties},
-    utils::geometry::LogicalPosition,
+    utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::config::AppWindow,
 };
 
@@ -14,4 +14,5 @@ pub struct UpdateAppWindowMessage {
     pub viewport: Option<ViewportProperties>,
     pub code_document: Option<CodeDocumentFrameProperties>,
     pub window_position: Option<LogicalPosition>,
+    pub window_size: Option<LogicalSize>,
 }

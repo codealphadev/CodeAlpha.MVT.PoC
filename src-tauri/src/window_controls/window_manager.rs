@@ -10,7 +10,7 @@ use crate::{
     app_handle,
     core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     platform::macos::models::viewport::ViewportPropertiesUpdateMessage,
-    utils::geometry::{LogicalFrame, LogicalPosition},
+    utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
@@ -291,6 +291,7 @@ impl WindowManager {
                 viewport: Some(update_editor_props.viewport_properties.clone()),
                 code_document: Some(update_editor_props.code_document_frame_properties.clone()),
                 window_position: None,
+                window_size: None,
             })
             .publish_to_tauri(&app_handle());
         }
@@ -301,6 +302,7 @@ impl WindowManager {
                 viewport: None,
                 code_document: None,
                 window_position: Some(update_window_position.clone()),
+                window_size: None,
             })
             .publish_to_tauri(&app_handle());
         }
@@ -324,4 +326,19 @@ pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool)
         active_feature: None,
     })
     .publish_to_tauri(&app_handle);
+}
+
+#[tauri::command]
+pub fn cmd_resize_window(app_window: AppWindow, size_x: u32, size_y: u32) {
+    EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
+        app_windows: vec![app_window],
+        viewport: None,
+        code_document: None,
+        window_position: None,
+        window_size: Some(LogicalSize {
+            width: size_x as f64,
+            height: size_y as f64,
+        }),
+    })
+    .publish_to_tauri(&app_handle());
 }

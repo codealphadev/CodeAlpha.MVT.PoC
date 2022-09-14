@@ -22,7 +22,10 @@ mod window_controls;
 
 use lazy_static::lazy_static;
 
-use crate::{utils::tracing::TracingSubscriber, window_controls::cmd_toggle_app_activation};
+use crate::{
+    utils::tracing::TracingSubscriber,
+    window_controls::{cmd_resize_window, cmd_toggle_app_activation},
+};
 
 lazy_static! {
     static ref APP_HANDLE: parking_lot::Mutex<Option<tauri::AppHandle>> =
@@ -62,7 +65,10 @@ fn main() {
     let system_tray = SystemTray::new().with_menu(construct_tray_menu());
 
     let mut app: tauri::App = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![cmd_toggle_app_activation])
+        .invoke_handler(tauri::generate_handler![
+            cmd_toggle_app_activation,
+            cmd_resize_window
+        ])
         .setup(|app| {
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());

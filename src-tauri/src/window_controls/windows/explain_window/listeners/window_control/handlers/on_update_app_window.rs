@@ -17,6 +17,7 @@ pub fn on_update_app_window(
             &update_msg.viewport,
             &update_msg.code_document,
             &update_msg.window_position,
+            &update_msg.window_size,
         );
     }
 
