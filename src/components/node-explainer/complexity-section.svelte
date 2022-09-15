@@ -4,7 +4,7 @@
 </script>
 
 {#if complexity > 2}
-<div class="bg-primarybackground p-4">
+<div class="p-4 bg-backgroundgrey rounded-md">
   <div class="flex gap-3">
     <div class="flex-shrink-0">
       <!-- Heroicon name: mini/exclamation-triangle -->

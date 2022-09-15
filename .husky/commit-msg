@@ -2,4 +2,3 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 node "$(dirname -- "$0")/commit-msg.js"
-cd src-tauri && cargo generate-lockfile

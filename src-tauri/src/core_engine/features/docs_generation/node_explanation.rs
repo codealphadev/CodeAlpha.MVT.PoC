@@ -88,15 +88,12 @@ pub async fn fetch_node_explanation(
             .map(map_function_parameters_to_names),
     };
 
-    let response = dbg!(
-        reqwest::Client::new()
-            .post(url)
-            .json(&req_body)
-            .send()
-            .await
-    )?;
-    let parsed_response: NodeExplanationResponse = dbg!(response.json().await)?;
-    dbg!(parsed_response.clone());
+    let response = reqwest::Client::new()
+        .post(url)
+        .json(&req_body)
+        .send()
+        .await?;
+    let parsed_response: NodeExplanationResponse = response.json().await?;
     Ok(map_node_explanation_response_to_node_explanation(
         parsed_response,
         &codeblock.func_parameters_todo,
