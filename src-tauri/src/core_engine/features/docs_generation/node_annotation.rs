@@ -13,7 +13,7 @@ use crate::{
             },
             EventRuleExecutionState, NodeAnnotationEvent, NodeExplanationEvent,
         },
-        syntax_tree::SwiftCodeBlockKind,
+        syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
         utils::XcodeText,
         TextPosition, TextRange, WindowUid,
     },
@@ -40,7 +40,7 @@ pub enum NodeAnnotationState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeBlock {
     pub name: Option<String>,
-    pub func_parameter_names_todo: Option<Vec<String>>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
+    pub func_parameters_todo: Option<Vec<FunctionParameter>>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
     pub func_complexity_todo: Option<isize>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,

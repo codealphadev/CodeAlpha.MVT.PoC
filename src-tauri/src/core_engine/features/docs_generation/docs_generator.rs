@@ -275,8 +275,8 @@ impl DocsGenerator {
             _ => None,
         };
 
-        let parameter_names = match codeblock {
-            SwiftCodeBlock::Function(ref function) => Some(function.get_parameter_names()),
+        let parameters = match codeblock {
+            SwiftCodeBlock::Function(ref function) => Some(function.get_parameters()),
             _ => None,
         };
 
@@ -288,7 +288,7 @@ impl DocsGenerator {
         Ok(CodeBlock {
             func_complexity_todo: func_complexity,
             name,
-            func_parameter_names_todo: parameter_names,
+            func_parameters_todo: parameters,
             kind: codeblock.get_kind(),
             first_char_pos,
             last_char_pos,

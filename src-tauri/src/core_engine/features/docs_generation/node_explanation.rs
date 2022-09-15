@@ -4,13 +4,19 @@ use serde::{Deserialize, Serialize};
 use tauri::async_runtime::block_on;
 use ts_rs::TS;
 
-use crate::core_engine::syntax_tree::SwiftCodeBlockKind;
+use crate::core_engine::syntax_tree::{FunctionParameter, SwiftCodeBlockKind};
 
 use super::node_annotation::CodeBlock;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
 #[ts(export, export_to = "bindings/features/node_explanation/")]
-pub struct FunctionParameter {
+pub struct FunctionParameterWithExplanation {
+    pub name: String,
+    pub explanation: String,
+    pub param_type: String,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FunctionParameterDto {
     pub name: String,
     pub explanation: String,
 }
@@ -20,14 +26,14 @@ pub struct FunctionParameter {
 pub struct NodeExplanation {
     pub summary: String,
     pub kind: SwiftCodeBlockKind,
-    pub parameters: Option<Vec<FunctionParameter>>,
+    pub parameters: Option<Vec<FunctionParameterWithExplanation>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct NodeExplanationResponse {
     pub summary: String,
     pub kind: SwiftCodeBlockKind,
-    pub parameters: Option<Vec<FunctionParameter>>,
+    pub parameters: Option<Vec<FunctionParameterDto>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -76,7 +82,10 @@ pub async fn fetch_node_explanation(
         code: codeblock_text_string,
         kind: codeblock.kind.clone(),
         context: ctx_string,
-        parameter_names: codeblock.func_parameter_names_todo.clone(),
+        parameter_names: codeblock
+            .func_parameters_todo
+            .as_ref()
+            .map(map_function_parameters_to_names),
     };
 
     let response = dbg!(
@@ -90,28 +99,36 @@ pub async fn fetch_node_explanation(
     dbg!(parsed_response.clone());
     Ok(map_node_explanation_response_to_node_explanation(
         parsed_response,
-        &codeblock.func_parameter_names_todo,
+        &codeblock.func_parameters_todo,
     ))
+}
+
+fn map_function_parameters_to_names(params: &Vec<FunctionParameter>) -> Vec<String> {
+    params.iter().map(|p| p.name.clone()).collect()
 }
 
 fn map_node_explanation_response_to_node_explanation(
     response: NodeExplanationResponse,
-    input_parameter_names: &Option<Vec<String>>,
+    function_parameters: &Option<Vec<FunctionParameter>>,
 ) -> NodeExplanation {
-    let parameters = if let (Some(input_parameter_names), Some(response_parameters)) =
-        (input_parameter_names, response.parameters)
+    let parameters = if let (Some(function_parameters), Some(response_parameters)) =
+        (function_parameters, response.parameters)
     {
-        Some(
-            response_parameters
-                .into_iter()
-                .filter(|p| input_parameter_names.contains(&p.name))
-                .collect::<Vec<FunctionParameter>>(),
-        )
+        let mut parameters_with_explanations: Vec<FunctionParameterWithExplanation> = [].to_vec();
+        for param in function_parameters {
+            let response_param = response_parameters.iter().find(|p| p.name == param.name);
+            if let Some(response_param) = response_param {
+                parameters_with_explanations.push(FunctionParameterWithExplanation {
+                    name: param.name.clone(),
+                    explanation: response_param.explanation.clone(),
+                    param_type: param.param_type.clone(),
+                });
+            }
+        }
+        Some(parameters_with_explanations)
     } else {
         None
     };
-    dbg!(parameters.clone());
-    dbg!(input_parameter_names);
     NodeExplanation {
         summary: response.summary,
         kind: response.kind,
@@ -139,8 +156,8 @@ mod tests_node_explanation_port {
                 first_char_pos: TextPosition { row: 0, column: 0 },
                 last_char_pos: TextPosition { row: 0, column: 0 },
                 kind: SwiftCodeBlockKind::Function,
-                func_parameter_names_todo: None,
                 func_complexity_todo: None,
+                func_parameters_todo: None,
             },
             Some("print(\"Hello World\")".to_string()),
         );
@@ -154,7 +171,7 @@ mod tests_node_explanation_port {
             &CodeBlock {
                 text: XcodeText::from_str("print(\"Hello World\")"),
                 name: Some("my_fun".to_string()),
-                func_parameter_names_todo: None,
+                func_parameters_todo: None,
                 first_char_pos: TextPosition { row: 0, column: 0 },
                 last_char_pos: TextPosition { row: 0, column: 0 },
                 kind: SwiftCodeBlockKind::Function,
