@@ -7,7 +7,7 @@ export const colorNames = [
 	'inactive',
 	'contrast',
 	'background',
-	'primarybackground'
+	'backgroundgrey'
 ] as const;
 
 export type ColorName = typeof colorNames[number];
@@ -21,11 +21,11 @@ export const themes: { [name in ThemeName]: Theme } = {
 	light: {
 		colors: {
 			background: '#ffffff',
-			primary: '#D44211',
-			secondary: '#555555',
+			primary: '#FF451D',
+			secondary: '#636363',
 			inactive: '#bbbbbb80',
 			contrast: '#000000',
-			primarybackground: '##FFCEA3'
+			backgroundgrey: '#f5f5f5'
 		}
 	},
 	dark: {
@@ -35,7 +35,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 			secondary: '#aaaaaa',
 			inactive: '#80808080',
 			contrast: '#ffffff',
-			primarybackground: '#D44211'
+			backgroundgrey: '#2c2c2c'
 		}
 	}
 };
