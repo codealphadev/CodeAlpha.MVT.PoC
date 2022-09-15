@@ -1,7 +1,7 @@
 <script lang="ts">
     import DOMPurify from 'dompurify';
     import { marked } from 'marked';
-	import type { FunctionParameter } from '../../../src-tauri/bindings/features/docs_generation/FunctionParameter';
+	import type { FunctionParameter } from '../../../src-tauri/bindings/features/node_explanation/FunctionParameter';
 
     export let parameters: FunctionParameter[];
 </script>
