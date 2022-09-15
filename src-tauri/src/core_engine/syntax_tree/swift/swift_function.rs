@@ -11,6 +11,12 @@ use super::swift_codeblock::{
     SwiftCodeBlockKind, SwiftCodeBlockProps,
 };
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionParameter {
+    pub name: String,
+    pub param_type: String,
+}
+
 pub struct SwiftFunction<'a> {
     props: SwiftCodeBlockProps<'a>,
 }
@@ -19,9 +25,9 @@ impl SwiftFunction<'_> {
         self.props.node_metadata.get_total_complexity()
     }
 
-    pub fn get_parameter_names(&self) -> Vec<String> {
+    pub fn get_parameters(&self) -> Vec<FunctionParameter> {
         let mut cursor = self.props.node.walk();
-        let mut result: Vec<String> = Vec::new();
+        let mut result: Vec<FunctionParameter> = Vec::new();
         for node in self
             .props
             .node
@@ -30,9 +36,16 @@ impl SwiftFunction<'_> {
         {
             let internal_name =
                 get_internal_name_for_parameter(&node, &self.props.text_content).ok();
+
+            let param_type = get_type_for_parameter(&node, &self.props.text_content)
+                .unwrap_or(XcodeText::from_str(&"TODOTODO".to_string())); //TODO
+
             if let Some(internal_name) = internal_name.map(|name| String::from_utf16_lossy(&name)) {
                 if internal_name != "_" {
-                    result.push(internal_name);
+                    result.push(FunctionParameter {
+                        name: internal_name,
+                        param_type: String::from_utf16_lossy(&param_type),
+                    });
                 }
             }
         }
@@ -59,6 +72,38 @@ fn get_internal_name_for_parameter(
 
     return Err(SwiftCodeBlockError::GenericError(anyhow!(
         "get_internal_name_for_parameter: Could not find internal name for parameter: {:?}",
+        node
+    )));
+}
+
+fn get_type_for_parameter(
+    node: &Node,
+    text_content: &XcodeText,
+) -> Result<XcodeText, SwiftCodeBlockError> {
+    //https://github.com/alex-pinkus/tree-sitter-swift/blob/f58deb71df91bcee6d650774dbd136a7493ca20f/grammar.js
+    const PARAMETER_TYPES: [&str; 10] = [
+        "function_type",
+        "user_type",
+        "tuple_type",
+        "array_type",
+        "dictionary_type",
+        "optional_type",
+        "metatype",
+        "opaque_type",
+        "existential_type",
+        "protocol_composition_type",
+    ];
+
+    let mut cursor = node.walk();
+    for nd in node
+        .named_children(&mut cursor)
+        .filter(|nd| PARAMETER_TYPES.contains(&nd.kind()))
+    {
+        return get_node_text(&nd, &text_content);
+    }
+
+    return Err(SwiftCodeBlockError::GenericError(anyhow!(
+        "get_internal_type_for_parameter: Could not find type for parameter: {:?}",
         node
     )));
 }

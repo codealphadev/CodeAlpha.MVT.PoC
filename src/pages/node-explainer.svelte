@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { marked } from 'marked';
-	import DOMPurify from 'dompurify';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { NodeExplanation } from '../../src-tauri/bindings/features/node_explanation/NodeExplanation';
 	import { listen } from '@tauri-apps/api/event';
-	import NodeExplainerHeader from '../components/node-explainer/node-explainer-header.svelte';
+	import NodeExplainerHeader from '../components/node-explainer/header-section.svelte';
 	import { afterUpdate } from 'svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import type { AppWindow } from '../../src-tauri/bindings/AppWindow';
@@ -15,7 +13,6 @@
 	let explanation: NodeExplanation | undefined = undefined;
 	let complexity: number | null = null;
 	let node_name: string | null = null;
-	$: summary = explanation ? DOMPurify.sanitize(marked.parse(explanation.summary)) : undefined;
 
 	let dom_id = 'explain-window-container';
 
@@ -76,18 +73,14 @@
 
 {#if explanation !== undefined}
 	<div data-tauri-drag-region class="absolute w-full h-full" />
-	<div id={dom_id} class="rounded-lg bg-background overflow-hidden">
-		<div class="p-4 sm:p-6 gap-2">
-			<NodeExplainerHeader kind={explanation.kind} name={node_name} />
-			<div class="mt-2 max-w-xl text-sm text-secondary">
-				<p>{@html summary}</p>
-			</div>
-			{#if explanation.parameters}
-				<ParametersSection parameters={explanation.parameters}/>
-			{/if}
-			{#if complexity}
-				<ComplexitySection complexity={complexity}/>
-			{/if}
-		</div>
+	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3">
+		<NodeExplainerHeader kind={explanation.kind} name={node_name} summary={explanation.summary} />
+		
+		{#if explanation.parameters}
+			<ParametersSection parameters={explanation.parameters}/>
+		{/if}
+		{#if complexity !== null}
+		<ComplexitySection complexity={complexity}/>
+		{/if}
 	</div>
 {/if}
