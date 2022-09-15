@@ -8,5 +8,5 @@ use crate::core_engine::features::NodeExplanation;
 pub struct UpdateNodeExplanationMessage {
     pub explanation: NodeExplanation,
     pub name: Option<String>,
-    pub complexity: Option<usize>,
+    pub complexity: Option<isize>,
 }

@@ -9,7 +9,7 @@ use tree_sitter::{Node, Parser, Tree};
 
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
-use super::{calculate_cognitive_complexities, swift_codeblock::SwiftCodeBlock, Complexities};
+use super::{calculate_cognitive_complexities, Complexities, SwiftCodeBlock, SwiftCodeBlockBase};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftSyntaxTreeError {
@@ -66,12 +66,6 @@ impl SwiftSyntaxTree {
         }
     }
 
-    pub fn get_node_complexity(&self, node: &Node) -> Result<&Complexities, SwiftSyntaxTreeError> {
-        self.node_metadata
-            .get(&node.id())
-            .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)
-    }
-
     pub fn get_selected_code_node(
         &self,
         selected_text_range: &TextRange,
@@ -109,13 +103,19 @@ impl SwiftSyntaxTree {
         selected_text_range: &TextRange,
     ) -> Result<SwiftCodeBlock, SwiftSyntaxTreeError> {
         let mut node = self.get_selected_code_node(selected_text_range)?;
-        let content = self
+
+        let node_metadata = self
+            .node_metadata
+            .get(&node.id())
+            .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)?;
+
+        let text_content = self
             .content
             .as_ref()
             .ok_or(SwiftSyntaxTreeError::NoTreeParsed)?;
 
         loop {
-            if let Ok(codeblock_node) = SwiftCodeBlock::new(node, content) {
+            if let Ok(codeblock_node) = SwiftCodeBlock::new(node, node_metadata, text_content) {
                 return Ok(codeblock_node);
             } else {
                 if let Some(parent) = node.parent() {

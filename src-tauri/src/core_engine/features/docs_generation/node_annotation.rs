@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use parking_lot::Mutex;
-use tracing::error;
 
 use crate::{
     app_handle,
@@ -41,7 +40,8 @@ pub enum NodeAnnotationState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeBlock {
     pub name: Option<String>,
-    pub parameter_names: Option<Vec<String>>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
+    pub func_parameter_names_todo: Option<Vec<String>>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
+    pub func_complexity_todo: Option<isize>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
     pub first_char_pos: TextPosition,
     pub last_char_pos: TextPosition,
     pub kind: SwiftCodeBlockKind,
@@ -128,6 +128,7 @@ impl NodeAnnotation {
             let name = self.codeblock.name.clone();
 
             let codeblock = self.codeblock.clone();
+
             async move {
                 let response = fetch_node_explanation(&codeblock, None).await;
 
@@ -138,7 +139,7 @@ impl NodeAnnotation {
                     NodeExplanationEvent::UpdateNodeExplanation(UpdateNodeExplanationMessage {
                         explanation: response,
                         name,
-                        complexity: None,
+                        complexity: codeblock.func_complexity_todo,
                     })
                     .publish_to_tauri(&app_handle());
 
@@ -154,7 +155,6 @@ impl NodeAnnotation {
                     EventRuleExecutionState::NodeExplanationFailed()
                         .publish_to_tauri(&app_handle());
                     (*explanation.lock()) = None;
-                    error!("Fetching node explanation failed");
                 }
                 (*state.lock()) = NodeAnnotationState::Finished;
             }
