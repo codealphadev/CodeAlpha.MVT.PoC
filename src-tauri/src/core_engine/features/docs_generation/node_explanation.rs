@@ -23,6 +23,13 @@ pub struct NodeExplanation {
     pub parameters: Option<Vec<FunctionParameter>>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct NodeExplanationResponse {
+    pub summary: String,
+    pub kind: SwiftCodeBlockKind,
+    pub parameters: Option<Vec<FunctionParameter>>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NodeExplanationRequest {
     apiKey: String,
@@ -69,17 +76,47 @@ pub async fn fetch_node_explanation(
         code: codeblock_text_string,
         kind: codeblock.kind.clone(),
         context: ctx_string,
-        parameter_names: codeblock.parameter_names.clone(), //.unwrap_or(Vec::new()),
+        parameter_names: codeblock.func_parameter_names_todo.clone(),
     };
 
-    let response = reqwest::Client::new()
-        .post(url)
-        .json(&req_body)
-        .send()
-        .await?;
+    let response = dbg!(
+        reqwest::Client::new()
+            .post(url)
+            .json(&req_body)
+            .send()
+            .await
+    )?;
+    let parsed_response: NodeExplanationResponse = dbg!(response.json().await)?;
+    dbg!(parsed_response.clone());
+    Ok(map_node_explanation_response_to_node_explanation(
+        parsed_response,
+        &codeblock.func_parameter_names_todo,
+    ))
+}
 
-    let parsed_response: NodeExplanation = response.json().await?;
-    Ok(parsed_response)
+fn map_node_explanation_response_to_node_explanation(
+    response: NodeExplanationResponse,
+    input_parameter_names: &Option<Vec<String>>,
+) -> NodeExplanation {
+    let parameters = if let (Some(input_parameter_names), Some(response_parameters)) =
+        (input_parameter_names, response.parameters)
+    {
+        Some(
+            response_parameters
+                .into_iter()
+                .filter(|p| input_parameter_names.contains(&p.name))
+                .collect::<Vec<FunctionParameter>>(),
+        )
+    } else {
+        None
+    };
+    dbg!(parameters.clone());
+    dbg!(input_parameter_names);
+    NodeExplanation {
+        summary: response.summary,
+        kind: response.kind,
+        parameters: parameters,
+    }
 }
 
 #[cfg(test)]
@@ -99,10 +136,11 @@ mod tests_node_explanation_port {
             &CodeBlock {
                 text: XcodeText::from_str("print(\"Hello World\")"),
                 name: Some("my_fun".to_string()),
-                parameter_names: None,
                 first_char_pos: TextPosition { row: 0, column: 0 },
                 last_char_pos: TextPosition { row: 0, column: 0 },
                 kind: SwiftCodeBlockKind::Function,
+                func_parameter_names_todo: None,
+                func_complexity_todo: None,
             },
             Some("print(\"Hello World\")".to_string()),
         );
@@ -116,10 +154,11 @@ mod tests_node_explanation_port {
             &CodeBlock {
                 text: XcodeText::from_str("print(\"Hello World\")"),
                 name: Some("my_fun".to_string()),
-                parameter_names: None,
+                func_parameter_names_todo: None,
                 first_char_pos: TextPosition { row: 0, column: 0 },
                 last_char_pos: TextPosition { row: 0, column: 0 },
                 kind: SwiftCodeBlockKind::Function,
+                func_complexity_todo: None,
             },
             None,
         );

@@ -4,7 +4,7 @@ use crate::{
     core_engine::{
         core_engine::WindowUid,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
-        syntax_tree::{SwiftCodeBlock, SwiftCodeBlockKind, SwiftSyntaxTree},
+        syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
         CodeDocument, TextRange,
     },
@@ -255,8 +255,6 @@ impl DocsGenerator {
         self.node_annotations.clear();
     }
 
-    //fn get_parameter_names_from_function_node(node: &Node) {}
-
     fn derive_codeblock(
         selected_text_range: &TextRange,
         syntax_tree: &SwiftSyntaxTree,
@@ -266,26 +264,32 @@ impl DocsGenerator {
             .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
 
         let text = codeblock
-            .get_codeblock_text()
+            .as_text()
             .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
 
         let first_char_pos = codeblock.get_first_char_position();
         let last_char_pos = codeblock.get_last_char_position();
 
-        let name = codeblock.get_name();
-        let parameter_names = match codeblock.codeblock_kind {
-            SwiftCodeBlockKind::Function => Some(
-                codeblock
-                    .get_function_parameter_names()
-                    .map_err(|err| DocsGenerationError::GenericError(err.into()))?,
-            ),
+        let name = match codeblock {
+            SwiftCodeBlock::Function(ref function) => function.get_name(),
+            _ => None,
+        };
+
+        let parameter_names = match codeblock {
+            SwiftCodeBlock::Function(ref function) => Some(function.get_parameter_names()),
+            _ => None,
+        };
+
+        let func_complexity = match codeblock {
+            SwiftCodeBlock::Function(ref function) => Some(function.get_complexity()),
             _ => None,
         };
 
         Ok(CodeBlock {
+            func_complexity_todo: func_complexity,
             name,
-            parameter_names,
-            kind: codeblock.codeblock_kind,
+            func_parameter_names_todo: parameter_names,
+            kind: codeblock.get_kind(),
             first_char_pos,
             last_char_pos,
             text,
