@@ -2,7 +2,7 @@
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { NodeAnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/NodeAnnotationEvent';
-	import type { UpdateNodeAnnotationMessage } from '../../../../src-tauri/bindings/features/docs_generation/UpdateNodeAnnotationMessage';
+	import type { UpdateNodeAnnotationMessage } from '../../../../src-tauri/bindings/features/node_annotation/UpdateNodeAnnotationMessage';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';

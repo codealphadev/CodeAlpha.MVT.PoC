@@ -2,7 +2,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
-	import type { NodeExplanation } from '../../src-tauri/bindings/features/docs_generation/NodeExplanation';
+	import type { NodeExplanation } from '../../src-tauri/bindings/features/node_explanation/NodeExplanation';
 	import { listen } from '@tauri-apps/api/event';
 	import NodeExplainerHeader from '../components/node-explainer/node-explainer-header.svelte';
 	import { afterUpdate } from 'svelte';
