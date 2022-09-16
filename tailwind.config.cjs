@@ -1,4 +1,12 @@
-const colorNames = ['primary', 'secondary', 'inactive', 'contrast', 'background', 'backgroundgrey'];
+const colorNames = [
+	'primary',
+	'secondary',
+	'inactive',
+	'contrast',
+	'background',
+	'backgroundgrey',
+	'frame'
+];
 
 function mapColorNameToCssVarString(colorName) {
 	return `--theme-${colorName}`;

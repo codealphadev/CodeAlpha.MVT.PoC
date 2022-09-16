@@ -2,14 +2,15 @@
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { NodeExplanation } from '../../src-tauri/bindings/features/node_explanation/NodeExplanation';
 	import { listen } from '@tauri-apps/api/event';
-	import NodeExplainerHeader from '../components/node-explainer/header-section.svelte';
+	import Header from '../components/node-explainer/header-section.svelte';
 	import { afterUpdate } from 'svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import type { AppWindow } from '../../src-tauri/bindings/AppWindow';
 	import ComplexitySection from '../components/node-explainer/complexity-section.svelte';	
 	import type { NodeExplanationEvent } from '../../src-tauri/bindings/features/node_explanation/NodeExplanationEvent';
 	import ParametersSection from '../components/node-explainer/parameters-section.svelte';
-
+	import Footer from '../components/node-explainer/footer-section.svelte';
+	
 	let explanation: NodeExplanation | undefined = undefined;
 	let complexity: number | null = null;
 	let node_name: string | null = null;
@@ -49,9 +50,7 @@
 
 	const listenToNodeAnnotationEvents = async () => {
 		let node_explanation_channel: ChannelList = 'NodeExplanationEvent';
-		console.log('started listening');
 		await listen(node_explanation_channel, (event) => {
-			console.log(event);
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
 			) as NodeExplanationEvent;
@@ -72,9 +71,9 @@
 </script>
 
 {#if explanation !== undefined}
-	<div data-tauri-drag-region class="absolute w-full h-full" />
-	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3">
-		<NodeExplainerHeader kind={explanation.kind} name={node_name} summary={explanation.summary} />
+	<div data-tauri-drag-region class="absolute w-full h-full"  />
+	<div class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3">
+		<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
 		
 		{#if explanation.parameters}
 			<ParametersSection parameters={explanation.parameters}/>
@@ -82,5 +81,8 @@
 		{#if complexity !== null}
 		<ComplexitySection complexity={complexity}/>
 		{/if}
+		<hr class="border-b border-frame w-full"/>
+		<Footer/>
+
 	</div>
 {/if}
