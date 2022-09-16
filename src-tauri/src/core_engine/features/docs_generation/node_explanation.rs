@@ -344,7 +344,7 @@ mod tests {
             );
         }
     }
-    mod node_explanation_port {
+    mod fetch_node_explanation {
 
         use tauri::async_runtime::block_on;
 
@@ -364,7 +364,6 @@ mod tests {
         }
 
         #[test]
-        #[ignore]
         fn with_context() {
             let resp = _fetch_node_explanation(
                 &CodeBlock {
@@ -382,7 +381,6 @@ mod tests {
         }
 
         #[test]
-        #[ignore]
         fn without_context() {
             let resp = _fetch_node_explanation(
                 &CodeBlock {
