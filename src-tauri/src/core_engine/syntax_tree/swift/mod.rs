@@ -8,6 +8,7 @@ mod swift_generic_codeblock;
 pub use swift_generic_codeblock::*;
 
 mod swift_codeblock;
+pub use swift_codeblock::get_node_text;
 pub use swift_codeblock::SwiftCodeBlock;
 pub use swift_codeblock::SwiftCodeBlockBase;
 pub use swift_codeblock::SwiftCodeBlockError;
