@@ -71,8 +71,9 @@
 </script>
 
 {#if explanation !== undefined}
-	<div data-tauri-drag-region class="absolute w-full h-full"  />
-	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3">
+	<div data-tauri-drag-region class="absolute w-full h-20"  />
+
+	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3 border-none">
 		<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
 		
 		{#if explanation.parameters}
@@ -81,7 +82,7 @@
 		{#if complexity !== null}
 		<ComplexitySection complexity={complexity}/>
 		{/if}
-		<hr class="border-b border-frame w-full"/>
+		<hr class="border-frame w-full"/>
 		<Footer/>
 
 	</div>

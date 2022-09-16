@@ -271,7 +271,8 @@ impl DocsGenerator {
         let last_char_pos = codeblock.get_last_char_position();
 
         let name = match codeblock {
-            SwiftCodeBlock::Function(ref function) => function.get_name(),
+            SwiftCodeBlock::Function(ref block) => block.get_name(),
+            SwiftCodeBlock::Class(ref block) => block.get_name(),
             _ => None,
         };
 

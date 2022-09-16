@@ -10,7 +10,7 @@ use crate::core_engine::{
     utils::{TextPosition, TextRange, XcodeText},
 };
 
-use super::{SwiftFunction, SwiftGenericCodeBlock};
+use super::{SwiftClass, SwiftFunction, SwiftGenericCodeBlock};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftCodeBlockError {
@@ -24,6 +24,7 @@ pub enum SwiftCodeBlockError {
 
 pub enum SwiftCodeBlock<'a> {
     Function(SwiftFunction<'a>),
+    Class(SwiftClass<'a>),
     Other(SwiftGenericCodeBlock<'a>),
 }
 pub trait SwiftCodeBlockBase<'a> {
@@ -48,6 +49,7 @@ impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
     fn as_text(&self) -> Result<XcodeText, SwiftCodeBlockError> {
         match self {
             SwiftCodeBlock::Function(f) => f.as_text(),
+            SwiftCodeBlock::Class(c) => c.as_text(),
             SwiftCodeBlock::Other(o) => o.as_text(),
         }
     }
@@ -60,8 +62,9 @@ impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
         let kind = node.kind();
         match kind {
             "function_declaration" => SwiftFunction::new(node, node_metadata, text_content),
-            "for_statement" | "if_statement" | "else_statement" | "class_declaration"
-            | "switch_statement" | "while_statement" | "do_statement" | "guard_statement" => {
+            "class_declaration" => SwiftClass::new(node, node_metadata, text_content),
+            "for_statement" | "if_statement" | "else_statement" | "switch_statement"
+            | "while_statement" | "do_statement" | "guard_statement" => {
                 SwiftGenericCodeBlock::new(node, node_metadata, text_content)
             }
             _ => Err(SwiftCodeBlockError::UnsupportedCodeblock),
@@ -71,18 +74,21 @@ impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
     fn get_first_char_position(&self) -> TextPosition {
         match self {
             SwiftCodeBlock::Function(f) => f.get_first_char_position(),
+            SwiftCodeBlock::Class(c) => c.get_first_char_position(),
             SwiftCodeBlock::Other(o) => o.get_first_char_position(),
         }
     }
     fn get_last_char_position(&self) -> TextPosition {
         match self {
             SwiftCodeBlock::Function(f) => f.get_last_char_position(),
+            SwiftCodeBlock::Class(c) => c.get_last_char_position(),
             SwiftCodeBlock::Other(o) => o.get_last_char_position(),
         }
     }
     fn get_kind(&self) -> SwiftCodeBlockKind {
         match self {
             SwiftCodeBlock::Function(f) => f.get_kind(),
+            SwiftCodeBlock::Class(c) => c.get_kind(),
             SwiftCodeBlock::Other(o) => o.get_kind(),
         }
     }
