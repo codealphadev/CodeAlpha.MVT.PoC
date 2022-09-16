@@ -6,9 +6,9 @@
 
 use std::sync::Arc;
 
-use core_engine::CoreEngine;
+use core_engine::{CoreEngine, TextRange};
 use parking_lot::Mutex;
-use platform::macos::setup_observers;
+use platform::macos::{setup_observers, xcode::actions::replace_range_with_clipboard_text, GetVia};
 use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
 use tracing::debug;
 use window_controls::WindowManager;
@@ -30,6 +30,16 @@ use crate::{
 lazy_static! {
     static ref APP_HANDLE: parking_lot::Mutex<Option<tauri::AppHandle>> =
         parking_lot::Mutex::new(None);
+}
+
+lazy_static! {
+    static ref NODE_EXPLAINATION_CURRENT_DOCSTRING: Arc<Mutex<String>> =
+        Arc::new(Mutex::new("".to_string()));
+}
+
+lazy_static! {
+    static ref NODE_EXPLAINATION_CURRENT_INSERTION_POINT: Arc<Mutex<usize>> =
+        Arc::new(Mutex::new(0));
 }
 
 pub static CORE_ENGINE_ACTIVE_AT_STARTUP: bool = true;
@@ -67,7 +77,8 @@ fn main() {
     let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             cmd_toggle_app_activation,
-            cmd_resize_window
+            cmd_resize_window,
+            cmd_paste_docs
         ])
         .setup(|app| {
             // Set the app handle for the static APP_HANDLE variable
@@ -180,5 +191,25 @@ fn deadlock_detection() {
                 println!("{:#?}", t.backtrace());
             }
         }
+    });
+}
+
+#[tauri::command]
+fn cmd_paste_docs() {
+    tauri::async_runtime::spawn(async move {
+        // Paste it at the docs insertion point
+        let insertion_point = NODE_EXPLAINATION_CURRENT_INSERTION_POINT.lock().clone();
+        let docstring = NODE_EXPLAINATION_CURRENT_DOCSTRING.lock().clone();
+        replace_range_with_clipboard_text(
+            &app_handle(),
+            &GetVia::Current,
+            &TextRange {
+                index: insertion_point,
+                length: 0,
+            },
+            Some(&docstring),
+            true,
+        )
+        .await;
     });
 }
