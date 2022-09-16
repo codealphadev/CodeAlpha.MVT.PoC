@@ -39,6 +39,11 @@ pub struct NodeExplanationResponse {
     pub parameters: Option<Vec<FunctionParameterDto>>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ExplainResponse {
+    data: NodeExplanationResponse,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NodeExplanationRequest {
     apiKey: String,
@@ -92,7 +97,7 @@ pub async fn fetch_node_explanation(
             error!(?e, "Error while sending request to cloud backend");
             e
         })?
-        .json::<NodeExplanationResponse>()
+        .json::<ExplainResponse>()
         .await
         .map_err(|e| {
             error!(?e, "Error while parsing response from cloud backend");
@@ -100,7 +105,7 @@ pub async fn fetch_node_explanation(
         })?;
 
     let node_explanation = map_node_explanation_response_to_node_explanation(
-        response,
+        response.data,
         codeblock.func_parameters_todo.as_ref(),
     );
 
