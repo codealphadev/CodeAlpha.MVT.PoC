@@ -1,6 +1,7 @@
 use std::{collections::HashMap, ops};
 
 use crate::core_engine::XcodeText;
+use anyhow::anyhow;
 use tree_sitter::Node;
 
 use super::{get_node_text, swift_syntax_tree::NodeMetadata, SwiftCodeBlockError};
@@ -59,9 +60,7 @@ fn calculate_cognitive_complexities_intl(
     match node.kind() {
         "function_declaration" | "lambda_literal" => {
             nesting_depth += 1;
-            if let Some(name) = get_function_name(node, text_content) {
-                parent_function_names.push(name);
-            }
+            parent_function_names.push(get_function_name(node, text_content)?); // TODO: What about getting complexity of incomplete trees? Shouldn't panic?
         }
         "ternary_expression" => {
             complexity.nesting_complexity += (nesting_depth - 1).max(0);
@@ -159,10 +158,16 @@ fn calculate_cognitive_complexities_intl(
     Ok(complexity)
 }
 
-// TODO: Use Result instead of Option
-fn get_function_name(node: &Node, text_content: &XcodeText) -> Option<XcodeText> {
-    let x = node.child_by_field_name("name")?;
-    get_node_text(&x, &text_content).ok()
+fn get_function_name(
+    node: &Node,
+    text_content: &XcodeText,
+) -> Result<XcodeText, SwiftCodeBlockError> {
+    let x = node
+        .child_by_field_name("name")
+        .ok_or(SwiftCodeBlockError::GenericError(anyhow!(
+            "Could not find name field in function declaration"
+        )))?;
+    get_node_text(&x, &text_content)
 }
 
 fn control_transfer_statement_is_penalizable(control_transfer_statement: &Node) -> bool {
