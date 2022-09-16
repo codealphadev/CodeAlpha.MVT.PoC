@@ -1,10 +1,9 @@
 use std::{collections::HashMap, ops};
 
-use crate::core_engine::{TextRange, XcodeText};
-use anyhow::anyhow;
+use crate::core_engine::XcodeText;
 use tree_sitter::Node;
 
-use super::{swift_syntax_tree::NodeMetadata, SwiftCodeBlockError};
+use super::{get_node_text, swift_syntax_tree::NodeMetadata, SwiftCodeBlockError};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Complexities {
@@ -57,7 +56,6 @@ fn calculate_cognitive_complexities_intl(
         fundamental_complexity: 0,
     };
 
-    // TODO: Refactor, and handle Swift recursion
     match node.kind() {
         "function_declaration" | "lambda_literal" => {
             nesting_depth += 1;
@@ -182,21 +180,6 @@ fn control_transfer_statement_is_penalizable(control_transfer_statement: &Node) 
     return false;
 }
 
-// TODO: Extract to helper function
-fn get_node_text(node: &Node, text_content: &XcodeText) -> Result<XcodeText, SwiftCodeBlockError> {
-    if let Some(code_block_range) =
-        TextRange::from_StartEndTSPoint(&text_content, &node.start_position(), &node.end_position())
-    {
-        Ok(XcodeText::from_array(
-            &text_content[code_block_range.index..code_block_range.index + code_block_range.length],
-        ))
-    } else {
-        Err(SwiftCodeBlockError::GenericError(anyhow!(
-            "get_codeblock_text: TextRange::from_StartEndTSPoint failed for: {:?}",
-            node
-        )))
-    }
-}
 #[cfg(test)]
 mod tests {
     mod calculate_cognitive_complexities {
@@ -254,6 +237,13 @@ mod tests {
                 &mut node_metadata,
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
+            assert_eq!(
+                expected_complexity,
+                node_metadata
+                    .get(&tree.root_node().id())
+                    .unwrap()
+                    .complexities
+            );
         }
 
         #[test]
@@ -382,6 +372,34 @@ mod tests {
             let expected_complexity: Complexities = Complexities {
                 nesting_complexity: 1,
                 fundamental_complexity: 1,
+            };
+            let mut node_metadata = HashMap::<usize, NodeMetadata>::new();
+            let calculated_complexity = calculate_cognitive_complexities(
+                &tree.root_node(),
+                &text_content,
+                &mut node_metadata,
+            );
+            assert_eq!(expected_complexity, calculated_complexity.unwrap());
+        }
+        #[test]
+        fn control_flow_changes() {
+            let text_content = XcodeText::from_str(
+                r#"
+                    func a() {
+                        break label;     // +1 for break label
+                        continue label;  // +1 for continue label
+                    }
+                "#,
+            );
+
+            let mut parser = Parser::new();
+            parser
+                .set_language(tree_sitter_swift::language())
+                .expect("Swift Language not found");
+            let tree = parser.parse_utf16(text_content.clone(), None).unwrap();
+            let expected_complexity: Complexities = Complexities {
+                nesting_complexity: 0,
+                fundamental_complexity: 2,
             };
             let mut node_metadata = HashMap::<usize, NodeMetadata>::new();
             let calculated_complexity = calculate_cognitive_complexities(
