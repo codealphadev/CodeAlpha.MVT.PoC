@@ -1,23 +1,21 @@
 <script lang="ts">
   import { setContext, onMount } from "svelte";
-  import { writable } from "svelte/store";
+  import { Writable, writable } from "svelte/store";
 
-  import { themes, ThemeName, colorNames, mapColorNameToCssVarString} from "./themes"
+  import { themes, ThemeName, colorNames, mapColorNameToCssVarString, Theme, ThemeContextType} from "./themes"
   import { getContext } from 'svelte';
   import { listen } from '@tauri-apps/api/event';
   import type { ChannelList } from '../src-tauri/bindings/ChannelList';
   import type { EventWindowControls } from '../src-tauri/bindings/window_controls/EventWindowControls';
 
-    interface ThemeContext {
-      setTheme: (theme: ThemeName) => void;
-    }
+    
   
     let _currentTheme: ThemeName = 'light';
   
     // set up Theme store, holding current theme object
     const theme_store = writable(themes[_currentTheme]);
   
-    setContext('theme', {
+    setContext<ThemeContextType>('theme', {
       // providing Theme store through context makes store readonly
       theme: theme_store,
       setTheme: (theme: ThemeName) => {
@@ -25,10 +23,10 @@
 
         theme_store.update(t => ({ ...t, ...themes[_currentTheme] }));
         setRootCssVars(_currentTheme);
-      }
+      },
     });
 
-    const { setTheme } = getContext<ThemeContext>('theme');
+    const { setTheme } = getContext<ThemeContextType>('theme');
     const setRootCssVars = (themeName: ThemeName) => {
         const theme = themes[themeName];
       for (const colorName of colorNames) {

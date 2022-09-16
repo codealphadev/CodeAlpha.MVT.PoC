@@ -1,3 +1,13 @@
+.gradient-text {
+	background-clip: text;
+	color: transparent;
+	background-image: var(--theme-primary_gradient);
+}
+
+.bg-primary-gradient.bg-primary-gradient {
+	background-image: var(--theme-primary_gradient);
+}
+
 /* inter-100 - latin */
 @font-face {
 	font-family: 'Inter';
