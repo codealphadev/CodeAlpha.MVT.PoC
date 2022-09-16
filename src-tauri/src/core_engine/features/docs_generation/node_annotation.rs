@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use parking_lot::Mutex;
+use tracing::debug;
 
 use crate::{
     app_handle,
@@ -150,10 +151,11 @@ impl NodeAnnotation {
                         },
                     )
                     .publish_to_tauri(&app_handle());
-                    println!("Finished loading explanation");
+                    debug!("NodeExplanationFetched");
                 } else {
                     EventRuleExecutionState::NodeExplanationFailed()
                         .publish_to_tauri(&app_handle());
+                    debug!("NodeExplanationFailed");
                     (*explanation.lock()) = None;
                 }
                 (*state.lock()) = NodeAnnotationState::Finished;
