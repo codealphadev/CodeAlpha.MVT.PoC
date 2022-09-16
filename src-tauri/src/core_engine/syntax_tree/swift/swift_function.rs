@@ -25,7 +25,7 @@ impl SwiftFunction<'_> {
         self.props.node_metadata.complexities.get_total_complexity()
     }
 
-    pub fn get_parameters(&self) -> Vec<FunctionParameter> {
+    pub fn get_parameters(&self) -> Result<Vec<FunctionParameter>, SwiftCodeBlockError> {
         let mut cursor = self.props.node.walk();
         let mut result: Vec<FunctionParameter> = Vec::new();
         for node in self
@@ -37,8 +37,7 @@ impl SwiftFunction<'_> {
             let internal_name =
                 get_internal_name_for_parameter(&node, &self.props.text_content).ok();
 
-            let param_type = get_type_for_parameter(&node, &self.props.text_content)
-                .unwrap_or(XcodeText::from_str(&"TODOTODO".to_string())); //TODO
+            let param_type = get_type_for_parameter(&node, &self.props.text_content)?;
 
             if let Some(internal_name) = internal_name.map(|name| String::from_utf16_lossy(&name)) {
                 if internal_name != "_" {
@@ -49,7 +48,7 @@ impl SwiftFunction<'_> {
                 }
             }
         }
-        result
+        Ok(result)
     }
     pub fn get_name(&self) -> Option<String> {
         let x = self.props.node.child_by_field_name("name")?;

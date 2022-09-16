@@ -277,7 +277,11 @@ impl DocsGenerator {
         };
 
         let parameters = match codeblock {
-            SwiftCodeBlock::Function(ref function) => Some(function.get_parameters()),
+            SwiftCodeBlock::Function(ref function) => Some(
+                function
+                    .get_parameters()
+                    .map_err(|err| DocsGenerationError::GenericError(err.into()))?,
+            ),
             _ => None,
         };
 
