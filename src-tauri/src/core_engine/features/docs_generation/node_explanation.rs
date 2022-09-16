@@ -1,7 +1,6 @@
 use std::env;
 
 use serde::{Deserialize, Serialize};
-use tauri::async_runtime::block_on;
 use ts_rs::TS;
 
 use crate::core_engine::syntax_tree::{FunctionParameter, SwiftCodeBlockKind};
@@ -45,14 +44,6 @@ pub struct NodeExplanationRequest {
     context: String,
     method: String,
     parameter_names: Option<Vec<String>>,
-}
-
-pub fn _fetch_node_explanation(
-    codeblock: &CodeBlock,
-    context: Option<String>,
-) -> Option<NodeExplanation> {
-    let handle = fetch_node_explanation(codeblock, context);
-    block_on(handle).ok()
 }
 
 pub async fn fetch_node_explanation(
@@ -133,49 +124,125 @@ fn map_node_explanation_response_to_node_explanation(
     }
 }
 
-#[cfg(test)]
-mod tests_node_explanation_port {
-
-    use crate::core_engine::{
-        features::docs_generation::node_annotation::CodeBlock, syntax_tree::SwiftCodeBlockKind,
-        TextPosition, XcodeText,
-    };
-
-    use super::_fetch_node_explanation;
-
-    #[test]
-    #[ignore]
-    fn test_fetch_node_explanation() {
-        let resp = _fetch_node_explanation(
-            &CodeBlock {
-                text: XcodeText::from_str("print(\"Hello World\")"),
-                name: Some("my_fun".to_string()),
-                first_char_pos: TextPosition { row: 0, column: 0 },
-                last_char_pos: TextPosition { row: 0, column: 0 },
-                kind: SwiftCodeBlockKind::Function,
-                func_complexity_todo: None,
-                func_parameters_todo: None,
-            },
-            Some("print(\"Hello World\")".to_string()),
-        );
-        assert!(resp.is_some());
+fn explaination_to_docstring(explanation: &NodeExplanation) -> String {
+    let mut docstring = String::new();
+    docstring.push_str(&format!("/// {}", explanation.summary));
+    if let Some(parameters) = &explanation.parameters {
+        if parameters.len() > 0 {
+            docstring.push_str("\n");
+            for param in parameters {
+                docstring.push_str(&format!(
+                    "/// - parameter {}: `{}` {}\n",
+                    param.name, param.param_type, param.explanation
+                ));
+            }
+            docstring.pop();
+        }
     }
+    docstring
+}
 
-    #[test]
-    #[ignore]
-    fn test_fetch_node_explanation_without_context() {
-        let resp = _fetch_node_explanation(
-            &CodeBlock {
-                text: XcodeText::from_str("print(\"Hello World\")"),
-                name: Some("my_fun".to_string()),
-                func_parameters_todo: None,
-                first_char_pos: TextPosition { row: 0, column: 0 },
-                last_char_pos: TextPosition { row: 0, column: 0 },
+#[cfg(test)]
+mod tests {
+    mod explaination_to_docstring {
+        use crate::core_engine::features::docs_generation::FunctionParameterWithExplanation;
+
+        use super::super::explaination_to_docstring;
+        use super::super::NodeExplanation;
+
+        use super::super::SwiftCodeBlockKind;
+
+        #[test]
+        fn only_summary() {
+            let explanation = NodeExplanation {
+                summary: "This is a summary".to_string(),
+                kind: SwiftCodeBlockKind::Class,
+                parameters: None,
+            };
+            let docstring = explaination_to_docstring(&explanation);
+            assert_eq!(docstring, "/// This is a summary");
+        }
+
+        #[test]
+        fn function_with_two_parameters() {
+            let explanation = NodeExplanation {
+                summary: "This is a summary".to_string(),
                 kind: SwiftCodeBlockKind::Function,
-                func_complexity_todo: None,
-            },
-            None,
-        );
-        assert!(resp.is_some());
+                parameters: Some(vec![
+                    FunctionParameterWithExplanation {
+                        name: "param1".to_string(),
+                        explanation: "This is a UIElement".to_string(),
+                        param_type: "UIElement".to_string(),
+                    },
+                    FunctionParameterWithExplanation {
+                        name: "param2".to_string(),
+                        explanation: "This is a string".to_string(),
+                        param_type: "String".to_string(),
+                    },
+                ]),
+            };
+            let docstring = explaination_to_docstring(&explanation);
+            assert_eq!(
+                docstring,
+                r#"/// This is a summary
+/// - parameter param1: `UIElement` This is a UIElement
+/// - parameter param2: `String` This is a string"#
+            );
+        }
+    }
+    mod node_explanation_port {
+
+        use tauri::async_runtime::block_on;
+
+        use crate::core_engine::{
+            features::docs_generation::node_annotation::CodeBlock, syntax_tree::SwiftCodeBlockKind,
+            TextPosition, XcodeText,
+        };
+
+        use super::super::{fetch_node_explanation, NodeExplanation};
+
+        fn _fetch_node_explanation(
+            codeblock: &CodeBlock,
+            context: Option<String>,
+        ) -> Option<NodeExplanation> {
+            let handle = fetch_node_explanation(codeblock, context);
+            block_on(handle).ok()
+        }
+
+        #[test]
+        #[ignore]
+        fn with_context() {
+            let resp = _fetch_node_explanation(
+                &CodeBlock {
+                    text: XcodeText::from_str("print(\"Hello World\")"),
+                    name: Some("my_fun".to_string()),
+                    first_char_pos: TextPosition { row: 0, column: 0 },
+                    last_char_pos: TextPosition { row: 0, column: 0 },
+                    kind: SwiftCodeBlockKind::Function,
+                    func_complexity_todo: None,
+                    func_parameters_todo: None,
+                },
+                Some("print(\"Hello World\")".to_string()),
+            );
+            assert!(resp.is_some());
+        }
+
+        #[test]
+        #[ignore]
+        fn without_context() {
+            let resp = _fetch_node_explanation(
+                &CodeBlock {
+                    text: XcodeText::from_str("print(\"Hello World\")"),
+                    name: Some("my_fun".to_string()),
+                    func_parameters_todo: None,
+                    first_char_pos: TextPosition { row: 0, column: 0 },
+                    last_char_pos: TextPosition { row: 0, column: 0 },
+                    kind: SwiftCodeBlockKind::Function,
+                    func_complexity_todo: None,
+                },
+                None,
+            );
+            assert!(resp.is_some());
+        }
     }
 }
