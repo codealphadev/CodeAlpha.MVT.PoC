@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { appWindow } from '@tauri-apps/api/window';
 	import WidgetBackground from '../components/widget/widget-background.svelte';
 	import IconLogo from '../components/widget/icons/icon-logo.svelte';
 	import IconLogoGreyscale from '../components/widget/icons/icon-logo-greyscale.svelte';
@@ -15,23 +14,14 @@
 
 	let app_active = true;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
-	let ghostClickAlreadyHappened = true;
 	let processing_timeout = 15000; // ms
 	let show_alternate_icon_duration = 2000; // ms
 
 	const clickAction = async () => {
 		app_active = !app_active;
 		await invoke('cmd_toggle_app_activation', { appActive: app_active });
-		if (ghostClickAlreadyHappened) {
-		} else {
-			// Case "Ghostclick happened"
-			ghostClickAlreadyHappened = true;
-		}
+		
 	};
-
-	appWindow.listen('tauri://move', async () => {
-		ghostClickAlreadyHappened = false;
-	});
 
 	const listenTauriEvents = async () => {
 		await listen('EventRuleExecutionState' as ChannelList, (event) => {

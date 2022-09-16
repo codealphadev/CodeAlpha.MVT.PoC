@@ -72,7 +72,7 @@
 
 {#if explanation !== undefined}
 	<div data-tauri-drag-region class="absolute w-full h-full"  />
-	<div class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3">
+	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3">
 		<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
 		
 		{#if explanation.parameters}
