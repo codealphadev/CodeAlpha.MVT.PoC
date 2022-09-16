@@ -1,6 +1,7 @@
 use std::env;
 
 use serde::{Deserialize, Serialize};
+use tracing::error;
 use ts_rs::TS;
 
 use crate::{
@@ -86,10 +87,20 @@ pub async fn fetch_node_explanation(
         .post(url)
         .json(&req_body)
         .send()
-        .await?;
-    let parsed_response: NodeExplanationResponse = response.json().await?;
+        .await
+        .map_err(|e| {
+            error!(?e, "Error while sending request to cloud backend");
+            e
+        })?
+        .json::<NodeExplanationResponse>()
+        .await
+        .map_err(|e| {
+            error!(?e, "Error while parsing response from cloud backend");
+            e
+        })?;
+
     let node_explanation = map_node_explanation_response_to_node_explanation(
-        parsed_response,
+        response,
         &codeblock.func_parameters_todo,
     );
 
