@@ -6,10 +6,10 @@ use crate::{
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
         syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
-        CodeDocument, TextRange,
+        CodeDocument, TextPosition, TextRange, XcodeChar,
     },
     window_controls::models::TrackingAreaClickedMessage,
-    CORE_ENGINE_ACTIVE_AT_STARTUP,
+    CORE_ENGINE_ACTIVE_AT_STARTUP, NODE_EXPLAINATION_CURRENT_INSERTION_POINT,
 };
 
 use super::{
@@ -302,6 +302,13 @@ impl DocsGenerator {
         text_content: &XcodeText,
         window_uid: WindowUid,
     ) -> Result<(), DocsGenerationError> {
+        let (docs_insertion_index, _) = compute_docs_insertion_point_and_indentation(
+            text_content,
+            codeblock.first_char_pos.row,
+        )?;
+
+        *NODE_EXPLAINATION_CURRENT_INSERTION_POINT.lock() = docs_insertion_index;
+
         let new_annotation = NodeAnnotation::new(codeblock, text_content, window_uid)?;
 
         self.node_annotations.insert(window_uid, new_annotation);
@@ -317,4 +324,35 @@ impl DocsGenerator {
             false
         }
     }
+}
+
+fn compute_docs_insertion_point_and_indentation(
+    text_content: &XcodeText,
+    insertion_line: usize,
+) -> Result<(usize, usize), DocsGenerationError> {
+    // split the text into lines
+
+    let line = text_content
+        .rows_iter()
+        .nth(insertion_line)
+        .ok_or(DocsGenerationError::MissingContext)?;
+
+    // count whitespaces in insertion_line until first character
+    let mut whitespaces = 0;
+    for c_u16 in line {
+        if *c_u16 == ' ' as XcodeChar {
+            whitespaces += 1;
+        } else {
+            break;
+        }
+    }
+
+    let docs_insertion_index = (TextPosition {
+        row: insertion_line,
+        column: whitespaces,
+    })
+    .as_TextIndex(&text_content)
+    .ok_or(DocsGenerationError::MissingContext)?;
+
+    Ok((docs_insertion_index, whitespaces))
 }

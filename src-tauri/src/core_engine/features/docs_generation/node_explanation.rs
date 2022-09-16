@@ -3,7 +3,10 @@ use std::env;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::core_engine::syntax_tree::{FunctionParameter, SwiftCodeBlockKind};
+use crate::{
+    core_engine::syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
+    NODE_EXPLAINATION_CURRENT_DOCSTRING,
+};
 
 use super::node_annotation::CodeBlock;
 
@@ -85,10 +88,15 @@ pub async fn fetch_node_explanation(
         .send()
         .await?;
     let parsed_response: NodeExplanationResponse = response.json().await?;
-    Ok(map_node_explanation_response_to_node_explanation(
+    let node_explanation = map_node_explanation_response_to_node_explanation(
         parsed_response,
         &codeblock.func_parameters_todo,
-    ))
+    );
+
+    let node_docstring = explaination_to_docstring(&node_explanation);
+    *NODE_EXPLAINATION_CURRENT_DOCSTRING.lock() = node_docstring;
+
+    Ok(node_explanation)
 }
 
 fn map_function_parameters_to_names(params: &Vec<FunctionParameter>) -> Vec<String> {
