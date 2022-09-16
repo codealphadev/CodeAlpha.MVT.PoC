@@ -135,7 +135,7 @@ impl ExplainWindow {
             .set_position(corrected_window_origin_global.as_tauri_LogicalPosition())
             .ok()?;
 
-        set_shadow(&tauri_window, false).expect("Unsupported platform!");
+        set_shadow(&tauri_window, true).expect("Unsupported platform!");
 
         tauri_window.show().ok()?;
 

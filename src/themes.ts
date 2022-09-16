@@ -1,4 +1,4 @@
-const CodeAlphaOrange = '#0A7CBB';
+const CodeAlphaBlue = '#0A7CBB';
 
 export type ThemeName = 'light' | 'dark';
 export const colorNames = [
@@ -33,7 +33,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 	dark: {
 		colors: {
 			background: '#222222',
-			primary: CodeAlphaOrange,
+			primary: CodeAlphaBlue,
 			secondary: '#aaaaaa',
 			inactive: '#80808080',
 			contrast: '#ffffff',
@@ -51,3 +51,6 @@ export const colors = colorNames.reduce(
 	(curr, colorName) => ({ ...curr, [colorName]: `var(${mapColorNameToCssVarString(colorName)})` }),
 	{} as { [colorName in ColorName]: string }
 );
+
+export const gradient_tailwind = 'bg-gradient-to-bl from-[#0b9cda] to-[#054b8b]';
+export const gradient_text_tailwind = `${gradient_tailwind} bg-clip-text text-transparent`;

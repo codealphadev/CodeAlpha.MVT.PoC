@@ -5,7 +5,8 @@ const colorNames = [
 	'contrast',
 	'background',
 	'backgroundgrey',
-	'frame'
+	'frame',
+	'primarygradient'
 ];
 
 function mapColorNameToCssVarString(colorName) {
