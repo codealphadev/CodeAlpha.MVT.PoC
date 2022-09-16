@@ -47,10 +47,9 @@ impl EventWindowControls {
             EventWindowControls::TrackingAreaClickedOutside(_) => publish_to_frontend = true,
         }
 
-        // Emit to CodeOverlay window
+        // Emit to all windows
         if publish_to_frontend {
-            _ = app_handle.emit_to(
-                &AppWindow::CodeOverlay.to_string(),
+            _ = app_handle.emit_all(
                 event_name.as_str(),
                 Some(serde_json::to_string(self).unwrap()),
             );

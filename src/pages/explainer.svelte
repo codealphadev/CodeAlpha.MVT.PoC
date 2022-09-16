@@ -82,7 +82,7 @@
 		{#if complexity !== null}
 		<ComplexitySection complexity={complexity}/>
 		{/if}
-		<hr class="border-frame w-full"/>
+		<hr class="border-backgroundsecondary w-full"/>
 		<Footer/>
 
 	</div>

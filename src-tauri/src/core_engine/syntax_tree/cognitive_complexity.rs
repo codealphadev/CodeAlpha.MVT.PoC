@@ -60,7 +60,9 @@ fn calculate_cognitive_complexities_intl(
     match node.kind() {
         "function_declaration" | "lambda_literal" => {
             nesting_depth += 1;
-            parent_function_names.push(get_function_name(node, text_content)?); // TODO: What about getting complexity of incomplete trees? Shouldn't panic?
+            if let Some(name) = get_function_name(node, text_content).ok() {
+                parent_function_names.push(name);
+            }
         }
         "ternary_expression" => {
             complexity.nesting_complexity += (nesting_depth - 1).max(0);
@@ -165,7 +167,7 @@ fn get_function_name(
     let x = node
         .child_by_field_name("name")
         .ok_or(SwiftCodeBlockError::GenericError(anyhow!(
-            "Could not find name field in function declaration"
+            "Could not find name field in function declaration",
         )))?;
     get_node_text(&x, &text_content)
 }

@@ -6,7 +6,7 @@ import { colors } from "../../../themes";
 	export let highlighted = false;
 	const ANNOTATION_LINE_WIDTH_PCT = 10;
 
-	$: background_color = highlighted ? colors.primary : colors.inactive;
+	$: background = highlighted ? colors.primary_gradient : colors.inactive;
 </script>
 
 {#if visible}
@@ -14,7 +14,7 @@ import { colors } from "../../../themes";
 		class="annotation-line"
 		style="width: {ANNOTATION_LINE_WIDTH_PCT}%; top: 0%; left: {50 -
 			ANNOTATION_LINE_WIDTH_PCT /
-				2}%; height: 100%; position: absolute; background-color: {background_color};"
+				2}%; height: 100%; position: absolute; background: {background};"
 	/>
 {/if}
 
