@@ -101,7 +101,7 @@ pub async fn fetch_node_explanation(
 
     let node_explanation = map_node_explanation_response_to_node_explanation(
         response,
-        &codeblock.func_parameters_todo,
+        codeblock.func_parameters_todo.as_ref(),
     );
 
     let node_docstring = explaination_to_docstring(&node_explanation);
@@ -116,7 +116,7 @@ fn map_function_parameters_to_names(params: &Vec<FunctionParameter>) -> Vec<Stri
 
 fn map_node_explanation_response_to_node_explanation(
     response: NodeExplanationResponse,
-    function_parameters: &Option<Vec<FunctionParameter>>,
+    function_parameters: Option<&Vec<FunctionParameter>>,
 ) -> NodeExplanation {
     let parameters = if let (Some(function_parameters), Some(response_parameters)) =
         (function_parameters, response.parameters)
@@ -163,6 +163,141 @@ fn explaination_to_docstring(explanation: &NodeExplanation) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    mod map_node_explanation_response_to_node_explanation {
+        use crate::core_engine::{
+            features::{
+                docs_generation::{
+                    node_explanation::map_node_explanation_response_to_node_explanation,
+                    FunctionParameterDto, FunctionParameterWithExplanation,
+                    NodeExplanationResponse,
+                },
+                NodeExplanation,
+            },
+            syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
+        };
+
+        #[test]
+        fn no_parameters() {
+            let response = NodeExplanationResponse {
+                summary: "summary".to_string(),
+                kind: SwiftCodeBlockKind::Function,
+                parameters: None,
+            };
+            assert_eq!(
+                map_node_explanation_response_to_node_explanation(response, None),
+                NodeExplanation {
+                    summary: "summary".to_string(),
+                    kind: SwiftCodeBlockKind::Function,
+                    parameters: None,
+                }
+            );
+        }
+
+        #[test]
+        fn correct_parameters() {
+            let response = NodeExplanationResponse {
+                summary: "summary".to_string(),
+                kind: SwiftCodeBlockKind::Function,
+                parameters: Some(vec![
+                    FunctionParameterDto {
+                        name: "param1".to_string(),
+                        explanation: "It's a param".to_string(),
+                    },
+                    FunctionParameterDto {
+                        name: "param2".to_string(),
+                        explanation: "Another one".to_string(),
+                    },
+                ]),
+            };
+            let input_parameters = Some(vec![
+                FunctionParameter {
+                    name: "param1".to_string(),
+                    param_type: "Int".to_string(),
+                },
+                FunctionParameter {
+                    name: "param2".to_string(),
+                    param_type: "String".to_string(),
+                },
+            ]);
+
+            assert_eq!(
+                map_node_explanation_response_to_node_explanation(
+                    response,
+                    input_parameters.as_ref()
+                ),
+                NodeExplanation {
+                    summary: "summary".to_string(),
+                    kind: SwiftCodeBlockKind::Function,
+                    parameters: Some(vec![
+                        FunctionParameterWithExplanation {
+                            name: "param1".to_string(),
+                            explanation: "It's a param".to_string(),
+                            param_type: "Int".to_string(),
+                        },
+                        FunctionParameterWithExplanation {
+                            name: "param2".to_string(),
+                            explanation: "Another one".to_string(),
+                            param_type: "String".to_string(),
+                        },
+                    ]),
+                }
+            );
+        }
+
+        #[test]
+        fn filters_out_wrong_parameters() {
+            let response = NodeExplanationResponse {
+                summary: "summary".to_string(),
+                kind: SwiftCodeBlockKind::Function,
+                parameters: Some(vec![
+                    FunctionParameterDto {
+                        name: "crazywrongparam".to_string(),
+                        explanation: "{a{ADSSfci3 xc,v.je}}".to_string(),
+                    },
+                    FunctionParameterDto {
+                        name: "param1".to_string(),
+                        explanation: "It's a param".to_string(),
+                    },
+                    FunctionParameterDto {
+                        name: "param1".to_string(),
+                        explanation: "It's a param again???".to_string(),
+                    },
+                    FunctionParameterDto {
+                        name: "crazywrongparasdfasdam".to_string(),
+                        explanation: "{a{ADSSf133qrwfasdfci3 xc,v.je}}".to_string(),
+                    },
+                ]),
+            };
+            let input_parameters = Some(vec![
+                FunctionParameter {
+                    name: "param1".to_string(),
+                    param_type: "Int".to_string(),
+                },
+                FunctionParameter {
+                    name: "param2".to_string(),
+                    param_type: "String".to_string(),
+                },
+            ]);
+
+            assert_eq!(
+                map_node_explanation_response_to_node_explanation(
+                    response,
+                    input_parameters.as_ref()
+                ),
+                NodeExplanation {
+                    summary: "summary".to_string(),
+                    kind: SwiftCodeBlockKind::Function,
+                    parameters: Some(vec![FunctionParameterWithExplanation {
+                        name: "param1".to_string(),
+                        explanation: "It's a param".to_string(),
+                        param_type: "Int".to_string(),
+                    }]),
+                }
+            );
+        }
+    }
+
     mod explaination_to_docstring {
         use crate::core_engine::features::docs_generation::FunctionParameterWithExplanation;
 
