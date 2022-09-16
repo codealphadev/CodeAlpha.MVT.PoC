@@ -9,7 +9,15 @@ use tree_sitter::{Node, Parser, Tree};
 
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
-use super::{calculate_cognitive_complexities, Complexities, SwiftCodeBlock, SwiftCodeBlockBase};
+use super::{
+    calculate_cognitive_complexities, Complexities, SwiftCodeBlock, SwiftCodeBlockBase,
+    SwiftCodeBlockError,
+};
+
+#[derive(Debug, Clone)]
+pub struct NodeMetadata {
+    pub complexities: Complexities,
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftSyntaxTreeError {
@@ -21,6 +29,16 @@ pub enum SwiftSyntaxTreeError {
     NoMetadataFoundForNode,
     #[error("At this point, no valid tree is available.")]
     NoTreeParsed,
+    #[error("Could not parse tree.")]
+    CouldNotParseTree,
+    #[error("Something went wrong.")]
+    GenericError(#[source] anyhow::Error),
+}
+
+impl From<SwiftCodeBlockError> for SwiftSyntaxTreeError {
+    fn from(error: SwiftCodeBlockError) -> Self {
+        SwiftSyntaxTreeError::GenericError(error.into())
+    }
 }
 
 pub struct SwiftSyntaxTree {
@@ -28,7 +46,7 @@ pub struct SwiftSyntaxTree {
     tree_sitter_tree: Option<Tree>,
     content: Option<XcodeText>,
     logging_folder: Option<PathBuf>,
-    node_metadata: HashMap<usize, Complexities>,
+    node_metadata: HashMap<usize, NodeMetadata>,
 }
 
 impl SwiftSyntaxTree {
@@ -53,16 +71,16 @@ impl SwiftSyntaxTree {
         self.node_metadata.clear();
     }
 
-    pub fn parse(&mut self, content: &XcodeText) -> bool {
+    pub fn parse(&mut self, content: &XcodeText) -> Result<(), SwiftSyntaxTreeError> {
         let updated_tree = self.tree_sitter_parser.parse_utf16(content, None);
 
         if let Some(tree) = updated_tree {
-            calculate_cognitive_complexities(&tree.root_node(), 0, &mut self.node_metadata);
+            calculate_cognitive_complexities(&tree.root_node(), &content, &mut self.node_metadata)?;
             self.content = Some(content.to_owned());
             self.tree_sitter_tree = Some(tree);
-            return true;
+            return Ok(());
         } else {
-            return false;
+            return Err(SwiftSyntaxTreeError::CouldNotParseTree);
         }
     }
 
@@ -213,7 +231,7 @@ mod tests_SwiftSyntaxTree {
             replace_string
         ));
 
-        swift_syntax_tree.parse(&code_original);
+        swift_syntax_tree.parse(&code_original).unwrap();
         {
             let root = swift_syntax_tree.tree().unwrap().root_node();
             let mut cursor = root.walk();
@@ -231,7 +249,7 @@ mod tests_SwiftSyntaxTree {
             }
         }
 
-        swift_syntax_tree.parse(&code_updated);
+        swift_syntax_tree.parse(&code_updated).unwrap();
         let root = swift_syntax_tree.tree().unwrap().root_node();
         let mut cursor = root.walk();
         println!(
@@ -257,9 +275,9 @@ mod tests_SwiftSyntaxTree {
 
         let code =
             XcodeText::from_str("var apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"");
-        swift_syntax_tree.parse(&code);
+        swift_syntax_tree.parse(&code).unwrap();
         let updated_code = XcodeText::from_str("let apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"\nlet appleSummary2 = \"I have \\(apples) apples.\"");
-        swift_syntax_tree.parse(&updated_code);
+        swift_syntax_tree.parse(&updated_code).unwrap();
     }
 
     fn prepare_treesitter_logging() -> PathBuf {
@@ -281,7 +299,7 @@ mod tests_SwiftSyntaxTree {
         //                |------------------------>| <- end column is zero on row 1
         //                                            <- end byte is one past the last byte (27), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
-        swift_syntax_tree.parse(&text);
+        swift_syntax_tree.parse(&text).unwrap();
 
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
@@ -303,7 +321,7 @@ mod tests_SwiftSyntaxTree {
         //                |------------------------>| <- end column is one past the last char (26)
         //                |------------------------>| <- end byte is one past the last byte (26), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new();
-        swift_syntax_tree.parse(&text);
+        swift_syntax_tree.parse(&text).unwrap();
 
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 
@@ -327,7 +345,7 @@ mod tests_SwiftSyntaxTree {
         let mut utf8_str = XcodeText::from_str("let x = 1; console.log(x);");
         text.append(&mut utf8_str);
 
-        swift_syntax_tree.parse(&text);
+        swift_syntax_tree.parse(&text).unwrap();
 
         let root_node = swift_syntax_tree.tree().unwrap().root_node();
 

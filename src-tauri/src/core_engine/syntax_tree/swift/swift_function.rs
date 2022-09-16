@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use tree_sitter::Node;
 
 use crate::core_engine::{
-    syntax_tree::{Complexities, SwiftCodeBlock, SwiftCodeBlockError},
+    syntax_tree::{swift_syntax_tree::NodeMetadata, SwiftCodeBlock, SwiftCodeBlockError},
     TextPosition, XcodeText,
 };
 
@@ -22,7 +22,7 @@ pub struct SwiftFunction<'a> {
 }
 impl SwiftFunction<'_> {
     pub fn get_complexity(&self) -> isize {
-        self.props.node_metadata.get_total_complexity()
+        self.props.node_metadata.complexities.get_total_complexity()
     }
 
     pub fn get_parameters(&self) -> Vec<FunctionParameter> {
@@ -111,7 +111,7 @@ fn get_type_for_parameter(
 impl SwiftCodeBlockBase<'_> for SwiftFunction<'_> {
     fn new<'a>(
         node: Node<'a>,
-        node_metadata: &'a Complexities,
+        node_metadata: &'a NodeMetadata,
         text_content: &'a XcodeText,
     ) -> Result<SwiftCodeBlock<'a>, SwiftCodeBlockError> {
         Ok(SwiftCodeBlock::Function(SwiftFunction {
