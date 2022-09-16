@@ -2,7 +2,7 @@
 
 	import { Router, Route } from 'yrv';
 	import CodeOverlay from './pages/code-overlay.svelte';
-	import NodeExplainer from './pages/node-explainer.svelte';
+	import Explainer from './pages/explainer.svelte';
 	import Widget from './pages/widget.svelte';
 	import ThemeContext from './theme-context.svelte';
 
@@ -17,7 +17,7 @@
 			<CodeOverlay />
 		</Route>
 		<Route path="/explain">
-			<NodeExplainer />
+			<Explainer />
 		</Route>
 	</Router>
 </ThemeContext>

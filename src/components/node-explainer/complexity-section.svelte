@@ -4,8 +4,8 @@
 </script>
 
 {#if complexity > 2}
-<div class="p-4 bg-backgroundgrey rounded-md">
-  <div class="flex gap-3">
+<div class="p-4 bg-backgroundgrey rounded-md w-full">
+  <div class="flex gap-3 items-center">
     <div class="flex-shrink-0">
       <!-- Heroicon name: mini/exclamation-triangle -->
       <svg class="h-5 w-5 text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -13,7 +13,7 @@
       </svg>
     </div>
     <div>
-      <p class="text-sm text-contrast">
+      <p class="text-xs text-contrast">
         This function may be too <span class="decoration-dotted underline-offset-2"></span> complex. Consider refactoring.
       </p>
     </div>

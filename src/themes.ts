@@ -1,4 +1,4 @@
-const CodeAlphaOrange = '#fc7456';
+const CodeAlphaOrange = '#0A7CBB';
 
 export type ThemeName = 'light' | 'dark';
 export const colorNames = [
@@ -7,7 +7,8 @@ export const colorNames = [
 	'inactive',
 	'contrast',
 	'background',
-	'backgroundgrey'
+	'backgroundgrey',
+	'frame'
 ] as const;
 
 export type ColorName = typeof colorNames[number];
@@ -21,11 +22,12 @@ export const themes: { [name in ThemeName]: Theme } = {
 	light: {
 		colors: {
 			background: '#ffffff',
-			primary: '#FF451D',
+			primary: '#0B92DA',
 			secondary: '#636363',
 			inactive: '#bbbbbb80',
 			contrast: '#000000',
-			backgroundgrey: '#f5f5f5'
+			backgroundgrey: '#f5f5f5',
+			frame: '#e5e5e5'
 		}
 	},
 	dark: {
@@ -35,7 +37,8 @@ export const themes: { [name in ThemeName]: Theme } = {
 			secondary: '#aaaaaa',
 			inactive: '#80808080',
 			contrast: '#ffffff',
-			backgroundgrey: '#2c2c2c'
+			backgroundgrey: '#2c2c2c',
+			frame: '#3c3c3c'
 		}
 	}
 };

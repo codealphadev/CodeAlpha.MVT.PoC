@@ -116,6 +116,7 @@ pub fn get_node_text(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/features/node_explanation/")]
 pub enum SwiftCodeBlockKind {
     Function,
     For,
