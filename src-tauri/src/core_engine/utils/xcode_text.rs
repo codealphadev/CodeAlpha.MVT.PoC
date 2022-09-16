@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use std::{
+    fmt,
     ops::{Deref, DerefMut},
     slice,
 };
@@ -11,12 +12,17 @@ use super::TextPosition;
 pub type XcodeChar = u16;
 pub type XcodeTextRows = Vec<Vec<XcodeChar>>;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, TS)]
 pub struct XcodeText {
     pub text: Vec<XcodeChar>,
     pub rows: Vec<Vec<XcodeChar>>,
 }
 
+impl fmt::Debug for XcodeText {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", String::from_utf16_lossy(&self))
+    }
+}
 impl<'a> XcodeText {
     pub fn new_empty() -> Self {
         Self {

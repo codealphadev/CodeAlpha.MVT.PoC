@@ -1,6 +1,6 @@
 use super::{
     rules::{rule_base::RuleResults, RuleBase, RuleType, SwiftLinterProps},
-    syntax_tree::SwiftSyntaxTree,
+    syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
     utils::XcodeText,
     TextRange,
 };
@@ -11,6 +11,7 @@ use crate::{
     window_controls::config::AppWindow,
 };
 use tauri::Manager;
+use tracing::error;
 
 #[derive(Clone, Debug)]
 pub struct EditorWindowProps {
@@ -101,7 +102,13 @@ impl CodeDocument {
         }
 
         self.file_path = file_path.clone();
-        self.syntax_tree.parse(&new_content);
+        match self.syntax_tree.parse(&new_content) {
+            Err(SwiftSyntaxTreeError::CouldNotParseTree) => {}
+            Err(e) => {
+                error!(?e, "Error parsing syntax tree");
+            }
+            Ok(_) => {}
+        };
         self.text = Some(new_content);
     }
 
@@ -147,7 +154,13 @@ impl CodeDocument {
                 self.selected_text_range = Some(text_range.clone());
 
                 if content_text_u16 != text {
-                    self.syntax_tree.parse(content_text_u16);
+                    match self.syntax_tree.parse(&content_text_u16) {
+                        Err(SwiftSyntaxTreeError::CouldNotParseTree) => {}
+                        Err(e) => {
+                            error!(?e, "Error parsing syntax tree");
+                        }
+                        Ok(_) => {}
+                    };
                     self.text = Some(content_text_u16.clone());
                 }
             }

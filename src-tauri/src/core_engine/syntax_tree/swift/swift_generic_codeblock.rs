@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use tree_sitter::Node;
 
-use crate::core_engine::{syntax_tree::Complexities, TextPosition, XcodeText};
+use crate::core_engine::{syntax_tree::swift_syntax_tree::NodeMetadata, TextPosition, XcodeText};
 
 use super::{
     swift_codeblock::{
@@ -20,7 +20,7 @@ pub struct SwiftGenericCodeBlock<'a> {
 impl SwiftCodeBlockBase<'_> for SwiftGenericCodeBlock<'_> {
     fn new<'a>(
         node: Node<'a>,
-        node_metadata: &'a Complexities,
+        node_metadata: &'a NodeMetadata,
         text_content: &'a XcodeText,
     ) -> Result<SwiftCodeBlock<'a>, SwiftCodeBlockError> {
         let kind = SwiftCodeBlockKind::from_str(node.kind())?;

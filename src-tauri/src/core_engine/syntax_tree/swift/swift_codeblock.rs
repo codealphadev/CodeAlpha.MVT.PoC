@@ -6,7 +6,7 @@ use tree_sitter::Node;
 use ts_rs::TS;
 
 use crate::core_engine::{
-    syntax_tree::Complexities,
+    syntax_tree::swift_syntax_tree::NodeMetadata,
     utils::{TextPosition, TextRange, XcodeText},
 };
 
@@ -31,7 +31,7 @@ pub trait SwiftCodeBlockBase<'a> {
     fn as_text(&self) -> Result<XcodeText, SwiftCodeBlockError>;
     fn new(
         node: Node<'a>,
-        node_metadata: &'a Complexities,
+        node_metadata: &'a NodeMetadata,
         text_content: &'a XcodeText,
     ) -> Result<SwiftCodeBlock<'a>, SwiftCodeBlockError>;
     fn get_kind(&self) -> SwiftCodeBlockKind;
@@ -42,7 +42,7 @@ pub trait SwiftCodeBlockBase<'a> {
 pub struct SwiftCodeBlockProps<'a> {
     pub text_content: &'a XcodeText,
     pub node: Node<'a>,
-    pub node_metadata: &'a Complexities,
+    pub node_metadata: &'a NodeMetadata,
 }
 
 impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
@@ -56,7 +56,7 @@ impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
 
     fn new(
         node: Node<'a>,
-        node_metadata: &'a Complexities,
+        node_metadata: &'a NodeMetadata,
         text_content: &'a XcodeText,
     ) -> Result<Self, SwiftCodeBlockError> {
         let kind = node.kind();
