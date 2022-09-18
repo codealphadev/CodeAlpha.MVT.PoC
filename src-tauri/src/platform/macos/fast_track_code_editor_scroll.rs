@@ -2,22 +2,26 @@
 // This only handles mousewheel scrolling events, since they come much faster than the native AX scroll event.
 // We additionally use the native AX scroll event to handle other scrolling cases like scrollbar click-and-drag.
 
+use std::time::Duration;
 use std::time::Instant;
 
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
 use crate::app_handle;
+use throttle::Throttle;
 
 use super::{
     generate_axui_element_hash, internal::get_focused_uielement, EventViewport, GetVia, XcodeError,
 };
 lazy_static! {
-    static ref CORRECTION_EVENT_PUBLISHING_TIME: Mutex<Option<Instant>> = Mutex::new(None);
+    static ref SCROLL_THROTTLE: Mutex<Throttle> =
+        Mutex::new(Throttle::new(Duration::from_millis(8), 1));
 }
 
 pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) -> Option<()> {
     // let start = Instant::now();
+    SCROLL_THROTTLE.try_lock()?.accept().ok()?;
     // println!("{}", Utc::now().to_rfc3339());
     _ = execute_publishing_event(text_editor_hash, None);
 
@@ -83,21 +87,21 @@ fn execute_publishing_event(
     _start: Option<Instant>,
 ) -> Result<(), XcodeError> {
     // Check if text editor is still focused
-    let current_hash = generate_axui_element_hash(&get_focused_uielement(&GetVia::Current)?);
+    //let current_hash = generate_axui_element_hash(&get_focused_uielement(&GetVia::Current)?);
 
-    if text_editor_hash == current_hash {
-        // Update viewport
-        EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current)?
-            .publish_to_tauri(&app_handle());
+    // if text_editor_hash == current_hash {
+    // Update viewport
+    EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current)?
+        .publish_to_tauri(&app_handle());
 
-        // if let Some(start) = start {
-        //     println!(
-        //         "start: {:?} dur: {:?} scroll event",
-        //         start,
-        //         Instant::now() - start
-        //     );
-        // }
-        return Ok(());
-    }
+    // if let Some(start) = start {
+    //     println!(
+    //         "start: {:?} dur: {:?} scroll event",
+    //         start,
+    //         Instant::now() - start
+    //     );
+    // }
+    //  return Ok(());
+    ///}
     Ok(())
 }

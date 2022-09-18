@@ -25,7 +25,7 @@ pub fn xcode_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                     _ = on_editor_window_resized(&core_engine, &msg);
                 }
                 AXEventXcode::EditorTextareaScrolled(msg) => {
-                    _ = on_editor_textarea_scrolled(&core_engine, &msg);
+                    // _ = on_editor_textarea_scrolled(&core_engine, &msg);
                 }
                 AXEventXcode::EditorTextareaZoomed(msg) => {
                     _ = on_editor_textarea_zoomed(&core_engine, &msg);
