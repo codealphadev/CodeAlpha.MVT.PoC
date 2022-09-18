@@ -10,8 +10,8 @@
     {#each parameters as parameter}
     <li>
         <span class="font-mono text-contrast font-medium">{parameter.name}</span>
-        <span class="  text-tras font-mono text-secondary ml-3 font-medium">{parameter.param_type}</span>
-        <span class="gradient-text clip mt-[2px] font-normal">{@html DOMPurify.sanitize(marked.parse(parameter.explanation))}</span>
+        <span class=" font-mono text-secondary ml-3 font-medium">{parameter.param_type}</span>
+        <div class="gradient-text  mt-[2px] font-normal">{@html DOMPurify.sanitize(marked.parse(parameter.explanation))}</div>
     </li>
     {/each}
 </ul>

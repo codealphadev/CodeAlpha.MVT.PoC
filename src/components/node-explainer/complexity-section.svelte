@@ -3,7 +3,7 @@
     export let complexity: number;
 </script>
 
-{#if complexity > 2}
+{#if complexity > 15}
 <div class="p-4 bg-backgroundsecondary rounded-md w-full">
   <div class="flex gap-3 items-center">
     <div class="flex-shrink-0">
