@@ -3,8 +3,8 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-
 use std::sync::Arc;
+use tracing::error;
 
 use core_engine::{CoreEngine, TextRange};
 use parking_lot::Mutex;
@@ -13,7 +13,7 @@ use tauri::{
     utils::assets::EmbeddedAssets, Context, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent,
     SystemTrayMenuItem,
 };
-use tracing::debug;
+use tracing::{debug, info};
 use window_controls::WindowManager;
 
 use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
@@ -99,6 +99,27 @@ fn main() {
             cmd_paste_docs
         ])
         .setup(|app| {
+            let handle = app.handle();
+            tauri::async_runtime::spawn(async move {
+                match handle.updater().check().await {
+                    Ok(update_response) => {
+                        if update_response.is_update_available() {
+                            match update_response.download_and_install().await {
+                                Ok(_) => {
+                                    info!("Successfully installed update. Restarting...");
+                                    handle.restart();
+                                }
+                                Err(e) => {
+                                    error!(?e, "Error downloading and installing update.");
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error!(?e, "Update check failed");
+                    }
+                }
+            });
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
 
@@ -184,6 +205,36 @@ fn main() {
         tauri::RunEvent::ExitRequested { api, .. } => {
             api.prevent_exit();
         }
+        tauri::RunEvent::Updater(updater_event) => match updater_event {
+            tauri::UpdaterEvent::DownloadProgress {
+                chunk_length,
+                content_length,
+            } => {
+                println!("downloaded {} of {:?}", chunk_length, content_length);
+            }
+            tauri::UpdaterEvent::UpdateAvailable {
+                body,
+                date,
+                version,
+            } => {
+                info!("update available {} {:?} {}", body, date, version);
+            }
+            tauri::UpdaterEvent::Pending => {
+                info!("update is pending!");
+            }
+            tauri::UpdaterEvent::Downloaded => {
+                info!("update has been downloaded!");
+            }
+            tauri::UpdaterEvent::Updated => {
+                info!("App has been updated");
+            }
+            tauri::UpdaterEvent::AlreadyUpToDate => {
+                println!("app is already up to date");
+            }
+            tauri::UpdaterEvent::Error(error) => {
+                error!("Failed to update: {}", error);
+            }
+        },
         _ => {}
     });
 }
