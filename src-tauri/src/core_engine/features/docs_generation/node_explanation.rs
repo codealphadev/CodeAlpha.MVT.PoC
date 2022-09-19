@@ -156,21 +156,42 @@ fn map_node_explanation_response_to_node_explanation(
 }
 
 fn explaination_to_docstring(explanation: &NodeExplanation) -> String {
+    let line_length = 80;
     let mut docstring = String::new();
-    docstring.push_str(&format!("/// {}", explanation.summary));
+    docstring.push_str(&add_str_every_n_chars(
+        &format!("/// {}", explanation.summary),
+        line_length,
+        "\n///",
+    ));
     if let Some(parameters) = &explanation.parameters {
         if parameters.len() > 0 {
             docstring.push_str("\n");
             for param in parameters {
-                docstring.push_str(&format!(
-                    "/// - parameter {}: `{}` {}\n",
-                    param.name, param.param_type, param.explanation
+                docstring.push_str(&add_str_every_n_chars(
+                    &format!(
+                        "/// - parameter {}: `{}` {}\n",
+                        param.name, param.param_type, param.explanation
+                    ),
+                    line_length,
+                    "\n///",
                 ));
             }
             docstring.pop();
         }
     }
     docstring
+}
+
+fn add_str_every_n_chars(text: &str, n: usize, insert_str: &str) -> String {
+    let mut result = String::new();
+    for (i, c) in text.chars().enumerate() {
+        let is_first_char = i == 0;
+        if i % n == 0 && !is_first_char {
+            result.push_str(insert_str);
+        }
+        result.push(c);
+    }
+    result
 }
 
 #[cfg(test)]
@@ -307,6 +328,25 @@ mod tests {
                     }]),
                 }
             );
+        }
+    }
+
+    mod add_line_breaks_every_n_chars {
+        use crate::core_engine::features::docs_generation::node_explanation::add_str_every_n_chars;
+
+        #[test]
+        fn no_line_breaks() {
+            assert_eq!(add_str_every_n_chars("1234567890", 10, "\n///"), "1234567890");
+        }
+
+        #[test]
+        fn one_line_break() {
+            assert_eq!(add_str_every_n_chars("1234567890", 5, "\n///"), "12345\n///67890");
+        }
+
+        #[test]
+        fn multiple_line_break() {
+            assert_eq!(add_str_every_n_chars("12345678901", 5, "\n//"), "12345\n//67890\n//1");
         }
     }
 
