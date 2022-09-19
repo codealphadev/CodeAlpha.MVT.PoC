@@ -122,18 +122,19 @@ impl SwiftSyntaxTree {
     ) -> Result<SwiftCodeBlock, SwiftSyntaxTreeError> {
         let mut node = self.get_selected_code_node(selected_text_range)?;
 
-        let node_metadata = self
-            .node_metadata
-            .get(&node.id())
-            .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)?;
-
         let text_content = self
             .content
             .as_ref()
             .ok_or(SwiftSyntaxTreeError::NoTreeParsed)?;
 
         loop {
-            if let Ok(codeblock_node) = SwiftCodeBlock::new(node, node_metadata, text_content) {
+            if let Ok(codeblock_node) = SwiftCodeBlock::new(
+                node,
+                self.node_metadata
+                    .get(&node.id())
+                    .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)?,
+                text_content,
+            ) {
                 return Ok(codeblock_node);
             } else {
                 if let Some(parent) = node.parent() {

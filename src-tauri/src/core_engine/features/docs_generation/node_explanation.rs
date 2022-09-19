@@ -61,15 +61,11 @@ pub struct NodeExplanationRequest {
     parameter_names: Option<Vec<String>>,
 }
 
-#[cached(result = true, size = 2)]
+#[cached(result = true, size = 100)]
 pub async fn fetch_node_explanation(
     codeblock: CodeBlock,
     context: Option<String>,
 ) -> Result<NodeExplanation, reqwest::Error> {
-    let mut hasher = DefaultHasher::new();
-    codeblock.kind.hash(&mut hasher);
-
-    dbg!(hasher.finish());
     let ctx_string = if let Some(context) = context {
         context
     } else {
