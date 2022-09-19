@@ -5,7 +5,7 @@ use crate::core_engine::utils::XcodeText;
 
 /// A position in a multi-line text document, in terms of rows and columns.
 /// Rows and columns are zero-based.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS, Hash)]
 #[ts(export, export_to = "bindings/rules/utils/")]
 pub struct TextPosition {
     pub row: usize,

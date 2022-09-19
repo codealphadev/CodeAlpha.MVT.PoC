@@ -12,7 +12,7 @@ use super::TextPosition;
 pub type XcodeChar = u16;
 pub type XcodeTextRows = Vec<Vec<XcodeChar>>;
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, TS, Hash)]
 pub struct XcodeText {
     pub text: Vec<XcodeChar>,
     pub rows: Vec<Vec<XcodeChar>>,

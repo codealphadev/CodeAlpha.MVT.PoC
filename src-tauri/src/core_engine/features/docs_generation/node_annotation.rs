@@ -38,7 +38,7 @@ pub enum NodeAnnotationState {
     Finished,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CodeBlock {
     pub name: Option<String>,
     pub func_parameters_todo: Option<Vec<FunctionParameter>>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
@@ -129,9 +129,9 @@ impl NodeAnnotation {
             let name = self.codeblock.name.clone();
 
             let codeblock = self.codeblock.clone();
-
+            let complexity = codeblock.func_complexity_todo;
             async move {
-                let response = fetch_node_explanation(&codeblock, None).await;
+                let response = fetch_node_explanation(codeblock, None).await;
 
                 if let Ok(response) = response {
                     (*explanation.lock()) = Some(response.clone());
@@ -140,7 +140,7 @@ impl NodeAnnotation {
                     NodeExplanationEvent::UpdateNodeExplanation(UpdateNodeExplanationMessage {
                         explanation: response,
                         name,
-                        complexity: codeblock.func_complexity_todo,
+                        complexity,
                     })
                     .publish_to_tauri(&app_handle());
 
