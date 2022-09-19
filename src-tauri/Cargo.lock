@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "CodeAlpha"
-version = "0.0.5"
+version = "0.0.10"
 dependencies = [
  "accessibility",
  "accessibility-sys",
@@ -3705,8 +3705,7 @@ dependencies = [
 [[package]]
 name = "tao"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43336f5d1793543ba96e2a1e75f3a5c7dcd592743be06a0ab3a190f4fcb4b934"
+source = "git+https://github.com/codealphadev/tao?branch=0.12.2#e1e45797cfcad99f75df64141725f1d7ea721a7d"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -5028,8 +5027,3 @@ dependencies = [
  "crc32fast",
  "crossbeam-utils",
 ]
-
-[[patch.unused]]
-name = "tao"
-version = "0.12.2"
-source = "git+https://github.com/codealphadev/tao?branch=0.12.2#77c15a4d21a9d8d49136836d5dbdbad1410d5ea1"
