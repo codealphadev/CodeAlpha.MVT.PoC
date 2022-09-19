@@ -1,5 +1,8 @@
 name: Release
-on: [workflow_dispatch]
+on:
+  push:
+    branches:
+      - '*'
 
 permissions:
   id-token: write # Make GitHub populate environment variables for OIDC with GCP
