@@ -19,11 +19,11 @@ lazy_static! {
         Mutex::new(Throttle::new(Duration::from_millis(8), 1));
 }
 
-pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) -> Option<()> {
+pub fn fast_track_handle_text_editor_mousewheel_scroll() -> Option<()> {
     // let start = Instant::now();
     SCROLL_THROTTLE.try_lock()?.accept().ok()?;
     // println!("{}", Utc::now().to_rfc3339());
-    _ = execute_publishing_event(text_editor_hash, None);
+    _ = execute_publishing_event(None);
 
     // Disable correction events for now
     /*
@@ -82,10 +82,7 @@ pub fn fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash: usize) 
     Some(())
 }
 
-fn execute_publishing_event(
-    text_editor_hash: usize,
-    _start: Option<Instant>,
-) -> Result<(), XcodeError> {
+fn execute_publishing_event(_start: Option<Instant>) -> Result<(), XcodeError> {
     // Check if text editor is still focused
     //let current_hash = generate_axui_element_hash(&get_focused_uielement(&GetVia::Current)?);
 

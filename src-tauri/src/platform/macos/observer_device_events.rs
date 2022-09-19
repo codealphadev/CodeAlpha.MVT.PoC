@@ -77,16 +77,9 @@ fn notification_mousewheel_event_wrapper() {
 }
 fn notification_mousewheel_event() -> Option<()> {
     // Check if we need to send a notification that a valid text editor field was scrolled.
-    if let Some((editor_pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
-        // 1. Is focused app a valid editor?
-        let focused_ui_element = get_focused_uielement(&GetVia::Current).ok()?;
-        if editor_pid == focused_ui_element.pid().ok()? {
-            // 2. Is focused app a valid text editor field?
-            if is_focused_uielement_xcode_editor_textarea().ok()? {
-                let text_editor_hash = generate_axui_element_hash(&focused_ui_element);
-                fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash);
-            }
-        }
+
+    if is_focused_uielement_xcode_editor_textarea().ok()? {
+        fast_track_handle_text_editor_mousewheel_scroll();
     }
 
     Some(())
