@@ -134,4 +134,4 @@ jobs:
           destination: 'codealpha-releases'
           parent: false
           headers: |-
-            cache-control: public, max-age=10
+            cache-control: no-cache
