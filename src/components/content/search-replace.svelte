@@ -4,7 +4,6 @@
 
 	let searchString: string;
 
-	$: console.log(searchString);
 
 	const swapStrings = () => {
 		invoke('cmd_search_and_replace', {

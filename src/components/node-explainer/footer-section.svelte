@@ -5,8 +5,8 @@
 	import IconThumbsDown from "./icons/icon-thumbs-down.svelte";
 	import IconThumbsUp from "./icons/icon-thumbs-up.svelte";
     
+    let activated = false;
     const paste_docs = async () => {
-        console.log('Hello');
 		await invoke('cmd_paste_docs');
 	}
 
@@ -15,6 +15,7 @@
             feature: 'NodeExplainer',
             feedback: 'good'
         })
+        activated = true;
     }
 
     const vote_bad = async () => {
@@ -28,7 +29,7 @@
 <div class="flex justify-between w-full items-center">
     <div class="flex gap-3 px-1 ">
         <IconButton on:click={vote_good}>
-            <IconThumbsUp/>
+            <IconThumbsUp activated={activated}/>
         </IconButton>
         <IconButton on:click={vote_bad}>
             <IconThumbsDown/>

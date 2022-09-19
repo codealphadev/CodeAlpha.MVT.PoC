@@ -190,7 +190,7 @@ impl TrackingAreasManager {
                 }
             } else {
                 // Check if tracking area subscribed to MouseClickedOutside event.
-                if Self::evaluate_event_subscriptions(
+                /*  if Self::evaluate_event_subscriptions(
                     &TrackingEventType::MouseClickedOutside,
                     &tracking_area.0.event_subscriptions,
                 ) {
@@ -199,7 +199,7 @@ impl TrackingAreasManager {
                         event_type: TrackingEventType::MouseClickedOutside,
                         duration_in_area_ms: None,
                     });
-                }
+                }*/
             }
         }
 
