@@ -1,10 +1,5 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    env,
-    hash::{Hash, Hasher},
-};
-
 use serde::{Deserialize, Serialize};
+use std::env;
 use tracing::error;
 use ts_rs::TS;
 
@@ -336,17 +331,26 @@ mod tests {
 
         #[test]
         fn no_line_breaks() {
-            assert_eq!(add_str_every_n_chars("1234567890", 10, "\n///"), "1234567890");
+            assert_eq!(
+                add_str_every_n_chars("1234567890", 10, "\n///"),
+                "1234567890"
+            );
         }
 
         #[test]
         fn one_line_break() {
-            assert_eq!(add_str_every_n_chars("1234567890", 5, "\n///"), "12345\n///67890");
+            assert_eq!(
+                add_str_every_n_chars("1234567890", 5, "\n///"),
+                "12345\n///67890"
+            );
         }
 
         #[test]
         fn multiple_line_break() {
-            assert_eq!(add_str_every_n_chars("12345678901", 5, "\n//"), "12345\n//67890\n//1");
+            assert_eq!(
+                add_str_every_n_chars("12345678901", 5, "\n//"),
+                "12345\n//67890\n//1"
+            );
         }
     }
 

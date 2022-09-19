@@ -135,14 +135,14 @@ impl NodeAnnotation {
 
                 if let Ok(response) = response {
                     (*explanation.lock()) = Some(response.clone());
-                    // Notify the frontend that loading has finished
-
-                    NodeExplanationEvent::UpdateNodeExplanation(UpdateNodeExplanationMessage {
+                    let node_explaination_msg = UpdateNodeExplanationMessage {
                         explanation: response,
                         name,
                         complexity,
-                    })
-                    .publish_to_tauri(&app_handle());
+                    };
+                    // Notify the frontend that loading has finished
+                    NodeExplanationEvent::UpdateNodeExplanation(node_explaination_msg.clone())
+                        .publish_to_tauri(&app_handle());
 
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
@@ -151,7 +151,7 @@ impl NodeAnnotation {
                         },
                     )
                     .publish_to_tauri(&app_handle());
-                    debug!("NodeExplanationFetched");
+                    debug!(explanation=?node_explaination_msg, "Node explanation fetched");
                 } else {
                     EventRuleExecutionState::NodeExplanationFailed()
                         .publish_to_tauri(&app_handle());

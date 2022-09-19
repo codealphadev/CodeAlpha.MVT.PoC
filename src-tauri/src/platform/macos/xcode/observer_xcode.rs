@@ -12,6 +12,7 @@ use accessibility_sys::{
 use accessibility::{AXObserver, AXUIElement, Error};
 use core_foundation::runloop::CFRunLoop;
 use parking_lot::Mutex;
+use tracing::debug;
 
 use super::callback_xcode_notifications;
 use crate::{
@@ -109,6 +110,7 @@ fn is_new_xcode_observer_registration_required() -> Result<bool, Error> {
                 browser: None,
             })
             .publish_to_tauri(&app_handle());
+            debug!(observer_type = ?ObserverType::XCode, "Removed AX observer");
         }
 
         // Cleanup old observers
@@ -135,6 +137,7 @@ fn create_observer_and_add_notifications() -> Result<(), Error> {
     let ui_element = AXUIElement::application(xcode_pid);
 
     store_registered_ax_observer(xcode_pid, ObserverType::XCode, &xcode_observer);
+    debug!(observer_type = ?ObserverType::XCode, "Added AX observer");
 
     // 2. Start AXObserver before adding notifications
     xcode_observer.start();
