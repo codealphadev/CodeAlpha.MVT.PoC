@@ -1,44 +1,44 @@
 {
-	"name": "code-alpha",
-	"version": "0.0.5",
-	"private": true,
-	"scripts": {
-		"build-frontend": "vite build",
-		"start-frontend": "vite",
-		"build": "tauri build --target universal-apple-darwin",
-		"start": "tauri dev",
-		"start-with-local-cloud-backend": "CODEALPHA_CLOUD_BACKEND_URL='http://localhost:8080' tauri dev",
-		"check": "svelte-check --tsconfig ./tsconfig.json",
-		"tauri": "tauri",
-		"prepare": "husky install"
-	},
-	"devDependencies": {
-		"@rgossiaux/svelte-headlessui": "^1.0.0-beta.12",
-		"@rgossiaux/svelte-heroicons": "^0.1.2",
-		"@sveltejs/vite-plugin-svelte": "^1.0.5",
-		"@tauri-apps/cli": "^1.0.0",
-		"@tauri-apps/tauricon": "github:tauri-apps/tauricon",
-		"@tsconfig/svelte": "^2.0.0",
-		"@types/dompurify": "^2.3.4",
-		"@types/marked": "^4.0.7",
-		"autoprefixer": "^10.4.2",
-		"husky": "^8.0.1",
-		"postcss": "^8.4.5",
-		"postcss-load-config": "^3.1.1",
-		"svelte": "^3.50.0",
-		"svelte-check": "^2.9.0",
-		"svelte-highlight": "^6.2.1",
-		"svelte-preprocess": "^4.10.7",
-		"tailwindcss": "^3.1.8",
-		"tslib": "^2.0.0",
-		"typescript": "^4.8.2"
-	},
-	"dependencies": {
-		"@tauri-apps/api": "^1.0.2",
-		"dompurify": "^2.4.0",
-		"marked": "^4.1.0",
-		"vite": "^3.0.7",
-		"yrv": "^0.0.57"
-	},
-	"type": "module"
+  "name": "code-alpha",
+  "version": "0.0.6",
+  "private": true,
+  "scripts": {
+    "build-frontend": "vite build",
+    "start-frontend": "vite",
+    "build": "tauri build --target universal-apple-darwin",
+    "start": "tauri dev",
+    "start-with-local-cloud-backend": "CODEALPHA_CLOUD_BACKEND_URL='http://localhost:8080' tauri dev",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "tauri": "tauri",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@rgossiaux/svelte-headlessui": "^1.0.0-beta.12",
+    "@rgossiaux/svelte-heroicons": "^0.1.2",
+    "@sveltejs/vite-plugin-svelte": "^1.0.5",
+    "@tauri-apps/cli": "^1.0.0",
+    "@tauri-apps/tauricon": "github:tauri-apps/tauricon",
+    "@tsconfig/svelte": "^2.0.0",
+    "@types/dompurify": "^2.3.4",
+    "@types/marked": "^4.0.7",
+    "autoprefixer": "^10.4.2",
+    "husky": "^8.0.1",
+    "postcss": "^8.4.5",
+    "postcss-load-config": "^3.1.1",
+    "svelte": "^3.50.0",
+    "svelte-check": "^2.9.0",
+    "svelte-highlight": "^6.2.1",
+    "svelte-preprocess": "^4.10.7",
+    "tailwindcss": "^3.1.8",
+    "tslib": "^2.0.0",
+    "typescript": "^4.8.2"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^1.0.2",
+    "dompurify": "^2.4.0",
+    "marked": "^4.1.0",
+    "vite": "^3.0.7",
+    "yrv": "^0.0.57"
+  },
+  "type": "module"
 }

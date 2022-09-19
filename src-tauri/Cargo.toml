@@ -1,6 +1,6 @@
 [package]
 name = "CodeAlpha"
-version = "0.0.5"
+version = "0.0.6"
 description = "CodeAlpha"
 authors = [ "Adrian Hupka, Daniel Owens, Adam Nyberg",]
 license = ""
@@ -44,7 +44,7 @@ custom-protocol = [ "tauri/custom-protocol",]
 
 [dependencies.tauri]
 version = "1.0.5"
-features = ["clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-start-dragging"]
+features = [ "clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-start-dragging",]
 
 [dependencies.tauri-plugin-log]
 git = "https://github.com/tauri-apps/tauri-plugin-log"
@@ -93,7 +93,9 @@ features = [ "serde-compat", "format", "uuid-impl",]
 
 [build-dependencies.tauri-build]
 version = "1.0.0"
-features = ["isolation"]
+features = [ "isolation",]
 
-[patch.crates-io]
-tao = { git = 'https://github.com/codealphadev/tao', branch="0.12.2"}
+[patch.crates-io.tao]
+git = "https://github.com/codealphadev/tao"
+branch = "0.12.2"
+
