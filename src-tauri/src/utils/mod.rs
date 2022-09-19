@@ -7,3 +7,4 @@ pub mod messaging;
 pub mod rule_types;
 pub mod tauri_types;
 pub mod tracing;
+pub mod updater;
