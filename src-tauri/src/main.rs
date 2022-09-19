@@ -26,7 +26,7 @@ mod window_controls;
 use lazy_static::lazy_static;
 
 use crate::{
-    utils::tracing::TracingSubscriber,
+    utils::{tracing::TracingSubscriber, updater::listen_for_updates},
     window_controls::{cmd_resize_window, cmd_toggle_app_activation},
 };
 
@@ -99,27 +99,8 @@ fn main() {
             cmd_paste_docs
         ])
         .setup(|app| {
-            let handle = app.handle();
-            tauri::async_runtime::spawn(async move {
-                match handle.updater().check().await {
-                    Ok(update_response) => {
-                        if update_response.is_update_available() {
-                            match update_response.download_and_install().await {
-                                Ok(_) => {
-                                    info!("Successfully installed update. Restarting...");
-                                    handle.restart();
-                                }
-                                Err(e) => {
-                                    error!(?e, "Error downloading and installing update.");
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        error!(?e, "Update check failed");
-                    }
-                }
-            });
+            listen_for_updates(app.handle());
+
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
 
