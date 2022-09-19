@@ -12,6 +12,7 @@ pub fn listen_for_updates(handle: AppHandle) {
             match handle.updater().check().await {
                 Ok(update_response) => {
                     if update_response.is_update_available() {
+                        info!("Found new version. Downloading and installing...");
                         match update_response.download_and_install().await {
                             Ok(_) => {
                                 info!("Successfully installed update. Restarting...");
