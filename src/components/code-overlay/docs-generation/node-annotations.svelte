@@ -28,7 +28,6 @@
 				event.payload as string
 			
 		) as NodeAnnotationEvent;
-			console.log(payload, event_type);
 			switch (event_type) {
 				case 'UpdateNodeAnnotation':
 					annotation = payload;

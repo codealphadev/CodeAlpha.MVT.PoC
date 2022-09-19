@@ -103,6 +103,7 @@ fn main() {
         .setup(|app| {
             debug!(app_version = ?app.package_info().version);
 
+            #[cfg(not(debug_assertions))]
             listen_for_updates(app.handle());
 
             // Set the app handle for the static APP_HANDLE variable
