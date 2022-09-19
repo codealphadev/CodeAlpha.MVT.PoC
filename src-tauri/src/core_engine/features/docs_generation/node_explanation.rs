@@ -1,8 +1,14 @@
-use std::env;
+use std::{
+    collections::hash_map::DefaultHasher,
+    env,
+    hash::{Hash, Hasher},
+};
 
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use ts_rs::TS;
+
+use cached::proc_macro::cached;
 
 use crate::{
     core_engine::syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
@@ -55,10 +61,15 @@ pub struct NodeExplanationRequest {
     parameter_names: Option<Vec<String>>,
 }
 
+#[cached(result = true, size = 2)]
 pub async fn fetch_node_explanation(
-    codeblock: &CodeBlock,
+    codeblock: CodeBlock,
     context: Option<String>,
 ) -> Result<NodeExplanation, reqwest::Error> {
+    let mut hasher = DefaultHasher::new();
+    codeblock.kind.hash(&mut hasher);
+
+    dbg!(hasher.finish());
     let ctx_string = if let Some(context) = context {
         context
     } else {
@@ -361,7 +372,7 @@ mod tests {
         use super::super::{fetch_node_explanation, NodeExplanation};
 
         fn _fetch_node_explanation(
-            codeblock: &CodeBlock,
+            codeblock: CodeBlock,
             context: Option<String>,
         ) -> Option<NodeExplanation> {
             let handle = fetch_node_explanation(codeblock, context);
@@ -371,7 +382,7 @@ mod tests {
         #[test]
         fn with_context() {
             let resp = _fetch_node_explanation(
-                &CodeBlock {
+                CodeBlock {
                     text: XcodeText::from_str("print(\"Hello World\")"),
                     name: Some("my_fun".to_string()),
                     first_char_pos: TextPosition { row: 0, column: 0 },
@@ -388,7 +399,7 @@ mod tests {
         #[test]
         fn without_context() {
             let resp = _fetch_node_explanation(
-                &CodeBlock {
+                CodeBlock {
                     text: XcodeText::from_str("print(\"Hello World\")"),
                     name: Some("my_fun".to_string()),
                     func_parameters_todo: None,

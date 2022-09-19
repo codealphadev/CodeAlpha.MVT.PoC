@@ -11,7 +11,7 @@ use super::swift_codeblock::{
     SwiftCodeBlockKind, SwiftCodeBlockProps,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionParameter {
     pub name: String,
     pub param_type: String,
