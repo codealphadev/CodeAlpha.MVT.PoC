@@ -3,9 +3,12 @@ use core_graphics::event::{
     CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
     EventField,
 };
+use lazy_static::lazy_static;
 use objc::{msg_send, runtime::Class, sel, sel_impl};
 use parking_lot::Mutex;
 use rdev::{simulate, EventType};
+use std::time::Duration;
+use throttle::Throttle;
 
 use crate::{
     app_handle,
@@ -14,10 +17,19 @@ use crate::{
 };
 
 use super::{
-    is_focused_uielement_xcode_editor_textarea,
+    get_xcode_editor_textarea,
     models::input_device::{ClickType, MouseButton, MouseClickMessage},
     EventViewport, GetVia, XcodeError,
 };
+
+lazy_static! {
+    static ref CODE_DOC_ORIGIN: Mutex<Option<LogicalPosition>> = Mutex::new(None);
+}
+
+lazy_static! {
+    static ref SCROLL_THROTTLE: Mutex<Throttle> =
+        Mutex::new(Throttle::new(Duration::from_millis(8), 1));
+}
 
 pub fn subscribe_mouse_events() {
     match CGEventTap::new(
@@ -73,11 +85,6 @@ fn notification_mousewheel_event_wrapper() {
     notification_xcode_textarea_scrolled();
 }
 
-use lazy_static::lazy_static;
-lazy_static! {
-    static ref CODE_DOC_ORIGIN: Mutex<Option<LogicalPosition>> = Mutex::new(None);
-}
-
 fn did_code_doc_origin_change(code_doc_origin: &LogicalPosition) -> bool {
     let mut code_doc_origin_lock = CODE_DOC_ORIGIN.lock();
     let code_doc_origin_changed = match *code_doc_origin_lock {
@@ -89,7 +96,9 @@ fn did_code_doc_origin_change(code_doc_origin: &LogicalPosition) -> bool {
 }
 
 fn notification_xcode_textarea_scrolled() -> Option<()> {
-    let xcode_editor_textarea = is_focused_uielement_xcode_editor_textarea().ok()?;
+    SCROLL_THROTTLE.try_lock()?.accept().ok()?;
+
+    let xcode_editor_textarea = get_xcode_editor_textarea().ok()?;
 
     if xcode_editor_textarea.is_some() {
         let event = EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current).ok()?;
@@ -145,7 +154,7 @@ fn notification_mouse_click_event(event_type: CGEventType, event: &CGEvent) {
 }
 
 pub fn send_event_mouse_wheel(delta: LogicalSize) -> Result<bool, XcodeError> {
-    if is_focused_uielement_xcode_editor_textarea()?.is_some() {
+    if get_xcode_editor_textarea()?.is_some() {
         let event_type = EventType::Wheel {
             delta_x: delta.width as i64,
             delta_y: delta.height as i64,
