@@ -99,12 +99,12 @@ fn main() {
             cmd_paste_docs
         ])
         .setup(|app| {
+            debug!(app_version = ?app.package_info().version);
+
             listen_for_updates(app.handle());
 
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
-
-            debug!(app_version = ?app.package_info().version);
 
             // Setup the observers for AX interactions and mouse events
             setup_observers();
@@ -213,7 +213,7 @@ fn main() {
                 println!("app is already up to date");
             }
             tauri::UpdaterEvent::Error(error) => {
-                error!("Failed to update: {}", error);
+                error!(?error, "Failed to update");
             }
         },
         _ => {}

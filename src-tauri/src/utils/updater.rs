@@ -22,6 +22,8 @@ pub fn listen_for_updates(handle: AppHandle) {
                                 error!(?e, "Error downloading and installing update.");
                             }
                         }
+                    } else {
+                        debug!("Version is up to date.");
                     }
                 }
                 Err(e) => {
