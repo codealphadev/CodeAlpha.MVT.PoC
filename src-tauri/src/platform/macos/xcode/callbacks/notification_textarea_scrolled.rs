@@ -3,14 +3,24 @@ use crate::platform::macos::{
     EventViewport, GetVia,
 };
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
+use lazy_static::lazy_static;
+use parking_lot::Mutex;
+
+use std::time::Duration;
 
 use core_foundation::base::{CFEqual, TCFType};
+use throttle::Throttle;
 
+lazy_static! {
+    static ref SCROLL_THROTTLE: Mutex<Throttle> =
+        Mutex::new(Throttle::new(Duration::from_millis(8), 1));
+}
 pub fn notify_textarea_scrolled(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
     assert_eq!(uielement.role()?, "AXScrollBar");
+    let _ = SCROLL_THROTTLE.try_lock().ok_or(Error::NotFound)?.accept();
 
     let window_element = uielement.window()?;
 
