@@ -1,27 +1,30 @@
-use core_foundation::runloop::{kCFRunLoopDefaultMode, CFRunLoop};
-use core_graphics::event::{
-    CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
-    EventField,
-};
-use objc::{msg_send, runtime::Class, sel, sel_impl};
-use rdev::{simulate, EventType};
+use std::time::Duration;
 
 use crate::{
     app_handle,
     platform::macos::{models::input_device::MouseMovedMessage, EventInputDevice},
     utils::geometry::{LogicalPosition, LogicalSize},
 };
+use core_foundation::runloop::{kCFRunLoopDefaultMode, CFRunLoop};
+use core_graphics::event::{
+    CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
+    EventField,
+};
+use lazy_static::lazy_static;
+use objc::{msg_send, runtime::Class, sel, sel_impl};
+use parking_lot::Mutex;
+use rdev::{simulate, EventType};
+use throttle::Throttle;
 
 use super::{
-    fast_track_code_editor_scroll::fast_track_handle_text_editor_mousewheel_scroll,
-    generate_axui_element_hash,
-    internal::get_focused_uielement,
     is_focused_uielement_xcode_editor_textarea,
     models::input_device::{ClickType, MouseButton, MouseClickMessage},
-    setup::{get_registered_ax_observer, ObserverType},
-    GetVia, XcodeError,
+    EventViewport, GetVia, XcodeError,
 };
-
+lazy_static! {
+    static ref SCROLL_THROTTLE: Mutex<Throttle> =
+        Mutex::new(Throttle::new(Duration::from_millis(8), 1));
+}
 pub fn subscribe_mouse_events() {
     match CGEventTap::new(
         CGEventTapLocation::HID,
@@ -79,7 +82,11 @@ fn notification_mousewheel_event() -> Option<()> {
     // Check if we need to send a notification that a valid text editor field was scrolled.
 
     if is_focused_uielement_xcode_editor_textarea().ok()? {
-        fast_track_handle_text_editor_mousewheel_scroll();
+        SCROLL_THROTTLE.try_lock()?.accept().ok()?;
+
+        EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current)
+            .ok()?
+            .publish_to_tauri(&app_handle());
     }
 
     Some(())
