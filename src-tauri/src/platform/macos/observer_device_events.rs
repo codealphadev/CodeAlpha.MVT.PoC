@@ -4,6 +4,7 @@ use core_graphics::event::{
     EventField,
 };
 use objc::{msg_send, runtime::Class, sel, sel_impl};
+use parking_lot::Mutex;
 use rdev::{simulate, EventType};
 
 use crate::{
@@ -13,13 +14,9 @@ use crate::{
 };
 
 use super::{
-    fast_track_code_editor_scroll::fast_track_handle_text_editor_mousewheel_scroll,
-    generate_axui_element_hash,
-    internal::get_focused_uielement,
     is_focused_uielement_xcode_editor_textarea,
     models::input_device::{ClickType, MouseButton, MouseClickMessage},
-    setup::{get_registered_ax_observer, ObserverType},
-    GetVia, XcodeError,
+    EventViewport, GetVia, XcodeError,
 };
 
 pub fn subscribe_mouse_events() {
@@ -73,19 +70,38 @@ pub fn subscribe_mouse_events() {
 }
 
 fn notification_mousewheel_event_wrapper() {
-    notification_mousewheel_event();
+    notification_xcode_textarea_scrolled();
 }
-fn notification_mousewheel_event() -> Option<()> {
-    // Check if we need to send a notification that a valid text editor field was scrolled.
-    if let Some((editor_pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
-        // 1. Is focused app a valid editor?
-        let focused_ui_element = get_focused_uielement(&GetVia::Current).ok()?;
-        if editor_pid == focused_ui_element.pid().ok()? {
-            // 2. Is focused app a valid text editor field?
-            if is_focused_uielement_xcode_editor_textarea().ok()? {
-                let text_editor_hash = generate_axui_element_hash(&focused_ui_element);
-                fast_track_handle_text_editor_mousewheel_scroll(text_editor_hash);
+
+use lazy_static::lazy_static;
+lazy_static! {
+    static ref CODE_DOC_ORIGIN: Mutex<Option<LogicalPosition>> = Mutex::new(None);
+}
+
+fn did_code_doc_origin_change(code_doc_origin: &LogicalPosition) -> bool {
+    let mut code_doc_origin_lock = CODE_DOC_ORIGIN.lock();
+    let code_doc_origin_changed = match *code_doc_origin_lock {
+        Some(ref origin) => origin != code_doc_origin,
+        None => true,
+    };
+    *code_doc_origin_lock = Some(*code_doc_origin);
+    code_doc_origin_changed
+}
+
+fn notification_xcode_textarea_scrolled() -> Option<()> {
+    let xcode_editor_textarea = is_focused_uielement_xcode_editor_textarea().ok()?;
+
+    if xcode_editor_textarea.is_some() {
+        let event = EventViewport::new_xcode_viewport_update_minimal(&GetVia::Current).ok()?;
+
+        let did_update = match &event {
+            EventViewport::XcodeViewportUpdate(msg) => {
+                did_code_doc_origin_change(&msg.code_document_frame_properties.dimensions.origin)
             }
+        };
+
+        if did_update {
+            event.publish_to_tauri(&app_handle());
         }
     }
 
@@ -129,7 +145,7 @@ fn notification_mouse_click_event(event_type: CGEventType, event: &CGEvent) {
 }
 
 pub fn send_event_mouse_wheel(delta: LogicalSize) -> Result<bool, XcodeError> {
-    if is_focused_uielement_xcode_editor_textarea()? {
+    if is_focused_uielement_xcode_editor_textarea()?.is_some() {
         let event_type = EventType::Wheel {
             delta_x: delta.width as i64,
             delta_y: delta.height as i64,

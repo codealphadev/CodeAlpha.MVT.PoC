@@ -10,11 +10,15 @@ use crate::platform::macos::setup::{get_registered_ax_observer, ObserverType};
 
 use super::{ax_helpers::ax_attribute, internal::get_focused_uielement, GetVia, XcodeError};
 
-pub fn is_focused_uielement_xcode_editor_textarea() -> Result<bool, XcodeError> {
+pub fn is_focused_uielement_xcode_editor_textarea() -> Result<Option<AXUIElement>, XcodeError> {
     if let Some((pid, _)) = get_registered_ax_observer(ObserverType::XCode) {
         let uielement = get_focused_uielement(&GetVia::Pid(pid))?;
 
-        is_uielement_xcode_editor_textarea(&uielement)
+        if is_uielement_xcode_editor_textarea(&uielement)? {
+            return Ok(Some(uielement));
+        } else {
+            return Ok(None);
+        }
     } else {
         Err(XcodeError::WindowHashUnknown)
     }
