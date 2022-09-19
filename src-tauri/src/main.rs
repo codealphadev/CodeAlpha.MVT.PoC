@@ -30,6 +30,7 @@ use crate::{
     window_controls::{cmd_resize_window, cmd_toggle_app_activation},
 };
 
+use utils::feedback::cmd_send_feedback;
 lazy_static! {
     static ref APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
 }
@@ -96,6 +97,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             cmd_toggle_app_activation,
             cmd_resize_window,
+            cmd_send_feedback,
             cmd_paste_docs
         ])
         .setup(|app| {

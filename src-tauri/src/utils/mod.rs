@@ -1,6 +1,7 @@
 pub use gcp::auth;
 pub use gcp::logging;
 
+pub mod feedback;
 pub mod gcp;
 pub mod geometry;
 pub mod messaging;

@@ -11,11 +11,17 @@
 	}
 
     const vote_good = async () => {
-        console.log('Voted suggestion good');
+        await invoke('send-feedback', {
+            feature: 'NodeExplainer',
+            feedback: 'good'
+        })
     }
 
     const vote_bad = async () => {
-        console.log('Voted suggestion good');
+        await invoke('send-feedback', {
+            feature: 'NodeExplainer',
+            feedback: 'bad'
+        })
     }
 </script>
 
