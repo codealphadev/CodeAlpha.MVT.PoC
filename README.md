@@ -50,4 +50,19 @@ Communication between these modules is event-driven, as is communication between
 The shared interfaces between the frontend and backend are generated from Rust structs with the `TS` annotation, and exported to TypeScript interfaces in `src-tauri/bindings/`, where they can be imported by the frontend. This is provided by [ts-rs](https://github.com/Aleph-Alpha/ts-rs)
 
 ## CI/CD
+
 This repository uses GitHub Actions on self-hosted hardware. To set up your development machine to run these, follow this guide: https://docs.github.com/en/actions/hosting-your-own-runners/adding-self-hosted-runners
+
+To set up machine to be a runner:
+
+- Make sure Xcode is installed in `/Applications`; otherwise, notarization will not work (error message: `xcrun altool` not found)
+- Make sure to set the environment variables:
+  - `TAURI_PRIVATE_KEY` (get from GCP secret manager)
+  - `TAURI_KEY_PASSWORD` (get from GCP secret manager)
+  - `APPLE_ID = 'adam.nyberg@gmail.com'`
+  - `APPLE_PASSWORD`
+  - `APPLE_CERTIFICATE`
+  - `APPLE_CERTIFICATE_PASSWORD`
+  - `ENABLE_CODE_SIGNING` (set this to anything)
+  - Follow the instructions at `https://github.com/codealphadev/CodeAlpha.MVT.PoC/settings/actions/runners/new` to set up your machine as a runner
+  - Install the certificate on your machine (whoever generates it needs to follow the guide at https://tauri.app/v1/guides/distribution/sign-macos)
