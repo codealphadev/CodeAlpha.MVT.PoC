@@ -9,7 +9,10 @@ use std::sync::Arc;
 use core_engine::{CoreEngine, TextRange};
 use parking_lot::Mutex;
 use platform::macos::{setup_observers, xcode::actions::replace_range_with_clipboard_text, GetVia};
-use tauri::{Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent, SystemTrayMenuItem};
+use tauri::{
+    utils::assets::EmbeddedAssets, Context, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent,
+    SystemTrayMenuItem,
+};
 use tracing::debug;
 use window_controls::WindowManager;
 
@@ -28,8 +31,7 @@ use crate::{
 };
 
 lazy_static! {
-    static ref APP_HANDLE: parking_lot::Mutex<Option<tauri::AppHandle>> =
-        parking_lot::Mutex::new(None);
+    static ref APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
 }
 
 lazy_static! {
@@ -54,17 +56,33 @@ pub fn app_handle() -> tauri::AppHandle {
     app_handle.as_ref().unwrap().clone()
 }
 
-fn construct_tray_menu() -> SystemTrayMenu {
+fn construct_tray_menu(context: &Context<EmbeddedAssets>) -> SystemTrayMenu {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let check_ax_api = CustomMenuItem::new("check_ax_api".to_string(), "Settings...");
+
+    let version = context.package_info().version.clone();
+
+    let version_label = CustomMenuItem::new(
+        "version".to_string(),
+        format!(
+            "Version: {}.{}.{}",
+            version.major, version.minor, version.patch
+        )
+        .as_str(),
+    )
+    .disabled();
 
     if !platform::macos::is_application_trusted() {
         SystemTrayMenu::new()
             .add_item(check_ax_api)
+            .add_item(version_label)
             .add_native_item(SystemTrayMenuItem::Separator)
             .add_item(quit)
     } else {
-        SystemTrayMenu::new().add_item(quit)
+        SystemTrayMenu::new()
+            .add_item(version_label)
+            .add_native_item(SystemTrayMenuItem::Separator)
+            .add_item(quit)
     }
 }
 
@@ -72,7 +90,7 @@ fn main() {
     // Configure tracing
     TracingSubscriber::new();
 
-    let system_tray = SystemTray::new().with_menu(construct_tray_menu());
+    let context = tauri::generate_context!("tauri.conf.json");
 
     let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -131,7 +149,7 @@ fn main() {
 
             Ok(())
         })
-        .system_tray(system_tray)
+        .system_tray(SystemTray::new().with_menu(construct_tray_menu(&context)))
         .on_system_tray_event(|_app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 "quit" => {
@@ -158,7 +176,7 @@ fn main() {
                 ]),
             )),
         ]))
-        .build(tauri::generate_context!("tauri.conf.json"))
+        .build(context)
         .expect("error while running tauri application");
 
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
