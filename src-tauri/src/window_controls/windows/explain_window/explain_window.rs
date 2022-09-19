@@ -22,7 +22,8 @@ use crate::{
 
 use super::listeners::window_control_events_listener;
 
-static Y_OFFSET: f64 = 0.;
+// The distance between the Explain window and any constraining border. Purely aesthetic.
+static CONSTRAINTS_OFFSET: f64 = 8.;
 
 #[derive(Clone, Debug)]
 pub struct ExplainWindow {
@@ -46,9 +47,6 @@ impl ExplainWindow {
         {
             let window_builder = create_default_window_builder(&app_handle, AppWindow::Explain)?;
             let _window = window_builder.build()?;
-
-            // #[cfg(debug_assertions)] // only include this code on debug builds
-            // window.open_devtools();
         }
 
         Ok(Self {
@@ -107,7 +105,7 @@ impl ExplainWindow {
             // Update the explain window's origin in local coordinates relative to code document frame.
             let local_origin = LogicalPosition {
                 x: annotation_area.origin.x - self.window_size.width,
-                y: annotation_area.origin.y - Y_OFFSET,
+                y: annotation_area.origin.y,
             }
             .to_local(&self.get_coordinate_system_origin()?);
 
@@ -229,7 +227,7 @@ impl ExplainWindow {
 
     fn corrected_window_origin_global(&self) -> Option<LogicalPosition> {
         // 1. Derive valid area of the screen where to put the explain window.
-        let valid_monitor_area = LogicalFrame {
+        let mut valid_monitor_area = LogicalFrame {
             origin: LogicalPosition {
                 x: self.monitor?.origin.x,
                 y: f64::max(
@@ -249,6 +247,11 @@ impl ExplainWindow {
                 ),
             },
         };
+
+        valid_monitor_area.origin.x += CONSTRAINTS_OFFSET;
+        valid_monitor_area.origin.y += CONSTRAINTS_OFFSET;
+        valid_monitor_area.size.width -= CONSTRAINTS_OFFSET * 2.0;
+        valid_monitor_area.size.height -= CONSTRAINTS_OFFSET * 2.0;
 
         let mut corrected_global_origin = self
             .window_origin_local?
