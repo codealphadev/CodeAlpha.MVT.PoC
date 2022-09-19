@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use accessibility::AXObserver;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
+use tracing::debug;
 
 use super::{
     app::register_observer_app, observer_device_events::subscribe_mouse_events,

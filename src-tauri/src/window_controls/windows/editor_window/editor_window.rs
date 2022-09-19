@@ -1,4 +1,5 @@
 use tauri::Manager;
+use tracing::debug;
 
 use crate::{
     app_handle,
@@ -59,8 +60,6 @@ pub struct EditorWindow {
     h_boundary: HorizontalBoundary,
     v_boundary: VerticalBoundary,
 
-    dark_mode: Option<bool>,
-
     viewport_props: Option<ViewportProperties>,
     code_document_props: Option<CodeDocumentFrameProperties>,
 }
@@ -69,7 +68,6 @@ impl EditorWindow {
     pub fn new(created_msg: &EditorWindowCreatedMessage) -> Self {
         let mut editor_window = Self {
             _id: created_msg.window_uid,
-            dark_mode: None,
             editor_name: created_msg.editor_name.clone(),
             pid: created_msg.pid,
             window_position: LogicalPosition::from_tauri_LogicalPosition(
@@ -159,13 +157,14 @@ impl EditorWindow {
     }
 
     pub fn check_and_update_dark_mode(&mut self) -> Result<(), String> {
-        self.dark_mode = get_dark_mode().ok();
-
-        EventWindowControls::DarkModeUpdate(DarkModeUpdateMessage {
-            dark_mode: self.dark_mode.ok_or("dark mode is None".to_string())?,
-        })
-        .publish_to_tauri(&app_handle());
-        Ok(())
+        if let Ok(dark_mode) = get_dark_mode() {
+            EventWindowControls::DarkModeUpdate(DarkModeUpdateMessage { dark_mode })
+                .publish_to_tauri(&app_handle());
+            debug!(dark_mode, "Dark mode updated");
+            Ok(())
+        } else {
+            Err("Could not get dark mode".to_string())
+        }
     }
 
     pub fn update_window_and_textarea_dimensions(

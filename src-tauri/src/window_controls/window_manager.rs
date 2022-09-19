@@ -5,6 +5,7 @@ use std::{
 };
 
 use parking_lot::Mutex;
+use tracing::debug;
 
 use crate::{
     app_handle,
@@ -130,8 +131,11 @@ impl WindowManager {
             }
         }
 
-        EventWindowControls::AppWindowHide(HideAppWindowMessage { app_windows })
-            .publish_to_tauri(&app_handle());
+        EventWindowControls::AppWindowHide(HideAppWindowMessage {
+            app_windows: app_windows.clone(),
+        })
+        .publish_to_tauri(&app_handle());
+        debug!(?app_windows, "Hide app windows");
     }
 
     pub fn show_app_windows(
@@ -180,6 +184,7 @@ impl WindowManager {
             code_document: editor_window.code_document()?,
         })
         .publish_to_tauri(&app_handle());
+        debug!(?app_windows, "Show app windows");
 
         Some(())
     }
@@ -326,6 +331,7 @@ pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool)
         active_feature: None,
     })
     .publish_to_tauri(&app_handle);
+    debug!(?app_active, "Toggle app activation");
 }
 
 #[tauri::command]

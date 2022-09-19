@@ -155,9 +155,11 @@ fn main() {
         .on_system_tray_event(|_app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 "quit" => {
+                    debug!("System tray: quit");
                     std::process::exit(0);
                 }
                 "check_ax_api" => {
+                    debug!("System tray: check_ax_api");
                     platform::macos::is_application_trusted_with_prompt();
                 }
                 _ => {}
@@ -261,5 +263,6 @@ fn cmd_paste_docs() {
             true,
         )
         .await;
+        debug!(insertion_point, docstring, "Docstring inserted");
     });
 }
