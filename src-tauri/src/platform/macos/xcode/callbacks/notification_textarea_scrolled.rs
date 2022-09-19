@@ -6,7 +6,6 @@ use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
-use crate::app_handle;
 use std::time::Duration;
 
 use core_foundation::base::{CFEqual, TCFType};
@@ -21,17 +20,7 @@ pub fn notify_textarea_scrolled(
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
     assert_eq!(uielement.role()?, "AXScrollBar");
-    let throttle = SCROLL_THROTTLE.try_lock();
-    match throttle {
-        None => return Ok(()),
-        Some(mut throttle) => match throttle.accept() {
-            Err(e) => {
-                println!("{:?}", e);
-                return Ok(());
-            }
-            Ok(_) => (),
-        },
-    };
+    let _ = SCROLL_THROTTLE.try_lock().ok_or(Error::NotFound)?.accept();
 
     let window_element = uielement.window()?;
 
