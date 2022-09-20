@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    node_annotation::{CodeBlock, NodeAnnotationState},
+    node_annotation::{AnnotationCodeBlock, NodeAnnotationState},
     NodeAnnotation,
 };
 
@@ -193,8 +193,11 @@ impl DocsGenerator {
 
         let window_uid = code_document.editor_window_props().window_uid;
 
-        let new_codeblock =
-            Self::derive_codeblock(selected_text_range, code_document.syntax_tree())?;
+        let new_codeblock = Self::derive_codeblock(
+            selected_text_range,
+            code_document.syntax_tree(),
+            text_content,
+        )?;
 
         let current_annotation = self.node_annotations.get(&window_uid);
         let did_codeblock_update =
@@ -267,14 +270,24 @@ impl DocsGenerator {
     fn derive_codeblock(
         selected_text_range: &TextRange,
         syntax_tree: &SwiftSyntaxTree,
-    ) -> Result<CodeBlock, DocsGenerationError> {
-        let codeblock: SwiftCodeBlock = syntax_tree
-            .get_selected_codeblock_node(&selected_text_range)
-            .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
+        text_content: &XcodeText,
+    ) -> Result<AnnotationCodeBlock, DocsGenerationError> {
+        let codeblock =
+            SwiftCodeBlock::from_text_range(syntax_tree, selected_text_range, text_content)
+                .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
 
         let text = codeblock
             .as_text()
             .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
+
+        let context = if let Ok(parent_codeblock) = codeblock.get_parent_code_block() {
+            let parent_text = parent_codeblock
+                .as_text()
+                .map_err(|err| DocsGenerationError::GenericError(err.into()))?;
+            Some(parent_text)
+        } else {
+            None
+        };
 
         let first_char_pos = codeblock.get_first_char_position();
         let last_char_pos = codeblock.get_last_char_position();
@@ -299,7 +312,7 @@ impl DocsGenerator {
             _ => None,
         };
 
-        Ok(CodeBlock {
+        Ok(AnnotationCodeBlock {
             func_complexity_todo: func_complexity,
             name,
             func_parameters_todo: parameters,
@@ -307,12 +320,13 @@ impl DocsGenerator {
             first_char_pos,
             last_char_pos,
             text,
+            context,
         })
     }
 
     fn create_node_annotation(
         &mut self,
-        codeblock: CodeBlock,
+        codeblock: AnnotationCodeBlock,
         text_content: &XcodeText,
         window_uid: WindowUid,
     ) -> Result<(), DocsGenerationError> {

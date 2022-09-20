@@ -452,7 +452,7 @@ fn get_selected_code_block_node(
 
     let selected_node = match code_document
         .syntax_tree()
-        .get_selected_code_node(selected_text_range)
+        .get_code_node_by_text_range(selected_text_range)
     {
         Ok(node) => node,
         Err(SwiftSyntaxTreeError::NoTreesitterNodeFound) => return Ok(None),

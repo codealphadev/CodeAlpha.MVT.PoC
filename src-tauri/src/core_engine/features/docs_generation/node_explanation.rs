@@ -14,7 +14,7 @@ use crate::{
     NODE_EXPLANATION_CURRENT_DOCSTRING,
 };
 
-use super::node_annotation::CodeBlock;
+use super::node_annotation::AnnotationCodeBlock;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
 #[ts(export, export_to = "bindings/features/node_explanation/")]
@@ -55,26 +55,27 @@ pub struct NodeExplanationRequest {
     version: String,
     kind: SwiftCodeBlockKind,
     code: String,
-    context: String,
+    context: Option<String>,
     method: String,
     parameter_names: Option<Vec<String>>,
 }
 
 pub async fn fetch_node_explanation(
-    codeblock: CodeBlock,
-    context: Option<String>,
+    code_block: AnnotationCodeBlock,
 ) -> Result<NodeExplanation, reqwest::Error> {
-    let CodeBlock {
-        text,
-        kind,
-        func_parameters_todo,
-        name: _,
-        func_complexity_todo: _,
-        first_char_pos: _,
-        last_char_pos: _,
-    } = codeblock;
+    let context = if let Some(context) = code_block.context {
+        Some(String::from_utf16_lossy(&context))
+    } else {
+        None
+    };
 
-    let result = cached_fetch_node_explanation(text, kind, func_parameters_todo, context).await;
+    let result = cached_fetch_node_explanation(
+        code_block.text,
+        code_block.kind,
+        code_block.func_parameters_todo,
+        context,
+    )
+    .await;
     if let Ok(node_explanation) = result.as_ref() {
         let node_docstring = explanation_to_docstring(&node_explanation);
         *NODE_EXPLANATION_CURRENT_DOCSTRING.lock() = node_docstring;
@@ -89,12 +90,6 @@ async fn cached_fetch_node_explanation(
     func_parameters: Option<Vec<FunctionParameter>>,
     context: Option<String>,
 ) -> Result<NodeExplanation, reqwest::Error> {
-    let ctx_string = if let Some(context) = context {
-        context
-    } else {
-        "".to_string()
-    };
-
     let url;
     let env_url = env::var("CODEALPHA_CLOUD_BACKEND_URL");
     if env_url.is_ok() {
@@ -111,7 +106,7 @@ async fn cached_fetch_node_explanation(
         apiKey: "-RWsev7z_qgP!Qinp_8cbmwgP9jg4AQBkfz".to_string(),
         code: codeblock_text_string,
         kind: kind.clone(),
-        context: ctx_string,
+        context,
         parameter_names: func_parameters
             .as_ref()
             .map(map_function_parameters_to_names),
@@ -423,51 +418,44 @@ mod tests {
         use tauri::async_runtime::block_on;
 
         use crate::core_engine::{
-            features::docs_generation::node_annotation::CodeBlock, syntax_tree::SwiftCodeBlockKind,
-            TextPosition, XcodeText,
+            features::docs_generation::node_annotation::AnnotationCodeBlock,
+            syntax_tree::SwiftCodeBlockKind, TextPosition, XcodeText,
         };
 
         use super::super::{fetch_node_explanation, NodeExplanation};
 
-        fn _fetch_node_explanation(
-            codeblock: CodeBlock,
-            context: Option<String>,
-        ) -> Option<NodeExplanation> {
-            let handle = fetch_node_explanation(codeblock, context);
+        fn _fetch_node_explanation(codeblock: AnnotationCodeBlock) -> Option<NodeExplanation> {
+            let handle = fetch_node_explanation(codeblock);
             block_on(handle).ok()
         }
 
         #[test]
         fn with_context() {
-            let resp = _fetch_node_explanation(
-                CodeBlock {
-                    text: XcodeText::from_str("print(\"Hello World\")"),
-                    name: Some("my_fun".to_string()),
-                    first_char_pos: TextPosition { row: 0, column: 0 },
-                    last_char_pos: TextPosition { row: 0, column: 0 },
-                    kind: SwiftCodeBlockKind::Function,
-                    func_complexity_todo: None,
-                    func_parameters_todo: None,
-                },
-                Some("print(\"Hello World\")".to_string()),
-            );
+            let resp = _fetch_node_explanation(AnnotationCodeBlock {
+                text: XcodeText::from_str("print(\"Hello World\")"),
+                name: Some("my_fun".to_string()),
+                first_char_pos: TextPosition { row: 0, column: 0 },
+                last_char_pos: TextPosition { row: 0, column: 0 },
+                kind: SwiftCodeBlockKind::Function,
+                func_complexity_todo: None,
+                func_parameters_todo: None,
+                context: Some(XcodeText::from_str("print(\"Hello World\")")),
+            });
             assert!(resp.is_some());
         }
 
         #[test]
         fn without_context() {
-            let resp = _fetch_node_explanation(
-                CodeBlock {
-                    text: XcodeText::from_str("print(\"Hello World\")"),
-                    name: Some("my_fun".to_string()),
-                    func_parameters_todo: None,
-                    first_char_pos: TextPosition { row: 0, column: 0 },
-                    last_char_pos: TextPosition { row: 0, column: 0 },
-                    kind: SwiftCodeBlockKind::Function,
-                    func_complexity_todo: None,
-                },
-                None,
-            );
+            let resp = _fetch_node_explanation(AnnotationCodeBlock {
+                text: XcodeText::from_str("print(\"Hello World\")"),
+                name: Some("my_fun".to_string()),
+                func_parameters_todo: None,
+                first_char_pos: TextPosition { row: 0, column: 0 },
+                last_char_pos: TextPosition { row: 0, column: 0 },
+                kind: SwiftCodeBlockKind::Function,
+                func_complexity_todo: None,
+                context: None,
+            });
             assert!(resp.is_some());
         }
     }

@@ -9,10 +9,7 @@ use tree_sitter::{Node, Parser, Tree};
 
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
-use super::{
-    calculate_cognitive_complexities, Complexities, SwiftCodeBlock, SwiftCodeBlockBase,
-    SwiftCodeBlockError,
-};
+use super::{calculate_cognitive_complexities, Complexities, SwiftCodeBlockError};
 
 #[derive(Debug, Clone)]
 pub struct NodeMetadata {
@@ -23,8 +20,6 @@ pub struct NodeMetadata {
 pub enum SwiftSyntaxTreeError {
     #[error("No treesitter node could be retreived with the given text range.")]
     NoTreesitterNodeFound,
-    #[error("No valid codeblock could be derived from the provided text range.")]
-    NoValidCodeblockFound,
     #[error("Metadata could not be found for node.")]
     NoMetadataFoundForNode,
     #[error("At this point, no valid tree is available.")]
@@ -71,6 +66,12 @@ impl SwiftSyntaxTree {
         self.node_metadata.clear();
     }
 
+    pub fn get_node_metadata(&self, node: Node) -> Result<&NodeMetadata, SwiftSyntaxTreeError> {
+        self.node_metadata
+            .get(&node.id())
+            .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)
+    }
+
     pub fn parse(&mut self, content: &XcodeText) -> Result<(), SwiftSyntaxTreeError> {
         let updated_tree = self.tree_sitter_parser.parse_utf16(content, None);
 
@@ -84,16 +85,14 @@ impl SwiftSyntaxTree {
         }
     }
 
-    pub fn get_selected_code_node(
+    pub fn get_code_node_by_text_range(
         &self,
-        selected_text_range: &TextRange,
+        text_range: &TextRange,
     ) -> Result<Node, SwiftSyntaxTreeError> {
         if let (Some(syntax_tree), Some(text_content)) =
             (self.tree_sitter_tree.as_ref(), self.content.as_ref())
         {
-            if let Some((start_position, _)) =
-                selected_text_range.as_StartEndTextPosition(text_content)
-            {
+            if let Some((start_position, _)) = text_range.as_StartEndTextPosition(text_content) {
                 if let Some(node) = syntax_tree.root_node().named_descendant_for_point_range(
                     TextPosition {
                         row: start_position.row,
@@ -114,36 +113,6 @@ impl SwiftSyntaxTree {
         }
 
         Err(SwiftSyntaxTreeError::NoTreeParsed)
-    }
-
-    pub fn get_selected_codeblock_node(
-        &self,
-        selected_text_range: &TextRange,
-    ) -> Result<SwiftCodeBlock, SwiftSyntaxTreeError> {
-        let mut node = self.get_selected_code_node(selected_text_range)?;
-
-        let text_content = self
-            .content
-            .as_ref()
-            .ok_or(SwiftSyntaxTreeError::NoTreeParsed)?;
-
-        loop {
-            if let Ok(codeblock_node) = SwiftCodeBlock::new(
-                node,
-                self.node_metadata
-                    .get(&node.id())
-                    .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)?,
-                text_content,
-            ) {
-                return Ok(codeblock_node);
-            } else {
-                if let Some(parent) = node.parent() {
-                    node = parent;
-                } else {
-                    return Err(SwiftSyntaxTreeError::NoValidCodeblockFound);
-                }
-            }
-        }
     }
 
     #[allow(dead_code)]

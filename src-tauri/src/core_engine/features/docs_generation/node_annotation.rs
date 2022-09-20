@@ -43,7 +43,7 @@ pub enum NodeAnnotationState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CodeBlock {
+pub struct AnnotationCodeBlock {
     pub name: Option<String>,
     pub func_parameters_todo: Option<Vec<FunctionParameter>>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
     pub func_complexity_todo: Option<isize>, // TODO: COD-320 Majorly refactor CodeBlock. Not ok to allow incompatible kind and parameters etc.
@@ -51,25 +51,27 @@ pub struct CodeBlock {
     pub last_char_pos: TextPosition,
     pub kind: SwiftCodeBlockKind,
     pub text: XcodeText,
+    pub context: Option<XcodeText>,
 }
 
 #[derive(Debug, Clone)]
 pub struct NodeAnnotation {
     tracking_area: TrackingArea,
-    codeblock: CodeBlock,
+    node_code_block: AnnotationCodeBlock,
     state: Arc<Mutex<NodeAnnotationState>>,
     explanation: Arc<Mutex<Option<NodeExplanation>>>,
 }
 
 impl PartialEq for NodeAnnotation {
     fn eq(&self, other: &Self) -> bool {
-        self.tracking_area.eq_props(&other.tracking_area) && self.codeblock == other.codeblock
+        self.tracking_area.eq_props(&other.tracking_area)
+            && self.node_code_block == other.node_code_block
     }
 }
 
 impl NodeAnnotation {
     pub fn new(
-        codeblock: CodeBlock,
+        codeblock: AnnotationCodeBlock,
         text_content: &XcodeText,
         window_uid: WindowUid,
     ) -> Result<Self, DocsGenerationError> {
@@ -77,7 +79,7 @@ impl NodeAnnotation {
 
         Ok(Self {
             tracking_area,
-            codeblock,
+            node_code_block: codeblock,
             state: Arc::new(Mutex::new(NodeAnnotationState::New)),
             explanation: Arc::new(Mutex::new(None)),
         })
@@ -91,8 +93,8 @@ impl NodeAnnotation {
         self.tracking_area.id
     }
 
-    pub fn codeblock(&self) -> &CodeBlock {
-        &self.codeblock
+    pub fn codeblock(&self) -> &AnnotationCodeBlock {
+        &self.node_code_block
     }
 
     pub fn update_visualization(&self, text: &XcodeText) -> Result<(), DocsGenerationError> {
@@ -104,7 +106,7 @@ impl NodeAnnotation {
 
         // 2. Get the annotation bounds, naturally in global coordinates
         let (annotation_rect_opt, codeblock_bounds) =
-            Self::calculate_annotation_bounds(text, &self.codeblock)?;
+            Self::calculate_annotation_bounds(text, &self.node_code_block)?;
 
         // 3. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
         NodeAnnotationEvent::UpdateNodeAnnotation(UpdateNodeAnnotationMessage {
@@ -126,7 +128,7 @@ impl NodeAnnotation {
     ) -> Result<(), DocsGenerationError> {
         let (docs_insertion_index, _) = compute_docs_insertion_point_and_indentation(
             &text_content,
-            self.codeblock.first_char_pos.row,
+            self.codeblock().first_char_pos.row,
         )?;
 
         *NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock() = docs_insertion_index;
@@ -143,12 +145,12 @@ impl NodeAnnotation {
             let state = self.state.clone();
             let explanation = self.explanation.clone();
             let tracking_area = self.tracking_area.clone();
-            let name = self.codeblock.name.clone();
+            let name = self.node_code_block.name.clone();
 
-            let codeblock = self.codeblock.clone();
+            let codeblock = self.node_code_block.clone();
             let complexity = codeblock.func_complexity_todo;
             async move {
-                let response = fetch_node_explanation(codeblock, None).await;
+                let response = fetch_node_explanation(codeblock).await;
 
                 if let Ok(response) = response {
                     (*explanation.lock()) = Some(response.clone());
@@ -184,7 +186,7 @@ impl NodeAnnotation {
 
     pub fn create_tracking_area(
         text: &XcodeText,
-        code_block: &CodeBlock,
+        code_block: &AnnotationCodeBlock,
         window_uid: WindowUid,
     ) -> Result<TrackingArea, DocsGenerationError> {
         // When we create the annotation, we need to compute the bounds for the frontend so it knows where to display the annotation
@@ -218,7 +220,7 @@ impl NodeAnnotation {
     ) -> Result<(), DocsGenerationError> {
         // 2. Get the local coordinates of the AnnotationSectionFrame
         if let Ok((annotation_rect_opt, _)) =
-            Self::calculate_annotation_bounds(text, &self.codeblock)
+            Self::calculate_annotation_bounds(text, &self.node_code_block)
         {
             self.tracking_area.rectangles = annotation_rect_opt.map_or(vec![], |rect| vec![rect]);
 
@@ -249,7 +251,7 @@ impl NodeAnnotation {
     /// the one that is going to be highlighted.
     fn calculate_annotation_bounds(
         text: &XcodeText,
-        code_block: &CodeBlock,
+        code_block: &AnnotationCodeBlock,
     ) -> Result<(Option<LogicalFrame>, Option<LogicalFrame>), DocsGenerationError> {
         // 1. Get viewport dimensions
         let ViewportProperties {

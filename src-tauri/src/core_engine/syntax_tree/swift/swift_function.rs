@@ -2,13 +2,15 @@ use anyhow::anyhow;
 use tree_sitter::Node;
 
 use crate::core_engine::{
-    syntax_tree::{swift_syntax_tree::NodeMetadata, SwiftCodeBlock, SwiftCodeBlockError},
+    syntax_tree::{
+        swift_syntax_tree::NodeMetadata, SwiftCodeBlock, SwiftCodeBlockError, SwiftSyntaxTree,
+    },
     TextPosition, XcodeText,
 };
 
-use super::swift_codeblock::{
-    get_first_char_position, get_last_char_position, get_node_text, SwiftCodeBlockBase,
-    SwiftCodeBlockKind, SwiftCodeBlockProps,
+use super::swift_code_block::{
+    get_first_char_position, get_last_char_position, get_node_text, get_parent_code_block,
+    SwiftCodeBlockBase, SwiftCodeBlockKind, SwiftCodeBlockProps,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -109,12 +111,14 @@ fn get_type_for_parameter(
 
 impl SwiftCodeBlockBase<'_> for SwiftFunction<'_> {
     fn new<'a>(
+        tree: &'a SwiftSyntaxTree,
         node: Node<'a>,
         node_metadata: &'a NodeMetadata,
         text_content: &'a XcodeText,
     ) -> Result<SwiftCodeBlock<'a>, SwiftCodeBlockError> {
         Ok(SwiftCodeBlock::Function(SwiftFunction {
             props: SwiftCodeBlockProps {
+                tree,
                 text_content,
                 node_metadata,
                 node,
@@ -135,5 +139,8 @@ impl SwiftCodeBlockBase<'_> for SwiftFunction<'_> {
     }
     fn get_last_char_position(&self) -> TextPosition {
         get_last_char_position(&self.props)
+    }
+    fn get_parent_code_block(&self) -> Result<SwiftCodeBlock, SwiftCodeBlockError> {
+        get_parent_code_block(&self.props)
     }
 }

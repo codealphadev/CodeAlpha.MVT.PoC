@@ -6,7 +6,7 @@ use tree_sitter::Node;
 use ts_rs::TS;
 
 use crate::core_engine::{
-    syntax_tree::swift_syntax_tree::NodeMetadata,
+    syntax_tree::{swift_syntax_tree::NodeMetadata, SwiftSyntaxTree},
     utils::{TextPosition, TextRange, XcodeText},
 };
 
@@ -18,6 +18,8 @@ pub enum SwiftCodeBlockError {
     WrongCodeBlockType,
     #[error("Initialization failed because node kind is unsupported.")]
     UnsupportedCodeblock,
+    #[error("No valid codeblock could be derived from the provided text range.")]
+    NoValidCodeblockFound,
     #[error("Generic error.")]
     GenericError(#[source] anyhow::Error),
 }
@@ -27,9 +29,30 @@ pub enum SwiftCodeBlock<'a> {
     Class(SwiftClass<'a>),
     Other(SwiftGenericCodeBlock<'a>),
 }
+
+impl<'a> SwiftCodeBlock<'a> {
+    pub fn from_text_range(
+        tree: &'a SwiftSyntaxTree,
+        text_range: &'a TextRange,
+        text_content: &'a XcodeText,
+    ) -> Result<Self, SwiftCodeBlockError> {
+        let node = tree
+            .get_code_node_by_text_range(text_range)
+            .map_err(|_err| {
+                SwiftCodeBlockError::GenericError(anyhow!(
+                    "get_selected_code_node failed for range: {:?}",
+                    text_range
+                ))
+            })?;
+
+        get_code_block_of_node(tree, node, text_content)
+    }
+}
+
 pub trait SwiftCodeBlockBase<'a> {
     fn as_text(&self) -> Result<XcodeText, SwiftCodeBlockError>;
     fn new(
+        tree: &'a SwiftSyntaxTree,
         node: Node<'a>,
         node_metadata: &'a NodeMetadata,
         text_content: &'a XcodeText,
@@ -37,12 +60,14 @@ pub trait SwiftCodeBlockBase<'a> {
     fn get_kind(&self) -> SwiftCodeBlockKind;
     fn get_first_char_position(&self) -> TextPosition;
     fn get_last_char_position(&self) -> TextPosition;
+    fn get_parent_code_block(&self) -> Result<SwiftCodeBlock, SwiftCodeBlockError>;
 }
 
 pub struct SwiftCodeBlockProps<'a> {
     pub text_content: &'a XcodeText,
     pub node: Node<'a>,
     pub node_metadata: &'a NodeMetadata,
+    pub tree: &'a SwiftSyntaxTree,
 }
 
 impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
@@ -55,17 +80,18 @@ impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
     }
 
     fn new(
+        tree: &'a SwiftSyntaxTree,
         node: Node<'a>,
         node_metadata: &'a NodeMetadata,
         text_content: &'a XcodeText,
     ) -> Result<Self, SwiftCodeBlockError> {
         let kind = node.kind();
         match kind {
-            "function_declaration" => SwiftFunction::new(node, node_metadata, text_content),
-            "class_declaration" => SwiftClass::new(node, node_metadata, text_content),
+            "function_declaration" => SwiftFunction::new(tree, node, node_metadata, text_content),
+            "class_declaration" => SwiftClass::new(tree, node, node_metadata, text_content),
             "for_statement" | "if_statement" | "else_statement" | "switch_statement"
             | "while_statement" | "do_statement" | "guard_statement" => {
-                SwiftGenericCodeBlock::new(node, node_metadata, text_content)
+                SwiftGenericCodeBlock::new(tree, node, node_metadata, text_content)
             }
             _ => Err(SwiftCodeBlockError::UnsupportedCodeblock),
         }
@@ -92,6 +118,14 @@ impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
             SwiftCodeBlock::Other(o) => o.get_kind(),
         }
     }
+
+    fn get_parent_code_block(&self) -> Result<SwiftCodeBlock, SwiftCodeBlockError> {
+        match self {
+            SwiftCodeBlock::Function(f) => f.get_parent_code_block(),
+            SwiftCodeBlock::Class(c) => c.get_parent_code_block(),
+            SwiftCodeBlock::Other(o) => o.get_parent_code_block(),
+        }
+    }
 }
 
 // Helper functions, to avoid reimplementing in every code block
@@ -101,6 +135,19 @@ pub fn get_first_char_position(props: &SwiftCodeBlockProps) -> TextPosition {
 
 pub fn get_last_char_position(props: &SwiftCodeBlockProps) -> TextPosition {
     TextPosition::from_TSPoint(&props.node.end_position())
+}
+
+pub fn get_parent_code_block<'a>(
+    props: &'a SwiftCodeBlockProps,
+) -> Result<SwiftCodeBlock<'a>, SwiftCodeBlockError> {
+    let parent_node = props
+        .node
+        .parent()
+        .ok_or(SwiftCodeBlockError::GenericError(anyhow!(
+            "No parent node found for node: {:?}",
+            props.node
+        )))?;
+    get_code_block_of_node(props.tree, parent_node, props.text_content)
 }
 
 pub fn get_node_text(
@@ -118,6 +165,36 @@ pub fn get_node_text(
             "get_codeblock_text: TextRange::from_StartEndTSPoint failed for: {:?}",
             node
         )))
+    }
+}
+
+fn get_code_block_of_node<'a>(
+    tree: &'a SwiftSyntaxTree,
+    node: Node<'a>,
+    text_content: &'a XcodeText,
+) -> Result<SwiftCodeBlock<'a>, SwiftCodeBlockError> {
+    let mut current_node = node;
+    loop {
+        if let Ok(codeblock) = SwiftCodeBlock::new(
+            tree,
+            current_node,
+            tree.get_node_metadata(node).map_err(|err| {
+                SwiftCodeBlockError::GenericError(anyhow!(
+                    "get_code_block_of_node: get_node_metadata() failed for: {:?}, err: {:?}",
+                    current_node,
+                    err
+                ))
+            })?,
+            text_content,
+        ) {
+            return Ok(codeblock);
+        } else {
+            if let Some(parent) = current_node.parent() {
+                current_node = parent;
+            } else {
+                return Err(SwiftCodeBlockError::NoValidCodeblockFound);
+            }
+        }
     }
 }
 
