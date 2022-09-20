@@ -11,6 +11,7 @@ use super::models::UpdateNodeExplanationMessage;
 #[ts(export, export_to = "bindings/features/node_explanation/")]
 pub enum NodeExplanationEvent {
     UpdateNodeExplanation(UpdateNodeExplanationMessage),
+    CloseNodeExplanationWindow(),
 }
 
 impl NodeExplanationEvent {
