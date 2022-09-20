@@ -10,8 +10,9 @@
 	import type { NodeExplanationEvent } from '../../src-tauri/bindings/features/node_explanation/NodeExplanationEvent';
 	import ParametersSection from '../components/node-explainer/parameters-section.svelte';
 	import Footer from '../components/node-explainer/footer-section.svelte';
-
-	let explanation: NodeExplanation | undefined = undefined;
+	import { fade } from 'svelte/transition';
+	
+	let explanation: NodeExplanation | null = null;
 	let complexity: number | null = null;
 	let node_name: string | null = null;
 
@@ -56,6 +57,11 @@
 			) as NodeExplanationEvent;
 
 			switch (event_type) {
+				case 'CloseNodeExplanationWindow':
+					explanation = null;
+					node_name = null;
+					complexity = null;
+					break;
 				case 'UpdateNodeExplanation':
 					explanation = payload.explanation;
 					node_name = payload.name;
@@ -71,10 +77,10 @@
 </script>
 
 {#key JSON.stringify(explanation)}
-{#if explanation !== undefined}
+{#if explanation !== null}
 	<div data-tauri-drag-region class="absolute w-full h-20"/>
 
-	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3 border-none">
+	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3 border-none" in:fade="{{ duration: 100}}" out:fade="{{duration: 100}}">
 		<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
 		
 		{#if explanation.parameters}

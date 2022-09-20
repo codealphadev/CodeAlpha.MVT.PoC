@@ -4,4 +4,4 @@ import type { UpdateNodeExplanationMessage } from "./UpdateNodeExplanationMessag
 export type NodeExplanationEvent = {
   event: "UpdateNodeExplanation";
   payload: UpdateNodeExplanationMessage;
-};
+} | { event: "CloseNodeExplanationWindow"; payload: null };
