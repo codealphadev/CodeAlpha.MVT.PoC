@@ -7,7 +7,10 @@ use ts_rs::TS;
 use cached::proc_macro::cached;
 
 use crate::{
-    core_engine::syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
+    core_engine::{
+        syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
+        XcodeText,
+    },
     NODE_EXPLAINATION_CURRENT_DOCSTRING,
 };
 
@@ -57,9 +60,27 @@ pub struct NodeExplanationRequest {
     parameter_names: Option<Vec<String>>,
 }
 
-#[cached(result = true, size = 100)]
 pub async fn fetch_node_explanation(
     codeblock: CodeBlock,
+    context: Option<String>,
+) -> Result<NodeExplanation, reqwest::Error> {
+    let CodeBlock {
+        text,
+        kind,
+        func_parameters_todo,
+        name: _,
+        func_complexity_todo: _,
+        first_char_pos: _,
+        last_char_pos: _,
+    } = codeblock;
+    cached_fetch_node_explanation(text, kind, func_parameters_todo, context).await
+}
+
+#[cached(result = true, size = 100)]
+async fn cached_fetch_node_explanation(
+    text: XcodeText,
+    kind: SwiftCodeBlockKind,
+    func_parameters: Option<Vec<FunctionParameter>>,
     context: Option<String>,
 ) -> Result<NodeExplanation, reqwest::Error> {
     let ctx_string = if let Some(context) = context {
@@ -76,17 +97,16 @@ pub async fn fetch_node_explanation(
         url = "https://europe-west1-analyze-text-dev.cloudfunctions.net/analyze-code".to_string();
     }
 
-    let codeblock_text_string = String::from_utf16_lossy(&codeblock.text);
+    let codeblock_text_string = String::from_utf16_lossy(&text);
 
     let req_body = NodeExplanationRequest {
         version: "v1".to_string(),
         method: "explain".to_string(),
         apiKey: "-RWsev7z_qgP!Qinp_8cbmwgP9jg4AQBkfz".to_string(),
         code: codeblock_text_string,
-        kind: codeblock.kind.clone(),
+        kind: kind.clone(),
         context: ctx_string,
-        parameter_names: codeblock
-            .func_parameters_todo
+        parameter_names: func_parameters
             .as_ref()
             .map(map_function_parameters_to_names),
     };
@@ -107,12 +127,10 @@ pub async fn fetch_node_explanation(
             e
         })?;
 
-    let node_explanation = map_node_explanation_response_to_node_explanation(
-        response.data,
-        codeblock.func_parameters_todo.as_ref(),
-    );
+    let node_explanation =
+        map_node_explanation_response_to_node_explanation(response.data, func_parameters.as_ref());
 
-    let node_docstring = explaination_to_docstring(&node_explanation);
+    let node_docstring = explanation_to_docstring(&node_explanation);
     *NODE_EXPLAINATION_CURRENT_DOCSTRING.lock() = node_docstring;
 
     Ok(node_explanation)
@@ -151,7 +169,7 @@ fn map_node_explanation_response_to_node_explanation(
     }
 }
 
-fn explaination_to_docstring(explanation: &NodeExplanation) -> String {
+fn explanation_to_docstring(explanation: &NodeExplanation) -> String {
     let line_length = 80;
     let mut docstring = String::new();
     docstring.push_str(&wrap_str(
@@ -354,7 +372,7 @@ mod tests {
     mod explaination_to_docstring {
         use crate::core_engine::features::docs_generation::FunctionParameterWithExplanation;
 
-        use super::super::explaination_to_docstring;
+        use super::super::explanation_to_docstring;
         use super::super::NodeExplanation;
 
         use super::super::SwiftCodeBlockKind;
@@ -366,7 +384,7 @@ mod tests {
                 kind: SwiftCodeBlockKind::Class,
                 parameters: None,
             };
-            let docstring = explaination_to_docstring(&explanation);
+            let docstring = explanation_to_docstring(&explanation);
             assert_eq!(docstring, "/// This is a summary");
         }
 
@@ -388,7 +406,7 @@ mod tests {
                     },
                 ]),
             };
-            let docstring = explaination_to_docstring(&explanation);
+            let docstring = explanation_to_docstring(&explanation);
             assert_eq!(
                 docstring,
                 r#"/// This is a summary
