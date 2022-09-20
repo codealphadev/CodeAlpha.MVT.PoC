@@ -219,7 +219,7 @@ impl DocsGenerator {
         Ok(
             if let Some(annotation) = self.node_annotations.get_mut(&msg.window_uid) {
                 if msg.id == annotation.id() {
-                    annotation.fetch_node_explanation()?;
+                    annotation.generate_node_explanation()?;
                 }
             },
         )

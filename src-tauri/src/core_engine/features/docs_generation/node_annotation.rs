@@ -116,7 +116,7 @@ impl NodeAnnotation {
         Ok(())
     }
 
-    pub fn fetch_node_explanation(&self) -> Result<(), DocsGenerationError> {
+    pub fn generate_node_explanation(&self) -> Result<(), DocsGenerationError> {
         let mut state = (self.state).lock();
         *state = NodeAnnotationState::FetchingExplanation;
 
@@ -135,13 +135,13 @@ impl NodeAnnotation {
 
                 if let Ok(response) = response {
                     (*explanation.lock()) = Some(response.clone());
-                    let node_explaination_msg = UpdateNodeExplanationMessage {
+                    let node_explanation_msg = UpdateNodeExplanationMessage {
                         explanation: response,
                         name,
                         complexity,
                     };
                     // Notify the frontend that loading has finished
-                    NodeExplanationEvent::UpdateNodeExplanation(node_explaination_msg.clone())
+                    NodeExplanationEvent::UpdateNodeExplanation(node_explanation_msg.clone())
                         .publish_to_tauri(&app_handle());
 
                     EventRuleExecutionState::NodeExplanationFetched(
@@ -151,7 +151,7 @@ impl NodeAnnotation {
                         },
                     )
                     .publish_to_tauri(&app_handle());
-                    debug!(explanation=?node_explaination_msg, "Node explanation fetched");
+                    debug!(explanation=?node_explanation_msg, "Node explanation fetched");
                 } else {
                     EventRuleExecutionState::NodeExplanationFailed()
                         .publish_to_tauri(&app_handle());

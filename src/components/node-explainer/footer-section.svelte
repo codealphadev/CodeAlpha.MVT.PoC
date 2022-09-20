@@ -5,35 +5,50 @@
 	import IconThumbsDown from "./icons/icon-thumbs-down.svelte";
 	import IconThumbsUp from "./icons/icon-thumbs-up.svelte";
     
-    let activated = false;
+    let vote: 'good' | 'bad' | null = null;
     const paste_docs = async () => {
 		await invoke('cmd_paste_docs');
 	}
 
-    const vote_good = async () => {
-        await invoke('send-feedback', {
+    const handle_click_thumbs_up = async () => {
+        if (vote) {
+            return;
+        }
+        await invoke('cmd_send_feedback', {
             feature: 'NodeExplainer',
             feedback: 'good'
-        })
-        activated = true;
+        });
+        vote = 'good';
     }
 
-    const vote_bad = async () => {
-        await invoke('send-feedback', {
+    const handle_click_thumbs_down = async () => {
+        if (vote) {
+            return;
+        }
+        await invoke('cmd_send_feedback', {
             feature: 'NodeExplainer',
             feedback: 'bad'
         })
+        vote = 'bad';
     }
 </script>
 
 <div class="flex justify-between w-full items-center">
-    <div class="flex gap-3 px-1 ">
-        <IconButton on:click={vote_good}>
-            <IconThumbsUp activated={activated}/>
+    <div class="flex gap-3 px-1 items-center">
+        <IconButton on:click={handle_click_thumbs_up}>
+            <IconThumbsUp activated={vote === 'good'}/>
         </IconButton>
-        <IconButton on:click={vote_bad}>
-            <IconThumbsDown/>
-        </IconButton>
+        <IconButton on:click={handle_click_thumbs_down}>
+            <IconThumbsDown activated={vote === 'bad'}/>
+        </IconButton>    
+        <div class="text-secondary text-xs">
+            {#if vote}
+            Thanks for the feedback!
+            {:else}
+            Honestly, was this helpful?
+            {/if}
+        </div>
+        
     </div>
     <Button on:click={paste_docs}>Insert as Docstring</Button>
 </div>
