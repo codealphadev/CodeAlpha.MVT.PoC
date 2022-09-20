@@ -214,9 +214,7 @@ fn main() {
             tauri::UpdaterEvent::Updated => {
                 info!("App has been updated");
             }
-            tauri::UpdaterEvent::AlreadyUpToDate => {
-                println!("app is already up to date");
-            }
+            tauri::UpdaterEvent::AlreadyUpToDate => {}
             tauri::UpdaterEvent::Error(error) => {
                 error!(?error, "Failed to update");
             }
