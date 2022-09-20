@@ -2008,9 +2008,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.133"
+version = "0.2.132"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0f80d65747a3e43d1596c7c5492d95d5edddaabd45a7fcdb02b95f644164966"
+checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
 
 [[package]]
 name = "libloading"
@@ -3726,7 +3726,8 @@ dependencies = [
 [[package]]
 name = "tao"
 version = "0.14.0"
-source = "git+https://github.com/codealphadev/tao?branch=0.12.2#e1e45797cfcad99f75df64141725f1d7ea721a7d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43336f5d1793543ba96e2a1e75f3a5c7dcd592743be06a0ab3a190f4fcb4b934"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -5069,3 +5070,8 @@ dependencies = [
  "crc32fast",
  "crossbeam-utils",
 ]
+
+[[patch.unused]]
+name = "tao"
+version = "0.12.2"
+source = "git+https://github.com/codealphadev/tao?branch=0.12.2#77c15a4d21a9d8d49136836d5dbdbad1410d5ea1"
