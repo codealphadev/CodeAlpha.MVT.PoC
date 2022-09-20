@@ -9,7 +9,7 @@ use crate::{
         CodeDocument, TextPosition, TextRange, XcodeChar,
     },
     window_controls::models::TrackingAreaClickedMessage,
-    CORE_ENGINE_ACTIVE_AT_STARTUP, NODE_EXPLANATION_CURRENT_INSERTION_POINT,
+    CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
 use super::{
@@ -57,7 +57,7 @@ impl FeatureBase for DocsGenerator {
                     self.procedure_update_existing_node_annotation(code_document)?;
                 }
                 DocsGenComputeProcedure::FetchNodeExplanation(msg) => {
-                    self.procedure_fetch_node_explanation(msg)?;
+                    self.procedure_fetch_node_explanation(code_document, msg)?;
                 }
                 DocsGenComputeProcedure::CreateNewNodeAnnotation => {
                     self.procedure_create_new_annotation(code_document)?;
@@ -214,11 +214,20 @@ impl DocsGenerator {
 
     fn procedure_fetch_node_explanation(
         &mut self,
+        code_document: &CodeDocument,
         msg: TrackingAreaClickedMessage,
     ) -> Result<(), FeatureError> {
+        let text_content =
+            code_document
+                .text_content()
+                .as_ref()
+                .ok_or(FeatureError::GenericError(
+                    DocsGenerationError::MissingContext.into(),
+                ))?;
         Ok(
             if let Some(annotation) = self.node_annotations.get_mut(&msg.window_uid) {
                 if msg.id == annotation.id() {
+                    annotation.prepare_docs_insertion_position(text_content)?;
                     annotation.generate_node_explanation()?;
                 }
             },
@@ -307,13 +316,6 @@ impl DocsGenerator {
         text_content: &XcodeText,
         window_uid: WindowUid,
     ) -> Result<(), DocsGenerationError> {
-        let (docs_insertion_index, _) = compute_docs_insertion_point_and_indentation(
-            text_content,
-            codeblock.first_char_pos.row,
-        )?;
-
-        *NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock() = docs_insertion_index;
-
         let new_annotation = NodeAnnotation::new(codeblock, text_content, window_uid)?;
 
         self.node_annotations.insert(window_uid, new_annotation);
@@ -331,7 +333,7 @@ impl DocsGenerator {
     }
 }
 
-fn compute_docs_insertion_point_and_indentation(
+pub fn compute_docs_insertion_point_and_indentation(
     text_content: &XcodeText,
     insertion_line: usize,
 ) -> Result<(usize, usize), DocsGenerationError> {

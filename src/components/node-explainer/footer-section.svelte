@@ -4,10 +4,14 @@
 	import IconButton from "../common/icon-button.svelte";
 	import IconThumbsDown from "./icons/icon-thumbs-down.svelte";
 	import IconThumbsUp from "./icons/icon-thumbs-up.svelte";
-    
+    import { appWindow } from '@tauri-apps/api/window';
+
+
     let vote: 'good' | 'bad' | null = null;
     const paste_docs = async () => {
 		await invoke('cmd_paste_docs');
+        await appWindow.hide();
+
 	}
 
     const handle_click_thumbs_up = async () => {
@@ -29,6 +33,7 @@
             feature: 'NodeExplainer',
             feedback: 'bad'
         })
+        await appWindow.hide();
         vote = 'bad';
     }
 </script>

@@ -27,9 +27,13 @@ use crate::{
         config::AppWindow, EventTrackingArea, TrackingArea, TrackingEventSubscription,
         TrackingEventType,
     },
+    NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
 
-use super::{docs_generator::DocsGenerationError, fetch_node_explanation, NodeExplanation};
+use super::{
+    docs_generator::{compute_docs_insertion_point_and_indentation, DocsGenerationError},
+    fetch_node_explanation, NodeExplanation,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NodeAnnotationState {
@@ -113,6 +117,19 @@ impl NodeAnnotation {
         })
         .publish_to_tauri(&app_handle());
 
+        Ok(())
+    }
+
+    pub fn prepare_docs_insertion_position(
+        &self,
+        text_content: &XcodeText,
+    ) -> Result<(), DocsGenerationError> {
+        let (docs_insertion_index, _) = compute_docs_insertion_point_and_indentation(
+            &text_content,
+            self.codeblock.first_char_pos.row,
+        )?;
+
+        *NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock() = docs_insertion_index;
         Ok(())
     }
 

@@ -73,7 +73,13 @@ pub async fn fetch_node_explanation(
         first_char_pos: _,
         last_char_pos: _,
     } = codeblock;
-    cached_fetch_node_explanation(text, kind, func_parameters_todo, context).await
+
+    let result = cached_fetch_node_explanation(text, kind, func_parameters_todo, context).await;
+    if let Ok(node_explanation) = result.as_ref() {
+        let node_docstring = explanation_to_docstring(&node_explanation);
+        *NODE_EXPLANATION_CURRENT_DOCSTRING.lock() = node_docstring;
+    }
+    result
 }
 
 #[cached(result = true, size = 100)]
@@ -129,9 +135,6 @@ async fn cached_fetch_node_explanation(
 
     let node_explanation =
         map_node_explanation_response_to_node_explanation(response.data, func_parameters.as_ref());
-
-    let node_docstring = explanation_to_docstring(&node_explanation);
-    *NODE_EXPLANATION_CURRENT_DOCSTRING.lock() = node_docstring;
 
     Ok(node_explanation)
 }
