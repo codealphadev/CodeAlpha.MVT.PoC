@@ -6,6 +6,7 @@ locals {
   project         = local.service
 
   services_to_enable = [
+    "bigquery.googleapis.com",
     "logging.googleapis.com",
     "secretmanager.googleapis.com",
     "storage.googleapis.com",
