@@ -9,7 +9,7 @@ use crate::{
         CodeDocument, TextPosition, TextRange, XcodeChar,
     },
     window_controls::models::TrackingAreaClickedMessage,
-    CORE_ENGINE_ACTIVE_AT_STARTUP, NODE_EXPLAINATION_CURRENT_INSERTION_POINT,
+    CORE_ENGINE_ACTIVE_AT_STARTUP, NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
 
 use super::{
@@ -312,7 +312,7 @@ impl DocsGenerator {
             codeblock.first_char_pos.row,
         )?;
 
-        *NODE_EXPLAINATION_CURRENT_INSERTION_POINT.lock() = docs_insertion_index;
+        *NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock() = docs_insertion_index;
 
         let new_annotation = NodeAnnotation::new(codeblock, text_content, window_uid)?;
 

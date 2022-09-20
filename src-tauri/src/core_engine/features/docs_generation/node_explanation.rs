@@ -11,7 +11,7 @@ use crate::{
         syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
         XcodeText,
     },
-    NODE_EXPLAINATION_CURRENT_DOCSTRING,
+    NODE_EXPLANATION_CURRENT_DOCSTRING,
 };
 
 use super::node_annotation::CodeBlock;
@@ -131,7 +131,7 @@ async fn cached_fetch_node_explanation(
         map_node_explanation_response_to_node_explanation(response.data, func_parameters.as_ref());
 
     let node_docstring = explanation_to_docstring(&node_explanation);
-    *NODE_EXPLAINATION_CURRENT_DOCSTRING.lock() = node_docstring;
+    *NODE_EXPLANATION_CURRENT_DOCSTRING.lock() = node_docstring;
 
     Ok(node_explanation)
 }
@@ -369,7 +369,7 @@ mod tests {
         }
     }
 
-    mod explaination_to_docstring {
+    mod explanation_to_docstring {
         use crate::core_engine::features::docs_generation::FunctionParameterWithExplanation;
 
         use super::super::explanation_to_docstring;
