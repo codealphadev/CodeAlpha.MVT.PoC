@@ -77,20 +77,20 @@
 </script>
 
 {#key JSON.stringify(explanation)}
-{#if explanation !== null}
-	<div data-tauri-drag-region class="absolute w-full h-20"/>
+	{#if explanation !== null}
+		<div data-tauri-drag-region class="absolute w-full h-20"/>
 
-	<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3 border-none" in:fade="{{ duration: 100}}" out:fade="{{duration: 100}}">
-		<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
-		
-		{#if explanation.parameters}
-			<ParametersSection parameters={explanation.parameters}/>
-		{/if}
-		{#if complexity !== null}
-		<ComplexitySection complexity={complexity}/>
-		{/if}
-		<hr class="border-backgroundsecondary w-full"/>
-			<Footer />
-	</div>
-{/if}
+		<div id={dom_id} class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3 border-none" in:fade="{{ duration: 100}}">
+			<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
+			
+			{#if explanation.parameters}
+				<ParametersSection parameters={explanation.parameters}/>
+			{/if}
+			{#if complexity !== null}
+			<ComplexitySection complexity={complexity}/>
+			{/if}
+			<hr class="border-backgroundsecondary w-full"/>
+				<Footer />
+		</div>
+	{/if}
 {/key}

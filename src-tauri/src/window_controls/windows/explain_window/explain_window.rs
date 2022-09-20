@@ -9,7 +9,6 @@ use window_shadows::set_shadow;
 
 use crate::{
     app_handle,
-    core_engine::events::NodeExplanationEvent,
     platform::macos::{CodeDocumentFrameProperties, ViewportProperties},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
@@ -315,7 +314,6 @@ impl ExplainWindow {
     ) -> Option<()> {
         if let Some(tracking_area) = self.tracking_area.as_ref() {
             if tracking_area.id == clicked_outside_msg.id {
-                NodeExplanationEvent::CloseNodeExplanationWindow().publish_to_tauri(&app_handle());
                 self.hide();
             }
         }
