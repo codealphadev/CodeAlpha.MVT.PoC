@@ -1,3 +1,4 @@
+use tracing::error;
 use tree_sitter::Node;
 
 use crate::{
@@ -171,6 +172,14 @@ pub fn get_text_index_of_left_most_char_in_range(
     range: TextRange,
     text: &XcodeText,
 ) -> Option<usize> {
+    if range.index > range.index + range.length {
+        // Debugging weird panic https://console.cloud.google.com/logs/query;cursorTimestamp=2022-09-20T14:56:38.421723Z;query=logName%3D%22projects%2Fclient-backend-x%2Flogs%2Fclient%22%0Aseverity%3DERROR%0Atimestamp%3D%222022-09-20T14:56:38.421723Z%22%0AinsertId%3D%221escc8rfirfxe1%22;summaryFields=labels%252Fmachine_id:false:32:beginning;timeRange=P1D?project=client-backend-x
+        error!(
+            ?text,
+            ?range,
+            "Range index is greater than range index + length"
+        );
+    }
     if text.len() < range.index + range.length {
         return None;
     }
