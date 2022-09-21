@@ -129,7 +129,7 @@
 				"center": false,
 				"close": false,
 				"create": false,
-				"hide": false,
+				"hide": true,
 				"maximize": false,
 				"minimize": false,
 				"print": false,

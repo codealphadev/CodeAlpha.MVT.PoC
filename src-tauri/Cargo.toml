@@ -96,7 +96,7 @@ features = [ "serde-compat", "format", "uuid-impl",]
 
 [build-dependencies.tauri-build]
 version = "1.0.0"
-features = [ "isolation",]
+features = ["isolation"]
 
 [patch.crates-io.tao]
 git = "https://github.com/codealphadev/tao"

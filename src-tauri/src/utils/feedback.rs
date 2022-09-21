@@ -14,5 +14,5 @@ impl std::fmt::Display for FeedbackFeature {
 
 #[tauri::command]
 pub fn cmd_send_feedback(feature: FeedbackFeature, feedback: String) {
-    info!("Feedback: {} {}", feature, feedback);
+    info!(?feature, ?feedback, "Feedback on feature");
 }
