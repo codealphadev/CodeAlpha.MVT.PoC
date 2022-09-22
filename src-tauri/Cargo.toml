@@ -54,7 +54,7 @@ git = "https://github.com/tauri-apps/tauri-plugin-log"
 features = [ "colored",]
 
 [dependencies.serde]
-version = "1.0.144"
+version = "1.0.145"
 features = [ "derive",]
 
 [dependencies.uuid]
