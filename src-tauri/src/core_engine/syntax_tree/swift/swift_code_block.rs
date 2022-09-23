@@ -178,7 +178,7 @@ fn get_code_block_of_node<'a>(
         if let Ok(codeblock) = SwiftCodeBlock::new(
             tree,
             current_node,
-            tree.get_node_metadata(node).map_err(|err| {
+            tree.get_node_metadata(&node).map_err(|err| {
                 SwiftCodeBlockError::GenericError(anyhow!(
                     "get_code_block_of_node: get_node_metadata() failed for: {:?}, err: {:?}",
                     current_node,

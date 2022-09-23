@@ -8,5 +8,6 @@ mod swift;
 pub use swift::*;
 
 mod swift_syntax_tree;
+pub use swift_syntax_tree::NodeMetadata;
 pub use swift_syntax_tree::SwiftSyntaxTree;
 pub use swift_syntax_tree::SwiftSyntaxTreeError;

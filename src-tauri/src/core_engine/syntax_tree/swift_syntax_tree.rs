@@ -66,7 +66,7 @@ impl SwiftSyntaxTree {
         self.node_metadata.clear();
     }
 
-    pub fn get_node_metadata(&self, node: Node) -> Result<&NodeMetadata, SwiftSyntaxTreeError> {
+    pub fn get_node_metadata(&self, node: &Node) -> Result<&NodeMetadata, SwiftSyntaxTreeError> {
         self.node_metadata
             .get(&node.id())
             .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)
@@ -76,7 +76,12 @@ impl SwiftSyntaxTree {
         let updated_tree = self.tree_sitter_parser.parse_utf16(content, None);
 
         if let Some(tree) = updated_tree {
-            calculate_cognitive_complexities(&tree.root_node(), &content, &mut self.node_metadata)?;
+            calculate_cognitive_complexities(
+                &tree.root_node(),
+                &content,
+                &mut self.node_metadata,
+                None,
+            )?;
             self.content = Some(content.to_owned());
             self.tree_sitter_tree = Some(tree);
             return Ok(());

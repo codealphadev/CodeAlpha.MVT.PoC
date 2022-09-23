@@ -4,9 +4,10 @@ use crate::{
 };
 
 use super::{
+    complexity_refactoring::ComplexityRefactoringError,
     docs_generation::DocsGenerationError,
     formatter::{SwiftFormatError, SwiftFormatter},
-    BracketHighlight, BracketHighlightError, DocsGenerator,
+    BracketHighlight, BracketHighlightError, ComplexityRefactoring, DocsGenerator,
 };
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub enum Feature {
     BracketHighlighting(BracketHighlight),
     DocsGeneration(DocsGenerator),
     Formatter(SwiftFormatter),
+    ComplexityRefactoring(ComplexityRefactoring),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -34,6 +36,12 @@ pub enum FeatureError {
 
 impl From<BracketHighlightError> for FeatureError {
     fn from(cause: BracketHighlightError) -> Self {
+        FeatureError::GenericError(cause.into())
+    }
+}
+
+impl From<ComplexityRefactoringError> for FeatureError {
+    fn from(cause: ComplexityRefactoringError) -> Self {
         FeatureError::GenericError(cause.into())
     }
 }
@@ -76,6 +84,7 @@ impl FeatureBase for Feature {
             Feature::BracketHighlighting(feature) => feature.compute(code_document, trigger),
             Feature::DocsGeneration(feature) => feature.compute(code_document, trigger),
             Feature::Formatter(feature) => feature.compute(code_document, trigger),
+            Feature::ComplexityRefactoring(feature) => feature.compute(code_document, trigger),
         }
     }
 
@@ -92,6 +101,9 @@ impl FeatureBase for Feature {
                 feature.update_visualization(code_document, trigger)
             }
             Feature::Formatter(feature) => feature.update_visualization(code_document, trigger),
+            Feature::ComplexityRefactoring(feature) => {
+                feature.update_visualization(code_document, trigger)
+            }
         }
     }
 
@@ -100,6 +112,7 @@ impl FeatureBase for Feature {
             Feature::BracketHighlighting(feature) => feature.activate(),
             Feature::DocsGeneration(feature) => feature.activate(),
             Feature::Formatter(feature) => feature.activate(),
+            Feature::ComplexityRefactoring(feature) => feature.activate(),
         }
     }
 
@@ -108,6 +121,7 @@ impl FeatureBase for Feature {
             Feature::BracketHighlighting(feature) => feature.deactivate(),
             Feature::DocsGeneration(feature) => feature.deactivate(),
             Feature::Formatter(feature) => feature.deactivate(),
+            Feature::ComplexityRefactoring(feature) => feature.deactivate(),
         }
     }
 
@@ -116,6 +130,7 @@ impl FeatureBase for Feature {
             Feature::BracketHighlighting(feature) => feature.reset(),
             Feature::DocsGeneration(feature) => feature.reset(),
             Feature::Formatter(feature) => feature.reset(),
+            Feature::ComplexityRefactoring(feature) => feature.reset(),
         }
     }
 }

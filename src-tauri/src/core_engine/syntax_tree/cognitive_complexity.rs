@@ -13,6 +13,12 @@ pub struct Complexities {
 }
 
 impl Complexities {
+    pub fn new() -> Self {
+        Self {
+            nesting_complexity: 0,
+            fundamental_complexity: 0,
+        }
+    }
     pub fn get_total_complexity(&self) -> isize {
         self.nesting_complexity + self.fundamental_complexity
     }
@@ -22,8 +28,8 @@ impl ops::Add<Complexities> for Complexities {
     type Output = Complexities;
     fn add(self, rhs: Complexities) -> Complexities {
         Complexities {
-            nesting_complexity: self.nesting_complexity + rhs.nesting_complexity,
             fundamental_complexity: self.fundamental_complexity + rhs.fundamental_complexity,
+            nesting_complexity: self.nesting_complexity + rhs.nesting_complexity,
         }
     }
 }
@@ -35,13 +41,29 @@ impl ops::AddAssign for Complexities {
         }
     }
 }
+impl ops::Sub for Complexities {
+    type Output = Complexities;
+    fn sub(self, rhs: Self) -> Self {
+        Complexities {
+            fundamental_complexity: self.fundamental_complexity - rhs.fundamental_complexity,
+            nesting_complexity: self.nesting_complexity - rhs.nesting_complexity,
+        }
+    }
+}
 
 pub fn calculate_cognitive_complexities(
     node: &Node,
     text_content: &XcodeText,
     output_node_metadata: &mut HashMap<usize, NodeMetadata>,
+    starting_depth: Option<isize>,
 ) -> Result<Complexities, SwiftCodeBlockError> {
-    calculate_cognitive_complexities_intl(&node, &text_content, output_node_metadata, 0, vec![])
+    calculate_cognitive_complexities_intl(
+        &node,
+        &text_content,
+        output_node_metadata,
+        starting_depth.unwrap_or(0),
+        vec![],
+    )
 }
 
 // Iterate through subtrees of a node and save an entry for the accumulated complexity of each node and its children, hashed by id in node_complexities
@@ -52,11 +74,7 @@ fn calculate_cognitive_complexities_intl(
     mut nesting_depth: isize,
     mut parent_function_names: Vec<XcodeText>,
 ) -> Result<Complexities, SwiftCodeBlockError> {
-    let mut complexity: Complexities = Complexities {
-        nesting_complexity: 0,
-        fundamental_complexity: 0,
-    };
-
+    let mut complexity = Complexities::new();
     match node.kind() {
         "function_declaration" | "lambda_literal" => {
             nesting_depth += 1;
@@ -75,13 +93,12 @@ fn calculate_cognitive_complexities_intl(
                 if parent.kind() != "if_statement" {
                     complexity.nesting_complexity += (nesting_depth - 1).max(0);
                     complexity.fundamental_complexity += 1;
-
                     if (node
                         .children_by_field_name("condition", &mut node.walk())
                         .count())
                         > 1
                     {
-                        complexity.fundamental_complexity += 1
+                        complexity.fundamental_complexity += 1;
                     }
 
                     nesting_depth += 1;
@@ -103,7 +120,7 @@ fn calculate_cognitive_complexities_intl(
         }
         "control_transfer_statement" => {
             if control_transfer_statement_is_penalizable(node) {
-                complexity.fundamental_complexity += 1
+                complexity.fundamental_complexity += 1;
             }
         }
         "conjunction_expression" => match node.parent().map(|p| p.kind()) {
@@ -132,24 +149,13 @@ fn calculate_cognitive_complexities_intl(
     }
 
     for child in node.named_children(&mut node.walk()) {
-        if node.kind() == "if_statement" && child.kind() == "if_statement" {
-            // else if should not increase nesting by 2. In case of else { if } there is a statements node in between
-            complexity += calculate_cognitive_complexities_intl(
-                &child,
-                &text_content,
-                output_node_metadata,
-                nesting_depth - 1,
-                parent_function_names.clone(),
-            )?;
-        } else {
-            complexity += calculate_cognitive_complexities_intl(
-                &child,
-                &text_content,
-                output_node_metadata,
-                nesting_depth,
-                parent_function_names.clone(),
-            )?;
-        }
+        complexity += calculate_cognitive_complexities_intl(
+            &child,
+            &text_content,
+            output_node_metadata,
+            nesting_depth,
+            parent_function_names.clone(),
+        )?
     }
     output_node_metadata.insert(
         node.id(),
@@ -242,6 +248,7 @@ mod tests {
                 &tree.root_node(),
                 &text_content,
                 &mut node_metadata,
+                None,
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
             assert_eq!(
@@ -286,6 +293,7 @@ mod tests {
                 &tree.root_node(),
                 &text_content,
                 &mut node_metadata,
+                None,
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
         }
@@ -320,6 +328,7 @@ mod tests {
                 &tree.root_node(),
                 &text_content,
                 &mut node_metadata,
+                None,
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
         }
@@ -353,6 +362,7 @@ mod tests {
                 &tree.root_node(),
                 &text_content,
                 &mut node_metadata,
+                None,
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
         }
@@ -385,6 +395,7 @@ mod tests {
                 &tree.root_node(),
                 &text_content,
                 &mut node_metadata,
+                None,
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
         }
@@ -413,6 +424,58 @@ mod tests {
                 &tree.root_node(),
                 &text_content,
                 &mut node_metadata,
+                None,
+            );
+            assert_eq!(expected_complexity, calculated_complexity.unwrap());
+        }
+
+        #[test]
+        fn if_else_if() {
+            let text_content = XcodeText::from_str(
+                r#"
+                public func extractName(input: String) -> String {
+                    if input is String {                                // + 1
+                        let start = String(input.prefix(1))
+                        let end = String(input.suffix(1));
+                        var result = start + end;
+                        return result;
+                    } else if input is Int {                            // + 1
+                        let result: Int;
+                        if (Int(input) ?? 0 < 1) {                      // + 2 (1 for nesting)
+                            result = 0;
+                        }
+                        var a = 0;
+                        var b = 1;
+                        for i in 1..<(Int(input) ?? 0) {                // + 2 (1 for nesting)
+                            let c = a + b;
+                            a = b;
+                            b = c;
+                        }
+                        result = c;
+                        result = b;
+                        return String(b);
+                    } else {                                            // + 1
+                        return "undefined";
+                    }
+                }
+            "#,
+            );
+
+            let mut parser = Parser::new();
+            parser
+                .set_language(tree_sitter_swift::language())
+                .expect("Swift Language not found");
+            let tree = parser.parse_utf16(text_content.clone(), None).unwrap();
+            let expected_complexity: Complexities = Complexities {
+                nesting_complexity: 2,
+                fundamental_complexity: 5,
+            };
+            let mut node_metadata = HashMap::<usize, NodeMetadata>::new();
+            let calculated_complexity = calculate_cognitive_complexities(
+                &tree.root_node(),
+                &text_content,
+                &mut node_metadata,
+                None,
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
         }
