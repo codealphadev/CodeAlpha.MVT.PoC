@@ -6,8 +6,8 @@ use crate::{app_handle, platform::macos::XcodeError, CORE_ENGINE_ACTIVE_AT_START
 
 use super::{
     features::{
-        BracketHighlight, CoreEngineTrigger, DocsGenerator, Feature, FeatureBase, FeatureError,
-        SwiftFormatter,
+        BracketHighlight, ComplexityRefactoring, CoreEngineTrigger, DocsGenerator, Feature,
+        FeatureBase, FeatureError, SwiftFormatter,
     },
     listeners::{
         user_interaction::user_interaction_listener, window_control::window_control_listener,
@@ -65,6 +65,7 @@ impl CoreEngine {
                 Feature::BracketHighlighting(BracketHighlight::new()),
                 Feature::Formatter(SwiftFormatter::new()),
                 Feature::DocsGeneration(DocsGenerator::new()),
+                Feature::ComplexityRefactoring(ComplexityRefactoring::new()),
             ],
         }
     }
