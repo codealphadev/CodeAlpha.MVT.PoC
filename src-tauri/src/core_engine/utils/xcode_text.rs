@@ -3,7 +3,7 @@ use ts_rs::TS;
 
 use std::{
     fmt,
-    ops::{Deref, DerefMut},
+    ops::{self, Deref, DerefMut},
     slice,
 };
 
@@ -23,6 +23,48 @@ impl fmt::Debug for XcodeText {
         write!(f, "{}", String::from_utf16_lossy(&self))
     }
 }
+
+impl ops::Add<XcodeText> for XcodeText {
+    type Output = XcodeText;
+    fn add(self, rhs: XcodeText) -> XcodeText {
+        let mut result = self;
+
+        result.text.append(rhs.text.clone().as_mut());
+
+        // Append rows
+        let mut rhs_start_row = 0;
+        if let Some(last) = result.rows.last_mut() {
+            if let Some(first) = rhs.rows.first() {
+                last.append(first.clone().as_mut());
+                rhs_start_row = 1;
+            }
+        }
+        let rhs_slice = &&rhs.rows[rhs_start_row..];
+
+        result.rows.extend_from_slice(rhs_slice);
+        result
+    }
+}
+
+impl ops::Add<&str> for XcodeText {
+    type Output = XcodeText;
+    fn add(self, rhs: &str) -> XcodeText {
+        self + XcodeText::from_str(rhs)
+    }
+}
+
+impl ops::AddAssign for XcodeText {
+    fn add_assign(&mut self, other: Self) {
+        *self = self.to_owned() + other;
+    }
+}
+
+impl ops::AddAssign<&str> for XcodeText {
+    fn add_assign(&mut self, other: &str) {
+        *self = self.to_owned() + other;
+    }
+}
+
 impl<'a> XcodeText {
     pub fn new_empty() -> Self {
         Self {
@@ -183,6 +225,52 @@ impl<'a> DerefMut for XcodeText {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(test)]
+    mod addition {
+        use super::super::*;
+
+        #[test]
+        fn addition() {
+            let a = XcodeText::from_str("Hello ");
+            let b = XcodeText::from_str("World!");
+            assert_eq!(a + b, XcodeText::from_str("Hello World!"));
+        }
+
+        #[test]
+        fn addition_with_newlines() {
+            let a = XcodeText::from_str("Hello \n");
+            let b = XcodeText::from_str("World!\n");
+            assert_eq!(a + b, XcodeText::from_str("Hello \nWorld!\n"));
+        }
+
+        #[test]
+        fn addition_with_multiple_newlines() {
+            let a = XcodeText::from_str("\nHello \n");
+            let b = XcodeText::from_str("\n\n\n");
+            assert_eq!(a + b, XcodeText::from_str("\nHello \n\n\n\n"));
+        }
+
+        #[test]
+        fn add_assign() {
+            let mut a = XcodeText::from_str("Hello ");
+            a += XcodeText::from_str("World!");
+            assert_eq!(a, XcodeText::from_str("Hello World!"));
+        }
+
+        #[test]
+        fn add_string() {
+            let mut a = XcodeText::from_str("Hello ");
+            a = a + "World!";
+            assert_eq!(a, XcodeText::from_str("Hello World!"));
+        }
+
+        #[test]
+        fn assign_add_string() {
+            let mut a = XcodeText::from_str("Hello ");
+            a += "World!";
+            assert_eq!(a, XcodeText::from_str("Hello World!"));
+        }
+    }
 
     #[cfg(test)]
     mod rows {

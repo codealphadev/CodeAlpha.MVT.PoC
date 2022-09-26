@@ -1,13 +1,16 @@
-use std::{collections::HashMap, fmt};
+use std::collections::HashMap;
 
 use tree_sitter::Node;
 
+use super::{get_type_for_index, ComplexityRefactoringError};
 use crate::core_engine::{
-    syntax_tree::{calculate_cognitive_complexities, get_node_text, Complexities, SwiftSyntaxTree},
-    XcodeText,
+    syntax_tree::{
+        calculate_cognitive_complexities, get_node_text, reconstruct_function, Complexities,
+        SwiftFunctionComponents, SwiftFunctionContext, SwiftFunctionParameter, SwiftSyntaxTree,
+    },
+    TextRange, XcodeText,
 };
-
-use super::ComplexityRefactoringError;
+use anyhow::anyhow;
 
 #[derive(Clone, Debug)]
 struct Scope {
@@ -24,7 +27,8 @@ pub fn check_for_method_extraction<'a>(
     node: Node<'a>,
     text_content: &'a XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
-) -> Result<Option<Vec<Node<'a>>>, ComplexityRefactoringError> {
+    file_path: &String, // TODO: Code document?
+) -> Result<Option<RefactoringOperation>, ComplexityRefactoringError> {
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
     let node_address = vec![node.id()];
@@ -56,16 +60,75 @@ pub fn check_for_method_extraction<'a>(
     const SCORE_THRESHOLD: f64 = 1.0;
 
     if score > SCORE_THRESHOLD {
-        return Ok(best_extraction.map(|e| e.nodes));
+        return Ok(Some(build_refactoring_operation(
+            best_extraction.unwrap(),
+            &scopes,
+            &text_content,
+            &file_path,
+        )?));
+        //return Ok(best_extraction.map(|e| e.nodes));
     } else {
         return Ok(None);
     }
 }
 
+fn build_refactoring_operation(
+    slice: NodeSlice,
+    scopes: &HashMap<NodeAddress, Scope>,
+    text_content: &XcodeText,
+    file_path: &String, // TODO: Check this
+) -> Result<RefactoringOperation, ComplexityRefactoringError> {
+    let SliceInputsAndOutputs { inputs, outputs } = slice.get_inputs_and_outputs(scopes);
+
+    let return_type = match outputs.len() {
+        0 => None,
+        1 => Some(outputs[0].1.clone()), // TODO
+        _ => {
+            return Err(ComplexityRefactoringError::GenericError(anyhow!(
+                "More than one output variable"
+            )))
+        }
+    };
+
+    let mut body = XcodeText::new_empty();
+    for node in &slice.nodes {
+        body += get_node_text(&node, &text_content)
+            .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
+    }
+
+    let new_function_text = reconstruct_function(SwiftFunctionComponents {
+        body,
+        parameters: inputs,
+        name: XcodeText::from_str("TODO"),
+        return_type,
+        context: SwiftFunctionContext::FilePrivate,
+    });
+
+    Ok(RefactoringOperation {
+        edits: vec![Edit::Add(new_function_text, todo!())],
+    })
+}
+
 #[derive(Debug, Clone)]
-struct ReferencesInSlice {
-    input_names: Vec<XcodeText>,
-    output_names: Vec<XcodeText>,
+struct SliceInputsAndOutputs {
+    inputs: Vec<SwiftFunctionParameter>,
+    outputs: Vec<(XcodeText, XcodeText)>, // TODO: Make a better type
+}
+
+async fn resolve_reference_types(
+    declaration_types: &mut Vec<DeclarationType>,
+    file_path: &String,
+) -> Result<(), ComplexityRefactoringError> {
+    for mut declaration_type in declaration_types {
+        if let DeclarationType::Unresolved(index) = declaration_type {
+            let resolved_type = get_type_for_index(file_path, *index)
+                .await
+                .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
+
+            declaration_type = &mut DeclarationType::Resolved(XcodeText::from_str(&resolved_type));
+        }
+    }
+    Ok(())
 }
 
 impl<'a> NodeSlice<'a> {
@@ -77,19 +140,19 @@ impl<'a> NodeSlice<'a> {
         return true;
     }*/
 
-    fn classify_references_in_slice(
+    async fn get_inputs_and_outputs(
         &self,
         scopes: &HashMap<NodeAddress, Scope>,
-    ) -> ReferencesInSlice {
-        let mut result = ReferencesInSlice {
-            output_names: Vec::new(),
-            input_names: Vec::new(),
+    ) -> SliceInputsAndOutputs {
+        let mut result = SliceInputsAndOutputs {
+            inputs: Vec::new(),
+            outputs: Vec::new(),
         };
 
         let mut curr_address = self.parent_address.clone();
         while curr_address.len() > 0 {
             if let Some(scope) = scopes.get(&curr_address) {
-                for (name, declaration) in &scope.declarations {
+                for (declaration) in scope.declarations.values() {
                     let (referenced_in_slice, referenced_in_and_after_slice) =
                         check_if_declaration_referenced_in_nodes_or_in_and_after_nodes(
                             &declaration,
@@ -100,15 +163,22 @@ impl<'a> NodeSlice<'a> {
                     let declared_in_slice =
                         check_if_declaration_declared_in_slice(&self, &declaration);
 
+                    let name = declaration.name.clone();
+                    let var_type = declaration.var_type.clone();
+
                     if declared_in_slice && referenced_in_and_after_slice {
-                        result.output_names.push(name.clone());
+                        result.outputs.push((name, var_type));
                     } else if referenced_in_slice && !declared_in_slice {
-                        result.input_names.push(name.clone());
+                        result.inputs.push(SwiftFunctionParameter {
+                            external_name: name,
+                            var_type,
+                        });
                     }
                 }
             }
             curr_address.pop();
         }
+
         return result;
     }
 }
@@ -152,6 +222,17 @@ fn get_node_address(parent_address: &NodeAddress, node: &Node) -> NodeAddress {
     result
 }
 
+#[derive(Debug, Clone)]
+pub enum Edit {
+    Add(XcodeText, usize),
+    Remove(TextRange),
+}
+
+#[derive(Debug, Clone)]
+pub struct RefactoringOperation {
+    edits: Vec<Edit>,
+}
+
 fn get_best_extraction<'a>(
     candidates: Vec<NodeSlice<'a>>,
     syntax_tree: &'a SwiftSyntaxTree,
@@ -166,7 +247,7 @@ fn get_best_extraction<'a>(
     let equality_preference_factor = 1.35;
 
     for slice in candidates {
-        let inputs_and_outputs = slice.classify_references_in_slice(scopes);
+        let inputs_and_outputs = slice.get_inputs_and_outputs(scopes);
 
         let ComplexitiesPrediction {
             removed_complexity,
@@ -215,8 +296,17 @@ fn is_child_of(parent: &NodeAddress, child: &NodeAddress) -> bool {
     }
     return true;
 }
+
+#[derive(Debug, Clone)]
+enum DeclarationType {
+    Resolved(XcodeText),
+    Unresolved(usize), // Index
+}
+
 #[derive(Debug, Clone)]
 struct Declaration {
+    name: XcodeText,
+    var_type: DeclarationType, // Some types cannot be resolved in the first pass, and need to be queried from the LSP
     declared_in_node: NodeAddress,
     referenced_in_nodes: Vec<NodeAddress>,
 }
@@ -249,10 +339,16 @@ fn walk_node<'a>(
                 },
             );
         }
-        if let Some(name) = get_variable_name_if_declaration(&child, &text_content) {
+
+        if let Some(declaration) = try_get_declaration_node(&child) {
+            let name = get_node_text(&declaration, &text_content)
+                .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
+
             get_scope(&node_address, scopes).declarations.insert(
-                name,
+                name.clone(),
                 Declaration {
+                    name,
+                    var_type: DeclarationType::Unresolved(dbg!(declaration.start_byte())),
                     declared_in_node: node_address.clone(),
                     referenced_in_nodes: Vec::new(),
                 },
@@ -312,38 +408,44 @@ fn get_variable_name_if_reference(node: &Node, text_content: &XcodeText) -> Opti
 }
 
 // We need to track which variables were declared within each scope, because global variables should be ignored (and can't be found).
-fn get_variable_name_if_declaration(node: &Node, text_content: &XcodeText) -> Option<XcodeText> {
+// There can be cases where we have an ERROR node etc., so just return None if no name is found
+// TODO: Should we handle this differently? Maybe don't check for method extraction if an error is contained in the node. Then treat this as a real error if the assertion of simple_identifier fails.
+
+fn try_get_declaration_node<'a>(node: &Node<'a>) -> Option<Node<'a>> {
+    let mut result: Option<(XcodeText, DeclarationType)>;
+
     match node.kind() {
         "property_declaration" => {
-            let name_node = node
-                .child_by_field_name("name")?
-                .child_by_field_name("bound_identifier")?;
-            return get_node_text(&name_node, &text_content).ok();
+            return Some(
+                node.child_by_field_name("name")?
+                    .child_by_field_name("bound_identifier")?,
+            );
         }
         "function_declaration" => {
             // TODO
         }
         "parameter" => {
+            // Second "simple_identifier" is internal identifier, which matters; first will be overwritten
+            let result = None;
             for child in node.children_by_field_name("name", &mut node.walk()) {
                 if child.kind() == "simple_identifier" {
-                    return get_node_text(&child, &text_content).ok();
+                    result = Some(child);
                 }
             }
+            return result;
         }
         "for_statement" => {
-            let name_node = node
-                .child_by_field_name("item")?
-                .child_by_field_name("bound_identifier")?;
-
-            // There can be cases where we have an ERROR node etc., so just return None if no name is found
-            // TODO: Should we handle this differently? Maybe don't check for method extraction if an error is contained in the node. Then treat this as a real error if the assertion of simple_identifier fails.
-            if name_node.kind() == "simple_identifier" {
-                return get_node_text(&name_node, &text_content).ok();
-            }
+            return Some(
+                node.child_by_field_name("item")?
+                    .child_by_field_name("bound_identifier")?,
+            );
         }
-        _ => (),
+        _ => {
+            // TODO: Fill in other cases.
+            return None;
+        }
     }
-    // TODO: Fill in other cases.
+
     return None;
 }
 
@@ -460,7 +562,7 @@ mod tests {
                         if (Int(input) ?? 0 < 1) {                      // + 2 (1 for nesting)
                             result = 0;
                         }
-                        var a = 0;
+                        var a: Int = 0;
                         var b = 1;
                         for i in 1..<(Int(input) ?? 0) {                // + 2 (1 for nesting)
                             let c = a + b;
@@ -481,6 +583,7 @@ mod tests {
             swift_syntax_tree.parse(&text_content).unwrap();
             let tree = swift_syntax_tree.tree().unwrap();
             let root_node = tree.root_node();
+            dbg!(root_node.clone().to_sexp());
 
             let expected_node_kinds = vec![
                 "property_declaration",
@@ -493,9 +596,14 @@ mod tests {
                 "control_transfer_statement",
             ];
 
-            let result =
-                check_for_method_extraction(root_node, &text_content, &swift_syntax_tree).unwrap();
-
+            let result = check_for_method_extraction(
+                root_node,
+                &text_content,
+                &swift_syntax_tree,
+                &"file".to_string(),
+            )
+            .unwrap();
+            /*
             assert_eq!(
                 result
                     .unwrap()
@@ -503,7 +611,7 @@ mod tests {
                     .map(|n| n.kind().to_string())
                     .collect::<Vec<String>>(),
                 expected_node_kinds
-            );
+            );*/
         }
     }
 }
