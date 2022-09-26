@@ -31,6 +31,14 @@ resource "google_bigquery_table" "default" {
 
     view {
         use_legacy_sql = false
-        query = "SELECT DATE(timestamp) as dte, COUNT(DISTINCT (CASE WHEN labels.machine_id != \"CFC72E46-90FE-50BB-A3EF-B9C111A74831\" AND labels.machine_id != \"081C71C6-3AC8-5A6E-B503-B3330328E9A6\" AND labels.machine_id != \"397E2E21-F462-56AB-9FE3-8B58A13AEFCE\" THEN labels.machine_id END)) as foreign_users, COUNT(DISTINCT labels.machine_id) as total_users FROM `client-backend-x.active_users.client` GROUP BY dte ORDER by dte;"
+        query = <<EOT
+        SELECT 
+          DATE(timestamp) as dte, 
+          COUNT(DISTINCT (CASE WHEN labels.machine_id != "CFC72E46-90FE-50BB-A3EF-B9C111A74831" AND labels.machine_id != "081C71C6-3AC8-5A6E-B503-B3330328E9A6" AND labels.machine_id != "7E3007D5-D32F-5163-8AD1-69D0557DCA36" AND labels.machine_id != "397E2E21-F462-56AB-9FE3-8B58A13AEFCE" THEN labels.machine_id END)) as foreign_users, 
+          COUNT(DISTINCT labels.machine_id) as total_users 
+          FROM `client-backend-x.active_users.client` 
+          GROUP BY dte 
+          ORDER by dte;
+        EOT
     }
 }
