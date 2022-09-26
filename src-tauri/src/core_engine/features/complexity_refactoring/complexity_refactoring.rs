@@ -66,6 +66,11 @@ impl FeatureBase for ComplexityRefactoring {
             selected_function,
             text_content,
             &code_document.syntax_tree(),
+            &code_document
+                .file_path()
+                .as_ref()
+                .expect("No file path!")
+                .clone(), // TODO
         )?;
         Ok(())
     }

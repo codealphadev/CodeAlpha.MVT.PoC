@@ -71,7 +71,7 @@ pub fn subscribe_mouse_events() {
             tap.enable();
             CFRunLoop::run_current();
         },
-        Err(_) => (println!("Error subscribing to mouse events")),
+        Err(_) => println!("Error subscribing to mouse events"),
     }
 }
 
