@@ -5,7 +5,8 @@ use tauri::Manager;
 
 use crate::{
     app_handle,
-    core_engine::{events::EventUserInteraction, CoreEngine},
+    core_engine::{events::EventUserInteraction, features::CoreEngineTrigger, CoreEngine},
+    platform::macos::get_focused_window,
     utils::messaging::ChannelList,
 };
 
@@ -17,10 +18,17 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
         move |msg| {
             let event_user_interaction: EventUserInteraction =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
-
+            dbg!(msg);
             match event_user_interaction {
                 EventUserInteraction::CoreActivationStatus(msg) => {
                     on_core_activation_status_update(&core_engine, &msg);
+                }
+                EventUserInteraction::PerformRefactoringOperation(_msg) => {
+                    let window_uid = get_focused_window().unwrap(); // TODO
+                    core_engine
+                        .lock()
+                        .run_features(window_uid, &CoreEngineTrigger::OnUserCommand);
+                    // TODO: Qualify this
                 }
                 _ => {}
             }

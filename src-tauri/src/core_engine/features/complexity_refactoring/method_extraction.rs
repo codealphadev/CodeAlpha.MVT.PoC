@@ -397,7 +397,7 @@ fn get_resulting_complexities(
         new_function_complexity,
     });
 }
-
+/*
 #[cfg(test)]
 mod tests {
     mod method_extraction {
@@ -476,3 +476,4 @@ mod tests {
         }
     }
 }
+*/

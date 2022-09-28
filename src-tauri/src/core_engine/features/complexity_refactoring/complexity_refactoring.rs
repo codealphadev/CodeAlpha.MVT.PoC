@@ -20,6 +20,11 @@ use crate::{
 
 use super::RefactoringOperation;
 
+enum ComplexityRefactoringProcedure {
+    ComputeSuggestions,
+    PerformOperation,
+}
+
 pub struct ComplexityRefactoring {
     is_activated: bool,
     suggestion: Arc<Mutex<Option<RefactoringOperation>>>, // TODO: Make array?
@@ -32,9 +37,49 @@ impl FeatureBase for ComplexityRefactoring {
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated || !self.should_compute(trigger) {
+        if !self.is_activated {
             return Ok(());
         }
+
+        if let Some(procedure) = self.should_compute(code_document, trigger) {
+            match procedure {
+                ComplexityRefactoringProcedure::ComputeSuggestions => {
+                    self.compute_suggestions(code_document)
+                }
+                ComplexityRefactoringProcedure::PerformOperation => self.perform_operation(),
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    fn update_visualization(
+        &mut self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
+        Ok(())
+    }
+
+    fn activate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = true;
+
+        Ok(())
+    }
+
+    fn deactivate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = false;
+
+        Ok(())
+    }
+
+    fn reset(&mut self) -> Result<(), FeatureError> {
+        Ok(())
+    }
+}
+
+impl ComplexityRefactoring {
+    fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         (*self.suggestion.lock()) = None;
 
         let selected_text_range = match code_document.selected_text_range() {
@@ -81,35 +126,10 @@ impl FeatureBase for ComplexityRefactoring {
                 .clone(), // TODO
             move |refactoring_operation| (*suggestion_mutex.lock()) = Some(refactoring_operation),
         )?;
-        Ok(())
-    }
-
-    fn update_visualization(
-        &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
-        Ok(())
-    }
-
-    fn activate(&mut self) -> Result<(), FeatureError> {
-        self.is_activated = true;
 
         Ok(())
     }
 
-    fn deactivate(&mut self) -> Result<(), FeatureError> {
-        self.is_activated = false;
-
-        Ok(())
-    }
-
-    fn reset(&mut self) -> Result<(), FeatureError> {
-        Ok(())
-    }
-}
-
-impl ComplexityRefactoring {
     fn perform_operation(&mut self) -> Result<(), FeatureError> {
         let mut operation = self
             .suggestion
@@ -118,6 +138,7 @@ impl ComplexityRefactoring {
             .ok_or(ComplexityRefactoringError::NoOperation)?;
 
         operation.edits.sort_by_key(|e| e.start_index);
+        operation.edits.reverse();
         tauri::async_runtime::spawn(async move {
             for edit in operation.edits {
                 replace_range_with_clipboard_text(
@@ -179,11 +200,20 @@ impl ComplexityRefactoring {
         }
     }
 
-    fn should_compute(&self, trigger: &CoreEngineTrigger) -> bool {
+    fn should_compute(
+        &self,
+        code_document: &CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Option<ComplexityRefactoringProcedure> {
         match trigger {
-            CoreEngineTrigger::OnTextContentChange => false, // The TextSelectionChange is already triggered on text content change
-            CoreEngineTrigger::OnTextSelectionChange => true,
-            _ => false,
+            CoreEngineTrigger::OnTextSelectionChange => {
+                Some(ComplexityRefactoringProcedure::ComputeSuggestions)
+            } // The TextSelectionChange is already triggered on text content change
+            CoreEngineTrigger::OnTextContentChange => None,
+            CoreEngineTrigger::OnUserCommand => {
+                Some(ComplexityRefactoringProcedure::PerformOperation)
+            }
+            _ => None,
         }
     }
 }

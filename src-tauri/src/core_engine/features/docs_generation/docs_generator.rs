@@ -169,6 +169,7 @@ impl DocsGenerator {
                 Some(DocsGenComputeProcedure::UpdateExistingNodeAnnotation)
             }
             CoreEngineTrigger::OnShortcutPressed(_) => None,
+            CoreEngineTrigger::OnUserCommand => None,
         }
     }
 
