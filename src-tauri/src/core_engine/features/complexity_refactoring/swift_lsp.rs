@@ -1,9 +1,9 @@
+use crate::core_engine::{TextPosition, XcodeText};
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
 use tracing::debug;
-
-use crate::core_engine::{TextPosition, XcodeText};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
@@ -36,14 +36,14 @@ fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
 
 #[derive(Debug, Clone)]
 pub struct Edit {
-    start_position: TextPosition,
-    end_position: TextPosition,
-    text: XcodeText,
+    pub text: XcodeText,
+    pub start_index: usize,
+    pub end_index: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct RefactoringOperation {
-    edits: Vec<Edit>,
+    pub edits: Vec<Edit>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -72,24 +72,36 @@ struct RefactoringResponse {
     categorized_edits: Vec<CategorizedEditDto>,
 }
 
-fn map_edit_dto_to_edit(edit_dto: EditDto) -> Edit {
-    Edit {
-        start_position: TextPosition {
+fn map_edit_dto_to_edit(
+    edit_dto: EditDto,
+    text_content: &XcodeText,
+) -> Result<Edit, SwiftLspError> {
+    Ok(Edit {
+        start_index: TextPosition {
             row: edit_dto.line - 1,
             column: edit_dto.column - 1,
-        },
-        end_position: TextPosition {
+        }
+        .as_TextIndex(text_content)
+        .ok_or(SwiftLspError::GenericError(anyhow!(
+            "Could not get text index for position"
+        )))?,
+        end_index: TextPosition {
             row: edit_dto.endline - 1,
             column: edit_dto.endcolumn - 1,
-        },
+        }
+        .as_TextIndex(text_content)
+        .ok_or(SwiftLspError::GenericError(anyhow!(
+            "Could not get text index for position"
+        )))?,
         text: XcodeText::from_str(&edit_dto.text),
-    }
+    })
 }
 
 pub async fn refactor_function(
     file_path: &String,
     start_position: TextPosition,
     length: usize,
+    text_content: &XcodeText,
 ) -> Result<Option<RefactoringOperation>, SwiftLspError> {
     let sdk_path = get_macos_sdk_path()?;
 
@@ -129,8 +141,10 @@ key.compilerargs:
         .into_iter()
         .map(|categorized_edit| categorized_edit.edits)
         .flatten()
-        .map(map_edit_dto_to_edit)
-        .collect();
+        .map(|edit_dto| -> Result<Edit, SwiftLspError> {
+            map_edit_dto_to_edit(edit_dto, text_content)
+        })
+        .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
     return Ok(Some(RefactoringOperation { edits }));
 }

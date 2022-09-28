@@ -1,22 +1,28 @@
+use std::sync::Arc;
+
+use parking_lot::Mutex;
 use tree_sitter;
 use tree_sitter::Node;
-use tree_sitter_swift::language;
 
 use crate::{
+    app_handle,
     core_engine::{
         features::{
             complexity_refactoring::check_for_method_extraction,
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
         },
         syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
-        utils::XcodeText,
         CodeDocument, TextRange,
     },
+    platform::macos::{xcode::actions::replace_range_with_clipboard_text, GetVia},
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
+use super::RefactoringOperation;
+
 pub struct ComplexityRefactoring {
     is_activated: bool,
+    suggestion: Arc<Mutex<Option<RefactoringOperation>>>, // TODO: Make array?
 }
 const MAX_ALLOWED_COMPLEXITY: isize = 2; // TODO: Raise to be more reasonable?
 
@@ -29,6 +35,7 @@ impl FeatureBase for ComplexityRefactoring {
         if !self.is_activated || !self.should_compute(trigger) {
             return Ok(());
         }
+        (*self.suggestion.lock()) = None;
 
         let selected_text_range = match code_document.selected_text_range() {
             Some(selected_text_range) => selected_text_range,
@@ -62,6 +69,7 @@ impl FeatureBase for ComplexityRefactoring {
         }
         println!("Problem with complexity in this function");
         //check_for_if_combination(&selected_function, text_content);
+        let suggestion_mutex = self.suggestion.clone();
         check_for_method_extraction(
             selected_function,
             text_content,
@@ -71,6 +79,7 @@ impl FeatureBase for ComplexityRefactoring {
                 .as_ref()
                 .expect("No file path!")
                 .clone(), // TODO
+            move |refactoring_operation| (*suggestion_mutex.lock()) = Some(refactoring_operation),
         )?;
         Ok(())
     }
@@ -100,6 +109,35 @@ impl FeatureBase for ComplexityRefactoring {
     }
 }
 
+impl ComplexityRefactoring {
+    fn perform_operation(&mut self) -> Result<(), FeatureError> {
+        let mut operation = self
+            .suggestion
+            .lock()
+            .clone()
+            .ok_or(ComplexityRefactoringError::NoOperation)?;
+
+        operation.edits.sort_by_key(|e| e.start_index);
+        tauri::async_runtime::spawn(async move {
+            for edit in operation.edits {
+                replace_range_with_clipboard_text(
+                    &app_handle(),
+                    &GetVia::Current,
+                    &TextRange {
+                        index: edit.start_index,
+                        length: edit.end_index - edit.start_index,
+                    },
+                    Some(&edit.text.as_string()),
+                    true,
+                )
+                .await;
+            }
+        });
+
+        Ok(())
+    }
+}
+/*
 fn check_for_if_combination(node: &Node, text_content: &XcodeText) {
     let mut query_cursor = tree_sitter::QueryCursor::new();
     let query = tree_sitter::Query::new(
@@ -130,12 +168,13 @@ fn check_for_if_combination(node: &Node, text_content: &XcodeText) {
         }
     }
 }
-
+*/
 // TODO: Make a diff of all the node changes to be done, and then only apply text changes for those.
 
 impl ComplexityRefactoring {
     pub fn new() -> Self {
         Self {
+            suggestion: Arc::new(Mutex::new(None)),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
     }
@@ -178,6 +217,8 @@ fn get_outermost_selected_functionlike<'a>(
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
+    #[error("No operation found to apply")]
+    NoOperation,
     #[error("Something went wrong when executing this ComplexityRefactoring feature.")]
     GenericError(#[source] anyhow::Error),
 }

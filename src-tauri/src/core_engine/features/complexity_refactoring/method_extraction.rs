@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use tree_sitter::Node;
 
-use super::{get_node_address, ComplexityRefactoringError, Declaration, DeclarationType};
+use super::{
+    get_node_address, ComplexityRefactoringError, Declaration, DeclarationType,
+    RefactoringOperation,
+};
 use crate::core_engine::{
     features::complexity_refactoring::{refactor_function, NodeAddress, NodeSlice},
     syntax_tree::{calculate_cognitive_complexities, get_node_text, Complexities, SwiftSyntaxTree},
@@ -21,6 +24,7 @@ pub fn check_for_method_extraction<'a>(
     text_content: &'a XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
     file_path: &String, // TODO: Code document?
+    set_result_callback: impl Fn(RefactoringOperation) -> () + Send + 'static,
 ) -> Result<(), ComplexityRefactoringError> {
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
@@ -80,50 +84,24 @@ pub fn check_for_method_extraction<'a>(
 
     tauri::async_runtime::spawn({
         let file_path = file_path.clone();
-
+        let text_content = text_content.clone();
         async move {
-            let result = match refactor_function(&file_path, start_position, range_length).await {
-                Err(e) => {
-                    error!(?e, "Failed to query LSP for refactoring");
-                    return ();
-                }
-                Ok(Some(result)) => result,
-                Ok(None) => {
-                    debug!("Refactoring not possible");
-                    return ();
-                }
-            };
-            dbg!(result);
-        }
-        /*&
-        async move {
-            let mut resolved_input_types: Vec<XcodeText> = vec![];
-            for input_type in input_types {
-                let resolved_type = match resolve_reference_type(input_type, &file_path).await {
+            let suggestion =
+                match refactor_function(&file_path, start_position, range_length, &text_content)
+                    .await
+                {
                     Err(e) => {
-                        error!(?e, "Failed to resolve input type");
+                        error!(?e, "Failed to query LSP for refactoring");
                         return ();
                     }
-                    Ok(resolved_type) => resolved_type,
+                    Ok(Some(res)) => res,
+                    Ok(None) => {
+                        debug!("Refactoring not possible");
+                        return ();
+                    }
                 };
-                resolved_input_types.push(resolved_type);
-            }
-
-            let resolved_return_type: Option<XcodeText> = match resolved_return_type {
-                None => None,
-                Some(return_type) => match resolve_reference_type(return_type, &file_path).await {
-                    Err(e) => {
-                        error!(?e, "Failed to resolve return type");
-                        return ();
-                    }
-                    Ok(resolved_type) => Some(resolved_type),
-                },
-            };
-            dbg!(operation_builder(
-                resolved_input_types,
-                resolved_return_type
-            ));
-        }*/
+            set_result_callback(suggestion);
+        }
     });
 
     Ok(())
@@ -477,12 +455,13 @@ mod tests {
                 "assignment",
                 "control_transfer_statement",
             ];
-
-            let result = check_for_method_extraction(
+            let result = None;
+            check_for_method_extraction(
                 root_node,
                 &text_content,
                 &swift_syntax_tree,
                 &"file".to_string(),
+                |res| result = res,
             )
             .unwrap();
             /*
