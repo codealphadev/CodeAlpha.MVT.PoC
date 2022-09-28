@@ -2,25 +2,18 @@ use std::collections::HashMap;
 
 use tree_sitter::Node;
 
-use super::{get_type_for_index, ComplexityRefactoringError};
+use super::{get_node_address, ComplexityRefactoringError, Declaration, DeclarationType};
 use crate::core_engine::{
-    syntax_tree::{
-        calculate_cognitive_complexities, get_node_text, reconstruct_function, Complexities,
-        SwiftFunctionComponents, SwiftFunctionContext, SwiftFunctionParameter, SwiftSyntaxTree,
-    },
-    TextRange, XcodeText,
+    features::complexity_refactoring::{refactor_function, NodeAddress, NodeSlice},
+    syntax_tree::{calculate_cognitive_complexities, get_node_text, Complexities, SwiftSyntaxTree},
+    TextPosition, XcodeText,
 };
-use anyhow::anyhow;
+use tracing::debug;
+use tracing::error;
 
 #[derive(Clone, Debug)]
 struct Scope {
     declarations: HashMap<XcodeText, Declaration>,
-}
-
-#[derive(Debug, Clone)]
-struct NodeSlice<'a> {
-    nodes: Vec<Node<'a>>,
-    parent_address: NodeAddress,
 }
 
 pub fn check_for_method_extraction<'a>(
@@ -28,7 +21,7 @@ pub fn check_for_method_extraction<'a>(
     text_content: &'a XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
     file_path: &String, // TODO: Code document?
-) -> Result<Option<RefactoringOperation>, ComplexityRefactoringError> {
+) -> Result<(), ComplexityRefactoringError> {
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
     let node_address = vec![node.id()];
@@ -49,38 +42,27 @@ pub fn check_for_method_extraction<'a>(
         .complexities
         .clone();
 
-    let (best_extraction, score) = get_best_extraction(
+    const SCORE_THRESHOLD: f64 = 1.0;
+
+    let (best_extraction, score) = match get_best_extraction(
         possible_extractions,
         syntax_tree,
         text_content,
         function_complexity,
         &scopes,
-    )?;
+        SCORE_THRESHOLD,
+    )? {
+        Some(r) => r,
+        None => return Ok(()),
+    };
 
-    const SCORE_THRESHOLD: f64 = 1.0;
+    //let SliceInputsAndOutputs { inputs, outputs } = best_extraction.get_inputs_and_outputs(&scopes); // TODO: Deduplicate
 
-    if score > SCORE_THRESHOLD {
-        return Ok(Some(build_refactoring_operation(
-            best_extraction.unwrap(),
-            &scopes,
-            &text_content,
-            &file_path,
-        )?));
-        //return Ok(best_extraction.map(|e| e.nodes));
-    } else {
-        return Ok(None);
-    }
-}
+    //let operation_builder = build_refactoring_operation(best_extraction, &scopes, &text_content)?;
+    /*
+    let input_types: Vec<DeclarationType> = inputs.into_iter().map(|input| input.1).collect();
 
-fn build_refactoring_operation(
-    slice: NodeSlice,
-    scopes: &HashMap<NodeAddress, Scope>,
-    text_content: &XcodeText,
-    file_path: &String, // TODO: Check this
-) -> Result<RefactoringOperation, ComplexityRefactoringError> {
-    let SliceInputsAndOutputs { inputs, outputs } = slice.get_inputs_and_outputs(scopes);
-
-    let return_type = match outputs.len() {
+    let resolved_return_type = match outputs.len() {
         0 => None,
         1 => Some(outputs[0].1.clone()), // TODO
         _ => {
@@ -89,149 +71,126 @@ fn build_refactoring_operation(
             )))
         }
     };
+    */
 
-    let mut body = XcodeText::new_empty();
-    for node in &slice.nodes {
-        body += get_node_text(&node, &text_content)
-            .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
-    }
+    let slice = best_extraction;
+    let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
+    let range_length =
+        (slice.nodes.last().unwrap().end_byte() - slice.nodes.first().unwrap().start_byte()) / 2; // UTF-16;
 
-    let new_function_text = reconstruct_function(SwiftFunctionComponents {
-        body,
-        parameters: inputs,
-        name: XcodeText::from_str("TODO"),
-        return_type,
-        context: SwiftFunctionContext::FilePrivate,
+    tauri::async_runtime::spawn({
+        let file_path = file_path.clone();
+
+        async move {
+            let result = match refactor_function(&file_path, start_position, range_length).await {
+                Err(e) => {
+                    error!(?e, "Failed to query LSP for refactoring");
+                    return ();
+                }
+                Ok(Some(result)) => result,
+                Ok(None) => {
+                    debug!("Refactoring not possible");
+                    return ();
+                }
+            };
+            dbg!(result);
+        }
+        /*&
+        async move {
+            let mut resolved_input_types: Vec<XcodeText> = vec![];
+            for input_type in input_types {
+                let resolved_type = match resolve_reference_type(input_type, &file_path).await {
+                    Err(e) => {
+                        error!(?e, "Failed to resolve input type");
+                        return ();
+                    }
+                    Ok(resolved_type) => resolved_type,
+                };
+                resolved_input_types.push(resolved_type);
+            }
+
+            let resolved_return_type: Option<XcodeText> = match resolved_return_type {
+                None => None,
+                Some(return_type) => match resolve_reference_type(return_type, &file_path).await {
+                    Err(e) => {
+                        error!(?e, "Failed to resolve return type");
+                        return ();
+                    }
+                    Ok(resolved_type) => Some(resolved_type),
+                },
+            };
+            dbg!(operation_builder(
+                resolved_input_types,
+                resolved_return_type
+            ));
+        }*/
     });
 
-    Ok(RefactoringOperation {
-        edits: vec![Edit::Add(new_function_text, todo!())],
-    })
+    Ok(())
 }
+/*
+fn build_refactoring_operation(
+    slice: NodeSlice,
+    scopes: &HashMap<NodeAddress, Scope>,
+    text_content: &XcodeText,
+) -> Result<
+    impl FnOnce(Vec<XcodeText>, Option<XcodeText>) -> RefactoringOperation,
+    ComplexityRefactoringError,
+> {
+    let SliceInputsAndOutputs { inputs, outputs } = slice.get_inputs_and_outputs(scopes);
 
+    let mut body = XcodeText::from_str("return "); // TODO: Only works for SingleExpression
+    for node in &slice.nodes {
+        body += get_node_text(&node, &text_content)
+            .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?
+            + "\n";
+    }
+
+    Ok(
+        move |input_types: Vec<XcodeText>, return_type: Option<XcodeText>| {
+            let new_function_text = reconstruct_function(SwiftFunctionComponents {
+                body,
+                parameters: inputs
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, input)| SwiftFunctionParameter {
+                        external_name: input.0,
+                        var_type: input_types[i].clone(),
+                    })
+                    .collect(),
+                name: XcodeText::from_str("TODO"),
+                return_type,
+                context: SwiftFunctionContext::FilePrivate,
+            });
+            dbg!(new_function_text.clone());
+
+            RefactoringOperation { edits: vec![] }
+        },
+    )
+}*/
+/*
 #[derive(Debug, Clone)]
 struct SliceInputsAndOutputs {
-    inputs: Vec<SwiftFunctionParameter>,
-    outputs: Vec<(XcodeText, XcodeText)>, // TODO: Make a better type
-}
-
-async fn resolve_reference_types(
-    declaration_types: &mut Vec<DeclarationType>,
+    inputs: Vec<(XcodeText, DeclarationType)>,
+    outputs: Vec<(XcodeText, DeclarationType)>, // TODO: Make a better type
+}*/
+/*
+// TODO: Refactor, no side effects
+async fn resolve_reference_type(
+    declaration_type: DeclarationType,
     file_path: &String,
-) -> Result<(), ComplexityRefactoringError> {
-    for mut declaration_type in declaration_types {
-        if let DeclarationType::Unresolved(index) = declaration_type {
-            let resolved_type = get_type_for_index(file_path, *index)
+) -> Result<XcodeText, ComplexityRefactoringError> {
+    Ok(match declaration_type {
+        DeclarationType::Unresolved(index) => {
+            let resolved_type = get_type_for_index(file_path, index)
                 .await
                 .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
 
-            declaration_type = &mut DeclarationType::Resolved(XcodeText::from_str(&resolved_type));
+            XcodeText::from_str(&resolved_type)
         }
-    }
-    Ok(())
-}
-
-impl<'a> NodeSlice<'a> {
-    /*fn is_candidate_for_extraction(&self) -> bool {
-        if nodes.iter().any(|n| n.has_error()) {
-            return false;
-        }
-        // TODO: Check for guard statements
-        return true;
-    }*/
-
-    async fn get_inputs_and_outputs(
-        &self,
-        scopes: &HashMap<NodeAddress, Scope>,
-    ) -> SliceInputsAndOutputs {
-        let mut result = SliceInputsAndOutputs {
-            inputs: Vec::new(),
-            outputs: Vec::new(),
-        };
-
-        let mut curr_address = self.parent_address.clone();
-        while curr_address.len() > 0 {
-            if let Some(scope) = scopes.get(&curr_address) {
-                for (declaration) in scope.declarations.values() {
-                    let (referenced_in_slice, referenced_in_and_after_slice) =
-                        check_if_declaration_referenced_in_nodes_or_in_and_after_nodes(
-                            &declaration,
-                            &self.nodes,
-                            &self.parent_address,
-                        );
-                    // TODO: Can just use one check. Doesn't matter if declaration or reference.
-                    let declared_in_slice =
-                        check_if_declaration_declared_in_slice(&self, &declaration);
-
-                    let name = declaration.name.clone();
-                    let var_type = declaration.var_type.clone();
-
-                    if declared_in_slice && referenced_in_and_after_slice {
-                        result.outputs.push((name, var_type));
-                    } else if referenced_in_slice && !declared_in_slice {
-                        result.inputs.push(SwiftFunctionParameter {
-                            external_name: name,
-                            var_type,
-                        });
-                    }
-                }
-            }
-            curr_address.pop();
-        }
-
-        return result;
-    }
-}
-
-fn check_if_declaration_declared_in_slice(slice: &NodeSlice, declaration: &Declaration) -> bool {
-    if slice.nodes.iter().any(|n| {
-        is_child_of(
-            &get_node_address(&slice.parent_address, n),
-            &declaration.declared_in_node,
-        )
-    }) {
-        return true;
-    }
-    false
-}
-
-// Checks if declaration is referenced in node range. If it is, checks if it is also referenced after it.
-fn check_if_declaration_referenced_in_nodes_or_in_and_after_nodes(
-    declaration: &Declaration,
-    nodes: &Vec<Node>,
-    surrounding_scope_address: &NodeAddress,
-) -> (bool, bool) {
-    let mut referenced_in_nodes = false;
-    let mut referenced_after_nodes = false;
-    for reference in &declaration.referenced_in_nodes {
-        if nodes
-            .iter()
-            .any(|n| is_child_of(&get_node_address(surrounding_scope_address, n), &reference))
-        {
-            referenced_in_nodes = true;
-        } else if referenced_in_nodes {
-            referenced_after_nodes = true;
-        }
-    }
-    (referenced_in_nodes, referenced_after_nodes)
-}
-
-fn get_node_address(parent_address: &NodeAddress, node: &Node) -> NodeAddress {
-    let mut result = parent_address.clone();
-    result.push(node.id());
-    result
-}
-
-#[derive(Debug, Clone)]
-pub enum Edit {
-    Add(XcodeText, usize),
-    Remove(TextRange),
-}
-
-#[derive(Debug, Clone)]
-pub struct RefactoringOperation {
-    edits: Vec<Edit>,
-}
+        DeclarationType::Resolved(res) => res,
+    })
+}*/
 
 fn get_best_extraction<'a>(
     candidates: Vec<NodeSlice<'a>>,
@@ -239,7 +198,8 @@ fn get_best_extraction<'a>(
     text_content: &'a XcodeText,
     original_complexity: Complexities,
     scopes: &HashMap<NodeAddress, Scope>,
-) -> Result<(Option<NodeSlice<'a>>, f64), ComplexityRefactoringError> {
+    score_threshold: f64,
+) -> Result<Option<(NodeSlice<'a>, f64)>, ComplexityRefactoringError> {
     let mut best_possibility = None;
     let mut best_score = 0.0;
 
@@ -247,7 +207,7 @@ fn get_best_extraction<'a>(
     let equality_preference_factor = 1.35;
 
     for slice in candidates {
-        let inputs_and_outputs = slice.get_inputs_and_outputs(scopes);
+        //let inputs_and_outputs = slice.get_inputs_and_outputs(scopes);
 
         let ComplexitiesPrediction {
             removed_complexity,
@@ -265,18 +225,17 @@ fn get_best_extraction<'a>(
             );
 
         println!(
-            "{:?}, {}, {}, {:?}",
+            "{:?}, {}, {}",
             slice.parent_address,
             slice.nodes.len(),
             score,
-            inputs_and_outputs
         );
-        if score > best_score {
+        if score > best_score && score > score_threshold {
             best_possibility = Some(slice);
             best_score = score;
         }
     }
-    Ok((best_possibility, best_score))
+    Ok(best_possibility.map(|p| (p, best_score)))
 }
 
 fn get_p_norm(x: f64, y: f64, exponent: f64) -> f64 {
@@ -284,31 +243,6 @@ fn get_p_norm(x: f64, y: f64, exponent: f64) -> f64 {
         f64::powf(x, exponent) + f64::powf(y, exponent),
         1.0 / exponent,
     )
-}
-
-type NodeAddress = Vec<usize>;
-
-fn is_child_of(parent: &NodeAddress, child: &NodeAddress) -> bool {
-    for (i, el) in parent.iter().enumerate() {
-        if child.get(i) != Some(&el) {
-            return false;
-        }
-    }
-    return true;
-}
-
-#[derive(Debug, Clone)]
-enum DeclarationType {
-    Resolved(XcodeText),
-    Unresolved(usize), // Index
-}
-
-#[derive(Debug, Clone)]
-struct Declaration {
-    name: XcodeText,
-    var_type: DeclarationType, // Some types cannot be resolved in the first pass, and need to be queried from the LSP
-    declared_in_node: NodeAddress,
-    referenced_in_nodes: Vec<NodeAddress>,
 }
 
 // TODO: Move scope logic into core syntax tree, and put it in metadata?
@@ -348,7 +282,7 @@ fn walk_node<'a>(
                 name.clone(),
                 Declaration {
                     name,
-                    var_type: DeclarationType::Unresolved(dbg!(declaration.start_byte())),
+                    var_type: DeclarationType::Unresolved(declaration.start_byte() / 2), // UTF-16
                     declared_in_node: node_address.clone(),
                     referenced_in_nodes: Vec::new(),
                 },
@@ -426,7 +360,7 @@ fn try_get_declaration_node<'a>(node: &Node<'a>) -> Option<Node<'a>> {
         }
         "parameter" => {
             // Second "simple_identifier" is internal identifier, which matters; first will be overwritten
-            let result = None;
+            let mut result = None;
             for child in node.children_by_field_name("name", &mut node.walk()) {
                 if child.kind() == "simple_identifier" {
                     result = Some(child);
@@ -488,58 +422,6 @@ fn get_resulting_complexities(
 
 #[cfg(test)]
 mod tests {
-    mod is_child_of {
-        use crate::core_engine::features::complexity_refactoring::method_extraction::is_child_of;
-
-        #[test]
-        fn equal_case() {
-            let parent = vec![22, 54, 25];
-            let child = vec![22, 54, 25];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
-
-        #[test]
-        fn unequal_case() {
-            let parent = vec![22, 54, 25];
-            let child = vec![22, 51, 25];
-            assert_eq!(is_child_of(&parent, &child), false);
-        }
-
-        #[test]
-        fn contains_case() {
-            let parent = vec![22, 54, 25];
-            let child = vec![22, 54, 25, 39, 12, 63];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
-
-        #[test]
-        fn reverse_case() {
-            let parent = vec![22, 51, 25, 39, 12, 63];
-            let child = vec![22, 54, 25];
-            assert_eq!(is_child_of(&parent, &child), false);
-        }
-
-        #[test]
-        fn empty_parent_case() {
-            let parent = vec![];
-            let child = vec![22, 54, 25];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
-
-        #[test]
-        fn empty_child_case() {
-            let parent = vec![124];
-            let child = vec![];
-            assert_eq!(is_child_of(&parent, &child), false);
-        }
-
-        #[test]
-        fn empty_case() {
-            let parent = vec![];
-            let child = vec![];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
-    }
     mod method_extraction {
 
         use crate::core_engine::{
