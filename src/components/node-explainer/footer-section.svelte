@@ -5,6 +5,7 @@
 	import IconThumbsDown from "./icons/icon-thumbs-down.svelte";
 	import IconThumbsUp from "./icons/icon-thumbs-up.svelte";
     import { appWindow } from '@tauri-apps/api/window';
+	import { emit } from "@tauri-apps/api/event";
 
 
     let vote: 'good' | 'bad' | null = null;
@@ -13,6 +14,15 @@
         await appWindow.hide();
 
 	}
+
+    const refactor = async () => {
+        await emit('EventUserInteractions', {
+            event: 'PerformRefactoringOperation',
+            payload: {
+            }
+        }) // TODO type it properly
+        console.log('emittedit')
+    }
 
     const handle_click_thumbs_up = async () => {
         if (vote) {
@@ -45,7 +55,7 @@
         </IconButton>
         <IconButton on:click={handle_click_thumbs_down}>
             <IconThumbsDown activated={vote === 'bad'}/>
-        </IconButton>    
+        </IconButton>   
         <div class="text-secondary text-xs">
             {#if vote}
             Thanks for the feedback!
@@ -55,5 +65,6 @@
         </div>
         
     </div>
+    <Button on:click={refactor}>Refactor</Button>
     <Button on:click={paste_docs}>Insert as Docstring</Button>
 </div>

@@ -4,13 +4,14 @@ use ts_rs::TS;
 
 use crate::utils::messaging::ChannelList;
 
-use super::models::CoreActivationStatusMessage;
+use super::models::{CoreActivationStatusMessage, PerformRefactoringOperationMessage};
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[ts(export, export_to = "bindings/user_interaction/")]
 #[serde(tag = "event", content = "payload")]
 pub enum EventUserInteraction {
     CoreActivationStatus(CoreActivationStatusMessage),
+    PerformRefactoringOperation(PerformRefactoringOperationMessage),
     ToggleMainWindow(bool),
 }
 

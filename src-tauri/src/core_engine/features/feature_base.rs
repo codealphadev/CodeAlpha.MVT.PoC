@@ -19,6 +19,7 @@ pub enum CoreEngineTrigger {
     OnViewportDimensionsChange,
     OnVisibleTextRangeChange,
     OnTrackingAreaClicked(TrackingAreaClickedMessage),
+    OnUserCommand,
 }
 
 pub enum Feature {
