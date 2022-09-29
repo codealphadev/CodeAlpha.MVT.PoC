@@ -3,7 +3,8 @@ use std::sync::Arc;
 use crate::{
     core_engine::{
         features::{
-            complexity_refactoring::check_for_method_extraction,
+            complexity_refactoring::{check_for_method_extraction, generate_function_name},
+            docs_generation::fetch_node_explanation,
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
             formatter::SwiftFormatError,
         },
