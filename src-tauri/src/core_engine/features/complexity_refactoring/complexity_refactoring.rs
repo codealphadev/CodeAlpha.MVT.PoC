@@ -7,15 +7,14 @@ use crate::{
         features::{
             complexity_refactoring::check_for_method_extraction,
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            formatter::SwiftFormatError,
         },
+        format_code,
         syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
         CodeDocument, TextRange, XcodeText,
     },
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
-use cached::proc_macro::cached;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -141,7 +140,8 @@ impl ComplexityRefactoring {
         }
         println!("Problem with complexity in this function");
         //check_for_if_combination(&selected_function, text_content);
-        let suggestions_mutex = self.suggestions.clone();
+        let suggestions_arc = self.suggestions.clone();
+        let file_path = code_document.file_path().clone();
         check_for_method_extraction(
             selected_function,
             &text_content.clone(),
@@ -151,24 +151,46 @@ impl ComplexityRefactoring {
                 .as_ref()
                 .expect("No file path!") // TODO
                 .clone(),
-            move |edits| {
-                let mut suggestions = suggestions_mutex.lock();
-                (*suggestions) = vec![Self::convert_edits_to_refactoring_operation(
+            move |edits: Vec<Edit>| {
+                Self::set_results_callback(
                     edits,
                     text_content.clone(),
-                    RefactoringKind::MethodExtraction,
-                )]; // TODO: Allow for multiple suggestions at once.
-                Self::publish_suggestions(suggestions.clone());
+                    suggestions_arc.clone(),
+                    file_path.clone(),
+                )
             },
         )?;
 
         Ok(())
     }
 
-    fn convert_edits_to_refactoring_operation(
+    fn set_results_callback(
+        edits: Vec<Edit>,
+        text_content: XcodeText,
+        suggestions_arc: Arc<Mutex<Vec<RefactoringOperation>>>,
+        file_path: Option<String>,
+    ) {
+        tauri::async_runtime::spawn(async move {
+            let new_suggestion = Self::convert_edits_to_refactoring_operation(
+                edits,
+                text_content,
+                RefactoringKind::MethodExtraction,
+                file_path,
+            )
+            .await;
+            dbg!(new_suggestion.clone());
+            let mut suggestions = suggestions_arc.lock();
+
+            (*suggestions) = vec![new_suggestion]; // TODO: Allow for multiple suggestions at once.
+            Self::publish_suggestions(suggestions.clone());
+        });
+    }
+
+    async fn convert_edits_to_refactoring_operation(
         mut edits: Vec<Edit>,
         text_content: XcodeText,
         kind: RefactoringKind,
+        file_path: Option<String>,
     ) -> RefactoringOperation {
         let mut edited_content = text_content.clone();
 
@@ -176,11 +198,30 @@ impl ComplexityRefactoring {
         edits.reverse();
 
         for edit in edits {
+            // TODO: replace_range for String is more efficient. In general, test feature with emojis and UTF16 etc.
             edited_content.replace_range(edit.start_index..edit.end_index, edit.text);
         }
+
+        let formatted_new_content = match format_code(&edited_content.as_string(), &file_path).await
+        {
+            Ok(content) => content,
+            Err(e) => {
+                error!(?e, "Failed to format during refactoring: new content");
+                edited_content.as_string()
+            }
+        };
+
+        let formatted_old_content = match format_code(&text_content.as_string(), &file_path).await {
+            Ok(content) => content,
+            Err(e) => {
+                error!(?e, "Failed to format during refactoring: old content");
+                text_content.as_string()
+            }
+        };
+
         RefactoringOperation {
-            old_text_content_string: text_content.as_string(),
-            new_text_content_string: edited_content.as_string(), // TODO: More efficient to replace_range on the string, due to row recalculation? Test this whole feature with UTF 16.
+            old_text_content_string: formatted_old_content,
+            new_text_content_string: formatted_new_content,
             id: uuid::Uuid::new_v4(),
             kind,
         }
@@ -213,34 +254,21 @@ impl ComplexityRefactoring {
             let operations_arc = self.suggestions.clone();
 
             async move {
-                let mut command = tauri::api::process::Command::new_sidecar("swiftformat")
-                    .map_err(|err| SwiftFormatError::GenericError(err.into()))
-                    .unwrap(); // TODO
+                // let formatted_content =
+                //     match format_code(&operation.new_text_content_string, &file_path).await {
+                //         Ok(content) => content,
+                //         Err(err) => {
+                //             error!(?err, "Error formatting refactored code");
+                //             operation.new_text_content_string
+                //         }
+                //     };
 
-                // Read .swiftformat settings from file path, even though we use direct stdin input
-                if let Some(file_path) = file_path {
-                    command = command.args(["--stdinpath".to_string(), file_path]);
-                }
-
-                let (mut rx, mut child) = command
-                    .spawn()
-                    .map_err(|err| SwiftFormatError::GenericError(err.into()))
-                    .unwrap(); // TODO: error handling
-
-                child
-                    .write(operation.new_text_content_string.as_bytes())
-                    .expect("Failed to write to swiftformat");
-
-                drop(child);
-                let mut formatted_content = "".to_string();
-                while let Some(event) = rx.recv().await {
-                    if let tauri::api::process::CommandEvent::Stdout(line) = event {
-                        formatted_content.push_str(&(line + "\n"));
-                    }
-                }
-
-                match replace_text_content(&text_content, &formatted_content, &selected_text_range)
-                    .await
+                match replace_text_content(
+                    &text_content,
+                    &operation.new_text_content_string,
+                    &selected_text_range,
+                )
+                .await
                 {
                     Ok(_) => {}
                     Err(err) => {

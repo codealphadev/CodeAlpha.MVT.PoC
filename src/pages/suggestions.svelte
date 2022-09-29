@@ -56,6 +56,8 @@
 			switch (event_type) {
 				case 'UpdateSuggestions':
                     suggestions = payload.suggestions;
+					console.log(payload.suggestions[0]?.new_text_content_string)
+					console.log(payload.suggestions[0]?.old_text_content_string)
 					break;
 				default:
 					break;
