@@ -2,33 +2,56 @@ use std::sync::Arc;
 
 use crate::{
     core_engine::{
+        events::{models::UpdateRefactoringSuggestionsMessage, RefactoringEvent},
         features::{
             complexity_refactoring::{check_for_method_extraction, generate_function_name},
-            docs_generation::fetch_node_explanation,
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
             formatter::SwiftFormatError,
         },
         syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
-        CodeDocument, TextRange,
+        CodeDocument, TextRange, XcodeText,
     },
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 use tracing::error;
 use tree_sitter;
 use tree_sitter::Node;
+use ts_rs::TS;
 
-use super::RefactoringOperation;
+//#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+//#[ts(export, export_to = "bindings/features/refactoring/")]
+#[derive(Clone, Debug)]
+pub enum RefactoringKind {
+    MethodExtraction,
+}
+
+//#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+//#[ts(export, export_to = "bindings/features/refactoring/")]
+#[derive(Clone, Debug)]
+pub struct RefactoringOperation {
+    pub id: uuid::Uuid,
+    pub edits: Vec<Edit>,
+    pub kind: RefactoringKind,
+}
+
+#[derive(Debug, Clone)]
+pub struct Edit {
+    pub text: XcodeText,
+    pub start_index: usize,
+    pub end_index: usize,
+}
 
 enum ComplexityRefactoringProcedure {
     ComputeSuggestions,
-    PerformOperation,
+    PerformOperation(uuid::Uuid),
 }
 
 pub struct ComplexityRefactoring {
     is_activated: bool,
-    suggestion: Arc<Mutex<Option<RefactoringOperation>>>, // TODO: Make array?
+    suggestions: Arc<Mutex<Vec<RefactoringOperation>>>,
 }
 const MAX_ALLOWED_COMPLEXITY: isize = 2; // TODO: Raise to be more reasonable?
 
@@ -47,8 +70,8 @@ impl FeatureBase for ComplexityRefactoring {
                 ComplexityRefactoringProcedure::ComputeSuggestions => {
                     self.compute_suggestions(code_document)
                 }
-                ComplexityRefactoringProcedure::PerformOperation => {
-                    self.perform_operation(code_document)
+                ComplexityRefactoringProcedure::PerformOperation(id) => {
+                    self.perform_operation(code_document, id)
                 }
             }
         } else {
@@ -83,7 +106,7 @@ impl FeatureBase for ComplexityRefactoring {
 
 impl ComplexityRefactoring {
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
-        (*self.suggestion.lock()) = None;
+        self.reset_suggestions();
 
         let selected_text_range = match code_document.selected_text_range() {
             Some(selected_text_range) => selected_text_range,
@@ -117,7 +140,7 @@ impl ComplexityRefactoring {
         }
         println!("Problem with complexity in this function");
         //check_for_if_combination(&selected_function, text_content);
-        let suggestion_mutex = self.suggestion.clone();
+        let suggestions_mutex = self.suggestions.clone();
         check_for_method_extraction(
             selected_function,
             text_content,
@@ -127,17 +150,22 @@ impl ComplexityRefactoring {
                 .as_ref()
                 .expect("No file path!")
                 .clone(), // TODO
-            move |refactoring_operation| (*suggestion_mutex.lock()) = Some(refactoring_operation),
+            move |refactoring_operation| (*suggestions_mutex.lock()).push(refactoring_operation),
         )?;
 
         Ok(())
     }
 
-    fn perform_operation(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
-        let mut operation = self
-            .suggestion
-            .lock()
-            .clone()
+    fn perform_operation(
+        &mut self,
+        code_document: &CodeDocument,
+        suggestion_id: uuid::Uuid,
+    ) -> Result<(), FeatureError> {
+        let operations = self.suggestions.lock().clone();
+
+        let mut operation = operations
+            .into_iter()
+            .find(|op| op.id == suggestion_id)
             .ok_or(ComplexityRefactoringError::NoOperation)?;
 
         let text_content =
@@ -212,6 +240,9 @@ impl ComplexityRefactoring {
 
         Ok(())
     }
+    fn reset_suggestions(&mut self) {
+        (*self.suggestions.lock()) = vec![];
+    }
 }
 /*
 fn check_for_if_combination(node: &Node, text_content: &XcodeText) {
@@ -250,9 +281,20 @@ fn check_for_if_combination(node: &Node, text_content: &XcodeText) {
 impl ComplexityRefactoring {
     pub fn new() -> Self {
         Self {
-            suggestion: Arc::new(Mutex::new(None)),
+            suggestions: Arc::new(Mutex::new(Vec::new())),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
+    }
+    fn publish_visualization(&self, _: &CodeDocument) {
+        // TODO: Use proper event syntax
+        /*RefactoringEvent::UpdateRefactoringSuggestions(UpdateRefactoringSuggestionsMessage {
+
+        })
+        let _ = app_handle().emit_to(
+            &AppWindow::CodeOverlay.to_string(),
+            &ChannelList::BracketHighlightResults.to_string(),
+            &self.visualization_results,
+        );*/
     }
 
     fn should_compute(
@@ -265,8 +307,8 @@ impl ComplexityRefactoring {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
             } // The TextSelectionChange is already triggered on text content change
             CoreEngineTrigger::OnTextContentChange => None,
-            CoreEngineTrigger::OnUserCommand => {
-                Some(ComplexityRefactoringProcedure::PerformOperation)
+            CoreEngineTrigger::OnUserCommand(msg) => {
+                Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
             }
             _ => None,
         }

@@ -6,9 +6,12 @@
 	import IconThumbsUp from "./icons/icon-thumbs-up.svelte";
     import { appWindow } from '@tauri-apps/api/window';
 	import { emit } from "@tauri-apps/api/event";
+    import type { EventUserInteraction} from '../../../src-tauri/bindings/user_interaction/EventUserInteraction';
+    import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
 
 
     let vote: 'good' | 'bad' | null = null;
+    let operation_id = 'TODO';
     const paste_docs = async () => {
 		await invoke('cmd_paste_docs');
         await appWindow.hide();
@@ -16,11 +19,10 @@
 	}
 
     const refactor = async () => {
-        await emit('EventUserInteractions', {
-            event: 'PerformRefactoringOperation',
-            payload: {
-            }
-        }) // TODO type it properly
+        const event: EventUserInteraction = {event: 'PerformRefactoringOperation', payload: {id: operation_id}};
+        const channel: ChannelList = 'EventUserInteractions';
+        
+        await emit(channel, event) // TODO type it properly
         console.log('emittedit')
     }
 

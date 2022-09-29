@@ -23,12 +23,11 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventUserInteraction::CoreActivationStatus(msg) => {
                     on_core_activation_status_update(&core_engine, &msg);
                 }
-                EventUserInteraction::PerformRefactoringOperation(_msg) => {
+                EventUserInteraction::PerformRefactoringOperation(msg) => {
                     let window_uid = get_focused_window().unwrap(); // TODO
                     core_engine
                         .lock()
-                        .run_features(window_uid, &CoreEngineTrigger::OnUserCommand);
-                    // TODO: Qualify this
+                        .run_features(window_uid, &CoreEngineTrigger::OnUserCommand(msg));
                 }
                 _ => {}
             }

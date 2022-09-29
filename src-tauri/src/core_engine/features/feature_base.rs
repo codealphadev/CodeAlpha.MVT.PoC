@@ -1,5 +1,6 @@
 use crate::{
-    core_engine::CodeDocument, platform::macos::models::editor::EditorShortcutPressedMessage,
+    core_engine::{events::models::PerformRefactoringOperationMessage, CodeDocument},
+    platform::macos::models::editor::EditorShortcutPressedMessage,
     window_controls::models::TrackingAreaClickedMessage,
 };
 
@@ -19,7 +20,7 @@ pub enum CoreEngineTrigger {
     OnViewportDimensionsChange,
     OnVisibleTextRangeChange,
     OnTrackingAreaClicked(TrackingAreaClickedMessage),
-    OnUserCommand,
+    OnUserCommand(PerformRefactoringOperationMessage),
 }
 
 pub enum Feature {

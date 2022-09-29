@@ -1,9 +1,11 @@
-use crate::core_engine::{TextPosition, XcodeText};
+use crate::core_engine::{TextPosition, XcodeText, features::complexity_refactoring::complexity_refactoring::RefactoringKind};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
 use tracing::debug;
+
+use super::{complexity_refactoring::Edit, RefactoringOperation};
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
@@ -32,18 +34,6 @@ fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
     }
     let sdk_path_string = String::from_utf8_lossy(&sdk_path_output);
     Ok(sdk_path_string.trim().to_string())
-}
-
-#[derive(Debug, Clone)]
-pub struct Edit {
-    pub text: XcodeText,
-    pub start_index: usize,
-    pub end_index: usize,
-}
-
-#[derive(Debug, Clone)]
-pub struct RefactoringOperation {
-    pub edits: Vec<Edit>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -146,7 +136,11 @@ key.compilerargs:
         })
         .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
-    return Ok(Some(RefactoringOperation { edits }));
+    return Ok(Some(RefactoringOperation {
+        edits,
+        id: uuid::Uuid::new_v4(),
+        kind: RefactoringKind::MethodExtraction,
+    }));
 }
 
 /*
