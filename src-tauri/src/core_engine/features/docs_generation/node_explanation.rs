@@ -8,6 +8,7 @@ use cached::proc_macro::cached;
 
 use crate::{
     core_engine::{
+        get_cloud_function_apikey, get_cloud_function_url,
         syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
         XcodeText,
     },
@@ -90,20 +91,14 @@ async fn cached_fetch_node_explanation(
     func_parameters: Option<Vec<FunctionParameter>>,
     context: Option<String>,
 ) -> Result<NodeExplanation, reqwest::Error> {
-    let url;
-    let env_url = env::var("CODEALPHA_CLOUD_BACKEND_URL");
-    if env_url.is_ok() {
-        url = env_url.unwrap();
-    } else {
-        url = "https://europe-west1-analyze-text-dev.cloudfunctions.net/analyze-code".to_string();
-    }
+    let url = get_cloud_function_url();
 
     let codeblock_text_string = String::from_utf16_lossy(&text);
 
     let req_body = NodeExplanationRequest {
         version: "v1".to_string(),
         method: "explain".to_string(),
-        apiKey: "-RWsev7z_qgP!Qinp_8cbmwgP9jg4AQBkfz".to_string(),
+        apiKey: get_cloud_function_apikey(),
         code: codeblock_text_string,
         kind: kind.clone(),
         context,
@@ -118,13 +113,16 @@ async fn cached_fetch_node_explanation(
         .send()
         .await
         .map_err(|e| {
-            error!(?e, "Error while sending request to cloud backend");
+            error!(?e, "Error while sending explain request to cloud backend");
             e
         })?
         .json::<ExplainResponse>()
         .await
         .map_err(|e| {
-            error!(?e, "Error while parsing response from cloud backend");
+            error!(
+                ?e,
+                "Error while parsing explain response from cloud backend"
+            );
             e
         })?;
 
