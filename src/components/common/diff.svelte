@@ -1,6 +1,6 @@
 <script lang="ts">
     import ReactAdapter from "../common/ReactAdapter.svelte";
-    import ReactDiffViewer from 'react-diff-viewer';
+    import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer';
 	import type { ThemeContextType, ThemeName } from "../../themes";
 	import { getContext } from "svelte";
     
@@ -24,6 +24,6 @@
 
 </script>
 
-<div class="w-full">
-<ReactAdapter el={ReactDiffViewer} oldValue={old_code} newValue={new_code} splitView={true} useDarkTheme={theme_name === 'dark'} styles={styles}/>
+<div class="w-full max-h-96 overflow-y-auto overflow-x-hidden">
+<ReactAdapter el={ReactDiffViewer} oldValue={old_code} newValue={new_code} splitView={true} useDarkTheme={theme_name === 'dark'} compareMethod={DiffMethod.WORDS} styles={styles}/>
 </div>

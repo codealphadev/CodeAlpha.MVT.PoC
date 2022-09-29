@@ -6,7 +6,7 @@ pub use node_explanation_fetched::NodeExplanationFetchedMessage;
 pub use perform_refactoring_operation::*;
 pub use search_query::SearchQueryMessage;
 pub use update_node_explanation::UpdateNodeExplanationMessage;
-pub use update_refactoring_suggestions::UpdateRefactoringSuggestionsMessage;
+pub use update_refactoring_suggestions::UpdateSuggestionsMessage;
 mod code_annotation;
 mod core_activation_status;
 mod node_explanation_fetched;

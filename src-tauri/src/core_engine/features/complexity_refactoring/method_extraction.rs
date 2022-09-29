@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use tree_sitter::Node;
 
 use super::{
-    get_node_address, ComplexityRefactoringError, Declaration, DeclarationType,
-    RefactoringOperation,
+    complexity_refactoring::Edit, get_node_address, ComplexityRefactoringError, Declaration,
+    DeclarationType,
 };
 use crate::core_engine::{
     features::complexity_refactoring::{refactor_function, NodeAddress, NodeSlice},
@@ -24,7 +24,7 @@ pub fn check_for_method_extraction<'a>(
     text_content: &'a XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
     file_path: &String, // TODO: Code document?
-    set_result_callback: impl Fn(RefactoringOperation) -> () + Send + 'static,
+    set_result_callback: impl Fn(Vec<Edit>) -> () + Send + 'static,
 ) -> Result<(), ComplexityRefactoringError> {
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
@@ -46,7 +46,7 @@ pub fn check_for_method_extraction<'a>(
         .complexities
         .clone();
 
-    const SCORE_THRESHOLD: f64 = 1.0;
+    const SCORE_THRESHOLD: f64 = 1.5;
 
     let (best_extraction, score) = match get_best_extraction(
         possible_extractions,
