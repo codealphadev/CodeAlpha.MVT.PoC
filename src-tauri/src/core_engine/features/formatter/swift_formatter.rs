@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use tauri::api::process::{Command, CommandEvent};
 use tracing::debug;
+use tracing::error;
 
+use crate::platform::macos::replace_text_content;
 use crate::{
     app_handle,
     core_engine::{
@@ -9,13 +11,9 @@ use crate::{
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
         rules::TemporaryFileOnDisk,
         utils::XcodeText,
-        CodeDocument, TextPosition, TextRange,
+        CodeDocument,
     },
-    platform::macos::{
-        get_bounds_for_TextRange, get_viewport_frame, models::editor::ModifierKey,
-        send_event_mouse_wheel, set_selected_text_range, set_textarea_content, GetVia,
-    },
-    utils::geometry::LogicalSize,
+    platform::macos::models::editor::ModifierKey,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
@@ -101,11 +99,7 @@ impl SwiftFormatter {
                 .ok_or(SwiftFormatError::InsufficientContextForFormat)?
                 .clone();
 
-            let selected_text_range = code_document
-                .selected_text_range()
-                .as_ref()
-                .ok_or(SwiftFormatError::InsufficientContextForFormat)?
-                .clone();
+            let selected_text_range = code_document.selected_text_range().clone();
 
             let file_path = code_document.file_path().clone();
 
@@ -150,39 +144,16 @@ impl SwiftFormatter {
                     return;
                 }
 
-                // 2. Store the position of the selected text to scroll to after formatting
-                let scroll_delta = Self::scroll_dist_after_formatting(&selected_text_range);
-
-                // 3. Update textarea content
-                match set_textarea_content(&formatted_content, &GetVia::Current)
-                    .map_err(|err| SwiftFormatError::GenericError(err.into()))
+                match replace_text_content(&text_content, &formatted_content, &selected_text_range)
+                    .await
                 {
                     Ok(_) => {}
                     Err(err) => {
                         EventRuleExecutionState::SwiftFormatFailed()
                             .publish_to_tauri(&app_handle());
-                        debug!(error = ?err, "SwiftFormatFailed");
+                        error!(error = ?err, "SwiftFormatFailed");
                         return;
                     }
-                }
-
-                // 4. Restore cursor position
-                _ = set_selected_text_range(
-                    &TextRange {
-                        index: Self::get_adjusted_cursor_index(
-                            &text_content,
-                            selected_text_range.index,
-                            &XcodeText::from_str(formatted_content.as_str()),
-                        ),
-                        length: selected_text_range.length,
-                    },
-                    &GetVia::Current,
-                );
-
-                // 5. Scroll to the same position as before the formatting
-                if let Ok(scroll_delta) = scroll_delta {
-                    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-                    _ = send_event_mouse_wheel(scroll_delta);
                 }
 
                 // 6. Notify the frontend that the file has been formatted successfully
@@ -203,31 +174,6 @@ impl SwiftFormatter {
             .map_err(|err| SwiftFormatError::GenericError(err.into()))?;
 
         Ok(file)
-    }
-
-    fn scroll_dist_after_formatting(
-        selected_text_range: &TextRange,
-    ) -> Result<LogicalSize, SwiftFormatError> {
-        if let Ok(textarea_frame) = get_viewport_frame(&GetVia::Current)
-            .map_err(|err| SwiftFormatError::GenericError(err.into()))
-        {
-            if let Ok(bounds_of_selected_text) = get_bounds_for_TextRange(
-                &TextRange {
-                    index: selected_text_range.index,
-                    length: 1,
-                },
-                &GetVia::Current,
-            ) {
-                return Ok(LogicalSize {
-                    width: 0.0, // No horizontal scrolling
-                    height: bounds_of_selected_text.origin.y - textarea_frame.origin.y,
-                });
-            }
-        }
-
-        Err(SwiftFormatError::GenericError(anyhow::Error::msg(
-            "Could not get first char as TextRange",
-        )))
     }
 
     async fn format_file(file_path: &String) -> Result<String, SwiftFormatError> {
@@ -258,26 +204,6 @@ impl SwiftFormatter {
         } else {
             Err(SwiftFormatError::FormatFailed)
         }
-    }
-
-    fn get_adjusted_cursor_index(
-        pre_formatting_content: &XcodeText,
-        pre_formatting_cursor_position_index: usize,
-        formatted_content: &XcodeText,
-    ) -> usize {
-        let mut new_index = formatted_content.len();
-        if let Some(text_position) = TextPosition::from_TextIndex(
-            pre_formatting_content,
-            pre_formatting_cursor_position_index,
-        ) {
-            if let Some(text_index) =
-                text_position.as_TextIndex_stay_on_line(formatted_content, true)
-            {
-                new_index = text_index;
-            }
-        }
-
-        new_index
     }
 }
 
