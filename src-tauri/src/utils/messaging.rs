@@ -19,7 +19,7 @@ pub enum ChannelList {
     RuleResults,
     EventViewport,
     NodeExplanationEvent,
-    RefactoringEvent,
+    SuggestionEvent,
 }
 impl fmt::Display for ChannelList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -36,7 +36,7 @@ impl fmt::Display for ChannelList {
             ChannelList::RuleResults => write!(f, "RuleResults"),
             ChannelList::EventViewport => write!(f, "EventViewport"),
             ChannelList::NodeExplanationEvent => write!(f, "NodeExplanationEvent"),
-            ChannelList::RefactoringEvent => write!(f, "RefactoringEvent"),
+            ChannelList::SuggestionEvent => write!(f, "SuggestionEvent"),
         }
     }
 }

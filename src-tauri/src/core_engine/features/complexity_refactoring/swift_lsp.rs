@@ -1,11 +1,11 @@
-use crate::core_engine::{TextPosition, XcodeText, features::complexity_refactoring::complexity_refactoring::RefactoringKind};
+use crate::core_engine::{TextPosition, XcodeText};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
 use tracing::debug;
 
-use super::{complexity_refactoring::Edit, RefactoringOperation};
+use super::complexity_refactoring::Edit;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
@@ -92,7 +92,7 @@ pub async fn refactor_function(
     start_position: TextPosition,
     length: usize,
     text_content: &XcodeText,
-) -> Result<Option<RefactoringOperation>, SwiftLspError> {
+) -> Result<Option<Vec<Edit>>, SwiftLspError> {
     let sdk_path = get_macos_sdk_path()?;
 
     let payload = format!(
@@ -136,11 +136,7 @@ key.compilerargs:
         })
         .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
-    return Ok(Some(RefactoringOperation {
-        edits,
-        id: uuid::Uuid::new_v4(),
-        kind: RefactoringKind::MethodExtraction,
-    }));
+    return Ok(Some(edits));
 }
 
 /*

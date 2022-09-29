@@ -12,4 +12,5 @@ export type ChannelList =
   | "NodeAnnotationEvent"
   | "RuleResults"
   | "EventViewport"
-  | "NodeExplanationEvent";
+  | "NodeExplanationEvent"
+  | "SuggestionEvent";
