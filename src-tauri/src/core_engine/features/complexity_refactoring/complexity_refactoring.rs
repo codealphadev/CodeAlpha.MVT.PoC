@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
-use parking_lot::Mutex;
-use tree_sitter;
-use tree_sitter::Node;
-
 use crate::{
-    app_handle,
     core_engine::{
         features::{
             complexity_refactoring::check_for_method_extraction,
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
+            formatter::SwiftFormatError,
         },
         syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
         CodeDocument, TextRange,
     },
-    platform::macos::{xcode::actions::replace_range_with_clipboard_text, GetVia},
+    platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
+use parking_lot::Mutex;
+use tracing::error;
+use tree_sitter;
+use tree_sitter::Node;
 
 use super::RefactoringOperation;
 
@@ -46,7 +46,9 @@ impl FeatureBase for ComplexityRefactoring {
                 ComplexityRefactoringProcedure::ComputeSuggestions => {
                     self.compute_suggestions(code_document)
                 }
-                ComplexityRefactoringProcedure::PerformOperation => self.perform_operation(),
+                ComplexityRefactoringProcedure::PerformOperation => {
+                    self.perform_operation(code_document)
+                }
             }
         } else {
             Ok(())
@@ -130,28 +132,80 @@ impl ComplexityRefactoring {
         Ok(())
     }
 
-    fn perform_operation(&mut self) -> Result<(), FeatureError> {
+    fn perform_operation(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         let mut operation = self
             .suggestion
             .lock()
             .clone()
             .ok_or(ComplexityRefactoringError::NoOperation)?;
 
+        let text_content =
+            code_document
+                .text_content()
+                .as_ref()
+                .ok_or(FeatureError::GenericError(
+                    ComplexityRefactoringError::InsufficientContext.into(),
+                ))?;
+
+        let mut edited_content = text_content.clone();
         operation.edits.sort_by_key(|e| e.start_index);
         operation.edits.reverse();
-        tauri::async_runtime::spawn(async move {
-            for edit in operation.edits {
-                replace_range_with_clipboard_text(
-                    &app_handle(),
-                    &GetVia::Current,
-                    &TextRange {
-                        index: edit.start_index,
-                        length: edit.end_index - edit.start_index,
-                    },
-                    Some(&edit.text.as_string()),
-                    true,
-                )
-                .await;
+        for edit in operation.edits {
+            edited_content.replace_range(edit.start_index..edit.end_index, edit.text);
+            /* replace_range_with_clipboard_text(
+                &app_handle(),
+                &GetVia::Current,
+                &TextRange {
+                    index: edit.start_index,
+                    length: edit.end_index - edit.start_index,
+                },
+                Some(&edit.text.as_string()),
+                true,
+            )
+            .await;*/
+        }
+
+        tauri::async_runtime::spawn({
+            let file_path = code_document.file_path().clone();
+            let selected_text_range = code_document.selected_text_range().clone();
+            let text_content = text_content.clone();
+
+            async move {
+                let mut command = tauri::api::process::Command::new_sidecar("swiftformat")
+                    .map_err(|err| SwiftFormatError::GenericError(err.into()))
+                    .unwrap(); // TODO
+
+                // Read .swiftformat settings from file path, even though we use direct stdin input
+                if let Some(file_path) = file_path {
+                    command = command.args(["--stdinpath".to_string(), file_path]);
+                }
+
+                let (mut rx, mut child) = command
+                    .spawn()
+                    .map_err(|err| SwiftFormatError::GenericError(err.into()))
+                    .unwrap(); // TODO: error handling
+
+                child
+                    .write(edited_content.as_string().as_bytes())
+                    .expect("Failed to write to swiftformat");
+
+                drop(child);
+                let mut formatted_content = "".to_string();
+                while let Some(event) = rx.recv().await {
+                    if let tauri::api::process::CommandEvent::Stdout(line) = event {
+                        formatted_content.push_str(&(line + "\n"));
+                    }
+                }
+
+                match replace_text_content(&text_content, &formatted_content, &selected_text_range)
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(err) => {
+                        error!(?err, "Error replacing text content")
+                    }
+                }
+                dbg!(formatted_content);
             }
         });
 

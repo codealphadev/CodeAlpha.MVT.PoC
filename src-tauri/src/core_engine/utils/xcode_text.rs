@@ -3,7 +3,7 @@ use ts_rs::TS;
 
 use std::{
     fmt,
-    ops::{self, Deref, DerefMut},
+    ops::{self, Deref, DerefMut, RangeBounds},
     slice,
 };
 
@@ -105,6 +105,19 @@ impl<'a> XcodeText {
             text: self.text.clone(),
             rows: self.rows.clone(),
         }
+    }
+    pub fn replace_range<R>(&mut self, range: R, replace_with: XcodeText)
+    where
+        R: RangeBounds<usize>,
+    {
+        // TODO: Check for char boundary (see String::replace_range implementation)
+
+        // We assume the bounds reported by `range` remain the same, but
+        // an adversarial implementation could change between calls
+        self.text
+            .splice((range.start_bound(), range.end_bound()), replace_with.text);
+
+        self.rows = Self::create_rows(&self.text) // TODO: Inefficient implementation
     }
 
     pub fn create_rows(text: &Vec<u16>) -> XcodeTextRows {
@@ -225,6 +238,38 @@ impl<'a> DerefMut for XcodeText {
 
 #[cfg(test)]
 mod tests {
+
+    #[cfg(test)]
+    mod replace_range {
+        use super::super::*;
+
+        #[test]
+        fn replace_range_one_line() {
+            let mut a = XcodeText::from_str("Hello World!");
+            let b = XcodeText::from_str("there");
+
+            a.replace_range(6..11, b);
+            assert_eq!(a, XcodeText::from_str("Hello there!"));
+        }
+
+        #[test]
+        fn replace_range_multiline() {
+            let mut a = XcodeText::from_str("Hello\nWorld!");
+            let b = XcodeText::from_str(" there");
+
+            a.replace_range(5..11, b);
+            assert_eq!(a, XcodeText::from_str("Hello there!"));
+        }
+        #[test]
+
+        fn replace_range_multiline_complex() {
+            let mut a = XcodeText::from_str("Hello\nWorld!");
+            let b = XcodeText::from_str(" the\nre");
+
+            a.replace_range(5..11, b);
+            assert_eq!(a, XcodeText::from_str("Hello the\nre!"));
+        }
+    }
     #[cfg(test)]
     mod addition {
         use super::super::*;
