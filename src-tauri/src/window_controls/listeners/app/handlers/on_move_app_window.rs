@@ -53,6 +53,9 @@ pub fn on_move_app_window(
         AppWindow::CodeOverlay => {
             // Do Nothing, for now.
         }
+        AppWindow::Main => {
+            // Do Nothing, for now.
+        }
     }
 
     Some(())

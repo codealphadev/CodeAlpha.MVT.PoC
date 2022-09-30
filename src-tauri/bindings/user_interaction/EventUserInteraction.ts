@@ -4,4 +4,4 @@ import type { CoreActivationStatusMessage } from "./CoreActivationStatusMessage"
 export type EventUserInteraction = {
   event: "CoreActivationStatus";
   payload: CoreActivationStatusMessage;
-};
+} | { event: "ToggleMainWindow"; payload: boolean };

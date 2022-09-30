@@ -12,14 +12,16 @@ pub enum AppWindow {
     Content,
     Explain,
     CodeOverlay,
+    Main,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum WindowLevel {
     CodeOverlay = 5,
     Widget = 6,
-    FloatingCard = 7,
-    ConfigWindow = 8,
+    Main = 7,
+    FloatingCard = 10,
+    ConfigWindow = 20,
 }
 
 impl std::fmt::Display for AppWindow {
@@ -44,12 +46,20 @@ impl AppWindow {
         vec![AppWindow::CodeOverlay, AppWindow::Explain]
     }
 
+    pub fn hidden_on_click_widget() -> Vec<AppWindow> {
+        vec![AppWindow::Main]
+    }
+
     pub fn shown_on_focus_gained() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay]
     }
 
     pub fn shown_on_core_engine_activated() -> Vec<AppWindow> {
         vec![AppWindow::Widget, AppWindow::CodeOverlay]
+    }
+
+    pub fn shown_on_click_widget() -> Vec<AppWindow> {
+        vec![AppWindow::Main]
     }
 }
 
@@ -84,6 +94,7 @@ pub mod default_properties {
                     AppWindow::CodeOverlay.to_string().to_lowercase()
                 )
             }
+            AppWindow::Main => format!("{}{}", r"\", AppWindow::Main.to_string().to_lowercase()),
         }
     }
 
@@ -98,6 +109,7 @@ pub mod default_properties {
             AppWindow::Content => "CodeAlpha - Guide".to_string(),
             AppWindow::Explain => "CodeAlpha - Explanation".to_string(),
             AppWindow::CodeOverlay => "CodeAlpha - CodeOverlay".to_string(),
+            AppWindow::Main => "CodeAlpha - Main".to_string(),
         }
     }
 
@@ -109,6 +121,7 @@ pub mod default_properties {
             AppWindow::Content => (322.0, 398.0),
             AppWindow::Explain => (460.0, 200.0),
             AppWindow::CodeOverlay => (1.0, 1.0),
+            AppWindow::Main => (650.0, 200.0),
         }
     }
 
@@ -120,6 +133,7 @@ pub mod default_properties {
             AppWindow::Content => false,
             AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
+            AppWindow::Main => false,
         }
     }
     pub fn is_transparent(window: &AppWindow) -> bool {
@@ -130,6 +144,7 @@ pub mod default_properties {
             AppWindow::Content => true,
             AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
+            AppWindow::Main => false,
         }
     }
 
@@ -141,6 +156,7 @@ pub mod default_properties {
             AppWindow::Content => false,
             AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
+            AppWindow::Main => false,
         }
     }
 
@@ -152,6 +168,7 @@ pub mod default_properties {
             AppWindow::Content => false,
             AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
+            AppWindow::Main => false,
         }
     }
 
@@ -163,6 +180,7 @@ pub mod default_properties {
             AppWindow::Content => true,
             AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
+            AppWindow::Main => true,
         }
     }
 
@@ -174,6 +192,7 @@ pub mod default_properties {
             AppWindow::Content => true,
             AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
+            AppWindow::Main => true,
         }
     }
 }

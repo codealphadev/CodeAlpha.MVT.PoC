@@ -1,3 +1,5 @@
 pub use on_core_activation_status_update::on_core_activation_status_update;
+pub use on_main_window_toggle::on_main_window_toggle;
 
 mod on_core_activation_status_update;
+mod on_main_window_toggle;
