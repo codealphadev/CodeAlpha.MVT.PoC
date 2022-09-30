@@ -14,6 +14,7 @@ use crate::{
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
+        windows::MainWindow,
     },
 };
 
@@ -24,6 +25,9 @@ static WIDGET_OFFSET: f64 = 75.;
 #[derive(Clone, Debug)]
 pub struct WidgetWindow {
     app_handle: tauri::AppHandle,
+
+    // Is the main window shown
+    main_window_shown: Option<bool>,
 
     // The widget window's size
     size: LogicalSize,
@@ -48,6 +52,7 @@ impl WidgetWindow {
                 width: default_properties::size(&AppWindow::Widget).0,
                 height: default_properties::size(&AppWindow::Widget).1,
             },
+            main_window_shown: None,
         })
     }
 
@@ -77,9 +82,13 @@ impl WidgetWindow {
         window_control_events_listener(widget_window);
     }
 
+    pub fn set_main_window_shown(&mut self, main_window_shown: bool) {
+        self.main_window_shown = Some(main_window_shown);
+    }
+
     pub fn show(
         &self,
-        widget_position: &Option<LogicalPosition>,
+        updated_widget_position: &Option<LogicalPosition>,
         editor_textarea: &LogicalFrame,
         monitor: &LogicalFrame,
     ) -> Option<()> {
@@ -87,29 +96,48 @@ impl WidgetWindow {
 
         // In case the widget has never been moved by the user, we set an initial position
         // based on the editor textarea.
-        let mut corrected_position = if let Some(position) = widget_position.to_owned() {
+        let mut widget_position = if let Some(position) = updated_widget_position.to_owned() {
             position
         } else {
             self.initial_widget_position(editor_textarea)
         };
 
+        let mut corrected_size = self.size;
+        let mut corrected_position = widget_position;
+
+        if let Some(main_window_shown) = self.main_window_shown {
+            if main_window_shown {
+                let main_window_frame = MainWindow::dimensions();
+
+                corrected_position = LogicalPosition {
+                    x: corrected_position.x - (main_window_frame.size.width - corrected_size.width),
+                    y: corrected_position.y - main_window_frame.size.height,
+                };
+
+                corrected_size = LogicalSize {
+                    width: main_window_frame.size.width,
+                    height: corrected_size.height + main_window_frame.size.height,
+                };
+            }
+        }
+
         // Determine if the widget would be off-screen and needs to be moved.
         let (offscreen_dist_x, offscreen_dist_y) =
-            Self::calc_off_screen_distance(&self.size, &corrected_position, &monitor);
+            Self::calc_off_screen_distance(&corrected_size, &corrected_position, &monitor);
 
         if let Some(offscreen_dist_x) = offscreen_dist_x {
-            corrected_position.x += offscreen_dist_x;
+            widget_position.x += offscreen_dist_x;
         }
 
         if let Some(offscreen_dist_y) = offscreen_dist_y {
-            corrected_position.y += offscreen_dist_y;
+            widget_position.y += offscreen_dist_y;
         }
 
         // Needs to be reset on each show.
         set_shadow(&tauri_window, true).expect("Unsupported platform!");
 
         tauri_window
-            .set_position(corrected_position.as_tauri_LogicalPosition())
+            .set_position(widget_position.as_tauri_LogicalPosition())
             .ok()?;
         tauri_window.show().ok()?;
 
@@ -158,6 +186,33 @@ impl WidgetWindow {
         LogicalPosition {
             x: editor_textarea.origin.x + editor_textarea.size.width - WIDGET_OFFSET,
             y: editor_textarea.origin.y + editor_textarea.size.height - WIDGET_OFFSET,
+        }
+    }
+
+    pub fn dimensions() -> LogicalFrame {
+        let widget_tauri_window = app_handle()
+            .get_window(&AppWindow::Widget.to_string())
+            .expect("Could not get WidgetWindow!");
+
+        let scale_factor = widget_tauri_window
+            .scale_factor()
+            .expect("Could not get WidgetWindow scale factor!");
+        let widget_position = LogicalPosition::from_tauri_LogicalPosition(
+            &widget_tauri_window
+                .outer_position()
+                .expect("Could not get WidgetWindow outer position!")
+                .to_logical::<f64>(scale_factor),
+        );
+        let widget_size = LogicalSize::from_tauri_LogicalSize(
+            &widget_tauri_window
+                .outer_size()
+                .expect("Could not get WidgetWindow outer size!")
+                .to_logical::<f64>(scale_factor),
+        );
+
+        LogicalFrame {
+            origin: widget_position,
+            size: widget_size,
         }
     }
 }
