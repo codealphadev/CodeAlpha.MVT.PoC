@@ -18,5 +18,11 @@ pub fn on_hide_app_window(
         };
     }
 
+    if hide_msg.app_windows.contains(&AppWindow::Main) {
+        let mut widget_window = widget_window.lock();
+
+        widget_window.set_main_window_shown(false);
+    }
+
     Some(())
 }

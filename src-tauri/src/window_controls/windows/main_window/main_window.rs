@@ -14,6 +14,7 @@ use crate::{
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
+        windows::WidgetWindow,
     },
 };
 
@@ -77,33 +78,13 @@ impl MainWindow {
 
     pub fn show(&self, monitor: &LogicalFrame) -> Option<()> {
         let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
-        let widget_tauri_window = self.app_handle.get_window(&AppWindow::Widget.to_string())?;
 
-        let scale_factor = widget_tauri_window.scale_factor().ok()?;
-        let widget_position = LogicalPosition::from_tauri_LogicalPosition(
-            &widget_tauri_window
-                .outer_position()
-                .ok()?
-                .to_logical::<f64>(scale_factor),
-        );
-        let widget_size = LogicalSize::from_tauri_LogicalSize(
-            &widget_tauri_window
-                .outer_size()
-                .ok()?
-                .to_logical::<f64>(scale_factor),
-        );
-
-        let scale_factor = main_tauri_window.scale_factor().ok()?;
-        let main_window_size = LogicalSize::from_tauri_LogicalSize(
-            &main_tauri_window
-                .outer_size()
-                .ok()?
-                .to_logical::<f64>(scale_factor),
-        );
+        let widget_frame = WidgetWindow::dimensions();
+        let main_window_frame = Self::dimensions();
 
         let mut corrected_position = LogicalPosition {
-            x: widget_position.x - (main_window_size.width - widget_size.width),
-            y: widget_position.y - main_window_size.height,
+            x: widget_frame.origin.x - (main_window_frame.size.width - widget_frame.size.width),
+            y: widget_frame.origin.y - main_window_frame.size.height,
         };
 
         // Determine if the main would be off-screen and needs to be moved.
@@ -163,6 +144,33 @@ impl MainWindow {
         }
 
         (dist_x, dist_y)
+    }
+
+    pub fn dimensions() -> LogicalFrame {
+        let main_tauri_window = app_handle()
+            .get_window(&AppWindow::Main.to_string())
+            .expect("Could not get MainWindow!");
+
+        let scale_factor = main_tauri_window
+            .scale_factor()
+            .expect("Could not get MainWindow scale factor!");
+        let main_position = LogicalPosition::from_tauri_LogicalPosition(
+            &main_tauri_window
+                .outer_position()
+                .expect("Could not get MainWindow outer position!")
+                .to_logical::<f64>(scale_factor),
+        );
+        let main_size = LogicalSize::from_tauri_LogicalSize(
+            &main_tauri_window
+                .outer_size()
+                .expect("Could not get MainWindow outer size!")
+                .to_logical::<f64>(scale_factor),
+        );
+
+        LogicalFrame {
+            origin: main_position,
+            size: main_size,
+        }
     }
 }
 
