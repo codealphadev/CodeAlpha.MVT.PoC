@@ -26,7 +26,7 @@ use super::{
         xcode_listener,
     },
     models::app_window::UpdateAppWindowMessage,
-    windows::{CodeOverlayWindow, EditorWindow, ExplainWindow, WidgetWindow},
+    windows::{CodeOverlayWindow, EditorWindow, ExplainWindow, MainWindow, WidgetWindow},
     TrackingAreasManager,
 };
 
@@ -57,6 +57,12 @@ pub struct WindowManager {
 impl WindowManager {
     pub fn new() -> Result<Self, tauri::Error> {
         // Instantiate app windows. If this fails, the app will not work.
+        let main_window = MainWindow::new()?;
+        main_window.set_macos_properties();
+
+        let main_window_arc = Arc::new(Mutex::new(main_window));
+        MainWindow::start_event_listeners(&main_window_arc);
+
         let widget_window = WidgetWindow::new()?;
         widget_window.set_macos_properties();
 
@@ -331,6 +337,8 @@ pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool)
         active_feature: None,
     })
     .publish_to_tauri(&app_handle);
+
+    EventUserInteraction::ToggleMainWindow(app_active).publish_to_tauri(&app_handle);
     debug!(?app_active, "Toggle app activation");
 }
 

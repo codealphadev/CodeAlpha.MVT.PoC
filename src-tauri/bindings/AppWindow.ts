@@ -6,4 +6,5 @@ export type AppWindow =
   | "Widget"
   | "Content"
   | "Explain"
-  | "CodeOverlay";
+  | "CodeOverlay"
+  | "Main";
