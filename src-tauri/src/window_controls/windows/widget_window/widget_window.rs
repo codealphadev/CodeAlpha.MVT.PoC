@@ -90,9 +90,9 @@ impl WidgetWindow {
         &self,
         updated_widget_position: &Option<LogicalPosition>,
         editor_textarea: &LogicalFrame,
-        monitor: &LogicalFrame,
+        editor_monitor: &LogicalFrame,
     ) -> Option<()> {
-        let tauri_window = self.app_handle.get_window(&AppWindow::Widget.to_string())?;
+        let widget_tauri_window = self.app_handle.get_window(&AppWindow::Widget.to_string())?;
 
         // In case the widget has never been moved by the user, we set an initial position
         // based on the editor textarea.
@@ -102,8 +102,11 @@ impl WidgetWindow {
             self.initial_widget_position(editor_textarea)
         };
 
+        let relevant_monitor =
+            Self::determine_widget_monitor(&self.size, &widget_position, &editor_monitor)?;
+
         let (offscreen_dist_x, offscreen_dist_y) =
-            Self::calc_off_screen_distance(&self.size, &widget_position, &monitor);
+            Self::calc_off_screen_distance(&self.size, &widget_position, &relevant_monitor);
 
         if let Some(offscreen_dist_x) = offscreen_dist_x {
             widget_position.x += offscreen_dist_x;
@@ -114,12 +117,12 @@ impl WidgetWindow {
         }
 
         // Needs to be reset on each show.
-        set_shadow(&tauri_window, true).expect("Unsupported platform!");
+        set_shadow(&widget_tauri_window, true).expect("Unsupported platform!");
 
-        tauri_window
+        widget_tauri_window
             .set_position(widget_position.as_tauri_LogicalPosition())
             .ok()?;
-        tauri_window.show().ok()?;
+        widget_tauri_window.show().ok()?;
 
         Some(())
     }
@@ -133,7 +136,41 @@ impl WidgetWindow {
         Some(())
     }
 
-    pub fn calc_off_screen_distance(
+    fn determine_widget_monitor(
+        widget_size: &LogicalSize,
+        widget_position: &LogicalPosition,
+        editor_monitor: &LogicalFrame,
+    ) -> Option<LogicalFrame> {
+        // We compute the position relative to the monitor the widget is on. If the widget is "offscreen" to
+        // its own monitor, we move it to the monitor the editor window is on.
+
+        // We fetch the window where the widget is on
+        let widget_window = app_handle().get_window(&AppWindow::Widget.to_string())?;
+        let monitor = widget_window.current_monitor().ok()??;
+
+        let scale_factor = monitor.scale_factor();
+        let widget_monitor_origin = LogicalPosition::from_tauri_LogicalPosition(
+            &monitor.position().to_logical::<f64>(scale_factor),
+        );
+        let widget_monitor_size =
+            LogicalSize::from_tauri_LogicalSize(&monitor.size().to_logical::<f64>(scale_factor));
+
+        let widget_monitor = LogicalFrame {
+            origin: widget_monitor_origin,
+            size: widget_monitor_size,
+        };
+
+        let (offscreen_dist_x, offscreen_dist_y) =
+            Self::calc_off_screen_distance(&widget_size, &widget_position, &widget_monitor);
+
+        if offscreen_dist_x.is_some() || offscreen_dist_y.is_some() {
+            Some(editor_monitor.to_owned())
+        } else {
+            Some(widget_monitor)
+        }
+    }
+
+    fn calc_off_screen_distance(
         widget_size: &LogicalSize,
         widget_position: &LogicalPosition,
         monitor: &LogicalFrame,
