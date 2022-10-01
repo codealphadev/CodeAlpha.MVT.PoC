@@ -1,0 +1,1 @@
+<h4 class="text-sm gradient-text font-medium"><slot/></h4>

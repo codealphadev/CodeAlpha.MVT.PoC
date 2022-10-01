@@ -20,7 +20,7 @@ pub struct FunctionParameter {
 }
 
 pub struct SwiftFunction<'a> {
-    props: SwiftCodeBlockProps<'a>,
+    pub props: SwiftCodeBlockProps<'a>,
 }
 impl SwiftFunction<'_> {
     pub fn get_complexity(&self) -> isize {

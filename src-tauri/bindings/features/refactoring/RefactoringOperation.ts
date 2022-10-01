@@ -5,5 +5,8 @@ export interface RefactoringOperation {
   id: string;
   new_text_content_string: string;
   old_text_content_string: string;
+  new_complexity: number;
+  old_complexity: number;
   kind: RefactoringKind;
+  function_name: string | null;
 }

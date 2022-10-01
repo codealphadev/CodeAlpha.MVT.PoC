@@ -5,11 +5,16 @@ use crate::{
     core_engine::{
         events::{models::UpdateSuggestionsMessage, SuggestionEvent},
         features::{
-            complexity_refactoring::check_for_method_extraction,
+            complexity_refactoring::{
+                check_for_method_extraction, method_extraction::MethodExtractionOperation,
+            },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
         },
         format_code,
-        syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
+        syntax_tree::{
+            SwiftCodeBlock, SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree,
+            SwiftSyntaxTreeError,
+        },
         CodeDocument, TextRange, XcodeText,
     },
     platform::macos::replace_text_content,
@@ -34,7 +39,10 @@ pub struct RefactoringOperation {
     pub id: uuid::Uuid,
     pub new_text_content_string: String,
     pub old_text_content_string: String,
+    pub new_complexity: isize,
+    pub old_complexity: isize,
     pub kind: RefactoringKind,
+    pub function_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -113,14 +121,6 @@ impl ComplexityRefactoring {
             None => return Ok(()),
         };
 
-        let selected_function = match get_outermost_selected_functionlike(
-            selected_text_range,
-            code_document.syntax_tree(),
-        )? {
-            Some(node) => node,
-            None => return Ok(()),
-        };
-
         let text_content = code_document
             .text_content()
             .as_ref()
@@ -129,21 +129,28 @@ impl ComplexityRefactoring {
             ))?
             .clone();
 
-        let node_metadata = code_document
-            .syntax_tree()
-            .get_node_metadata(&selected_function)
-            .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
+        let binding = text_content.clone();
+        let selected_function = match get_outermost_selected_function(
+            selected_text_range,
+            code_document.syntax_tree(),
+            &binding,
+        )? {
+            Some(f) => f,
+            None => return Ok(()),
+        };
 
-        if node_metadata.complexities.get_total_complexity() <= MAX_ALLOWED_COMPLEXITY {
+        if selected_function.get_complexity() <= MAX_ALLOWED_COMPLEXITY {
             println!("This function is fine");
             return Ok(());
         }
+
         println!("Problem with complexity in this function");
         //check_for_if_combination(&selected_function, text_content);
         let suggestions_arc = self.suggestions.clone();
         let file_path = code_document.file_path().clone();
+        let function_name = selected_function.get_name();
         check_for_method_extraction(
-            selected_function,
+            selected_function.props.node,
             &text_content.clone(),
             &code_document.syntax_tree(),
             &code_document
@@ -151,12 +158,13 @@ impl ComplexityRefactoring {
                 .as_ref()
                 .expect("No file path!") // TODO
                 .clone(),
-            move |edits: Vec<Edit>| {
+            move |result: MethodExtractionOperation| {
                 Self::set_results_callback(
-                    edits,
+                    result,
                     text_content.clone(),
                     suggestions_arc.clone(),
                     file_path.clone(),
+                    function_name.clone(),
                 )
             },
         )?;
@@ -165,20 +173,21 @@ impl ComplexityRefactoring {
     }
 
     fn set_results_callback(
-        edits: Vec<Edit>,
+        result: MethodExtractionOperation,
         text_content: XcodeText,
         suggestions_arc: Arc<Mutex<Vec<RefactoringOperation>>>,
         file_path: Option<String>,
+        function_name: Option<String>,
     ) {
         tauri::async_runtime::spawn(async move {
-            let new_suggestion = Self::convert_edits_to_refactoring_operation(
-                edits,
+            let new_suggestion = Self::convert_result_to_refactoring_operation(
+                result,
                 text_content,
                 RefactoringKind::MethodExtraction,
+                function_name,
                 file_path,
             )
             .await;
-            dbg!(new_suggestion.clone());
             let mut suggestions = suggestions_arc.lock();
 
             (*suggestions) = vec![new_suggestion]; // TODO: Allow for multiple suggestions at once.
@@ -186,18 +195,19 @@ impl ComplexityRefactoring {
         });
     }
 
-    async fn convert_edits_to_refactoring_operation(
-        mut edits: Vec<Edit>,
+    async fn convert_result_to_refactoring_operation(
+        mut result: MethodExtractionOperation,
         text_content: XcodeText,
         kind: RefactoringKind,
+        function_name: Option<String>,
         file_path: Option<String>,
     ) -> RefactoringOperation {
         let mut edited_content = text_content.clone();
 
-        edits.sort_by_key(|e| e.start_index);
-        edits.reverse();
+        result.edits.sort_by_key(|e| e.start_index);
+        result.edits.reverse();
 
-        for edit in edits {
+        for edit in result.edits {
             // TODO: replace_range for String is more efficient. In general, test feature with emojis and UTF16 etc.
             edited_content.replace_range(edit.start_index..edit.end_index, edit.text);
         }
@@ -222,6 +232,9 @@ impl ComplexityRefactoring {
         RefactoringOperation {
             old_text_content_string: formatted_old_content,
             new_text_content_string: formatted_new_content,
+            old_complexity: result.prev_complexity,
+            new_complexity: result.new_complexity,
+            function_name,
             id: uuid::Uuid::new_v4(),
             kind,
         }
@@ -248,7 +261,6 @@ impl ComplexityRefactoring {
                 ))?;
 
         tauri::async_runtime::spawn({
-            let file_path = code_document.file_path().clone();
             let selected_text_range = code_document.selected_text_range().clone();
             let text_content = text_content.clone();
             let operations_arc = self.suggestions.clone();
@@ -354,10 +366,11 @@ impl ComplexityRefactoring {
     }
 }
 
-fn get_outermost_selected_functionlike<'a>(
+fn get_outermost_selected_function<'a>(
     selected_text_range: &'a TextRange,
     syntax_tree: &'a SwiftSyntaxTree,
-) -> Result<Option<Node<'a>>, ComplexityRefactoringError> {
+    text_content: &'a XcodeText,
+) -> Result<Option<SwiftFunction<'a>>, ComplexityRefactoringError> {
     let mut result_node: Option<Node> = None;
 
     let mut curr_node = match syntax_tree.get_code_node_by_text_range(&selected_text_range) {
@@ -376,7 +389,21 @@ fn get_outermost_selected_functionlike<'a>(
             None => break,
         }
     }
-    Ok(result_node)
+
+    if let Some(node) = result_node {
+        let node_metadata = syntax_tree
+            .get_node_metadata(&node)
+            .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
+
+        SwiftFunction::new(syntax_tree, node, node_metadata, &text_content)
+            .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))
+            .map(|f| match f {
+                SwiftCodeBlock::Function(f) => Some(f),
+                _ => panic!("Wrong codeblock type"),
+            })
+    } else {
+        Ok(None)
+    }
 }
 
 #[derive(thiserror::Error, Debug)]

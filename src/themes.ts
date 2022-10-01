@@ -9,7 +9,10 @@ export const colorNames = [
 	'contrast',
 	'contrastsecondary',
 	'background',
-	'backgroundsecondary'
+	'backgroundsecondary',
+	'signalbad',
+	'signalmedium',
+	'signalgood'
 ] as const;
 
 export type ColorName = typeof colorNames[number];
@@ -34,10 +37,13 @@ export const themes: { [name in ThemeName]: Theme } = {
 
 			secondary: '#a3a3a3',
 
-			contrast: '#000000',
+			contrast: '#404040',
 			contrastsecondary: '#737373',
 
-			inactive: '#bbbbbb80'
+			inactive: '#bbbbbb80',
+			signalbad: '#881337',
+			signalmedium: '#3a88fd',
+			signalgood: '#047857'
 		},
 		name: 'light'
 	},
@@ -52,7 +58,10 @@ export const themes: { [name in ThemeName]: Theme } = {
 			contrast: '#F5F5F5',
 			contrastsecondary: '#e5e5e5',
 
-			inactive: '#80808080'
+			inactive: '#80808080',
+			signalbad: '##E2366A',
+			signalmedium: '#5D9DFD',
+			signalgood: '#09F6B3'
 		},
 		name: 'dark'
 	}
