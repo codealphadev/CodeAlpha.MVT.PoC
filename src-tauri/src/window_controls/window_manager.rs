@@ -288,10 +288,12 @@ impl WindowManager {
 
     pub fn update_app_windows(
         &self,
+        app_windows: Vec<AppWindow>,
         update_editor_props: Option<ViewportPropertiesUpdateMessage>,
         update_window_position: Option<LogicalPosition>,
+        update_window_size: Option<LogicalSize>,
     ) -> Option<()> {
-        if let Some(update_editor_props) = update_editor_props {
+        if let Some(update_editor_props) = update_editor_props.clone() {
             {
                 let mut editor_windows = self.editor_windows.try_lock()?;
                 let editor_window =
@@ -302,27 +304,20 @@ impl WindowManager {
                     update_editor_props.code_document_frame_properties.clone(),
                 ));
             }
-
-            EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
-                app_windows: vec![AppWindow::Explain],
-                viewport: Some(update_editor_props.viewport_properties.clone()),
-                code_document: Some(update_editor_props.code_document_frame_properties.clone()),
-                window_position: None,
-                window_size: None,
-            })
-            .publish_to_tauri(&app_handle());
         }
 
-        if let Some(update_window_position) = update_window_position {
-            EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
-                app_windows: vec![AppWindow::Explain],
-                viewport: None,
-                code_document: None,
-                window_position: Some(update_window_position.clone()),
-                window_size: None,
-            })
-            .publish_to_tauri(&app_handle());
-        }
+        EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
+            app_windows,
+            viewport: update_editor_props
+                .clone()
+                .map(|props| props.viewport_properties),
+            code_document: update_editor_props
+                .clone()
+                .map(|props| props.code_document_frame_properties),
+            window_position: update_window_position,
+            window_size: update_window_size,
+        })
+        .publish_to_tauri(&app_handle());
 
         Some(())
     }
