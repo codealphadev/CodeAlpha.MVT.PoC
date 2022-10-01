@@ -13,7 +13,7 @@ use crate::{
     platform::macos::{get_menu_bar_height, models::app::AppWindowMovedMessage, AXEventApp},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::{default_properties, AppWindow, WindowLevel},
+        config::{AppWindow, WindowLevel},
         utils::create_default_window_builder,
         windows::{widget_window::WIDGET_MAIN_WINDOW_OFFSET, WidgetWindow},
     },
@@ -24,9 +24,6 @@ use super::listeners::window_control_events_listener;
 #[derive(Clone, Debug)]
 pub struct MainWindow {
     app_handle: tauri::AppHandle,
-
-    // The main window's size
-    size: LogicalSize,
 }
 
 impl MainWindow {
@@ -42,13 +39,7 @@ impl MainWindow {
             create_default_window_builder(&app_handle, AppWindow::Main)?.build()?;
         }
 
-        Ok(Self {
-            app_handle,
-            size: LogicalSize {
-                width: default_properties::size(&AppWindow::Main).0,
-                height: default_properties::size(&AppWindow::Main).1,
-            },
-        })
+        Ok(Self { app_handle })
     }
 
     pub fn set_macos_properties(&self) -> Option<()> {
@@ -78,17 +69,26 @@ impl MainWindow {
     }
 
     pub fn show(&self, monitor: &LogicalFrame) -> Option<()> {
-        let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
-
-        let widget_frame = WidgetWindow::dimensions();
         let main_window_frame = Self::dimensions();
+        Self::update(&main_window_frame.size, monitor)?;
+
+        let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
+        main_tauri_window.show().ok()?;
+
+        set_shadow(&main_tauri_window, true).expect("Unsupported platform!");
+
+        Some(())
+    }
+
+    pub fn update(updated_main_window_size: &LogicalSize, monitor: &LogicalFrame) -> Option<()> {
+        let widget_frame = WidgetWindow::dimensions();
 
         let mut corrected_position = LogicalPosition {
             x: widget_frame.origin.x
-                - (main_window_frame.size.width
+                - (updated_main_window_size.width
                     - widget_frame.size.width
                     - WIDGET_MAIN_WINDOW_OFFSET),
-            y: widget_frame.origin.y - main_window_frame.size.height,
+            y: widget_frame.origin.y - updated_main_window_size.height,
         };
 
         let is_flipped = Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
@@ -96,9 +96,11 @@ impl MainWindow {
             corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET;
         }
 
-        // Determine if the main would be off-screen and needs to be moved.
-        let (offscreen_dist_x, offscreen_dist_y) =
-            Self::calc_off_screen_distance(&self.size, &corrected_position, &monitor);
+        let (offscreen_dist_x, offscreen_dist_y) = Self::calc_off_screen_distance(
+            &updated_main_window_size,
+            &corrected_position,
+            &monitor,
+        );
 
         if let Some(offscreen_dist_x) = offscreen_dist_x {
             corrected_position.x += offscreen_dist_x;
@@ -108,23 +110,25 @@ impl MainWindow {
             corrected_position.y += offscreen_dist_y;
         }
 
-        // Needs to be reset on each show.
-        set_shadow(&main_tauri_window, true).expect("Unsupported platform!");
-
-        main_tauri_window
-            .set_position(corrected_position.as_tauri_LogicalPosition())
-            .ok()?;
-        main_tauri_window.show().ok()?;
-
-        // Update WidgetPosition
         Self::update_widget_position(
             LogicalFrame {
                 origin: corrected_position,
-                size: main_window_frame.size,
+                size: *updated_main_window_size,
             },
             &monitor,
             is_flipped,
         );
+
+        let main_tauri_window = app_handle().get_window(&AppWindow::Main.to_string())?;
+        main_tauri_window
+            .set_position(corrected_position.as_tauri_LogicalPosition())
+            .ok()?;
+
+        if *updated_main_window_size != WidgetWindow::dimensions().size {
+            main_tauri_window
+                .set_size(updated_main_window_size.as_tauri_LogicalSize())
+                .ok()?;
+        }
 
         Some(())
     }

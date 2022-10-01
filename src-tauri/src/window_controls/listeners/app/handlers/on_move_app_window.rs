@@ -43,11 +43,13 @@ pub fn on_move_app_window(
             // Therefore we check if a mouse button is pressed.
             if pressed_mouse_buttons().is_some() {
                 window_manager.update_app_windows(
+                    vec![AppWindow::Explain],
                     None,
                     Some(LogicalPosition::from_tauri_LogicalPosition(
                         &move_msg.window_position,
                     )),
-                );
+                    None,
+                )?;
             }
         }
         AppWindow::CodeOverlay => {

@@ -7,7 +7,7 @@ use crate::{
     app_handle,
     platform::macos::{models::viewport::ViewportPropertiesUpdateMessage, EventViewport},
     utils::messaging::ChannelList,
-    window_controls::WindowManager,
+    window_controls::{config::AppWindow, WindowManager},
 };
 
 pub fn viewport_update_listener(window_manager: &Arc<Mutex<WindowManager>>) {
@@ -32,7 +32,12 @@ fn on_viewport_update(
 ) -> Option<()> {
     let window_manager = &mut window_manager.lock();
 
-    window_manager.update_app_windows(Some(update_msg.to_owned()), None)?;
+    window_manager.update_app_windows(
+        vec![AppWindow::Explain],
+        Some(update_msg.to_owned()),
+        None,
+        None,
+    )?;
 
     Some(())
 }
