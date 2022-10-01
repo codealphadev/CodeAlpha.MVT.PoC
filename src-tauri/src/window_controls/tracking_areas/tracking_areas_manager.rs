@@ -259,14 +259,14 @@ impl TrackingAreasManager {
                         .publish_to_tauri(&self.app_handle);
                     }
                     TrackingEventType::MouseClickedOutside => {
-                        // EventWindowControls::TrackingAreaClickedOutside(
-                        //     TrackingAreaClickedOutsideMessage {
-                        //         id: area.id,
-                        //         window_uid: area.window_uid,
-                        //         app_window: area.app_window,
-                        //     },
-                        // )
-                        // .publish_to_tauri(&self.app_handle);
+                        EventWindowControls::TrackingAreaClickedOutside(
+                            TrackingAreaClickedOutsideMessage {
+                                id: area.id,
+                                window_uid: area.window_uid,
+                                app_window: area.app_window,
+                            },
+                        )
+                        .publish_to_tauri(&self.app_handle);
                     }
                 }
             }

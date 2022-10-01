@@ -33,9 +33,6 @@ pub fn on_move_app_window(
                     y: move_msg.window_position.y,
                 });
         }
-        AppWindow::Content => {
-            // Do Nothing, for now.
-        }
         AppWindow::Explain => {
             let window_manager = window_manager.lock();
 

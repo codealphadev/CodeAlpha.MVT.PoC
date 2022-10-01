@@ -1,8 +1,8 @@
 <script lang="ts">
   import { setContext, onMount } from "svelte";
-  import { Writable, writable } from "svelte/store";
+  import {  writable } from "svelte/store";
 
-  import { themes, ThemeName, colorNames, mapColorNameToCssVarString, Theme, ThemeContextType} from "./themes"
+  import { themes, ThemeName, colorNames, mapColorNameToCssVarString, ThemeContextType} from "./themes"
   import { getContext } from 'svelte';
   import { listen } from '@tauri-apps/api/event';
   import type { ChannelList } from '../src-tauri/bindings/ChannelList';

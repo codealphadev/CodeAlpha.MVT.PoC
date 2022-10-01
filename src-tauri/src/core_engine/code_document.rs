@@ -133,13 +133,6 @@ impl CodeDocument {
             &ChannelList::RuleResults.to_string(),
             &rule_results,
         );
-
-        // Send to Main window
-        let _ = app_handle().emit_to(
-            &AppWindow::Content.to_string(),
-            &ChannelList::RuleResults.to_string(),
-            &rule_results,
-        );
     }
 
     pub fn set_selected_text_range(&mut self, text_range: &TextRange, double_check: bool) {
