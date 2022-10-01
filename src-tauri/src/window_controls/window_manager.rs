@@ -111,7 +111,12 @@ impl WindowManager {
     }
 
     pub fn focused_editor_window(&self) -> Option<Uid> {
-        self.focused_editor_window.lock().clone()
+        if let Some(focused_editor_window) = self.focused_editor_window.try_lock() {
+            focused_editor_window.clone()
+        } else {
+            debug!("Parking_lot: Could not lock focused_editor_window of WindowManager.");
+            None
+        }
     }
 
     pub fn is_core_engine_active(&self) -> bool {
@@ -210,32 +215,33 @@ impl WindowManager {
                 Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
         }
 
-        let editor_windows_move_copy = self.editor_windows.clone();
-        let focused_editor_window_move_copy = self.focused_editor_window.clone();
-        let temporarily_hide_move_copy = self.temporarily_hide_until.clone();
-        let is_core_engine_active_move_copy = self.is_core_engine_active;
+        std::thread::spawn({
+            let editor_windows = self.editor_windows.clone();
+            let focused_editor_window = self.focused_editor_window.clone();
+            let temporarily_hide = self.temporarily_hide_until.clone();
+            let is_core_engine_active = self.is_core_engine_active;
+            move || {
+                loop {
+                    let hide_until;
+                    {
+                        hide_until = temporarily_hide.lock().clone();
+                    }
 
-        std::thread::spawn(move || {
-            loop {
-                let hide_until;
-                {
-                    hide_until = temporarily_hide_move_copy.lock().clone();
+                    // Is zero when hide_until is older than Instant::now()
+                    let duration = hide_until.duration_since(Instant::now());
+
+                    if duration.is_zero() {
+                        //
+                        Self::delayed_show_app_windows(
+                            &editor_windows,
+                            &focused_editor_window,
+                            is_core_engine_active,
+                        );
+                        break;
+                    }
+
+                    std::thread::sleep(duration);
                 }
-
-                // Is zero when hide_until is older than Instant::now()
-                let duration = hide_until.duration_since(Instant::now());
-
-                if duration.is_zero() {
-                    //
-                    Self::delayed_show_app_windows(
-                        &editor_windows_move_copy,
-                        &focused_editor_window_move_copy,
-                        is_core_engine_active_move_copy,
-                    );
-                    break;
-                }
-
-                std::thread::sleep(duration);
             }
         });
     }

@@ -21,6 +21,7 @@ use crate::{
 use super::listeners::window_control_events_listener;
 
 static WIDGET_OFFSET: f64 = 75.;
+pub static WIDGET_MAIN_WINDOW_OFFSET: f64 = 24.;
 
 #[derive(Clone, Debug)]
 pub struct WidgetWindow {
@@ -109,12 +110,8 @@ impl WidgetWindow {
                 main_window_frame = Some(MainWindow::dimensions());
             }
         }
-        let (offscreen_dist_x, offscreen_dist_y) = Self::calc_off_screen_distance(
-            &self.size,
-            &widget_position,
-            main_window_frame,
-            &monitor,
-        );
+        let (offscreen_dist_x, offscreen_dist_y) =
+            Self::calc_off_screen_distance(&self.size, &widget_position, None, &monitor);
 
         if let Some(offscreen_dist_x) = offscreen_dist_x {
             widget_position.x += offscreen_dist_x;
