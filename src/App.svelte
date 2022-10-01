@@ -2,11 +2,10 @@
 
 	import { Router, Route } from 'yrv';
 	import CodeOverlay from './pages/code-overlay.svelte';
-	//import Explainer from './pages/explainer.svelte';
-	import Suggestions from './pages/suggestions.svelte';
 	import Widget from './pages/widget.svelte';
 	import ThemeContext from './theme-context.svelte';
-
+	import Main from './pages/main.svelte';
+	import Explainer from './pages/explainer.svelte';
 </script>
 
 <ThemeContext>
@@ -18,7 +17,10 @@
 			<CodeOverlay />
 		</Route>
 		<Route path="/explain">
-			<Suggestions />
+			<Explainer />
+		</Route>
+		<Route path="/main">
+			<Main/>
 		</Route>
 	</Router>
 </ThemeContext>

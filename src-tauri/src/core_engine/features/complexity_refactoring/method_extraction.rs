@@ -19,12 +19,18 @@ struct Scope {
     declarations: HashMap<XcodeText, Declaration>,
 }
 
+pub struct MethodExtractionOperation {
+    pub edits: Vec<Edit>,
+    pub prev_complexity: isize,
+    pub new_complexity: isize,
+}
+
 pub fn check_for_method_extraction<'a>(
     node: Node<'a>,
     text_content: &'a XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
     file_path: &String, // TODO: Code document?
-    set_result_callback: impl Fn(Vec<Edit>) -> () + Send + 'static,
+    set_result_callback: impl Fn(MethodExtractionOperation) -> () + Send + 'static,
 ) -> Result<(), ComplexityRefactoringError> {
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
@@ -48,11 +54,11 @@ pub fn check_for_method_extraction<'a>(
 
     const SCORE_THRESHOLD: f64 = 1.5;
 
-    let (best_extraction, score) = match get_best_extraction(
+    let (best_extraction, remaining_complexity) = match get_best_extraction(
         possible_extractions,
         syntax_tree,
         text_content,
-        function_complexity,
+        function_complexity.clone(),
         &scopes,
         SCORE_THRESHOLD,
     )? {
@@ -82,6 +88,7 @@ pub fn check_for_method_extraction<'a>(
     let range_length =
         (slice.nodes.last().unwrap().end_byte() - slice.nodes.first().unwrap().start_byte()) / 2; // UTF-16;
 
+    let prev_complexity = function_complexity.get_total_complexity();
     tauri::async_runtime::spawn({
         let file_path = file_path.clone();
         let text_content = text_content.clone();
@@ -100,7 +107,11 @@ pub fn check_for_method_extraction<'a>(
                         return ();
                     }
                 };
-            set_result_callback(suggestion);
+            set_result_callback(MethodExtractionOperation {
+                edits: suggestion,
+                prev_complexity: prev_complexity,
+                new_complexity: remaining_complexity,
+            });
         }
     });
 
@@ -177,9 +188,11 @@ fn get_best_extraction<'a>(
     original_complexity: Complexities,
     scopes: &HashMap<NodeAddress, Scope>,
     score_threshold: f64,
-) -> Result<Option<(NodeSlice<'a>, f64)>, ComplexityRefactoringError> {
+) -> Result<Option<(NodeSlice<'a>, isize)>, ComplexityRefactoringError> {
     let mut best_possibility = None;
     let mut best_score = 0.0;
+
+    let mut output_remaining_complexity: Option<isize> = None;
 
     // Should be higher than 1, to incentivise equalizing complexity of the two functions
     let equality_preference_factor = 1.35;
@@ -211,9 +224,15 @@ fn get_best_extraction<'a>(
         if score > best_score && score > score_threshold {
             best_possibility = Some(slice);
             best_score = score;
+            output_remaining_complexity = Some(remaining_complexity);
         }
     }
-    Ok(best_possibility.map(|p| (p, best_score)))
+    Ok(best_possibility.map(|p| {
+        (
+            p,
+            output_remaining_complexity.expect("Remaining complexity should be set"),
+        )
+    }))
 }
 
 fn get_p_norm(x: f64, y: f64, exponent: f64) -> f64 {

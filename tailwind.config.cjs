@@ -4,7 +4,10 @@ const colorNames = [
 	'contrast',
 	'contrastsecondary',
 	'background',
-	'backgroundsecondary'
+	'backgroundsecondary',
+	'signalbad',
+	'signalmedium',
+	'signalgood'
 ];
 
 function mapColorNameToCssVarString(colorName) {

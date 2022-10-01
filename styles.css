@@ -8,6 +8,9 @@
 	background-image: var(--theme-primary_gradient);
 }
 
+code {
+	font-weight: 600;
+}
 /* inter-100 - latin */
 @font-face {
 	font-family: 'Inter';
