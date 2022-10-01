@@ -9,7 +9,6 @@ pub enum AppWindow {
     Settings,
     Analytics,
     Widget,
-    Content,
     Explain,
     CodeOverlay,
     Main,
@@ -80,10 +79,6 @@ pub mod default_properties {
             AppWindow::Widget => {
                 format!("{}{}", r"\", AppWindow::Widget.to_string().to_lowercase())
             }
-
-            AppWindow::Content => {
-                format!("{}{}", r"\", AppWindow::Content.to_string().to_lowercase())
-            }
             AppWindow::Explain => {
                 format!("{}{}", r"\", AppWindow::Explain.to_string().to_lowercase())
             }
@@ -106,7 +101,6 @@ pub mod default_properties {
             AppWindow::Settings => "CodeAlpha - Settings".to_string(),
             AppWindow::Analytics => "CodeAlpha - Analytics".to_string(),
             AppWindow::Widget => "CodeAlpha - Widget".to_string(),
-            AppWindow::Content => "CodeAlpha - Guide".to_string(),
             AppWindow::Explain => "CodeAlpha - Explanation".to_string(),
             AppWindow::CodeOverlay => "CodeAlpha - CodeOverlay".to_string(),
             AppWindow::Main => "CodeAlpha - Main".to_string(),
@@ -118,7 +112,6 @@ pub mod default_properties {
             AppWindow::Settings => (800.0, 600.0),
             AppWindow::Analytics => (1280.0, 786.0),
             AppWindow::Widget => (48.0, 48.0),
-            AppWindow::Content => (322.0, 398.0),
             AppWindow::Explain => (368.0, 500.0),
             AppWindow::CodeOverlay => (1.0, 1.0),
             AppWindow::Main => (650.0, 200.0),
@@ -130,7 +123,6 @@ pub mod default_properties {
             AppWindow::Settings => false,
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
-            AppWindow::Content => false,
             AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
             AppWindow::Main => false,
@@ -141,7 +133,6 @@ pub mod default_properties {
             AppWindow::Settings => false,
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
-            AppWindow::Content => true,
             AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
             AppWindow::Main => false,
@@ -153,7 +144,6 @@ pub mod default_properties {
             AppWindow::Settings => true,
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
-            AppWindow::Content => false,
             AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
             AppWindow::Main => false,
@@ -165,7 +155,6 @@ pub mod default_properties {
             AppWindow::Settings => true,
             AppWindow::Analytics => true,
             AppWindow::Widget => false,
-            AppWindow::Content => false,
             AppWindow::Explain => false,
             AppWindow::CodeOverlay => false,
             AppWindow::Main => false,
@@ -177,7 +166,6 @@ pub mod default_properties {
             AppWindow::Settings => false,
             AppWindow::Analytics => false,
             AppWindow::Widget => true,
-            AppWindow::Content => true,
             AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
             AppWindow::Main => true,
@@ -189,7 +177,6 @@ pub mod default_properties {
             AppWindow::Settings => true,
             AppWindow::Analytics => true,
             AppWindow::Widget => true,
-            AppWindow::Content => true,
             AppWindow::Explain => true,
             AppWindow::CodeOverlay => true,
             AppWindow::Main => true,

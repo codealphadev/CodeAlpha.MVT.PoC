@@ -15,7 +15,7 @@
 		updateDimensions();
 
 		if (window_width && window_height) {
-			let appWindow: AppWindow = 'Content'; // TODO
+			let appWindow: AppWindow = 'Main'; // TODO
 
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
