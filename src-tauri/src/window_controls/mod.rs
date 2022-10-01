@@ -3,6 +3,7 @@ pub use tracking_areas::*;
 pub use window_manager::cmd_resize_window;
 pub use window_manager::cmd_toggle_app_activation;
 pub use window_manager::WindowManager;
+pub use windows::cmd_rebind_main_widget;
 
 pub mod config;
 mod events;

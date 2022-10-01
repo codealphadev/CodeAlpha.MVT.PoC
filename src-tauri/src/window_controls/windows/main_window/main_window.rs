@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cocoa::{base::id, foundation::NSInteger};
+use cocoa::{appkit::NSWindowOrderingMode, base::id, foundation::NSInteger};
 
 use objc::{msg_send, sel, sel_impl};
 
@@ -16,7 +16,6 @@ use crate::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
         windows::{widget_window::WIDGET_MAIN_WINDOW_OFFSET, WidgetWindow},
-        EventWindowControls,
     },
 };
 
@@ -113,19 +112,13 @@ impl MainWindow {
         main_tauri_window.show().ok()?;
 
         // Update WidgetPosition
-        if let Some(updated_widget_origin) = Self::update_widget_position(
+        Self::update_widget_position(
             LogicalFrame {
                 origin: corrected_position,
                 size: main_window_frame.size,
             },
             &monitor,
-        ) {
-            // Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
-            // delay between setting a new position and recreating the parent/child relationship.
-            // Pausing the main thread is not possible. Also, running this task async is also not trivial.
-            // We send a message to the main thread to run this task.
-            EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
-        }
+        );
 
         Some(())
     }
@@ -142,7 +135,7 @@ impl MainWindow {
     fn update_widget_position(
         main_window_frame: LogicalFrame,
         monitor: &LogicalFrame,
-    ) -> Option<LogicalPosition> {
+    ) -> Option<()> {
         let widget_tauri_window_frame = WidgetWindow::dimensions();
 
         let updated_widget_window_origin =
@@ -160,7 +153,7 @@ impl MainWindow {
             .set_position(updated_widget_window_origin.as_tauri_LogicalPosition())
             .ok()?;
 
-        Some(updated_widget_window_origin)
+        Some(())
     }
 
     pub fn calc_off_screen_distance(
@@ -241,6 +234,31 @@ impl MainWindow {
     }
 }
 
+#[tauri::command]
+pub fn cmd_rebind_main_widget() {
+    // Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
+    // delay between setting a new position and recreating the parent/child relationship.
+    // Pausing the main thread is not possible. Also, running this task async is also not trivial.
+    // We send a message to the main thread to run this task.
+    // EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
+    _ = rebind_main_and_widget_window();
+}
+
+fn rebind_main_and_widget_window() -> Option<()> {
+    let widget_tauri_window = app_handle().get_window(&AppWindow::Widget.to_string())?;
+
+    let main_tauri_window = app_handle().get_window(&AppWindow::Main.to_string())?;
+    if let (Ok(parent_ptr), Ok(child_ptr)) = (
+        widget_tauri_window.ns_window(),
+        main_tauri_window.ns_window(),
+    ) {
+        unsafe {
+            let _: () = msg_send![parent_ptr as id, addChildWindow: child_ptr as id ordered: NSWindowOrderingMode::NSWindowBelow];
+        }
+    }
+
+    Some(())
+}
 #[cfg(test)]
 mod tests_main_window {
 

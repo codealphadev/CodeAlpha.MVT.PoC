@@ -17,10 +17,22 @@
 	let processing_timeout = 15000; // ms
 	let show_alternate_icon_duration = 2000; // ms
 
+	// Important logic! Don't change this unless you know what you're doing. :-P
+	// Should be moved into a separate file.
 	const clickAction = async () => {
 		app_active = !app_active;
-		await invoke('cmd_toggle_app_activation', { appActive: app_active });
-		
+		invoke('cmd_toggle_app_activation', { appActive: app_active });
+
+		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
+		// delay between setting a new position and recreating the parent/child relationship.
+		// Pausing the main thread is not possible. Also, running this task async is also not trivial.
+		// We send a message to the main thread to run this task.
+		// EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
+		if (app_active) {
+			setTimeout(() => {
+				invoke('cmd_rebind_main_widget');
+			}, 100);
+		}
 	};
 
 	const listenTauriEvents = async () => {
@@ -79,13 +91,16 @@
 		const diffX = Math.abs(event.screenX - startX);
 		const diffY = Math.abs(event.screenY - startY);
 
-		if (diffX < minimum_move_distance_to_fire_click && diffY < minimum_move_distance_to_fire_click) {
+		if (
+			diffX < minimum_move_distance_to_fire_click &&
+			diffY < minimum_move_distance_to_fire_click
+		) {
 			clickAction();
 		}
 	}
 </script>
 
-<div class="relative overflow-hidden w-full h-full" >
+<div class="relative overflow-hidden w-full h-full">
 	{#if app_active === false}
 		<WidgetBackgroundGreyscale />
 	{:else}
@@ -123,5 +138,10 @@
 			</div>
 		</div>
 	</div>
-	<div data-tauri-drag-region  class="absolute bottom-0 right-0 w-12 h-12" on:mousedown={handleMouseDown} on:mouseup={handleMouseUp} />
+	<div
+		data-tauri-drag-region
+		class="absolute bottom-0 right-0 w-12 h-12"
+		on:mousedown={handleMouseDown}
+		on:mouseup={handleMouseUp}
+	/>
 </div>

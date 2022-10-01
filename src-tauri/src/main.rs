@@ -27,7 +27,7 @@ use lazy_static::lazy_static;
 
 use crate::{
     utils::{tracing::TracingSubscriber, updater::listen_for_updates},
-    window_controls::{cmd_resize_window, cmd_toggle_app_activation},
+    window_controls::{cmd_rebind_main_widget, cmd_resize_window, cmd_toggle_app_activation},
 };
 
 use utils::feedback::cmd_send_feedback;
@@ -98,7 +98,8 @@ fn main() {
             cmd_toggle_app_activation,
             cmd_resize_window,
             cmd_send_feedback,
-            cmd_paste_docs
+            cmd_paste_docs,
+            cmd_rebind_main_widget,
         ])
         .setup(|app| {
             debug!(app_version = ?app.package_info().version);

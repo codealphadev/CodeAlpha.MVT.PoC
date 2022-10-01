@@ -14,7 +14,6 @@ use crate::{
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
-        windows::MainWindow,
     },
 };
 
@@ -103,15 +102,8 @@ impl WidgetWindow {
             self.initial_widget_position(editor_textarea)
         };
 
-        // Determine if the widget would be off-screen and needs to be moved.
-        let mut main_window_frame = None;
-        if let Some(main_window_shown) = self.main_window_shown {
-            if main_window_shown {
-                main_window_frame = Some(MainWindow::dimensions());
-            }
-        }
         let (offscreen_dist_x, offscreen_dist_y) =
-            Self::calc_off_screen_distance(&self.size, &widget_position, None, &monitor);
+            Self::calc_off_screen_distance(&self.size, &widget_position, &monitor);
 
         if let Some(offscreen_dist_x) = offscreen_dist_x {
             widget_position.x += offscreen_dist_x;
@@ -144,33 +136,13 @@ impl WidgetWindow {
     pub fn calc_off_screen_distance(
         widget_size: &LogicalSize,
         widget_position: &LogicalPosition,
-        main_window_frame: Option<LogicalFrame>,
         monitor: &LogicalFrame,
     ) -> (Option<f64>, Option<f64>) {
         let mut dist_x: Option<f64> = None;
         let mut dist_y: Option<f64> = None;
 
-        // For the off-screen-check we add the widget to the container
-        let mut corrected_size = widget_size.to_owned();
-        let mut corrected_position = widget_position.to_owned();
-
-        if let Some(main_window_frame) = main_window_frame {
-            corrected_position = LogicalPosition {
-                x: corrected_position.x - (main_window_frame.size.width - corrected_size.width),
-                y: corrected_position.y - main_window_frame.size.height,
-            };
-
-            corrected_size = LogicalSize {
-                width: main_window_frame.size.width,
-                height: corrected_size.height + main_window_frame.size.height,
-            };
-
-            // If monitor is the primary monitor, we need to account for the menu bar.
-            if monitor.origin == (LogicalPosition { x: 0., y: 0. }) {
-                corrected_size.height += main_window_frame.origin.y;
-                corrected_position.y -= main_window_frame.origin.y;
-            }
-        }
+        let corrected_size = widget_size.to_owned();
+        let corrected_position = widget_position.to_owned();
 
         // prevent widget from going off-screen
         if corrected_position.x < monitor.origin.x {
@@ -255,14 +227,14 @@ mod tests_widget_window {
 
         let widget_position = LogicalPosition { x: 0., y: 0. };
         let (dist_x, dist_y) =
-            WidgetWindow::calc_off_screen_distance(&widget_size, &widget_position, None, &monitor);
+            WidgetWindow::calc_off_screen_distance(&widget_size, &widget_position, &monitor);
 
         assert_eq!(dist_x, None);
         assert_eq!(dist_y, None);
 
         let widget_position = LogicalPosition { x: 100., y: 100. };
         let (dist_x, dist_y) =
-            WidgetWindow::calc_off_screen_distance(&widget_size, &widget_position, None, &monitor);
+            WidgetWindow::calc_off_screen_distance(&widget_size, &widget_position, &monitor);
 
         assert_eq!(dist_x, Some(-48.));
         assert_eq!(dist_y, Some(-48.));
@@ -272,46 +244,11 @@ mod tests_widget_window {
             y: 100. - widget_size.height,
         };
         let (dist_x, dist_y) =
-            WidgetWindow::calc_off_screen_distance(&widget_size, &widget_position, None, &monitor);
+            WidgetWindow::calc_off_screen_distance(&widget_size, &widget_position, &monitor);
 
         assert_eq!(dist_x, None);
         assert_eq!(dist_y, None);
 
         // with main window
-    }
-
-    #[test]
-    fn test_calc_offscreen_distance_with_main_window() {
-        let widget_position = LogicalPosition { x: 0., y: 0. };
-        let widget_size = LogicalSize {
-            width: 48.,
-            height: 48.,
-        };
-
-        let main_window_frame = LogicalFrame {
-            origin: LogicalPosition { x: -50., y: 38. },
-            size: LogicalSize {
-                width: 50.,
-                height: 30.,
-            },
-        };
-
-        let monitor = LogicalFrame {
-            origin: LogicalPosition { x: 0., y: 0. },
-            size: LogicalSize {
-                width: 100.,
-                height: 100.,
-            },
-        };
-
-        let (dist_x, dist_y) = WidgetWindow::calc_off_screen_distance(
-            &widget_size,
-            &widget_position,
-            Some(main_window_frame),
-            &monitor,
-        );
-
-        assert_eq!(dist_x, Some(2.));
-        assert_eq!(dist_y, Some(68.));
     }
 }

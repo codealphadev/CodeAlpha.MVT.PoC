@@ -23,7 +23,6 @@ pub enum EventWindowControls {
     AppWindowShow(ShowAppWindowMessage),
     AppWindowUpdate(UpdateAppWindowMessage),
     DarkModeUpdate(DarkModeUpdateMessage),
-    RebindMainAndWidget,
 }
 
 impl EventWindowControls {
@@ -45,7 +44,6 @@ impl EventWindowControls {
             EventWindowControls::AppWindowUpdate(_) => false,
             EventWindowControls::DarkModeUpdate(_) => true,
             EventWindowControls::TrackingAreaClickedOutside(_) => true,
-            EventWindowControls::RebindMainAndWidget => false,
         };
 
         // Emit to all windows
