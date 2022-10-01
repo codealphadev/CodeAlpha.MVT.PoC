@@ -91,6 +91,11 @@ impl MainWindow {
             y: widget_frame.origin.y - main_window_frame.size.height,
         };
 
+        let is_flipped = Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
+        if is_flipped {
+            corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET;
+        }
+
         // Determine if the main would be off-screen and needs to be moved.
         let (offscreen_dist_x, offscreen_dist_y) =
             Self::calc_off_screen_distance(&self.size, &corrected_position, &monitor);
@@ -118,6 +123,7 @@ impl MainWindow {
                 size: main_window_frame.size,
             },
             &monitor,
+            is_flipped,
         );
 
         Some(())
@@ -132,14 +138,46 @@ impl MainWindow {
         Some(())
     }
 
+    pub fn dimensions() -> LogicalFrame {
+        let main_tauri_window = app_handle()
+            .get_window(&AppWindow::Main.to_string())
+            .expect("Could not get MainWindow!");
+
+        let scale_factor = main_tauri_window
+            .scale_factor()
+            .expect("Could not get MainWindow scale factor!");
+        let main_window_origin = LogicalPosition::from_tauri_LogicalPosition(
+            &main_tauri_window
+                .outer_position()
+                .expect("Could not get MainWindow outer position!")
+                .to_logical::<f64>(scale_factor),
+        );
+        let main_window_size = LogicalSize::from_tauri_LogicalSize(
+            &main_tauri_window
+                .outer_size()
+                .expect("Could not get MainWindow outer size!")
+                .to_logical::<f64>(scale_factor),
+        );
+
+        LogicalFrame {
+            origin: main_window_origin,
+            size: main_window_size,
+        }
+    }
+
     fn update_widget_position(
         main_window_frame: LogicalFrame,
         monitor: &LogicalFrame,
+        is_main_window_flipped: bool,
     ) -> Option<()> {
         let widget_tauri_window_frame = WidgetWindow::dimensions();
 
-        let updated_widget_window_origin =
-            Self::compute_widget_origin(main_window_frame, widget_tauri_window_frame, &monitor);
+        let updated_widget_window_origin = Self::compute_widget_origin(
+            main_window_frame,
+            widget_tauri_window_frame,
+            &monitor,
+            is_main_window_flipped,
+        );
 
         let msg = AppWindowMovedMessage {
             window: AppWindow::Widget,
@@ -156,57 +194,47 @@ impl MainWindow {
         Some(())
     }
 
-    pub fn calc_off_screen_distance(
-        main_size: &LogicalSize,
-        main_position: &LogicalPosition,
+    fn calc_off_screen_distance(
+        main_window_size: &LogicalSize,
+        main_window_origin: &LogicalPosition,
         monitor: &LogicalFrame,
     ) -> (Option<f64>, Option<f64>) {
         let mut dist_x: Option<f64> = None;
         let mut dist_y: Option<f64> = None;
 
         // prevent main from going off-screen
-        if main_position.x < monitor.origin.x {
-            dist_x = Some(monitor.origin.x - main_position.x);
+        if main_window_origin.x < monitor.origin.x {
+            dist_x = Some(monitor.origin.x - main_window_origin.x);
         }
-        if main_position.y < monitor.origin.y {
-            dist_y = Some(monitor.origin.y - main_position.y);
+        if main_window_origin.y < monitor.origin.y {
+            dist_y = Some(monitor.origin.y - main_window_origin.y);
         }
-        if main_position.x + main_size.width > monitor.origin.x + monitor.size.width {
-            dist_x =
-                Some(monitor.origin.x + monitor.size.width - main_size.width - main_position.x);
+        if main_window_origin.x + main_window_size.width > monitor.origin.x + monitor.size.width {
+            dist_x = Some(
+                monitor.origin.x + monitor.size.width
+                    - main_window_size.width
+                    - main_window_origin.x,
+            );
         }
-        if main_position.y + main_size.height > monitor.origin.y + monitor.size.height {
-            dist_y =
-                Some(monitor.origin.y + monitor.size.height - main_size.height - main_position.y);
+        if main_window_origin.y + main_window_size.height > monitor.origin.y + monitor.size.height {
+            dist_y = Some(
+                monitor.origin.y + monitor.size.height
+                    - main_window_size.height
+                    - main_window_origin.y,
+            );
         }
 
         (dist_x, dist_y)
     }
 
-    pub fn dimensions() -> LogicalFrame {
-        let main_tauri_window = app_handle()
-            .get_window(&AppWindow::Main.to_string())
-            .expect("Could not get MainWindow!");
-
-        let scale_factor = main_tauri_window
-            .scale_factor()
-            .expect("Could not get MainWindow scale factor!");
-        let main_position = LogicalPosition::from_tauri_LogicalPosition(
-            &main_tauri_window
-                .outer_position()
-                .expect("Could not get MainWindow outer position!")
-                .to_logical::<f64>(scale_factor),
-        );
-        let main_size = LogicalSize::from_tauri_LogicalSize(
-            &main_tauri_window
-                .outer_size()
-                .expect("Could not get MainWindow outer size!")
-                .to_logical::<f64>(scale_factor),
-        );
-
-        LogicalFrame {
-            origin: main_position,
-            size: main_size,
+    fn is_main_window_flipped_horizontally(
+        main_window_origin: &LogicalPosition,
+        monitor: &LogicalFrame,
+    ) -> bool {
+        if main_window_origin.x < monitor.origin.x {
+            true
+        } else {
+            false
         }
     }
 
@@ -214,6 +242,7 @@ impl MainWindow {
         main_window_frame: LogicalFrame,
         widget_tauri_window_frame: LogicalFrame,
         monitor: &LogicalFrame,
+        is_main_window_flipped: bool,
     ) -> LogicalPosition {
         let mut updated_widget_window_origin = LogicalPosition {
             x: main_window_frame.origin.x + main_window_frame.size.width
@@ -221,6 +250,11 @@ impl MainWindow {
                 - WIDGET_MAIN_WINDOW_OFFSET,
             y: main_window_frame.origin.y + main_window_frame.size.height,
         };
+
+        if is_main_window_flipped {
+            updated_widget_window_origin.x = main_window_frame.origin.x + WIDGET_MAIN_WINDOW_OFFSET;
+        }
+
         // If monitor is the primary monitor, we need to account for the menu bar.
         let menu_bar_height = get_menu_bar_height(&monitor);
         if menu_bar_height > 0. {
@@ -272,7 +306,7 @@ mod tests_main_window {
 
     #[test]
     fn test_calc_offscreen_distance() {
-        let main_size = LogicalSize {
+        let main_window_size = LogicalSize {
             width: 48.,
             height: 48.,
         };
@@ -284,26 +318,26 @@ mod tests_main_window {
             },
         };
 
-        let main_position = LogicalPosition { x: 0., y: 0. };
+        let main_window_origin = LogicalPosition { x: 0., y: 0. };
         let (dist_x, dist_y) =
-            MainWindow::calc_off_screen_distance(&main_size, &main_position, &monitor);
+            MainWindow::calc_off_screen_distance(&main_window_size, &main_window_origin, &monitor);
 
         assert_eq!(dist_x, None);
         assert_eq!(dist_y, None);
 
-        let main_position = LogicalPosition { x: 100., y: 100. };
+        let main_window_origin = LogicalPosition { x: 100., y: 100. };
         let (dist_x, dist_y) =
-            MainWindow::calc_off_screen_distance(&main_size, &main_position, &monitor);
+            MainWindow::calc_off_screen_distance(&main_window_size, &main_window_origin, &monitor);
 
         assert_eq!(dist_x, Some(-48.));
         assert_eq!(dist_y, Some(-48.));
 
-        let main_position = LogicalPosition {
-            x: 100. - main_size.width,
-            y: 100. - main_size.height,
+        let main_window_origin = LogicalPosition {
+            x: 100. - main_window_size.width,
+            y: 100. - main_window_size.height,
         };
         let (dist_x, dist_y) =
-            MainWindow::calc_off_screen_distance(&main_size, &main_position, &monitor);
+            MainWindow::calc_off_screen_distance(&main_window_size, &main_window_origin, &monitor);
 
         assert_eq!(dist_x, None);
         assert_eq!(dist_y, None);
@@ -345,6 +379,7 @@ mod tests_main_window {
             main_window_frame,
             widget_tauri_window_frame,
             &primary_monitor,
+            false,
         );
 
         // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
@@ -363,6 +398,7 @@ mod tests_main_window {
             main_window_frame,
             widget_tauri_window_frame,
             &secondary_monitor,
+            false,
         );
 
         // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
@@ -376,5 +412,59 @@ mod tests_main_window {
             updated_widget_window_origin.y,
             100. /*main_window_frame.size.height*/
         );
+
+        let updated_widget_window_origin = MainWindow::compute_widget_origin(
+            main_window_frame,
+            widget_tauri_window_frame,
+            &secondary_monitor,
+            true,
+        );
+
+        // Placement should be bottom LEFT cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
+        assert_eq!(
+            updated_widget_window_origin.x,
+            0. /*main_window_frame.origin.x*/ + WIDGET_MAIN_WINDOW_OFFSET
+        );
+    }
+
+    #[test]
+    fn test_is_main_window_flipped_horizontally() {
+        let main_window_frame = LogicalFrame {
+            origin: LogicalPosition { x: 0., y: 0. },
+            size: LogicalSize {
+                width: 100.,
+                height: 100.,
+            },
+        };
+
+        let primary_monitor = LogicalFrame {
+            origin: LogicalPosition { x: 0., y: 0. },
+            size: LogicalSize {
+                width: 1000.,
+                height: 1000.,
+            },
+        };
+
+        let secondary_monitor = LogicalFrame {
+            origin: LogicalPosition { x: 1., y: 1. },
+            size: LogicalSize {
+                width: 1000.,
+                height: 1000.,
+            },
+        };
+
+        let is_flipped = MainWindow::is_main_window_flipped_horizontally(
+            &main_window_frame.origin,
+            &primary_monitor,
+        );
+
+        assert_eq!(is_flipped, false);
+
+        let is_flipped = MainWindow::is_main_window_flipped_horizontally(
+            &main_window_frame.origin,
+            &secondary_monitor,
+        );
+
+        assert_eq!(is_flipped, true);
     }
 }
