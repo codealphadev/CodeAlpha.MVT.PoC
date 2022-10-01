@@ -9,7 +9,10 @@ use core_foundation::{
 };
 use core_graphics::sys::CGColorRef;
 
-use crate::core_engine::TextRange;
+use crate::{
+    core_engine::TextRange,
+    utils::geometry::{LogicalFrame, LogicalPosition},
+};
 
 use super::{
     ax_helpers::{ax_attribute, generate_axui_element_hash},
@@ -17,6 +20,17 @@ use super::{
     textarea::get_textarea_uielement,
     GetVia, XcodeError,
 };
+
+// [09/22] - I could not find a way to programmatically get this value
+pub fn get_menu_bar_height(monitor: &LogicalFrame) -> f64 {
+    if monitor.origin == (LogicalPosition { x: 0.0, y: 0.0 }) {
+        // Case: primary monitor -> menu bar is 22 on most screens, only the new screens with the notch have a height of 38
+        38.
+    } else {
+        // Case: any secondary monitor
+        0.0
+    }
+}
 
 pub fn get_focused_window() -> Result<usize, XcodeError> {
     let focused_uielement = get_focused_uielement(&GetVia::Current)?;

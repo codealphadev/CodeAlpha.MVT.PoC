@@ -10,11 +10,13 @@ use window_shadows::set_shadow;
 
 use crate::{
     app_handle,
+    platform::macos::{get_menu_bar_height, models::app::AppWindowMovedMessage, AXEventApp},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
-        windows::WidgetWindow,
+        windows::{widget_window::WIDGET_MAIN_WINDOW_OFFSET, WidgetWindow},
+        EventWindowControls,
     },
 };
 
@@ -83,7 +85,10 @@ impl MainWindow {
         let main_window_frame = Self::dimensions();
 
         let mut corrected_position = LogicalPosition {
-            x: widget_frame.origin.x - (main_window_frame.size.width - widget_frame.size.width),
+            x: widget_frame.origin.x
+                - (main_window_frame.size.width
+                    - widget_frame.size.width
+                    - WIDGET_MAIN_WINDOW_OFFSET),
             y: widget_frame.origin.y - main_window_frame.size.height,
         };
 
@@ -107,6 +112,21 @@ impl MainWindow {
             .ok()?;
         main_tauri_window.show().ok()?;
 
+        // Update WidgetPosition
+        if let Some(updated_widget_origin) = Self::update_widget_position(
+            LogicalFrame {
+                origin: corrected_position,
+                size: main_window_frame.size,
+            },
+            &monitor,
+        ) {
+            // Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
+            // delay between setting a new position and recreating the parent/child relationship.
+            // Pausing the main thread is not possible. Also, running this task async is also not trivial.
+            // We send a message to the main thread to run this task.
+            EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
+        }
+
         Some(())
     }
 
@@ -117,6 +137,30 @@ impl MainWindow {
             .hide();
 
         Some(())
+    }
+
+    fn update_widget_position(
+        main_window_frame: LogicalFrame,
+        monitor: &LogicalFrame,
+    ) -> Option<LogicalPosition> {
+        let widget_tauri_window_frame = WidgetWindow::dimensions();
+
+        let updated_widget_window_origin =
+            Self::compute_widget_origin(main_window_frame, widget_tauri_window_frame, &monitor);
+
+        let msg = AppWindowMovedMessage {
+            window: AppWindow::Widget,
+            window_position: updated_widget_window_origin.as_tauri_LogicalPosition(),
+        };
+        AXEventApp::AppWindowMoved(msg).publish_to_tauri(&app_handle());
+
+        // Set widget position
+        let widget_tauri_window = app_handle().get_window(&AppWindow::Widget.to_string())?;
+        widget_tauri_window
+            .set_position(updated_widget_window_origin.as_tauri_LogicalPosition())
+            .ok()?;
+
+        Some(updated_widget_window_origin)
     }
 
     pub fn calc_off_screen_distance(
@@ -172,12 +216,38 @@ impl MainWindow {
             size: main_size,
         }
     }
+
+    fn compute_widget_origin(
+        main_window_frame: LogicalFrame,
+        widget_tauri_window_frame: LogicalFrame,
+        monitor: &LogicalFrame,
+    ) -> LogicalPosition {
+        let mut updated_widget_window_origin = LogicalPosition {
+            x: main_window_frame.origin.x + main_window_frame.size.width
+                - widget_tauri_window_frame.size.width
+                - WIDGET_MAIN_WINDOW_OFFSET,
+            y: main_window_frame.origin.y + main_window_frame.size.height,
+        };
+        // If monitor is the primary monitor, we need to account for the menu bar.
+        let menu_bar_height = get_menu_bar_height(&monitor);
+        if menu_bar_height > 0. {
+            if main_window_frame.origin.y < menu_bar_height && main_window_frame.origin.y >= 0. {
+                // Case: the main window is positioned where the menu bar is -> it will be pushed down
+                // and overlap with the repositioned widget.
+                updated_widget_window_origin.y += menu_bar_height - main_window_frame.origin.y;
+            }
+        }
+        updated_widget_window_origin
+    }
 }
 
 #[cfg(test)]
 mod tests_main_window {
 
-    use crate::utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize};
+    use crate::{
+        utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
+        window_controls::windows::widget_window::WIDGET_MAIN_WINDOW_OFFSET,
+    };
 
     use super::MainWindow;
     use pretty_assertions::assert_eq;
@@ -219,5 +289,74 @@ mod tests_main_window {
 
         assert_eq!(dist_x, None);
         assert_eq!(dist_y, None);
+    }
+
+    #[test]
+    fn test_compute_widget_origin() {
+        let main_window_frame = LogicalFrame {
+            origin: LogicalPosition { x: 0., y: 0. },
+            size: LogicalSize {
+                width: 100.,
+                height: 100.,
+            },
+        };
+        let widget_tauri_window_frame = LogicalFrame {
+            origin: LogicalPosition { x: 0., y: 0. },
+            size: LogicalSize {
+                width: 48.,
+                height: 48.,
+            },
+        };
+        let primary_monitor = LogicalFrame {
+            origin: LogicalPosition { x: 0., y: 0. },
+            size: LogicalSize {
+                width: 1000.,
+                height: 1000.,
+            },
+        };
+
+        let secondary_monitor = LogicalFrame {
+            origin: LogicalPosition { x: -1., y: -1. },
+            size: LogicalSize {
+                width: 1000.,
+                height: 1000.,
+            },
+        };
+
+        let updated_widget_window_origin = MainWindow::compute_widget_origin(
+            main_window_frame,
+            widget_tauri_window_frame,
+            &primary_monitor,
+        );
+
+        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
+        assert_eq!(
+            updated_widget_window_origin.x,
+            0. /*main_window_frame.origin.x*/ + 100. /*main_window_frame.size.width*/
+                    - 48. /*widget_tauri_window_frame.size.width*/
+                    - WIDGET_MAIN_WINDOW_OFFSET
+        );
+        assert_eq!(
+            updated_widget_window_origin.y,
+            100. /*main_window_frame.size.height*/ + 38. /*menu bar height*/
+        );
+
+        let updated_widget_window_origin = MainWindow::compute_widget_origin(
+            main_window_frame,
+            widget_tauri_window_frame,
+            &secondary_monitor,
+        );
+
+        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
+        assert_eq!(
+            updated_widget_window_origin.x,
+            0. /*main_window_frame.origin.x*/ + 100. /*main_window_frame.size.width*/
+                    - 48. /*widget_tauri_window_frame.size.width*/
+                    - WIDGET_MAIN_WINDOW_OFFSET
+        );
+        assert_eq!(
+            updated_widget_window_origin.y,
+            100. /*main_window_frame.size.height*/
+        );
     }
 }

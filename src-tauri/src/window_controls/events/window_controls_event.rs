@@ -23,6 +23,7 @@ pub enum EventWindowControls {
     AppWindowShow(ShowAppWindowMessage),
     AppWindowUpdate(UpdateAppWindowMessage),
     DarkModeUpdate(DarkModeUpdateMessage),
+    RebindMainAndWidget,
 }
 
 impl EventWindowControls {
@@ -35,17 +36,17 @@ impl EventWindowControls {
             Some(serde_json::to_string(self).unwrap()),
         );
 
-        let publish_to_frontend;
-        match self {
-            EventWindowControls::TrackingAreaClicked(_) => publish_to_frontend = true,
-            EventWindowControls::TrackingAreaEntered(_) => publish_to_frontend = true,
-            EventWindowControls::TrackingAreaExited(_) => publish_to_frontend = true,
-            EventWindowControls::AppWindowHide(_) => publish_to_frontend = false,
-            EventWindowControls::AppWindowShow(_) => publish_to_frontend = false,
-            EventWindowControls::AppWindowUpdate(_) => publish_to_frontend = false,
-            EventWindowControls::DarkModeUpdate(_) => publish_to_frontend = true,
-            EventWindowControls::TrackingAreaClickedOutside(_) => publish_to_frontend = true,
-        }
+        let publish_to_frontend = match self {
+            EventWindowControls::TrackingAreaClicked(_) => true,
+            EventWindowControls::TrackingAreaEntered(_) => true,
+            EventWindowControls::TrackingAreaExited(_) => true,
+            EventWindowControls::AppWindowHide(_) => false,
+            EventWindowControls::AppWindowShow(_) => false,
+            EventWindowControls::AppWindowUpdate(_) => false,
+            EventWindowControls::DarkModeUpdate(_) => true,
+            EventWindowControls::TrackingAreaClickedOutside(_) => true,
+            EventWindowControls::RebindMainAndWidget => false,
+        };
 
         // Emit to all windows
         if publish_to_frontend {

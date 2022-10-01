@@ -18,28 +18,13 @@ pub fn window_control_events_listener(widget_window: &Arc<Mutex<WidgetWindow>>) 
             serde_json::from_str(&msg.payload().unwrap()).unwrap();
 
         match event_window_controls {
-            EventWindowControls::TrackingAreaClicked(_) => {
-                // Do Nothing here
-            }
-            EventWindowControls::TrackingAreaEntered(_) => {
-                // Do Nothing here
-            }
-            EventWindowControls::TrackingAreaExited(_) => {
-                // Do Nothing here
-            }
             EventWindowControls::AppWindowHide(msg) => {
                 on_hide_app_window(&widget_window_move_copy, &msg);
             }
             EventWindowControls::AppWindowShow(msg) => {
                 on_show_app_window(&widget_window_move_copy, &msg);
             }
-            EventWindowControls::DarkModeUpdate(_) => {
-                // Do nothing here
-            }
-            EventWindowControls::TrackingAreaClickedOutside(_) => {
-                // Do Nothing here
-            }
-            EventWindowControls::AppWindowUpdate(_) => {
+            _ => {
                 // Do Nothing here
             }
         }
