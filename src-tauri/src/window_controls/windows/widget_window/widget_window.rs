@@ -14,8 +14,8 @@ use crate::{
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
-        windows::utils::app_window_dimensions,
-        EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
+        windows::utils::{app_window_dimensions, register_tracking_area, update_tracking_area},
+        EventTrackingArea, TrackingArea,
     },
 };
 
@@ -34,7 +34,7 @@ pub struct WidgetWindow {
     // The widget window's size
     size: LogicalSize,
 
-    // The widget's tracking area id
+    // The window's tracking area
     tracking_area: TrackingArea,
 }
 
@@ -147,47 +147,11 @@ impl WidgetWindow {
     }
 
     fn update_tracking_area(&self, is_visible: bool) {
-        if is_visible {
-            let widget_frame = WidgetWindow::dimensions();
-            let mut tracking_area = self.tracking_area.clone();
-            tracking_area.rectangle = LogicalFrame {
-                origin: LogicalPosition::default(),
-                size: widget_frame.size,
-            };
-            EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-        } else {
-            let mut tracking_area = self.tracking_area.clone();
-            tracking_area.rectangle = LogicalFrame::default();
-            EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-        }
+        update_tracking_area(AppWindow::Widget, self.tracking_area.clone(), is_visible)
     }
 
     fn register_tracking_area() -> TrackingArea {
-        let widget_frame = if default_properties::is_visible(&AppWindow::Widget) {
-            WidgetWindow::dimensions()
-        } else {
-            LogicalFrame::default()
-        };
-
-        let tracking_area = TrackingArea {
-            id: uuid::Uuid::new_v4(),
-            editor_window_uid: 0,
-            rectangle: LogicalFrame {
-                origin: LogicalPosition::default(),
-                size: widget_frame.size,
-            },
-            event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
-                TrackingEventType::MouseOver,
-                TrackingEventType::MouseEntered,
-                TrackingEventType::MouseExited,
-            ]),
-            app_window: AppWindow::Widget,
-        };
-
-        // 3. Publish to the tracking area manager with its original GLOBAL coordinates
-        EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-
-        tracking_area
+        register_tracking_area(AppWindow::Widget)
     }
 
     fn determine_widget_monitor(

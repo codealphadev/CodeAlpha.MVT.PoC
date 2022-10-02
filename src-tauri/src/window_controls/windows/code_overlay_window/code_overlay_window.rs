@@ -13,6 +13,8 @@ use crate::{
     window_controls::{
         config::{AppWindow, WindowLevel},
         utils::create_default_window_builder,
+        windows::utils::{register_tracking_area, update_tracking_area},
+        EventTrackingArea, TrackingArea,
     },
 };
 
@@ -21,6 +23,9 @@ use super::listeners::window_control_events_listener;
 #[derive(Clone, Debug)]
 pub struct CodeOverlayWindow {
     app_handle: tauri::AppHandle,
+
+    // The window's tracking area
+    tracking_area: TrackingArea,
 }
 
 impl CodeOverlayWindow {
@@ -43,7 +48,10 @@ impl CodeOverlayWindow {
             window.open_devtools();
         }
 
-        Ok(Self { app_handle })
+        Ok(Self {
+            app_handle,
+            tracking_area: Self::register_tracking_area(),
+        })
     }
 
     pub fn set_macos_properties(&self) -> Option<()> {
@@ -86,6 +94,8 @@ impl CodeOverlayWindow {
 
         tauri_window.show().ok()?;
 
+        self.update_tracking_area(true);
+
         Some(())
     }
 
@@ -95,10 +105,30 @@ impl CodeOverlayWindow {
             .get_window(&AppWindow::CodeOverlay.to_string())?
             .hide();
 
+        self.update_tracking_area(false);
+
         Some(())
+    }
+
+    fn update_tracking_area(&self, is_visible: bool) {
+        update_tracking_area(
+            AppWindow::CodeOverlay,
+            self.tracking_area.clone(),
+            is_visible,
+        )
+    }
+
+    fn register_tracking_area() -> TrackingArea {
+        register_tracking_area(AppWindow::CodeOverlay)
     }
 
     fn _is_main_thread() -> Option<bool> {
         unsafe { Some(msg_send![class!(NSThread), isMainThread]) }
+    }
+}
+
+impl Drop for CodeOverlayWindow {
+    fn drop(&mut self) {
+        EventTrackingArea::Remove(vec![self.tracking_area.id]).publish_to_tauri(&app_handle());
     }
 }

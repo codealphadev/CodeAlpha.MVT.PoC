@@ -335,6 +335,10 @@ fn is_blocked_by_other_app_window(
             continue;
         }
 
+        if !(is_visible(app_window).ok() == Some(true)) {
+            continue;
+        }
+
         if let Some(window_level) = get_window_level(app_window) {
             // Only check if the window is above the overlay window.
             if window_level > window_level_checked_app_window {

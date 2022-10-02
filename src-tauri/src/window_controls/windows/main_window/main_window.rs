@@ -16,8 +16,11 @@ use crate::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
         windows::{
-            utils::app_window_dimensions, widget_window::WIDGET_MAIN_WINDOW_OFFSET, WidgetWindow,
+            utils::{app_window_dimensions, register_tracking_area, update_tracking_area},
+            widget_window::WIDGET_MAIN_WINDOW_OFFSET,
+            WidgetWindow,
         },
+        EventTrackingArea, TrackingArea,
     },
 };
 
@@ -32,6 +35,8 @@ pub struct MainWindow {
     // window was resized before it snaps back to initial size at startup the moment both
     // move to a different screen. Our workaround for now is to reset the size on "show".
     size: LogicalSize,
+    // The window's tracking area
+    tracking_area: TrackingArea,
 }
 
 impl MainWindow {
@@ -52,6 +57,7 @@ impl MainWindow {
         Ok(Self {
             app_handle,
             size: LogicalSize { width, height },
+            tracking_area: Self::register_tracking_area(),
         })
     }
 
@@ -88,6 +94,8 @@ impl MainWindow {
         main_tauri_window.show().ok()?;
 
         set_shadow(&main_tauri_window, true).expect("Unsupported platform!");
+
+        self.update_tracking_area(true);
 
         Some(())
     }
@@ -168,7 +176,17 @@ impl MainWindow {
             .get_window(&AppWindow::Main.to_string())?
             .hide();
 
+        self.update_tracking_area(false);
+
         Some(())
+    }
+
+    fn update_tracking_area(&self, is_visible: bool) {
+        update_tracking_area(AppWindow::Main, self.tracking_area.clone(), is_visible)
+    }
+
+    fn register_tracking_area() -> TrackingArea {
+        register_tracking_area(AppWindow::Main)
     }
 
     pub fn dimensions() -> LogicalFrame {
@@ -277,6 +295,12 @@ impl MainWindow {
         }
 
         menu_bar_diff
+    }
+}
+
+impl Drop for MainWindow {
+    fn drop(&mut self) {
+        EventTrackingArea::Remove(vec![self.tracking_area.id]).publish_to_tauri(&app_handle());
     }
 }
 
