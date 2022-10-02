@@ -15,7 +15,7 @@
 		updateDimensions();
 
 		if (window_width && window_height) {
-			let appWindow: AppWindow = 'Main'; // TODO
+			let appWindow: AppWindow = 'Main';
 
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
@@ -38,8 +38,6 @@
 		window_height = positionInfo.height;
 	};
 
-
-
 	let bubbleOrientationRight = true;
 	const listenToGlobalEvents = async () => {
 		await listen('evt-content-window-orientation', (event) => {
@@ -49,6 +47,7 @@
 	};
 
 	listenToGlobalEvents();
+	console.log('hello');
 </script>
 
 <div id={dom_id} class="flex flex-col justify-end transform overflow-hidden h-full">

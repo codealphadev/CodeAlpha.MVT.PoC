@@ -23,9 +23,9 @@ impl SuggestionEvent {
             Some(serde_json::to_string(self).unwrap()),
         );
 
-        // Emit to Explain FE
+        // Emit to Main FE window
         _ = app_handle.emit_to(
-            &AppWindow::Explain.to_string(),
+            &AppWindow::Main.to_string(),
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );
