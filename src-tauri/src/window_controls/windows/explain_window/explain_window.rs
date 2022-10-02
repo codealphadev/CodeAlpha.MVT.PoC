@@ -323,7 +323,7 @@ impl ExplainWindow {
 
     fn update_tracking_area(&mut self, updated_tracking_rect: &LogicalFrame) -> Option<()> {
         let mut tracking_area = self.tracking_area.as_ref()?.clone();
-        tracking_area.rectangles = vec![updated_tracking_rect.to_owned()];
+        tracking_area.rectangle = updated_tracking_rect.to_owned();
 
         EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
 
@@ -336,7 +336,7 @@ impl ExplainWindow {
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
             window_uid: 0,
-            rectangles: vec![tracking_rect.to_owned()],
+            rectangle: tracking_rect.to_owned(),
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClickedOutside,
             ]),

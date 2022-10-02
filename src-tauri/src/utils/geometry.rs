@@ -6,7 +6,7 @@ use core_graphics_types::geometry::CGRect;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/geometry/")]
 pub struct LogicalPosition {
     /// Vertical axis value.
@@ -56,7 +56,7 @@ impl LogicalPosition {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/geometry/")]
 pub struct LogicalSize {
     /// Width.
@@ -95,7 +95,7 @@ impl LogicalSize {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/geometry/")]
 pub struct LogicalFrame {
     pub origin: LogicalPosition,

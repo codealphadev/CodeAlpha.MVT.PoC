@@ -166,7 +166,7 @@ impl NodeAnnotation {
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
                             window_uid: tracking_area.window_uid,
-                            annotation_frame: Some(*tracking_area.rectangles.first().unwrap()),
+                            annotation_frame: Some(tracking_area.rectangle),
                         },
                     )
                     .publish_to_tauri(&app_handle());
@@ -199,7 +199,7 @@ impl NodeAnnotation {
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
             window_uid,
-            rectangles: annotation_rect_opt.map_or(vec![], |rect| vec![rect]),
+            rectangle: annotation_rect_opt.map_or(LogicalFrame::default(), |rect| rect),
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,
                 TrackingEventType::MouseEntered,
@@ -222,7 +222,8 @@ impl NodeAnnotation {
         if let Ok((annotation_rect_opt, _)) =
             Self::calculate_annotation_bounds(text, &self.node_code_block)
         {
-            self.tracking_area.rectangles = annotation_rect_opt.map_or(vec![], |rect| vec![rect]);
+            self.tracking_area.rectangle =
+                annotation_rect_opt.map_or(LogicalFrame::default(), |rect| rect);
 
             // Check if the annotation is outside of the viewport and if so, remove the tracking areas
             let viewport = get_viewport_frame(&GetVia::Current).map_err(|_| {
@@ -233,7 +234,7 @@ impl NodeAnnotation {
                 if !viewport.contains_position(&annotation_rect.top_left())
                     && !viewport.contains_position(&annotation_rect.bottom_left())
                 {
-                    self.tracking_area.rectangles = vec![];
+                    self.tracking_area.rectangle = LogicalFrame::default();
                 }
             }
 
