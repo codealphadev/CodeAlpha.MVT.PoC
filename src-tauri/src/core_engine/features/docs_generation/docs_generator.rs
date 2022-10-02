@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     core_engine::{
-        core_engine::WindowUid,
+        core_engine::EditorWindowUid,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
         syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
@@ -36,7 +36,7 @@ enum DocsGenComputeProcedure {
 }
 
 pub struct DocsGenerator {
-    node_annotations: HashMap<WindowUid, NodeAnnotation>,
+    node_annotations: HashMap<EditorWindowUid, NodeAnnotation>,
     is_activated: bool,
     compute_results_updated: bool,
 }
@@ -229,7 +229,7 @@ impl DocsGenerator {
                     DocsGenerationError::MissingContext.into(),
                 ))?;
         Ok(
-            if let Some(annotation) = self.node_annotations.get_mut(&msg.window_uid) {
+            if let Some(annotation) = self.node_annotations.get_mut(&msg.editor_window_uid) {
                 if msg.id == annotation.id() {
                     annotation.prepare_docs_insertion_position(text_content)?;
                     annotation.generate_node_explanation()?;
@@ -329,7 +329,7 @@ impl DocsGenerator {
         &mut self,
         codeblock: AnnotationCodeBlock,
         text_content: &XcodeText,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
     ) -> Result<(), DocsGenerationError> {
         let new_annotation = NodeAnnotation::new(codeblock, text_content, window_uid)?;
 
@@ -339,7 +339,7 @@ impl DocsGenerator {
         Ok(())
     }
 
-    fn is_docs_gen_task_running(&self, window_uid: &WindowUid) -> bool {
+    fn is_docs_gen_task_running(&self, window_uid: &EditorWindowUid) -> bool {
         if let Some(current_annotation) = self.node_annotations.get(&window_uid) {
             current_annotation.state() == NodeAnnotationState::FetchingExplanation
         } else {

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core_engine::WindowUid, utils::geometry::LogicalFrame, window_controls::config::AppWindow,
+    core_engine::EditorWindowUid, utils::geometry::LogicalFrame, window_controls::config::AppWindow,
 };
 
 /// A TrackingArea can subscribe to any number of TrackingEventTypes.
@@ -24,7 +24,7 @@ pub enum TrackingEventType {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TrackingArea {
     pub id: uuid::Uuid,
-    pub window_uid: WindowUid,
+    pub window_uid: EditorWindowUid,
     pub app_window: AppWindow,
     pub rectangles: Vec<LogicalFrame>,
     pub event_subscriptions: TrackingEventSubscription,
