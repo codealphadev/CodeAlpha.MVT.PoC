@@ -11,6 +11,7 @@
 	import { fade } from 'svelte/transition';
 	import SwiftFormat from '../components/widget/swift-format.svelte';
 	import DocsGeneration from '../components/widget/docs-generation.svelte';
+	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
 
 	let app_active = true;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
@@ -87,6 +88,15 @@
 			}
 		});
 	};
+
+	const listen_mouse_move = async () => {
+		await listen('EventWindowControls' as ChannelList, (event) => {
+			let tracking_event = JSON.parse(event.payload as string) as EventWindowControls;
+
+			console.log('tracking_event', tracking_event);
+		});
+	};
+	listen_mouse_move();
 
 	let startX: number | undefined = undefined;
 	let startY: number | undefined = undefined;

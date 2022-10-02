@@ -24,8 +24,8 @@ use crate::{
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::AppWindow, get_position, EventTrackingArea, TrackingArea,
-        TrackingEventSubscription, TrackingEventType,
+        config::AppWindow, get_position, EventTrackingArea, TrackingArea, TrackingEventSubscriber,
+        TrackingEventType, TrackingEvents,
     },
     NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
@@ -208,12 +208,16 @@ impl NodeAnnotation {
             rectangle: annotation_rect_opt.map_or(LogicalFrame::default(), |rect| {
                 rect.to_local(&code_overlay_origin)
             }),
-            event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
+            events: TrackingEvents::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,
                 TrackingEventType::MouseEntered,
                 TrackingEventType::MouseExited,
             ]),
             app_window: AppWindow::CodeOverlay,
+            subscriber: vec![
+                TrackingEventSubscriber::AppWindow(AppWindow::CodeOverlay),
+                TrackingEventSubscriber::Backend,
+            ],
         };
 
         // 3. Publish to the tracking area manager with its original GLOBAL coordinates

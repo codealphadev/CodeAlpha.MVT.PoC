@@ -21,15 +21,6 @@ pub fn window_control_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventWindowControls::TrackingAreaClicked(msg) => {
                     _ = on_tracking_area_clicked(msg, &core_engine);
                 }
-                EventWindowControls::TrackingAreaMouseOver(msg) => {
-                    println!("TrackingAreaMouseOver: {:?}", msg);
-                }
-                EventWindowControls::TrackingAreaEntered(msg) => {
-                    println!("TrackingAreaEntered: {:?}", msg);
-                }
-                EventWindowControls::TrackingAreaExited(msg) => {
-                    println!("TrackingAreaExited: {:?}", msg);
-                }
                 _ => {}
             }
         }
