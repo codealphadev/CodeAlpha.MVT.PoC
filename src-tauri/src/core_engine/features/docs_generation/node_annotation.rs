@@ -24,8 +24,8 @@ use crate::{
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::AppWindow, EventTrackingArea, TrackingArea, TrackingEventSubscription,
-        TrackingEventType,
+        config::AppWindow, get_position, EventTrackingArea, TrackingArea,
+        TrackingEventSubscription, TrackingEventType,
     },
     NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
@@ -166,7 +166,11 @@ impl NodeAnnotation {
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
                             window_uid: tracking_area.editor_window_uid,
-                            annotation_frame: Some(tracking_area.rectangle),
+                            annotation_frame: Some(
+                                tracking_area
+                                    .rectangle
+                                    .to_global(&tracking_area.global_origin()),
+                            ),
                         },
                     )
                     .publish_to_tauri(&app_handle());
@@ -196,10 +200,14 @@ impl NodeAnnotation {
         // 1. Get the annotation bounds, naturally in global coordinates
         let (annotation_rect_opt, _) = Self::calculate_annotation_bounds(text, code_block)?;
 
+        let code_overlay_origin =
+            get_position(AppWindow::CodeOverlay).expect("NodeAnnotation: CodeOverlay not found");
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
             editor_window_uid: window_uid,
-            rectangle: annotation_rect_opt.map_or(LogicalFrame::default(), |rect| rect),
+            rectangle: annotation_rect_opt.map_or(LogicalFrame::default(), |rect| {
+                rect.to_local(&code_overlay_origin)
+            }),
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,
                 TrackingEventType::MouseEntered,
@@ -222,8 +230,12 @@ impl NodeAnnotation {
         if let Ok((annotation_rect_opt, _)) =
             Self::calculate_annotation_bounds(text, &self.node_code_block)
         {
-            self.tracking_area.rectangle =
-                annotation_rect_opt.map_or(LogicalFrame::default(), |rect| rect);
+            let code_overlay_origin = get_position(AppWindow::CodeOverlay)
+                .expect("NodeAnnotation: CodeOverlay not found");
+            self.tracking_area.rectangle = annotation_rect_opt
+                .map_or(LogicalFrame::default(), |rect| {
+                    rect.to_local(&code_overlay_origin)
+                });
 
             // Check if the annotation is outside of the viewport and if so, remove the tracking areas
             let viewport = get_viewport_frame(&GetVia::Current).map_err(|_| {

@@ -1,5 +1,6 @@
 pub use events::*;
 pub use tracking_areas::*;
+pub use utils::*;
 pub use window_manager::cmd_resize_window;
 pub use window_manager::cmd_toggle_app_activation;
 pub use window_manager::WindowManager;
