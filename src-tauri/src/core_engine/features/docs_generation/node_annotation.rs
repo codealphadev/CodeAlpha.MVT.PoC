@@ -115,7 +115,7 @@ impl NodeAnnotation {
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
             annotation_codeblock: codeblock_bounds
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
-            window_uid: self.tracking_area.window_uid,
+            window_uid: self.tracking_area.editor_window_uid,
         })
         .publish_to_tauri(&app_handle());
 
@@ -165,7 +165,7 @@ impl NodeAnnotation {
 
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
-                            window_uid: tracking_area.window_uid,
+                            window_uid: tracking_area.editor_window_uid,
                             annotation_frame: Some(tracking_area.rectangle),
                         },
                     )
@@ -198,7 +198,7 @@ impl NodeAnnotation {
 
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
-            window_uid,
+            editor_window_uid: window_uid,
             rectangle: annotation_rect_opt.map_or(LogicalFrame::default(), |rect| rect),
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClicked,
@@ -346,7 +346,7 @@ impl Drop for NodeAnnotation {
     fn drop(&mut self) {
         NodeAnnotationEvent::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
             id: self.id(),
-            window_uid: self.tracking_area.window_uid,
+            window_uid: self.tracking_area.editor_window_uid,
         })
         .publish_to_tauri(&app_handle());
         EventTrackingArea::Remove(vec![self.id()]).publish_to_tauri(&app_handle());

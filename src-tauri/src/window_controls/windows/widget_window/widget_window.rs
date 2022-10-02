@@ -14,6 +14,8 @@ use crate::{
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
+        windows::utils::app_window_dimensions,
+        EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };
 
@@ -26,11 +28,14 @@ pub static WIDGET_MAIN_WINDOW_OFFSET: f64 = 24.;
 pub struct WidgetWindow {
     app_handle: tauri::AppHandle,
 
-    // Is the main window shown; always false at startup.
-    main_window_shown: bool,
+    // Is the main window shown
+    main_window_shown: Option<bool>,
 
     // The widget window's size
     size: LogicalSize,
+
+    // The widget's tracking area id
+    tracking_area: TrackingArea,
 }
 
 impl WidgetWindow {
@@ -52,7 +57,8 @@ impl WidgetWindow {
                 width: default_properties::size(&AppWindow::Widget).0,
                 height: default_properties::size(&AppWindow::Widget).1,
             },
-            main_window_shown: false,
+            main_window_shown: None,
+            tracking_area: Self::register_tracking_area(),
         })
     }
 
@@ -124,6 +130,8 @@ impl WidgetWindow {
             .ok()?;
         widget_tauri_window.show().ok()?;
 
+        self.update_tracking_area(true);
+
         Some(())
     }
 
@@ -133,7 +141,43 @@ impl WidgetWindow {
             .get_window(&AppWindow::Widget.to_string())?
             .hide();
 
+        self.update_tracking_area(false);
+
         Some(())
+    }
+
+    fn update_tracking_area(&self, is_visible: bool) {
+        if is_visible {
+            let widget_frame = WidgetWindow::dimensions();
+            let mut tracking_area = self.tracking_area.clone();
+            tracking_area.rectangle = widget_frame;
+            EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
+        } else {
+            let mut tracking_area = self.tracking_area.clone();
+            tracking_area.rectangle = LogicalFrame::default();
+            EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
+        }
+    }
+
+    fn register_tracking_area() -> TrackingArea {
+        let widget_frame = WidgetWindow::dimensions();
+
+        let tracking_area = TrackingArea {
+            id: uuid::Uuid::new_v4(),
+            editor_window_uid: 0,
+            rectangle: widget_frame,
+            event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
+                TrackingEventType::MouseOver,
+                TrackingEventType::MouseEntered,
+                TrackingEventType::MouseExited,
+            ]),
+            app_window: AppWindow::Widget,
+        };
+
+        // 3. Publish to the tracking area manager with its original GLOBAL coordinates
+        EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
+
+        tracking_area
     }
 
     fn determine_widget_monitor(
@@ -213,30 +257,7 @@ impl WidgetWindow {
     }
 
     pub fn dimensions() -> LogicalFrame {
-        let widget_tauri_window = app_handle()
-            .get_window(&AppWindow::Widget.to_string())
-            .expect("Could not get WidgetWindow!");
-
-        let scale_factor = widget_tauri_window
-            .scale_factor()
-            .expect("Could not get WidgetWindow scale factor!");
-        let widget_position = LogicalPosition::from_tauri_LogicalPosition(
-            &widget_tauri_window
-                .outer_position()
-                .expect("Could not get WidgetWindow outer position!")
-                .to_logical::<f64>(scale_factor),
-        );
-        let widget_size = LogicalSize::from_tauri_LogicalSize(
-            &widget_tauri_window
-                .outer_size()
-                .expect("Could not get WidgetWindow outer size!")
-                .to_logical::<f64>(scale_factor),
-        );
-
-        LogicalFrame {
-            origin: widget_position,
-            size: widget_size,
-        }
+        app_window_dimensions(AppWindow::Widget)
     }
 }
 
@@ -285,5 +306,11 @@ mod tests_widget_window {
 
         assert_eq!(dist_x, None);
         assert_eq!(dist_y, None);
+    }
+}
+
+impl Drop for WidgetWindow {
+    fn drop(&mut self) {
+        EventTrackingArea::Remove(vec![self.tracking_area.id]).publish_to_tauri(&app_handle());
     }
 }

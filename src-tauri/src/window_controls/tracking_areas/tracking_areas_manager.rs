@@ -65,6 +65,7 @@ impl TrackingAreasManager {
     }
 
     pub fn update_tracking_areas(&mut self, tracking_areas: Vec<TrackingArea>) {
+        println!("update_tracking_areas: {:?}", tracking_areas);
         for updated_tracking_area in tracking_areas.iter() {
             for tracking_area in self.tracking_areas.iter_mut() {
                 if tracking_area.0.id == updated_tracking_area.id {
@@ -80,7 +81,7 @@ impl TrackingAreasManager {
         window_uid: EditorWindowUid,
     ) {
         for tracking_area in self.tracking_areas.iter_mut() {
-            if tracking_area.0.window_uid == window_uid {
+            if tracking_area.0.editor_window_uid == window_uid {
                 tracking_area.0.rectangle.origin.x += move_distance.width;
                 tracking_area.0.rectangle.origin.y += move_distance.height;
             }
@@ -106,7 +107,8 @@ impl TrackingAreasManager {
             if tracking_area.0.rectangle.contains_point(mouse_x, mouse_y) {
                 if let Some(tracking_start) = tracking_area.1 {
                     // Case: TrackingArea was already entered before.
-                    if check_overlap_with_other_app_windows(mouse_x, mouse_y)? {
+                    if is_blocked_by_other_app_window(tracking_area.0.app_window, mouse_x, mouse_y)
+                    {
                         // Case: Mouse is still inside the tracking area, but an app window opens above it.
                         // We publish a MouseExited event to the tracking area.
                         tracking_events.push(TrackingEvent {
@@ -135,7 +137,8 @@ impl TrackingAreasManager {
                     }
                 } else {
                     // Case: TrackingArea was not entered before, start tracking the time spent in the area.
-                    if check_overlap_with_other_app_windows(mouse_x, mouse_y)? {
+                    if is_blocked_by_other_app_window(tracking_area.0.app_window, mouse_x, mouse_y)
+                    {
                         continue;
                     } else {
                         tracking_area.1 = Some(std::time::Instant::now());
@@ -179,14 +182,14 @@ impl TrackingAreasManager {
     pub fn track_mouse_click(&mut self, mouse_x: f64, mouse_y: f64) -> Option<()> {
         self.previous_mouse_position = Some((mouse_x, mouse_y));
 
-        if check_overlap_with_other_app_windows(mouse_x, mouse_y)? {
-            return Some(());
-        }
-
         // `Option<u128>` contains the duration in millis for how long the mouse has been in this tracking area.
         let mut tracking_results: Vec<TrackingEvent> = Vec::new();
 
         for tracking_area in self.tracking_areas.iter() {
+            if is_blocked_by_other_app_window(tracking_area.0.app_window, mouse_x, mouse_y) {
+                continue;
+            }
+
             if tracking_area.0.rectangle.contains_point(mouse_x, mouse_y) {
                 if let Some(tracking_start) = tracking_area.1 {
                     tracking_results.push(TrackingEvent {
@@ -249,7 +252,7 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseEntered => {
                         EventWindowControls::TrackingAreaEntered(TrackingAreaEnteredMessage {
                             id: area.id,
-                            editor_window_uid: area.window_uid,
+                            editor_window_uid: area.editor_window_uid,
                             app_window: area.app_window,
                         })
                         .publish_to_tauri(&self.app_handle);
@@ -257,7 +260,7 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseExited => {
                         EventWindowControls::TrackingAreaExited(TrackingAreaExitedMessage {
                             id: area.id,
-                            editor_window_uid: area.window_uid,
+                            editor_window_uid: area.editor_window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: area.app_window,
                         })
@@ -266,7 +269,7 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseOver => {
                         EventWindowControls::TrackingAreaMouseOver(TrackingAreaMouseOverMessage {
                             id: area.id,
-                            editor_window_uid: area.window_uid,
+                            editor_window_uid: area.editor_window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: area.app_window,
                             mouse_position: *mouse_position,
@@ -276,7 +279,7 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseClicked => {
                         EventWindowControls::TrackingAreaClicked(TrackingAreaClickedMessage {
                             id: area.id,
-                            editor_window_uid: area.window_uid,
+                            editor_window_uid: area.editor_window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: area.app_window,
                         })
@@ -286,7 +289,7 @@ impl TrackingAreasManager {
                         EventWindowControls::TrackingAreaClickedOutside(
                             TrackingAreaClickedOutsideMessage {
                                 id: area.id,
-                                editor_window_uid: area.window_uid,
+                                editor_window_uid: area.editor_window_uid,
                                 app_window: area.app_window,
                             },
                         )
@@ -317,37 +320,45 @@ impl TrackingAreasManager {
     }
 }
 
-fn check_overlap_with_other_app_windows(mouse_x: f64, mouse_y: f64) -> Option<bool> {
+fn is_blocked_by_other_app_window(
+    checked_app_window: AppWindow,
+    mouse_x: f64,
+    mouse_y: f64,
+) -> bool {
     use strum::IntoEnumIterator;
 
-    if let Some(overlay_level) = get_window_level(AppWindow::CodeOverlay) {
-        for app_window in AppWindow::iter() {
-            if app_window == AppWindow::CodeOverlay {
-                continue;
-            }
+    if !(is_visible(checked_app_window).ok() == Some(true)) {
+        return false;
+    }
 
-            if let (Some(window_level), Ok(window_visible)) =
-                (get_window_level(app_window), is_visible(app_window))
-            {
-                // Only check if the window is above the overlay window.
-                if window_visible && window_level > overlay_level {
-                    if let (Some(origin), Some(size)) =
-                        (get_position(app_window), get_size(app_window))
+    let window_level_checked_app_window =
+        if let Some(window_level) = get_window_level(checked_app_window) {
+            window_level
+        } else {
+            panic!("No window level for: AppWindow: {:?}", checked_app_window);
+        };
+
+    for app_window in AppWindow::iter() {
+        if app_window == checked_app_window {
+            continue;
+        }
+
+        if let Some(window_level) = get_window_level(app_window) {
+            // Only check if the window is above the overlay window.
+            if window_level > window_level_checked_app_window {
+                if let (Some(origin), Some(size)) = (get_position(app_window), get_size(app_window))
+                {
+                    if mouse_x >= origin.x
+                        && mouse_x <= origin.x + size.width
+                        && mouse_y >= origin.y
+                        && mouse_y <= origin.y + size.height
                     {
-                        if mouse_x >= origin.x
-                            && mouse_x <= origin.x + size.width
-                            && mouse_y >= origin.y
-                            && mouse_y <= origin.y + size.height
-                        {
-                            return Some(true);
-                        }
+                        return true;
                     }
                 }
             }
         }
-    } else {
-        panic!("No window level for: AppWindow::CodeOverlay");
     }
 
-    Some(false)
+    false
 }

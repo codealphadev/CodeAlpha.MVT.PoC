@@ -56,6 +56,10 @@ pub struct WindowManager {
 
 impl WindowManager {
     pub fn new() -> Result<Self, tauri::Error> {
+        // First instantiate tracking areas manager so that it can be used by the windows.
+        let tracking_areas_manager_arc = Arc::new(Mutex::new(TrackingAreasManager::new()));
+        TrackingAreasManager::start_event_listeners(&tracking_areas_manager_arc);
+
         // Instantiate app windows. If this fails, the app will not work.
         let main_window = MainWindow::new()?;
         main_window.set_macos_properties();
@@ -80,9 +84,6 @@ impl WindowManager {
 
         let explain_window_arc = Arc::new(Mutex::new(explain_window));
         ExplainWindow::start_event_listeners(&explain_window_arc);
-
-        let tracking_areas_manager_arc = Arc::new(Mutex::new(TrackingAreasManager::new()));
-        TrackingAreasManager::start_event_listeners(&tracking_areas_manager_arc);
 
         Ok(Self {
             app_handle: app_handle(),

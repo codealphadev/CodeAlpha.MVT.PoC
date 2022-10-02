@@ -15,7 +15,9 @@ use crate::{
     window_controls::{
         config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
-        windows::{widget_window::WIDGET_MAIN_WINDOW_OFFSET, WidgetWindow},
+        windows::{
+            utils::app_window_dimensions, widget_window::WIDGET_MAIN_WINDOW_OFFSET, WidgetWindow,
+        },
     },
 };
 
@@ -170,30 +172,7 @@ impl MainWindow {
     }
 
     pub fn dimensions() -> LogicalFrame {
-        let main_tauri_window = app_handle()
-            .get_window(&AppWindow::Main.to_string())
-            .expect("Could not get MainWindow!");
-
-        let scale_factor = main_tauri_window
-            .scale_factor()
-            .expect("Could not get MainWindow scale factor!");
-        let main_window_origin = LogicalPosition::from_tauri_LogicalPosition(
-            &main_tauri_window
-                .outer_position()
-                .expect("Could not get MainWindow outer position!")
-                .to_logical::<f64>(scale_factor),
-        );
-        let main_window_size = LogicalSize::from_tauri_LogicalSize(
-            &main_tauri_window
-                .outer_size()
-                .expect("Could not get MainWindow outer size!")
-                .to_logical::<f64>(scale_factor),
-        );
-
-        LogicalFrame {
-            origin: main_window_origin,
-            size: main_window_size,
-        }
+        app_window_dimensions(AppWindow::Main)
     }
 
     fn update_widget_position(

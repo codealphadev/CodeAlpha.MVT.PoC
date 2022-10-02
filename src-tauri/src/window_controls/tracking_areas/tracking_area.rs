@@ -24,7 +24,7 @@ pub enum TrackingEventType {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TrackingArea {
     pub id: uuid::Uuid,
-    pub window_uid: EditorWindowUid,
+    pub editor_window_uid: EditorWindowUid, // Set to '0' if not associated with an editor window.
     pub app_window: AppWindow,
     pub rectangle: LogicalFrame,
     pub event_subscriptions: TrackingEventSubscription,
@@ -40,7 +40,7 @@ impl TrackingArea {
     }
 
     pub fn eq_props(&self, other: &Self) -> bool {
-        self.window_uid == other.window_uid
+        self.editor_window_uid == other.editor_window_uid
             && self.rectangle == other.rectangle
             && self.event_subscriptions == other.event_subscriptions
     }
