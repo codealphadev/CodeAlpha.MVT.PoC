@@ -9,4 +9,5 @@ mod code_overlay_window;
 mod editor_window;
 mod explain_window;
 mod main_window;
+mod utils;
 mod widget_window;

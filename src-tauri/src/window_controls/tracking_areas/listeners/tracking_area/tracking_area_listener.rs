@@ -20,6 +20,7 @@ pub fn tracking_area_listener(tracking_area_manager_arc: &Arc<Mutex<TrackingArea
 
             match event_tracking_areas {
                 EventTrackingArea::Add(msg) => {
+                    println!("Add: {:?}", msg);
                     tracking_area_manager.add_tracking_areas(msg);
                 }
                 EventTrackingArea::Remove(msg) => {

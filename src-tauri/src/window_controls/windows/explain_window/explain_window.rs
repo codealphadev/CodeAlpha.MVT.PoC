@@ -335,7 +335,7 @@ impl ExplainWindow {
     fn create_tracking_area(&mut self, tracking_rect: &LogicalFrame) -> Option<()> {
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
-            window_uid: 0,
+            editor_window_uid: 0,
             rectangle: tracking_rect.to_owned(),
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseClickedOutside,
