@@ -15,7 +15,10 @@ use crate::{
         config::{default_properties, AppWindow, WindowLevel},
         models::TrackingAreaClickedOutsideMessage,
         utils::create_default_window_builder,
-        windows::EditorWindow,
+        windows::{
+            utils::{register_tracking_area, update_tracking_area},
+            EditorWindow,
+        },
         EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
     },
 };
@@ -28,13 +31,15 @@ static CONSTRAINTS_OFFSET: f64 = 8.;
 #[derive(Clone, Debug)]
 pub struct ExplainWindow {
     app_handle: tauri::AppHandle,
-    tracking_area: Option<TrackingArea>,
     window_size: LogicalSize,
     window_origin_local: Option<LogicalPosition>, // The origin of the window relative to the code document frame.
     viewport_props: Option<ViewportProperties>,
     code_document_props: Option<CodeDocumentFrameProperties>,
     monitor: Option<LogicalFrame>,
     annotation_area: Option<LogicalFrame>, // The origin of the annotation area relative to the viewport frame.
+
+    // The window's tracking area
+    tracking_area: TrackingArea,
 }
 
 impl ExplainWindow {
@@ -52,9 +57,19 @@ impl ExplainWindow {
             // window.open_devtools();
         }
 
+        let mut tracking_area = Self::register_tracking_area();
+        // Update the tracking area with specific event subscriptions.
+        tracking_area.event_subscriptions = TrackingEventSubscription::TrackingEventTypes(vec![
+            TrackingEventType::MouseOver,
+            TrackingEventType::MouseEntered,
+            TrackingEventType::MouseExited,
+            TrackingEventType::MouseClickedOutside,
+        ]);
+        EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle);
+
         Ok(Self {
             app_handle,
-            tracking_area: None,
+            tracking_area,
             monitor: None,
             window_size: LogicalSize {
                 width: default_properties::size(&AppWindow::Explain).0,
@@ -122,12 +137,6 @@ impl ExplainWindow {
         // Derive an origin for the explain window following a set of positioning rules.
         let corrected_window_origin_global = self.corrected_window_origin_global()?;
 
-        // Create Tracking Area to detect clicks outside the explain window.
-        self.create_tracking_area(&LogicalFrame {
-            origin: corrected_window_origin_global,
-            size: self.window_size,
-        })?;
-
         let tauri_window = self
             .app_handle
             .get_window(&AppWindow::Explain.to_string())?;
@@ -140,24 +149,23 @@ impl ExplainWindow {
 
         tauri_window.show().ok()?;
 
+        self.update_tracking_area(true);
+
         Some(())
     }
 
     pub fn hide(&mut self) -> Option<()> {
-        if let Some(tracking_area) = self.tracking_area.as_ref() {
-            EventTrackingArea::Remove(vec![tracking_area.id]).publish_to_tauri(&app_handle());
-        }
-
         _ = self
             .app_handle
             .get_window(&AppWindow::Explain.to_string())?
             .hide();
 
+        self.update_tracking_area(false);
+
         // Reset properties
         self.window_origin_local = None;
         self.annotation_area = None;
         self.monitor = None;
-        self.tracking_area = None;
 
         Some(())
     }
@@ -192,6 +200,14 @@ impl ExplainWindow {
         Some(())
     }
 
+    fn update_tracking_area(&self, is_visible: bool) {
+        update_tracking_area(AppWindow::Explain, self.tracking_area.clone(), is_visible)
+    }
+
+    fn register_tracking_area() -> TrackingArea {
+        register_tracking_area(AppWindow::Explain)
+    }
+
     fn update_window_origin_local(&mut self, window_origin_global: &LogicalPosition) -> Option<()> {
         let local_origin = window_origin_global.to_local(&self.get_coordinate_system_origin()?);
 
@@ -210,12 +226,6 @@ impl ExplainWindow {
 
         // Derive an origin for the explain window following a set of positioning rules.
         let corrected_global_origin = self.corrected_window_origin_global()?;
-
-        // Create Tracking Area to detect clicks outside the explain window.
-        self.update_tracking_area(&LogicalFrame {
-            origin: corrected_global_origin,
-            size: self.window_size,
-        })?;
 
         let tauri_window = self
             .app_handle
@@ -308,47 +318,10 @@ impl ExplainWindow {
         Some(corrected_global_origin)
     }
 
-    pub fn clicked_outside(
-        &mut self,
-        clicked_outside_msg: &TrackingAreaClickedOutsideMessage,
-    ) -> Option<()> {
-        if let Some(tracking_area) = self.tracking_area.as_ref() {
-            if tracking_area.id == clicked_outside_msg.id {
-                self.hide();
-            }
+    pub fn clicked_outside(&mut self, clicked_outside_msg: &TrackingAreaClickedOutsideMessage) {
+        if self.tracking_area.id == clicked_outside_msg.id {
+            self.hide();
         }
-
-        Some(())
-    }
-
-    fn update_tracking_area(&mut self, updated_tracking_rect: &LogicalFrame) -> Option<()> {
-        let mut tracking_area = self.tracking_area.as_ref()?.clone();
-        tracking_area.rectangle = updated_tracking_rect.to_owned();
-
-        EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-
-        self.tracking_area.replace(tracking_area);
-
-        Some(())
-    }
-
-    fn create_tracking_area(&mut self, tracking_rect: &LogicalFrame) -> Option<()> {
-        let tracking_area = TrackingArea {
-            id: uuid::Uuid::new_v4(),
-            editor_window_uid: 0,
-            rectangle: tracking_rect.to_owned(),
-            event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
-                TrackingEventType::MouseClickedOutside,
-            ]),
-            app_window: AppWindow::Explain,
-        };
-
-        // Publish to the tracking area manager
-        EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-
-        self.tracking_area.replace(tracking_area);
-
-        Some(())
     }
 
     fn get_coordinate_system_origin(&self) -> Option<LogicalPosition> {
@@ -395,5 +368,11 @@ impl ExplainWindow {
         }
 
         (dist_x, dist_y)
+    }
+}
+
+impl Drop for ExplainWindow {
+    fn drop(&mut self) {
+        EventTrackingArea::Remove(vec![self.tracking_area.id]).publish_to_tauri(&app_handle());
     }
 }

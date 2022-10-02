@@ -10,9 +10,7 @@ pub fn on_click_outside_tracking_area(
 ) -> Option<()> {
     let mut explain_window = explain_window.try_lock()?;
 
-    if explain_window.clicked_outside(&outside_click_msg).is_none() {
-        println!("Failed to hide explain window");
-    };
+    explain_window.clicked_outside(&outside_click_msg);
 
     Some(())
 }
