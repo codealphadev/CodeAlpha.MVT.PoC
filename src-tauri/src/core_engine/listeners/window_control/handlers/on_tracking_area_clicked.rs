@@ -19,7 +19,7 @@ pub fn on_tracking_area_clicked(
     }
 
     core_engine.run_features(
-        clicked_msg.window_uid,
+        clicked_msg.editor_window_uid,
         &CoreEngineTrigger::OnTrackingAreaClicked(clicked_msg),
     )
 }

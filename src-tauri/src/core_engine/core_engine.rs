@@ -17,14 +17,14 @@ use super::{
     CodeDocument,
 };
 
-pub type WindowUid = usize;
+pub type EditorWindowUid = usize;
 
-pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<WindowUid, CodeDocument>>>;
+pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<EditorWindowUid, CodeDocument>>>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum CoreEngineError {
     #[error("There exists no CodeDocument with window_uid {0}.")]
-    CodeDocNotFound(WindowUid),
+    CodeDocNotFound(EditorWindowUid),
     #[error("Context missing to proceed: {0}.")]
     MissingContext(String),
     #[error("Something went wrong.")]
@@ -97,7 +97,7 @@ impl CoreEngine {
 
     pub fn run_features(
         &mut self,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), CoreEngineError> {
         let code_documents = self.code_documents.lock();

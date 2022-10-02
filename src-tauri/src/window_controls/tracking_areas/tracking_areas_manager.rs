@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 
 use crate::{
     app_handle,
-    core_engine::WindowUid,
+    core_engine::EditorWindowUid,
     utils::geometry::LogicalSize,
     window_controls::{
         config::AppWindow,
@@ -73,7 +73,11 @@ impl TrackingAreasManager {
         }
     }
 
-    pub fn move_tracking_areas(&mut self, move_distance: &LogicalSize, window_uid: WindowUid) {
+    pub fn move_tracking_areas(
+        &mut self,
+        move_distance: &LogicalSize,
+        window_uid: EditorWindowUid,
+    ) {
         for tracking_area in self.tracking_areas.iter_mut() {
             if tracking_area.0.window_uid == window_uid {
                 tracking_area.0.rectangles.iter_mut().for_each(|rectangle| {
@@ -220,7 +224,7 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseEntered => {
                         EventWindowControls::TrackingAreaEntered(TrackingAreaEnteredMessage {
                             id: area.id,
-                            window_uid: area.window_uid,
+                            editor_window_uid: area.window_uid,
                             app_window: area.app_window,
                         })
                         .publish_to_tauri(&self.app_handle);
@@ -234,7 +238,7 @@ impl TrackingAreasManager {
 
                         EventWindowControls::TrackingAreaExited(TrackingAreaExitedMessage {
                             id: area.id,
-                            window_uid: area.window_uid,
+                            editor_window_uid: area.window_uid,
                             duration_ms,
                             app_window: area.app_window,
                         })
@@ -252,7 +256,7 @@ impl TrackingAreasManager {
 
                         EventWindowControls::TrackingAreaClicked(TrackingAreaClickedMessage {
                             id: area.id,
-                            window_uid: area.window_uid,
+                            editor_window_uid: area.window_uid,
                             duration_ms,
                             app_window: area.app_window,
                         })
@@ -262,7 +266,7 @@ impl TrackingAreasManager {
                         EventWindowControls::TrackingAreaClickedOutside(
                             TrackingAreaClickedOutsideMessage {
                                 id: area.id,
-                                window_uid: area.window_uid,
+                                editor_window_uid: area.window_uid,
                                 app_window: area.app_window,
                             },
                         )
