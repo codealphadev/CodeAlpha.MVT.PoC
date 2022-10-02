@@ -150,7 +150,10 @@ impl WidgetWindow {
         if is_visible {
             let widget_frame = WidgetWindow::dimensions();
             let mut tracking_area = self.tracking_area.clone();
-            tracking_area.rectangle = widget_frame;
+            tracking_area.rectangle = LogicalFrame {
+                origin: LogicalPosition::default(),
+                size: widget_frame.size,
+            };
             EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
         } else {
             let mut tracking_area = self.tracking_area.clone();
@@ -160,12 +163,19 @@ impl WidgetWindow {
     }
 
     fn register_tracking_area() -> TrackingArea {
-        let widget_frame = WidgetWindow::dimensions();
+        let widget_frame = if default_properties::is_visible(&AppWindow::Widget) {
+            WidgetWindow::dimensions()
+        } else {
+            LogicalFrame::default()
+        };
 
         let tracking_area = TrackingArea {
             id: uuid::Uuid::new_v4(),
             editor_window_uid: 0,
-            rectangle: widget_frame,
+            rectangle: LogicalFrame {
+                origin: LogicalPosition::default(),
+                size: widget_frame.size,
+            },
             event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
                 TrackingEventType::MouseOver,
                 TrackingEventType::MouseEntered,

@@ -4,8 +4,7 @@ use parking_lot::Mutex;
 
 use crate::{
     app_handle,
-    core_engine::EditorWindowUid,
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::geometry::LogicalPosition,
     window_controls::{
         config::AppWindow,
         events::{
@@ -20,7 +19,7 @@ use crate::{
 };
 
 use super::{
-    listeners::{input_devices_listener, tracking_area_listener, xcode_listener},
+    listeners::{input_devices_listener, tracking_area_listener},
     TrackingArea, TrackingEventSubscription, TrackingEventType,
 };
 
@@ -65,25 +64,11 @@ impl TrackingAreasManager {
     }
 
     pub fn update_tracking_areas(&mut self, tracking_areas: Vec<TrackingArea>) {
-        println!("update_tracking_areas: {:?}", tracking_areas);
         for updated_tracking_area in tracking_areas.iter() {
             for tracking_area in self.tracking_areas.iter_mut() {
                 if tracking_area.0.id == updated_tracking_area.id {
                     tracking_area.0.update(updated_tracking_area);
                 }
-            }
-        }
-    }
-
-    pub fn move_tracking_areas(
-        &mut self,
-        move_distance: &LogicalSize,
-        window_uid: EditorWindowUid,
-    ) {
-        for tracking_area in self.tracking_areas.iter_mut() {
-            if tracking_area.0.editor_window_uid == window_uid {
-                tracking_area.0.rectangle.origin.x += move_distance.width;
-                tracking_area.0.rectangle.origin.y += move_distance.height;
             }
         }
     }
@@ -104,7 +89,11 @@ impl TrackingAreasManager {
         let mut tracking_events: Vec<TrackingEvent> = Vec::new();
 
         for tracking_area in self.tracking_areas.iter_mut() {
-            if tracking_area.0.rectangle.contains_point(mouse_x, mouse_y) {
+            if tracking_area
+                .0
+                .rect_as_global()
+                .contains_point(mouse_x, mouse_y)
+            {
                 if let Some(tracking_start) = tracking_area.1 {
                     // Case: TrackingArea was already entered before.
                     if is_blocked_by_other_app_window(tracking_area.0.app_window, mouse_x, mouse_y)
@@ -119,7 +108,7 @@ impl TrackingAreasManager {
                                 x: mouse_x,
                                 y: mouse_y,
                             }
-                            .to_local(&tracking_area.0.rectangle.origin),
+                            .to_local(&tracking_area.0.global_origin()),
                         });
                         tracking_area.1 = None;
                         continue;
@@ -132,7 +121,7 @@ impl TrackingAreasManager {
                                 x: mouse_x,
                                 y: mouse_y,
                             }
-                            .to_local(&tracking_area.0.rectangle.origin),
+                            .to_local(&tracking_area.0.global_origin()),
                         });
                     }
                 } else {
@@ -150,7 +139,7 @@ impl TrackingAreasManager {
                                 x: mouse_x,
                                 y: mouse_y,
                             }
-                            .to_local(&tracking_area.0.rectangle.origin),
+                            .to_local(&tracking_area.0.global_origin()),
                         });
                     }
                 }
@@ -168,7 +157,7 @@ impl TrackingAreasManager {
                             x: mouse_x,
                             y: mouse_y,
                         }
-                        .to_local(&tracking_area.0.rectangle.origin),
+                        .to_local(&tracking_area.0.global_origin()),
                     });
                 }
             }
@@ -190,7 +179,11 @@ impl TrackingAreasManager {
                 continue;
             }
 
-            if tracking_area.0.rectangle.contains_point(mouse_x, mouse_y) {
+            if tracking_area
+                .0
+                .rect_as_global()
+                .contains_point(mouse_x, mouse_y)
+            {
                 if let Some(tracking_start) = tracking_area.1 {
                     tracking_results.push(TrackingEvent {
                         area: tracking_area.0.clone(),
@@ -200,7 +193,7 @@ impl TrackingAreasManager {
                             x: mouse_x,
                             y: mouse_y,
                         }
-                        .to_local(&tracking_area.0.rectangle.origin),
+                        .to_local(&tracking_area.0.global_origin()),
                     });
                 } else {
                     tracking_results.push(TrackingEvent {
@@ -211,7 +204,7 @@ impl TrackingAreasManager {
                             x: mouse_x,
                             y: mouse_y,
                         }
-                        .to_local(&tracking_area.0.rectangle.origin),
+                        .to_local(&tracking_area.0.global_origin()),
                     });
                 }
             } else {
@@ -228,7 +221,7 @@ impl TrackingAreasManager {
                             x: mouse_x,
                             y: mouse_y,
                         }
-                        .to_local(&tracking_area.0.rectangle.origin),
+                        .to_local(&tracking_area.0.global_origin()),
                     });
                 }
             }
@@ -316,7 +309,6 @@ impl TrackingAreasManager {
     pub fn start_event_listeners(tracking_area_manager: &Arc<Mutex<Self>>) {
         tracking_area_listener(tracking_area_manager);
         input_devices_listener(tracking_area_manager);
-        xcode_listener(tracking_area_manager);
     }
 }
 
