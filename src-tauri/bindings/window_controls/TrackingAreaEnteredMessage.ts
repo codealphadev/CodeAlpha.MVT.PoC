@@ -3,6 +3,6 @@ import type { AppWindow } from "../AppWindow";
 
 export interface TrackingAreaEnteredMessage {
   id: string;
-  window_uid: number;
+  editor_window_uid: number;
   app_window: AppWindow;
 }

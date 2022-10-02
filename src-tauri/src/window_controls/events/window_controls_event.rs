@@ -8,7 +8,7 @@ use super::models::{
     app_window::{HideAppWindowMessage, ShowAppWindowMessage, UpdateAppWindowMessage},
     dark_mode::DarkModeUpdateMessage,
     TrackingAreaClickedMessage, TrackingAreaClickedOutsideMessage, TrackingAreaEnteredMessage,
-    TrackingAreaExitedMessage,
+    TrackingAreaExitedMessage, TrackingAreaMouseOverMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
@@ -19,6 +19,7 @@ pub enum EventWindowControls {
     TrackingAreaClickedOutside(TrackingAreaClickedOutsideMessage),
     TrackingAreaEntered(TrackingAreaEnteredMessage),
     TrackingAreaExited(TrackingAreaExitedMessage),
+    TrackingAreaMouseOver(TrackingAreaMouseOverMessage),
     AppWindowHide(HideAppWindowMessage),
     AppWindowShow(ShowAppWindowMessage),
     AppWindowUpdate(UpdateAppWindowMessage),
@@ -39,6 +40,7 @@ impl EventWindowControls {
             EventWindowControls::TrackingAreaClicked(_) => true,
             EventWindowControls::TrackingAreaEntered(_) => true,
             EventWindowControls::TrackingAreaExited(_) => true,
+            EventWindowControls::TrackingAreaMouseOver(_) => true,
             EventWindowControls::AppWindowHide(_) => false,
             EventWindowControls::AppWindowShow(_) => false,
             EventWindowControls::AppWindowUpdate(_) => false,

@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use crate::{
     app_handle,
     core_engine::EditorWindowUid,
-    utils::geometry::LogicalSize,
+    utils::geometry::{LogicalPosition, LogicalSize},
     window_controls::{
         config::AppWindow,
         events::{
@@ -14,7 +14,7 @@ use crate::{
             },
             EventWindowControls,
         },
-        models::TrackingAreaClickedOutsideMessage,
+        models::{TrackingAreaClickedOutsideMessage, TrackingAreaMouseOverMessage},
         utils::{get_position, get_size, get_window_level, is_visible},
     },
 };
@@ -34,6 +34,7 @@ pub struct TrackingAreasManager {
 struct TrackingEvent {
     area: TrackingArea,
     event_type: TrackingEventType,
+    mouse_position_local: LogicalPosition,
     duration_in_area_ms: Option<u64>,
 }
 
@@ -80,10 +81,8 @@ impl TrackingAreasManager {
     ) {
         for tracking_area in self.tracking_areas.iter_mut() {
             if tracking_area.0.window_uid == window_uid {
-                tracking_area.0.rectangles.iter_mut().for_each(|rectangle| {
-                    rectangle.origin.x += move_distance.width;
-                    rectangle.origin.y += move_distance.height;
-                });
+                tracking_area.0.rectangle.origin.x += move_distance.width;
+                tracking_area.0.rectangle.origin.y += move_distance.height;
             }
         }
     }
@@ -104,12 +103,7 @@ impl TrackingAreasManager {
         let mut tracking_events: Vec<TrackingEvent> = Vec::new();
 
         for tracking_area in self.tracking_areas.iter_mut() {
-            if tracking_area
-                .0
-                .rectangles
-                .iter()
-                .any(|rectangle| rectangle.contains_point(mouse_x, mouse_y))
-            {
+            if tracking_area.0.rectangle.contains_point(mouse_x, mouse_y) {
                 if let Some(tracking_start) = tracking_area.1 {
                     // Case: TrackingArea was already entered before.
                     if check_overlap_with_other_app_windows(mouse_x, mouse_y)? {
@@ -119,14 +113,24 @@ impl TrackingAreasManager {
                             area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseExited,
                             duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
+                            mouse_position_local: LogicalPosition {
+                                x: mouse_x,
+                                y: mouse_y,
+                            }
+                            .to_local(&tracking_area.0.rectangle.origin),
                         });
                         tracking_area.1 = None;
                         continue;
                     } else {
                         tracking_events.push(TrackingEvent {
                             area: tracking_area.0.clone(),
-                            event_type: TrackingEventType::MouseMoved,
+                            event_type: TrackingEventType::MouseOver,
                             duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
+                            mouse_position_local: LogicalPosition {
+                                x: mouse_x,
+                                y: mouse_y,
+                            }
+                            .to_local(&tracking_area.0.rectangle.origin),
                         });
                     }
                 } else {
@@ -139,6 +143,11 @@ impl TrackingAreasManager {
                             area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseEntered,
                             duration_in_area_ms: None,
+                            mouse_position_local: LogicalPosition {
+                                x: mouse_x,
+                                y: mouse_y,
+                            }
+                            .to_local(&tracking_area.0.rectangle.origin),
                         });
                     }
                 }
@@ -152,6 +161,11 @@ impl TrackingAreasManager {
                         area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseExited,
                         duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
+                        mouse_position_local: LogicalPosition {
+                            x: mouse_x,
+                            y: mouse_y,
+                        }
+                        .to_local(&tracking_area.0.rectangle.origin),
                     });
                 }
             }
@@ -173,23 +187,28 @@ impl TrackingAreasManager {
         let mut tracking_results: Vec<TrackingEvent> = Vec::new();
 
         for tracking_area in self.tracking_areas.iter() {
-            if tracking_area
-                .0
-                .rectangles
-                .iter()
-                .any(|rectangle| rectangle.contains_point(mouse_x, mouse_y))
-            {
+            if tracking_area.0.rectangle.contains_point(mouse_x, mouse_y) {
                 if let Some(tracking_start) = tracking_area.1 {
                     tracking_results.push(TrackingEvent {
                         area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
+                        mouse_position_local: LogicalPosition {
+                            x: mouse_x,
+                            y: mouse_y,
+                        }
+                        .to_local(&tracking_area.0.rectangle.origin),
                     });
                 } else {
                     tracking_results.push(TrackingEvent {
                         area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: None,
+                        mouse_position_local: LogicalPosition {
+                            x: mouse_x,
+                            y: mouse_y,
+                        }
+                        .to_local(&tracking_area.0.rectangle.origin),
                     });
                 }
             } else {
@@ -202,6 +221,11 @@ impl TrackingAreasManager {
                         area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClickedOutside,
                         duration_in_area_ms: None,
+                        mouse_position_local: LogicalPosition {
+                            x: mouse_x,
+                            y: mouse_y,
+                        }
+                        .to_local(&tracking_area.0.rectangle.origin),
                     });
                 }
             }
@@ -217,6 +241,7 @@ impl TrackingAreasManager {
             area,
             duration_in_area_ms,
             event_type,
+            mouse_position_local: mouse_position,
         } in tracking_results.iter()
         {
             if Self::evaluate_event_subscriptions(event_type, &area.event_subscriptions) {
@@ -230,34 +255,29 @@ impl TrackingAreasManager {
                         .publish_to_tauri(&self.app_handle);
                     }
                     TrackingEventType::MouseExited => {
-                        let duration_ms = if let Some(duration_ms) = *duration_in_area_ms {
-                            duration_ms
-                        } else {
-                            0
-                        };
-
                         EventWindowControls::TrackingAreaExited(TrackingAreaExitedMessage {
                             id: area.id,
                             editor_window_uid: area.window_uid,
-                            duration_ms,
+                            duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: area.app_window,
                         })
                         .publish_to_tauri(&self.app_handle);
                     }
-                    TrackingEventType::MouseMoved => {
-                        // We don't see a use case for this at the moment. Hovering is detecting by the entering message.
+                    TrackingEventType::MouseOver => {
+                        EventWindowControls::TrackingAreaMouseOver(TrackingAreaMouseOverMessage {
+                            id: area.id,
+                            editor_window_uid: area.window_uid,
+                            duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
+                            app_window: area.app_window,
+                            mouse_position: *mouse_position,
+                        })
+                        .publish_to_tauri(&self.app_handle);
                     }
                     TrackingEventType::MouseClicked => {
-                        let duration_ms = if let Some(duration_ms) = *duration_in_area_ms {
-                            duration_ms
-                        } else {
-                            0
-                        };
-
                         EventWindowControls::TrackingAreaClicked(TrackingAreaClickedMessage {
                             id: area.id,
                             editor_window_uid: area.window_uid,
-                            duration_ms,
+                            duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: area.app_window,
                         })
                         .publish_to_tauri(&self.app_handle);
