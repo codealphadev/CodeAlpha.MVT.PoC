@@ -258,7 +258,7 @@ fn walk_node<'a>(
 
         if node_children_are_candidates_for_extraction(&child) {
             possible_extractions.push(NodeSlice {
-                nodes: child.named_children(&mut child.walk()).collect(),
+                nodes: child.children(&mut child.walk()).collect(),
                 parent_address: node_address.clone(),
             });
         }

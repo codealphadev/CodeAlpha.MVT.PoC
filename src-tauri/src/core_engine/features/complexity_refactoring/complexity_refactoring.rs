@@ -20,6 +20,7 @@ use crate::{
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
+use cached::proc_macro::cached;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -113,6 +114,8 @@ impl FeatureBase for ComplexityRefactoring {
 }
 
 impl ComplexityRefactoring {
+    fn get_suggestions_for_function() {}
+
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         self.reset_suggestions();
 
