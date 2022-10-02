@@ -19,7 +19,8 @@ use crate::{
             utils::{register_tracking_area, update_tracking_area},
             EditorWindow,
         },
-        EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
+        EventTrackingArea, TrackingArea, TrackingEventSubscriber, TrackingEventType,
+        TrackingEvents,
     },
 };
 
@@ -59,12 +60,16 @@ impl ExplainWindow {
 
         let mut tracking_area = Self::register_tracking_area();
         // Update the tracking area with specific event subscriptions.
-        tracking_area.event_subscriptions = TrackingEventSubscription::TrackingEventTypes(vec![
+        tracking_area.events = TrackingEvents::TrackingEventTypes(vec![
             TrackingEventType::MouseOver,
             TrackingEventType::MouseEntered,
             TrackingEventType::MouseExited,
             TrackingEventType::MouseClickedOutside,
         ]);
+        tracking_area.subscriber = vec![
+            TrackingEventSubscriber::AppWindow(AppWindow::Explain),
+            TrackingEventSubscriber::Backend,
+        ];
         EventTrackingArea::Update(vec![tracking_area.clone()]).publish_to_tauri(&app_handle);
 
         Ok(Self {

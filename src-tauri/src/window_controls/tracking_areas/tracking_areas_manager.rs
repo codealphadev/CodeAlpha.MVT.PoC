@@ -20,7 +20,7 @@ use crate::{
 
 use super::{
     listeners::{input_devices_listener, tracking_area_listener},
-    TrackingArea, TrackingEventSubscription, TrackingEventType,
+    TrackingArea, TrackingEventType, TrackingEvents,
 };
 
 #[derive(Clone, Debug)]
@@ -31,7 +31,7 @@ pub struct TrackingAreasManager {
 }
 
 struct TrackingEvent {
-    area: TrackingArea,
+    tracking_area: TrackingArea,
     event_type: TrackingEventType,
     mouse_position_local: LogicalPosition,
     duration_in_area_ms: Option<u64>,
@@ -89,6 +89,10 @@ impl TrackingAreasManager {
         let mut tracking_events: Vec<TrackingEvent> = Vec::new();
 
         for tracking_area in self.tracking_areas.iter_mut() {
+            if !(is_visible(tracking_area.0.app_window).ok() == Some(true)) {
+                continue;
+            }
+
             if tracking_area
                 .0
                 .rect_as_global()
@@ -101,7 +105,7 @@ impl TrackingAreasManager {
                         // Case: Mouse is still inside the tracking area, but an app window opens above it.
                         // We publish a MouseExited event to the tracking area.
                         tracking_events.push(TrackingEvent {
-                            area: tracking_area.0.clone(),
+                            tracking_area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseExited,
                             duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
                             mouse_position_local: LogicalPosition {
@@ -114,7 +118,7 @@ impl TrackingAreasManager {
                         continue;
                     } else {
                         tracking_events.push(TrackingEvent {
-                            area: tracking_area.0.clone(),
+                            tracking_area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseOver,
                             duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
                             mouse_position_local: LogicalPosition {
@@ -132,7 +136,7 @@ impl TrackingAreasManager {
                     } else {
                         tracking_area.1 = Some(std::time::Instant::now());
                         tracking_events.push(TrackingEvent {
-                            area: tracking_area.0.clone(),
+                            tracking_area: tracking_area.0.clone(),
                             event_type: TrackingEventType::MouseEntered,
                             duration_in_area_ms: None,
                             mouse_position_local: LogicalPosition {
@@ -150,7 +154,7 @@ impl TrackingAreasManager {
                     // publish a MouseExited event to the tracking area.
                     tracking_area.1 = None;
                     tracking_events.push(TrackingEvent {
-                        area: tracking_area.0.clone(),
+                        tracking_area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseExited,
                         duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
                         mouse_position_local: LogicalPosition {
@@ -175,6 +179,10 @@ impl TrackingAreasManager {
         let mut tracking_results: Vec<TrackingEvent> = Vec::new();
 
         for tracking_area in self.tracking_areas.iter() {
+            if !(is_visible(tracking_area.0.app_window).ok() == Some(true)) {
+                continue;
+            }
+
             if is_blocked_by_other_app_window(tracking_area.0.app_window, mouse_x, mouse_y) {
                 continue;
             }
@@ -186,7 +194,7 @@ impl TrackingAreasManager {
             {
                 if let Some(tracking_start) = tracking_area.1 {
                     tracking_results.push(TrackingEvent {
-                        area: tracking_area.0.clone(),
+                        tracking_area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
                         mouse_position_local: LogicalPosition {
@@ -197,7 +205,7 @@ impl TrackingAreasManager {
                     });
                 } else {
                     tracking_results.push(TrackingEvent {
-                        area: tracking_area.0.clone(),
+                        tracking_area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: None,
                         mouse_position_local: LogicalPosition {
@@ -211,10 +219,10 @@ impl TrackingAreasManager {
                 // Check if tracking area subscribed to MouseClickedOutside event.
                 if Self::evaluate_event_subscriptions(
                     &TrackingEventType::MouseClickedOutside,
-                    &tracking_area.0.event_subscriptions,
+                    &tracking_area.0.events,
                 ) {
                     tracking_results.push(TrackingEvent {
-                        area: tracking_area.0.clone(),
+                        tracking_area: tracking_area.0.clone(),
                         event_type: TrackingEventType::MouseClickedOutside,
                         duration_in_area_ms: None,
                         mouse_position_local: LogicalPosition {
@@ -234,59 +242,59 @@ impl TrackingAreasManager {
 
     fn publish_tracking_state(&self, tracking_results: &Vec<TrackingEvent>) {
         for TrackingEvent {
-            area,
+            tracking_area,
             duration_in_area_ms,
             event_type,
             mouse_position_local: mouse_position,
         } in tracking_results.iter()
         {
-            if Self::evaluate_event_subscriptions(event_type, &area.event_subscriptions) {
+            if Self::evaluate_event_subscriptions(event_type, &tracking_area.events) {
                 match event_type {
                     TrackingEventType::MouseEntered => {
                         EventWindowControls::TrackingAreaEntered(TrackingAreaEnteredMessage {
-                            id: area.id,
-                            editor_window_uid: area.editor_window_uid,
-                            app_window: area.app_window,
+                            id: tracking_area.id,
+                            editor_window_uid: tracking_area.editor_window_uid,
+                            app_window: tracking_area.app_window,
                         })
-                        .publish_to_tauri(&self.app_handle);
+                        .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseExited => {
                         EventWindowControls::TrackingAreaExited(TrackingAreaExitedMessage {
-                            id: area.id,
-                            editor_window_uid: area.editor_window_uid,
+                            id: tracking_area.id,
+                            editor_window_uid: tracking_area.editor_window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
-                            app_window: area.app_window,
+                            app_window: tracking_area.app_window,
                         })
-                        .publish_to_tauri(&self.app_handle);
+                        .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseOver => {
                         EventWindowControls::TrackingAreaMouseOver(TrackingAreaMouseOverMessage {
-                            id: area.id,
-                            editor_window_uid: area.editor_window_uid,
+                            id: tracking_area.id,
+                            editor_window_uid: tracking_area.editor_window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
-                            app_window: area.app_window,
+                            app_window: tracking_area.app_window,
                             mouse_position: *mouse_position,
                         })
-                        .publish_to_tauri(&self.app_handle);
+                        .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseClicked => {
                         EventWindowControls::TrackingAreaClicked(TrackingAreaClickedMessage {
-                            id: area.id,
-                            editor_window_uid: area.editor_window_uid,
+                            id: tracking_area.id,
+                            editor_window_uid: tracking_area.editor_window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
-                            app_window: area.app_window,
+                            app_window: tracking_area.app_window,
                         })
-                        .publish_to_tauri(&self.app_handle);
+                        .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseClickedOutside => {
                         EventWindowControls::TrackingAreaClickedOutside(
                             TrackingAreaClickedOutsideMessage {
-                                id: area.id,
-                                editor_window_uid: area.editor_window_uid,
-                                app_window: area.app_window,
+                                id: tracking_area.id,
+                                editor_window_uid: tracking_area.editor_window_uid,
+                                app_window: tracking_area.app_window,
                             },
                         )
-                        .publish_to_tauri(&self.app_handle);
+                        .publish_tracking_area(&tracking_area.subscriber);
                     }
                 }
             }
@@ -295,14 +303,14 @@ impl TrackingAreasManager {
 
     fn evaluate_event_subscriptions(
         tracking_event_type: &TrackingEventType,
-        subscriptions: &TrackingEventSubscription,
+        subscriptions: &TrackingEvents,
     ) -> bool {
         match subscriptions {
-            TrackingEventSubscription::TrackingEventTypes(subscriptions) => subscriptions
+            TrackingEvents::TrackingEventTypes(subscriptions) => subscriptions
                 .iter()
                 .any(|subscription| subscription == tracking_event_type),
-            TrackingEventSubscription::All => true,
-            TrackingEventSubscription::None => false,
+            TrackingEvents::All => true,
+            TrackingEvents::None => false,
         }
     }
 

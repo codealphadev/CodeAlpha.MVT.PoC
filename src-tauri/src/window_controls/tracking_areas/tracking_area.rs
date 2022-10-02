@@ -8,7 +8,7 @@ use crate::{
 
 /// A TrackingArea can subscribe to any number of TrackingEventTypes.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum TrackingEventSubscription {
+pub enum TrackingEvents {
     TrackingEventTypes(Vec<TrackingEventType>),
     All,
     None,
@@ -24,12 +24,19 @@ pub enum TrackingEventType {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum TrackingEventSubscriber {
+    AppWindow(AppWindow),
+    Backend,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TrackingArea {
     pub id: uuid::Uuid,
     pub editor_window_uid: EditorWindowUid, // Set to '0' if not associated with an editor window.
     pub app_window: AppWindow,
     pub rectangle: LogicalFrame, // In coordinates relative to the containing app window.
-    pub event_subscriptions: TrackingEventSubscription,
+    pub events: TrackingEvents,
+    pub subscriber: Vec<TrackingEventSubscriber>,
 }
 
 impl TrackingArea {
@@ -38,13 +45,14 @@ impl TrackingArea {
             return;
         }
         self.rectangle = updated_tracking_area.rectangle.clone();
-        self.event_subscriptions = updated_tracking_area.event_subscriptions.clone();
+        self.events = updated_tracking_area.events.clone();
+        self.subscriber = updated_tracking_area.subscriber.clone();
     }
 
     pub fn eq_props(&self, other: &Self) -> bool {
         self.editor_window_uid == other.editor_window_uid
             && self.rectangle == other.rectangle
-            && self.event_subscriptions == other.event_subscriptions
+            && self.events == other.events
     }
 
     pub fn rect_as_global(&self) -> LogicalFrame {

@@ -5,7 +5,8 @@ use crate::{
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
         config::{default_properties, AppWindow},
-        EventTrackingArea, TrackingArea, TrackingEventSubscription, TrackingEventType,
+        EventTrackingArea, TrackingArea, TrackingEventSubscriber, TrackingEventType,
+        TrackingEvents,
     },
 };
 
@@ -80,12 +81,13 @@ pub fn register_tracking_area(app_window: AppWindow) -> TrackingArea {
             origin: LogicalPosition::default(),
             size: app_window_frame.size,
         },
-        event_subscriptions: TrackingEventSubscription::TrackingEventTypes(vec![
+        events: TrackingEvents::TrackingEventTypes(vec![
             TrackingEventType::MouseOver,
             TrackingEventType::MouseEntered,
             TrackingEventType::MouseExited,
         ]),
         app_window,
+        subscriber: vec![TrackingEventSubscriber::AppWindow(app_window)],
     };
 
     // 3. Publish to the tracking area manager with its original GLOBAL coordinates
