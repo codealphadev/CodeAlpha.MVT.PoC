@@ -58,6 +58,45 @@ impl SwiftFunction<'_> {
             .ok()
             .map(|text| String::from_utf16_lossy(&text))
     }
+
+    // TODO: Test
+    pub fn get_top_level_functions<'a>(
+        syntax_tree: &'a SwiftSyntaxTree,
+        text_content: &'a XcodeText,
+    ) -> Result<Vec<SwiftFunction<'a>>, SwiftCodeBlockError> {
+        let node = syntax_tree
+            .tree()
+            .ok_or(SwiftCodeBlockError::GenericError(anyhow!("No tree found")))?
+            .root_node();
+        Self::get_top_level_functions_intl(node, syntax_tree, text_content)
+    }
+
+    fn get_top_level_functions_intl<'a>(
+        node: Node<'a>,
+        syntax_tree: &'a SwiftSyntaxTree,
+        text_content: &'a XcodeText,
+    ) -> Result<Vec<SwiftFunction<'a>>, SwiftCodeBlockError> {
+        let mut results: Vec<SwiftFunction<'a>> = vec![];
+        if node.kind() == "function_declaration" {
+            let node_metadata = syntax_tree
+                .get_node_metadata(&node)
+                .map_err(|err| SwiftCodeBlockError::GenericError(err.into()))?;
+            let new_func = SwiftFunction::new(syntax_tree, node, node_metadata, &text_content)
+                .map(|f| match f {
+                    SwiftCodeBlock::Function(f) => f,
+                    _ => panic!("Wrong codeblock type"),
+                })?;
+            results.push(new_func);
+        }
+        for child in node.named_children(&mut node.walk()) {
+            results.append(&mut Self::get_top_level_functions_intl(
+                child,
+                syntax_tree,
+                text_content,
+            )?);
+        }
+        Ok(results)
+    }
 }
 
 fn get_internal_name_for_parameter(

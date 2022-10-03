@@ -1,7 +1,7 @@
 pub use bracket_highlight::BracketHighlight;
 pub use bracket_highlight::BracketHighlightError;
 pub use complexity_refactoring::ComplexityRefactoring;
-pub use complexity_refactoring::RefactoringOperation;
+pub use complexity_refactoring::FERefactoringSuggestion;
 pub use docs_generation::DocsGenerator;
 pub use docs_generation::NodeExplanation;
 pub use feature_base::*;

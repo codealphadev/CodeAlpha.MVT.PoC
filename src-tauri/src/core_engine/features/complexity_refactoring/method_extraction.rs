@@ -8,7 +8,10 @@ use super::{
 };
 use crate::core_engine::{
     features::complexity_refactoring::{refactor_function, NodeAddress, NodeSlice},
-    syntax_tree::{calculate_cognitive_complexities, get_node_text, Complexities, SwiftSyntaxTree},
+    syntax_tree::{
+        calculate_cognitive_complexities, get_node_text, Complexities, SwiftFunction,
+        SwiftSyntaxTree,
+    },
     TextPosition, XcodeText,
 };
 use tracing::debug;
@@ -19,19 +22,12 @@ struct Scope {
     declarations: HashMap<XcodeText, Declaration>,
 }
 
-pub struct MethodExtractionOperation {
-    pub edits: Vec<Edit>,
-    pub prev_complexity: isize,
-    pub new_complexity: isize,
-}
-
 pub fn check_for_method_extraction<'a>(
-    node: Node<'a>,
+    function: &SwiftFunction<'a>,
     text_content: &'a XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
-    file_path: &String, // TODO: Code document?
-    set_result_callback: impl Fn(MethodExtractionOperation) -> () + Send + 'static,
-) -> Result<(), ComplexityRefactoringError> {
+) -> Result<Option<(NodeSlice<'a>, isize)>, ComplexityRefactoringError> {
+    let node = function.props.node;
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
     let node_address = vec![node.id()];
@@ -54,41 +50,27 @@ pub fn check_for_method_extraction<'a>(
 
     const SCORE_THRESHOLD: f64 = 1.5;
 
-    let (best_extraction, remaining_complexity) = match get_best_extraction(
+    get_best_extraction(
         possible_extractions,
         syntax_tree,
         text_content,
         function_complexity.clone(),
         &scopes,
         SCORE_THRESHOLD,
-    )? {
-        Some(r) => r,
-        None => return Ok(()),
-    };
+    )
+}
 
-    //let SliceInputsAndOutputs { inputs, outputs } = best_extraction.get_inputs_and_outputs(&scopes); // TODO: Deduplicate
-
-    //let operation_builder = build_refactoring_operation(best_extraction, &scopes, &text_content)?;
-    /*
-    let input_types: Vec<DeclarationType> = inputs.into_iter().map(|input| input.1).collect();
-
-    let resolved_return_type = match outputs.len() {
-        0 => None,
-        1 => Some(outputs[0].1.clone()), // TODO
-        _ => {
-            return Err(ComplexityRefactoringError::GenericError(anyhow!(
-                "More than one output variable"
-            )))
-        }
-    };
-    */
-
-    let slice = best_extraction;
+pub fn do_method_extraction(
+    slice: NodeSlice,
+    set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
+    text_content: &XcodeText,
+    file_path: &String, // TODO: Code document? // TODO: Create temporary file
+) -> Result<(), ComplexityRefactoringError> {
     let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
     let range_length =
         (slice.nodes.last().unwrap().end_byte() - slice.nodes.first().unwrap().start_byte()) / 2; // UTF-16;
 
-    let prev_complexity = function_complexity.get_total_complexity();
+    // TODO: Create temporary file
     tauri::async_runtime::spawn({
         let file_path = file_path.clone();
         let text_content = text_content.clone();
@@ -107,79 +89,12 @@ pub fn check_for_method_extraction<'a>(
                         return ();
                     }
                 };
-            set_result_callback(MethodExtractionOperation {
-                edits: suggestion,
-                prev_complexity: prev_complexity,
-                new_complexity: remaining_complexity,
-            });
+            set_result_callback(suggestion);
         }
     });
 
     Ok(())
 }
-/*
-fn build_refactoring_operation(
-    slice: NodeSlice,
-    scopes: &HashMap<NodeAddress, Scope>,
-    text_content: &XcodeText,
-) -> Result<
-    impl FnOnce(Vec<XcodeText>, Option<XcodeText>) -> RefactoringOperation,
-    ComplexityRefactoringError,
-> {
-    let SliceInputsAndOutputs { inputs, outputs } = slice.get_inputs_and_outputs(scopes);
-
-    let mut body = XcodeText::from_str("return "); // TODO: Only works for SingleExpression
-    for node in &slice.nodes {
-        body += get_node_text(&node, &text_content)
-            .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?
-            + "\n";
-    }
-
-    Ok(
-        move |input_types: Vec<XcodeText>, return_type: Option<XcodeText>| {
-            let new_function_text = reconstruct_function(SwiftFunctionComponents {
-                body,
-                parameters: inputs
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, input)| SwiftFunctionParameter {
-                        external_name: input.0,
-                        var_type: input_types[i].clone(),
-                    })
-                    .collect(),
-                name: XcodeText::from_str("TODO"),
-                return_type,
-                context: SwiftFunctionContext::FilePrivate,
-            });
-            dbg!(new_function_text.clone());
-
-            RefactoringOperation { edits: vec![] }
-        },
-    )
-}*/
-/*
-#[derive(Debug, Clone)]
-struct SliceInputsAndOutputs {
-    inputs: Vec<(XcodeText, DeclarationType)>,
-    outputs: Vec<(XcodeText, DeclarationType)>, // TODO: Make a better type
-}*/
-/*
-// TODO: Refactor, no side effects
-async fn resolve_reference_type(
-    declaration_type: DeclarationType,
-    file_path: &String,
-) -> Result<XcodeText, ComplexityRefactoringError> {
-    Ok(match declaration_type {
-        DeclarationType::Unresolved(index) => {
-            let resolved_type = get_type_for_index(file_path, index)
-                .await
-                .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
-
-            XcodeText::from_str(&resolved_type)
-        }
-        DeclarationType::Resolved(res) => res,
-    })
-}*/
 
 fn get_best_extraction<'a>(
     candidates: Vec<NodeSlice<'a>>,

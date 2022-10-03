@@ -16,15 +16,15 @@ pub struct NodeSlice<'a> {
 // A serialized identifier for a NodeSlice relative to a function's s-exp which does not rely on lifetimes/IDs
 #[derive(Hash, Debug, Clone, PartialEq)]
 pub struct SerializedNodeSlice {
-    path_from_function_root: Vec<usize>, // [a, b, c]: each element is the index of the descendant relative to its parent
-    count: usize,                        // Number of nodes in the slice
-    function_sexp: String,
+    pub path_from_function_root: Vec<usize>, // [a, b, c]: each element is the index of the descendant relative to its parent
+    pub count: usize,                        // Number of nodes in the slice
+    pub function_sexp: String,
 }
 
 impl<'a> NodeSlice<'a> {
     // TODO: Return error instead of panicking. But lifetime issue?
     pub fn deserialize(
-        serialized_node_slice: SerializedNodeSlice,
+        serialized_node_slice: &SerializedNodeSlice,
         function_node: Node<'a>,
     ) -> NodeSlice<'a> {
         let mut curr_node: Node<'a> = function_node;
@@ -347,7 +347,7 @@ mod tests {
             let function_declaration = root_node.child(0).unwrap();
 
             let recovered_slice =
-                NodeSlice::deserialize(serialized_node_slice.clone(), function_declaration);
+                NodeSlice::deserialize(&serialized_node_slice, function_declaration);
 
             let reserialized_slice = recovered_slice.serialize(function_declaration);
             assert_eq!(reserialized_slice, serialized_node_slice);

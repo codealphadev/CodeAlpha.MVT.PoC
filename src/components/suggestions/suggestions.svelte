@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
-	import type { RefactoringOperation } from '../../../src-tauri/bindings/features/refactoring/RefactoringOperation';
+	import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
 	import type { SuggestionEvent } from '../../../src-tauri/bindings/features/refactoring/SuggestionEvent';
 	import Suggestion from './suggestion.svelte';
-	
+	import omit from 'lodash/omit';
 
-    let suggestions: RefactoringOperation[] | null = null;
+    let suggestions: {[id: string]: FERefactoringSuggestion}  = {};
 
 	const listenToSuggestionEvents = async () => {
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
@@ -17,8 +17,13 @@
 			) as SuggestionEvent;
 
 			switch (event_type) {
-				case 'UpdateSuggestions':
-                    suggestions = payload.suggestions;
+				case 'UpdateSuggestion':
+					suggestions[payload.suggestion.id] = payload.suggestion;
+					suggestions = suggestions;
+					break;
+
+				case 'RemoveSuggestion':
+					suggestions = omit(suggestions, payload.id);
 					break;
 				default:
 					break;
@@ -30,11 +35,9 @@
 </script>
 
 <div class="flex flex-col gap-5">
-	{#if suggestions}
-		{#each suggestions as suggestion}
-			{#key suggestion.id}
-				<Suggestion suggestion={suggestion}/>
-			{/key}
-		{/each}
-	{/if}
+	{#each Object.values(suggestions) as suggestion}
+		{#key suggestion.id}
+			<Suggestion suggestion={suggestion}/>
+		{/key}
+	{/each}
 </div>

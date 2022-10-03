@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { RefactoringOperation } from "../../../src-tauri/bindings/features/refactoring/RefactoringOperation";
 	//import Diff from "../common/diff.svelte";
     import H3 from '../common/typography/h3.svelte';
 	import { emit } from "@tauri-apps/api/event";
@@ -10,8 +9,9 @@
 	import P from "../common/typography/p.svelte";
 	import H4 from "../common/typography/h4.svelte";
 	import Arrow from "./icons/arrow.svelte";
+	import type { FERefactoringSuggestion } from "../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion";
 
-    export let suggestion: RefactoringOperation;    
+    export let suggestion: FERefactoringSuggestion;    
 
     const apply_suggestion = async () => {
         const event: EventUserInteraction = {event: 'PerformRefactoringOperation', payload: {id: suggestion.id}};
@@ -32,7 +32,7 @@
             return {text: `very high (${complexity})`, class: 'text-signalbad'}
         }
     }
-    $: old_complexity = map_complexity_to_text(suggestion.old_complexity);
+    $: prev_complexity = map_complexity_to_text(suggestion.prev_complexity);
     $: new_complexity = map_complexity_to_text(suggestion.new_complexity);
 
     function title_case(str: string){
@@ -47,15 +47,14 @@
     <header>
         <H3>Reduce complexity</H3>
         <P>
-            Your function <code>{suggestion.function_name}</code> may be hard to understand due to nested statements. 
+            Your function <code>{suggestion.main_function_name}</code> may be hard to understand due to nested statements. 
             Consider extracting this code block into a separate function.
         </P>
     </header>
     <H4>Impact on complexity</H4>
     <div class="flex items-center gap-1">
-        
-        <div class="text-sm font-bold {old_complexity.class}">
-            {title_case(old_complexity.text)}
+        <div class="text-sm font-bold {prev_complexity.class}">
+            {title_case(prev_complexity.text)}
         </div>
         <Arrow/>
         <div class="text-sm font-bold {new_complexity.class}">

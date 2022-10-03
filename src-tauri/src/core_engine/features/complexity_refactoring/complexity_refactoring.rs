@@ -1,12 +1,15 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     app_handle,
     core_engine::{
-        events::{models::UpdateSuggestionsMessage, SuggestionEvent},
+        events::{
+            models::{RemoveSuggestionMessage, UpdateSuggestionMessage},
+            SuggestionEvent,
+        },
         features::{
             complexity_refactoring::{
-                check_for_method_extraction, method_extraction::MethodExtractionOperation,
+                check_for_method_extraction, method_extraction::do_method_extraction,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
         },
@@ -20,30 +23,20 @@ use crate::{
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
-use cached::proc_macro::cached;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use tree_sitter;
 use tree_sitter::Node;
 use ts_rs::TS;
+use uuid::Uuid;
+
+use super::{NodeSlice, SerializedNodeSlice};
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub enum RefactoringKind {
     MethodExtraction,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/features/refactoring/")]
-pub struct RefactoringOperation {
-    pub id: uuid::Uuid,
-    pub new_text_content_string: String,
-    pub old_text_content_string: String,
-    pub new_complexity: isize,
-    pub old_complexity: isize,
-    pub kind: RefactoringKind,
-    pub function_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -58,10 +51,49 @@ enum ComplexityRefactoringProcedure {
     PerformOperation(uuid::Uuid),
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/features/refactoring/")]
+pub struct FERefactoringSuggestion {
+    pub id: uuid::Uuid,
+    pub new_text_content_string: String, // TODO: Future?
+    pub old_text_content_string: String, // TODO: Future?
+    pub new_complexity: isize,
+    pub prev_complexity: isize,
+    pub main_function_name: Option<String>, // TODO: Should it be an option?
+}
+
+#[derive(Debug, Clone)]
+pub struct RefactoringSuggestion {
+    pub id: uuid::Uuid,
+    pub new_text_content_string: Option<String>, // TODO: Future? // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
+    pub old_text_content_string: Option<String>, // TODO: Future?
+    pub new_complexity: isize,
+    pub prev_complexity: isize,
+    pub main_function_name: Option<String>,
+    pub serialized_slice: SerializedNodeSlice,
+}
+
+pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
+    suggestion: RefactoringSuggestion,
+) -> Result<FERefactoringSuggestion, ComplexityRefactoringError> {
+    Ok(FERefactoringSuggestion {
+        id: suggestion.id,
+        new_text_content_string: suggestion
+            .new_text_content_string
+            .ok_or(ComplexityRefactoringError::SuggestionIncomplete)?,
+        old_text_content_string: suggestion
+            .old_text_content_string
+            .ok_or(ComplexityRefactoringError::SuggestionIncomplete)?,
+        new_complexity: suggestion.new_complexity,
+        prev_complexity: suggestion.prev_complexity,
+        main_function_name: suggestion.main_function_name,
+    })
+}
 pub struct ComplexityRefactoring {
     is_activated: bool,
-    suggestions: Arc<Mutex<Vec<RefactoringOperation>>>,
+    suggestions: Arc<Mutex<HashMap<String, Vec<RefactoringSuggestion>>>>, // Map function s-exp to suggestions
 }
+
 const MAX_ALLOWED_COMPLEXITY: isize = 2; // TODO: Raise to be more reasonable?
 
 impl FeatureBase for ComplexityRefactoring {
@@ -79,9 +111,9 @@ impl FeatureBase for ComplexityRefactoring {
                 ComplexityRefactoringProcedure::ComputeSuggestions => {
                     self.compute_suggestions(code_document)
                 }
-                ComplexityRefactoringProcedure::PerformOperation(id) => {
-                    self.perform_operation(code_document, id)
-                }
+                ComplexityRefactoringProcedure::PerformOperation(id) => self
+                    .perform_operation(code_document, id)
+                    .map_err(|e| e.into()),
             }
         } else {
             Ok(())
@@ -114,16 +146,7 @@ impl FeatureBase for ComplexityRefactoring {
 }
 
 impl ComplexityRefactoring {
-    fn get_suggestions_for_function() {}
-
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
-        self.reset_suggestions();
-
-        let selected_text_range = match code_document.selected_text_range() {
-            Some(selected_text_range) => selected_text_range,
-            None => return Ok(()),
-        };
-
         let text_content = code_document
             .text_content()
             .as_ref()
@@ -132,85 +155,128 @@ impl ComplexityRefactoring {
             ))?
             .clone();
 
-        let binding = text_content.clone();
-        let selected_function = match get_outermost_selected_function(
-            selected_text_range,
-            code_document.syntax_tree(),
-            &binding,
-        )? {
-            Some(f) => f,
-            None => return Ok(()),
-        };
+        let top_level_functions =
+            SwiftFunction::get_top_level_functions(code_document.syntax_tree(), &text_content)
+                .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
 
-        if selected_function.get_complexity() <= MAX_ALLOWED_COMPLEXITY {
-            println!("This function is fine");
-            return Ok(());
-        }
-
-        println!("Problem with complexity in this function");
-        //check_for_if_combination(&selected_function, text_content);
-        let suggestions_arc = self.suggestions.clone();
         let file_path = code_document.file_path().clone();
-        let function_name = selected_function.get_name();
-        check_for_method_extraction(
-            selected_function.props.node,
-            &text_content.clone(),
-            &code_document.syntax_tree(),
-            &code_document
-                .file_path()
-                .as_ref()
-                .expect("No file path!") // TODO
-                .clone(),
-            move |result: MethodExtractionOperation| {
-                Self::set_results_callback(
-                    result,
-                    text_content.clone(),
-                    suggestions_arc.clone(),
-                    file_path.clone(),
-                    function_name.clone(),
-                )
-            },
-        )?;
+
+        let suggestions_cache_arc = self.suggestions.clone();
+        let mut suggestions_cache = self.suggestions.lock();
+
+        let mut s_exps = vec![];
+        for function in top_level_functions {
+            let function_s_exp = function.props.node.to_sexp();
+            let suggestions_opt = suggestions_cache.get(&function_s_exp);
+            let suggestions = match suggestions_opt {
+                Some(suggestions) => suggestions.clone(),
+                None => {
+                    let prev_complexity = function.get_complexity();
+                    if prev_complexity <= MAX_ALLOWED_COMPLEXITY {
+                        continue;
+                    }
+                    let (slice, new_complexity) = match check_for_method_extraction(
+                        &function,
+                        &text_content,
+                        &code_document.syntax_tree(),
+                    )? {
+                        Some(result) => result,
+                        None => continue,
+                    };
+                    let new_suggestions = vec![RefactoringSuggestion {
+                        id: uuid::Uuid::new_v4(),
+                        serialized_slice: slice.serialize(function.props.node),
+                        main_function_name: function.get_name(),
+                        new_complexity,
+                        prev_complexity,
+                        old_text_content_string: None,
+                        new_text_content_string: None,
+                    }];
+
+                    suggestions_cache.insert(function_s_exp.clone(), new_suggestions.clone());
+                    new_suggestions
+                }
+            };
+            for suggestion in suggestions {
+                let slice =
+                    NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
+                let binded_text_content = text_content.clone();
+                let binded_file_path = file_path.clone();
+                let binded_s_exp = function_s_exp.clone();
+                let binded_suggestions_cache_arc = suggestions_cache_arc.clone();
+                do_method_extraction(
+                    slice,
+                    move |edits: Vec<Edit>| {
+                        Self::update_suggestion_with_text_diff(
+                            edits,
+                            binded_text_content,
+                            binded_suggestions_cache_arc,
+                            binded_file_path, //TODO,
+                            binded_s_exp,
+                            suggestion.id,
+                        )
+                    },
+                    &text_content.clone(),
+                    &file_path.clone().unwrap(), // TODO
+                );
+            }
+            s_exps.push(function_s_exp);
+        }
+        suggestions_cache.retain(|k, _| s_exps.contains(&k));
 
         Ok(())
     }
 
-    fn set_results_callback(
-        result: MethodExtractionOperation,
+    fn update_suggestion_with_text_diff(
+        edits: Vec<Edit>,
         text_content: XcodeText,
-        suggestions_arc: Arc<Mutex<Vec<RefactoringOperation>>>,
+        suggestions_cache: Arc<Mutex<HashMap<String, Vec<RefactoringSuggestion>>>>,
         file_path: Option<String>,
-        function_name: Option<String>,
+        function_s_exp: String,
+        suggestion_id: Uuid,
     ) {
         tauri::async_runtime::spawn(async move {
-            let new_suggestion = Self::convert_result_to_refactoring_operation(
-                result,
-                text_content,
-                RefactoringKind::MethodExtraction,
-                function_name,
-                file_path,
-            )
-            .await;
-            let mut suggestions = suggestions_arc.lock();
+            let (old_content, new_content) =
+                Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
-            (*suggestions) = vec![new_suggestion]; // TODO: Allow for multiple suggestions at once.
-            Self::publish_suggestions(suggestions.clone());
+            let mut suggestions = suggestions_cache.lock();
+
+            if let Some(entry) = suggestions.get_mut(&function_s_exp) {
+                if let Some(suggestion) = entry.iter_mut().find(|s| s.id == suggestion_id) {
+                    suggestion.new_text_content_string = Some(new_content);
+                    suggestion.old_text_content_string = Some(old_content);
+
+                    let fe_suggestion =
+                        match map_refactoring_suggestion_to_fe_refactoring_suggestion(
+                            suggestion.to_owned(),
+                        ) {
+                            Err(e) => {
+                                error!(?e, "Unable to map suggestion to FE suggestion");
+                                return;
+                            }
+                            Ok(res) => res,
+                        };
+
+                    SuggestionEvent::UpdateSuggestion(UpdateSuggestionMessage {
+                        suggestion: fe_suggestion,
+                    })
+                    .publish_to_tauri(&app_handle());
+                }
+            }
         });
     }
 
-    async fn convert_result_to_refactoring_operation(
-        mut result: MethodExtractionOperation,
+    async fn format_and_apply_edits_to_text_content(
+        mut edits: Vec<Edit>,
         text_content: XcodeText,
-        kind: RefactoringKind,
-        function_name: Option<String>,
         file_path: Option<String>,
-    ) -> RefactoringOperation {
+    ) -> (String, String) {
         let mut edited_content = text_content.clone();
 
-        result.edits.sort_by_key(|e| e.start_index);
-        result.edits.reverse();
+        edits.sort_by_key(|e| e.start_index);
+        edits.reverse();
 
-        for edit in result.edits {
+        for edit in edits {
             // TODO: replace_range for String is more efficient. In general, test feature with emojis and UTF16 etc.
             edited_content.replace_range(edit.start_index..edit.end_index, edit.text);
         }
@@ -232,58 +298,39 @@ impl ComplexityRefactoring {
             }
         };
 
-        RefactoringOperation {
-            old_text_content_string: formatted_old_content,
-            new_text_content_string: formatted_new_content,
-            old_complexity: result.prev_complexity,
-            new_complexity: result.new_complexity,
-            function_name,
-            id: uuid::Uuid::new_v4(),
-            kind,
-        }
+        (formatted_old_content, formatted_new_content)
     }
 
     fn perform_operation(
         &mut self,
         code_document: &CodeDocument,
         suggestion_id: uuid::Uuid,
-    ) -> Result<(), FeatureError> {
-        let operations = self.suggestions.lock().clone();
+    ) -> Result<(), ComplexityRefactoringError> {
+        let suggestions_cache = self.suggestions.lock().clone();
 
-        let operation = operations
-            .into_iter()
-            .find(|op| op.id == suggestion_id)
-            .ok_or(ComplexityRefactoringError::NoOperation)?;
+        let suggestion_to_apply = suggestions_cache
+            .values()
+            .flatten()
+            .find(|f| f.id == suggestion_id)
+            .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
+            .clone();
 
-        let text_content =
-            code_document
-                .text_content()
-                .as_ref()
-                .ok_or(FeatureError::GenericError(
-                    ComplexityRefactoringError::InsufficientContext.into(),
-                ))?;
+        let new_content = suggestion_to_apply
+            .new_text_content_string
+            .ok_or(ComplexityRefactoringError::SuggestionIncomplete)?;
+
+        let text_content = code_document
+            .text_content()
+            .as_ref()
+            .ok_or(ComplexityRefactoringError::InsufficientContext)?;
 
         tauri::async_runtime::spawn({
             let selected_text_range = code_document.selected_text_range().clone();
             let text_content = text_content.clone();
-            let operations_arc = self.suggestions.clone();
+            let suggestions_arc = self.suggestions.clone();
 
             async move {
-                // let formatted_content =
-                //     match format_code(&operation.new_text_content_string, &file_path).await {
-                //         Ok(content) => content,
-                //         Err(err) => {
-                //             error!(?err, "Error formatting refactored code");
-                //             operation.new_text_content_string
-                //         }
-                //     };
-
-                match replace_text_content(
-                    &text_content,
-                    &operation.new_text_content_string,
-                    &selected_text_range,
-                )
-                .await
+                match replace_text_content(&text_content, &new_content, &selected_text_range).await
                 {
                     Ok(_) => {}
                     Err(err) => {
@@ -291,17 +338,19 @@ impl ComplexityRefactoring {
                         return;
                     }
                 }
-                let mut operations = operations_arc.lock();
-                (*operations).retain(|s| s.id != suggestion_id);
-                Self::publish_suggestions(operations.clone());
+                let mut suggestions_cache = suggestions_arc.lock();
+                if let Some(suggestions_for_function) =
+                    suggestions_cache.get_mut(&suggestion_to_apply.serialized_slice.function_sexp)
+                {
+                    suggestions_for_function.retain(|s| s.id != suggestion_id);
+                }
+
+                SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id: suggestion_id })
+                    .publish_to_tauri(&app_handle());
             }
         });
 
         Ok(())
-    }
-
-    fn reset_suggestions(&mut self) {
-        (*self.suggestions.lock()) = vec![];
     }
 }
 /*
@@ -341,14 +390,9 @@ fn check_for_if_combination(node: &Node, text_content: &XcodeText) {
 impl ComplexityRefactoring {
     pub fn new() -> Self {
         Self {
-            suggestions: Arc::new(Mutex::new(Vec::new())),
+            suggestions: Arc::new(Mutex::new(HashMap::new())),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
         }
-    }
-    fn publish_suggestions(suggestions: Vec<RefactoringOperation>) {
-        // TODO: Use proper event syntax
-        SuggestionEvent::UpdateSuggestions(UpdateSuggestionsMessage { suggestions })
-            .publish_to_tauri(&app_handle())
     }
 
     fn should_compute(
@@ -357,10 +401,9 @@ impl ComplexityRefactoring {
         trigger: &CoreEngineTrigger,
     ) -> Option<ComplexityRefactoringProcedure> {
         match trigger {
-            CoreEngineTrigger::OnTextSelectionChange => {
+            CoreEngineTrigger::OnTextContentChange => {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
-            } // The TextSelectionChange is already triggered on text content change
-            CoreEngineTrigger::OnTextContentChange => None,
+            }
             CoreEngineTrigger::OnUserCommand(msg) => {
                 Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
             }
@@ -413,8 +456,10 @@ fn get_outermost_selected_function<'a>(
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
-    #[error("No operation found to apply")]
-    NoOperation,
+    #[error("No suggestion found to apply")]
+    SuggestionNotFound,
+    #[error("Suggestion has incomplete state")]
+    SuggestionIncomplete,
     #[error("Something went wrong when executing this ComplexityRefactoring feature.")]
     GenericError(#[source] anyhow::Error),
 }
