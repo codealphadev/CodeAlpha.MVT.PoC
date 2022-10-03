@@ -1,7 +1,5 @@
 use tree_sitter::Node;
 
-use crate::core_engine::XcodeText;
-
 use super::ComplexityRefactoringError;
 
 pub type NodeAddress = Vec<usize>;
@@ -36,7 +34,6 @@ impl<'a> NodeSlice<'a> {
             .expect("path_from_function_root may not be empty");
 
         for index in path_to_parent {
-            dbg!(curr_node.kind(), index);
             curr_node = curr_node
                 .children(&mut curr_node.walk())
                 .nth(index)
@@ -171,28 +168,28 @@ pub fn check_if_declaration_declared_in_slice(
     false
 }
  */
-#[derive(Debug, Clone)]
-pub enum DeclarationType {
-    Resolved(XcodeText),
-    Unresolved(usize), // Index
-}
+// #[derive(Debug, Clone)]
+// pub enum DeclarationType {
+//     Resolved(XcodeText),
+//     Unresolved(usize), // Index
+// }
 
-#[derive(Debug, Clone)]
-pub struct Declaration {
-    pub name: XcodeText,
-    pub var_type: DeclarationType, // Some types cannot be resolved in the first pass, and need to be queried from the LSP
-    pub declared_in_node: NodeAddress,
-    pub referenced_in_nodes: Vec<NodeAddress>,
-}
+// #[derive(Debug, Clone)]
+// pub struct Declaration {
+//     pub name: XcodeText,
+//     pub var_type: DeclarationType, // Some types cannot be resolved in the first pass, and need to be queried from the LSP
+//     pub declared_in_node: NodeAddress,
+//     pub referenced_in_nodes: Vec<NodeAddress>,
+// }
 
-fn is_child_of(parent: &NodeAddress, child: &NodeAddress) -> bool {
-    for (i, el) in parent.iter().enumerate() {
-        if child.get(i) != Some(&el) {
-            return false;
-        }
-    }
-    return true;
-}
+// fn is_child_of(parent: &NodeAddress, child: &NodeAddress) -> bool {
+//     for (i, el) in parent.iter().enumerate() {
+//         if child.get(i) != Some(&el) {
+//             return false;
+//         }
+//     }
+//     return true;
+// }
 
 pub fn get_node_address(parent_address: &NodeAddress, node: &Node) -> NodeAddress {
     let mut result = parent_address.clone();
@@ -361,56 +358,56 @@ mod tests {
             );
         }
     }
-    mod is_child_of {
-        use crate::core_engine::features::complexity_refactoring::utils::is_child_of;
+    // mod is_child_of {
+    //     use crate::core_engine::features::complexity_refactoring::utils::is_child_of;
 
-        #[test]
-        fn equal_case() {
-            let parent = vec![22, 54, 25];
-            let child = vec![22, 54, 25];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
+    //     #[test]
+    //     fn equal_case() {
+    //         let parent = vec![22, 54, 25];
+    //         let child = vec![22, 54, 25];
+    //         assert_eq!(is_child_of(&parent, &child), true);
+    //     }
 
-        #[test]
-        fn unequal_case() {
-            let parent = vec![22, 54, 25];
-            let child = vec![22, 51, 25];
-            assert_eq!(is_child_of(&parent, &child), false);
-        }
+    //     #[test]
+    //     fn unequal_case() {
+    //         let parent = vec![22, 54, 25];
+    //         let child = vec![22, 51, 25];
+    //         assert_eq!(is_child_of(&parent, &child), false);
+    //     }
 
-        #[test]
-        fn contains_case() {
-            let parent = vec![22, 54, 25];
-            let child = vec![22, 54, 25, 39, 12, 63];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
+    //     #[test]
+    //     fn contains_case() {
+    //         let parent = vec![22, 54, 25];
+    //         let child = vec![22, 54, 25, 39, 12, 63];
+    //         assert_eq!(is_child_of(&parent, &child), true);
+    //     }
 
-        #[test]
-        fn reverse_case() {
-            let parent = vec![22, 51, 25, 39, 12, 63];
-            let child = vec![22, 54, 25];
-            assert_eq!(is_child_of(&parent, &child), false);
-        }
+    //     #[test]
+    //     fn reverse_case() {
+    //         let parent = vec![22, 51, 25, 39, 12, 63];
+    //         let child = vec![22, 54, 25];
+    //         assert_eq!(is_child_of(&parent, &child), false);
+    //     }
 
-        #[test]
-        fn empty_parent_case() {
-            let parent = vec![];
-            let child = vec![22, 54, 25];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
+    //     #[test]
+    //     fn empty_parent_case() {
+    //         let parent = vec![];
+    //         let child = vec![22, 54, 25];
+    //         assert_eq!(is_child_of(&parent, &child), true);
+    //     }
 
-        #[test]
-        fn empty_child_case() {
-            let parent = vec![124];
-            let child = vec![];
-            assert_eq!(is_child_of(&parent, &child), false);
-        }
+    //     #[test]
+    //     fn empty_child_case() {
+    //         let parent = vec![124];
+    //         let child = vec![];
+    //         assert_eq!(is_child_of(&parent, &child), false);
+    //     }
 
-        #[test]
-        fn empty_case() {
-            let parent = vec![];
-            let child = vec![];
-            assert_eq!(is_child_of(&parent, &child), true);
-        }
-    }
+    //     #[test]
+    //     fn empty_case() {
+    //         let parent = vec![];
+    //         let child = vec![];
+    //         assert_eq!(is_child_of(&parent, &child), true);
+    //     }
+    // }
 }

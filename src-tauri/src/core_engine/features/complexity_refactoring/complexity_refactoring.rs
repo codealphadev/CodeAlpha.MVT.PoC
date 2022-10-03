@@ -14,11 +14,8 @@ use crate::{
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
         },
         format_code,
-        syntax_tree::{
-            SwiftCodeBlock, SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree,
-            SwiftSyntaxTreeError,
-        },
-        CodeDocument, TextRange, XcodeText,
+        syntax_tree::{SwiftFunction, SwiftSyntaxTree},
+        CodeDocument, XcodeText,
     },
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -26,8 +23,6 @@ use crate::{
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tracing::error;
-use tree_sitter;
-use tree_sitter::Node;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -106,7 +101,7 @@ impl FeatureBase for ComplexityRefactoring {
             return Ok(());
         }
 
-        if let Some(procedure) = self.should_compute(code_document, trigger) {
+        if let Some(procedure) = self.should_compute(trigger) {
             match procedure {
                 ComplexityRefactoringProcedure::ComputeSuggestions => {
                     self.compute_suggestions(code_document)
@@ -122,8 +117,8 @@ impl FeatureBase for ComplexityRefactoring {
 
     fn update_visualization(
         &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
+        _code_document: &CodeDocument,
+        _trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         Ok(())
     }
@@ -161,70 +156,96 @@ impl ComplexityRefactoring {
 
         let file_path = code_document.file_path().clone();
 
-        let suggestions_cache_arc = self.suggestions.clone();
-        let mut suggestions_cache = self.suggestions.lock();
-
         let mut s_exps = vec![];
         for function in top_level_functions {
-            let function_s_exp = function.props.node.to_sexp();
-            let suggestions_opt = suggestions_cache.get(&function_s_exp);
-            let suggestions = match suggestions_opt {
-                Some(suggestions) => suggestions.clone(),
-                None => {
-                    let prev_complexity = function.get_complexity();
-                    if prev_complexity <= MAX_ALLOWED_COMPLEXITY {
-                        continue;
-                    }
-                    let (slice, new_complexity) = match check_for_method_extraction(
-                        &function,
-                        &text_content,
-                        &code_document.syntax_tree(),
-                    )? {
-                        Some(result) => result,
-                        None => continue,
-                    };
-                    let new_suggestions = vec![RefactoringSuggestion {
-                        id: uuid::Uuid::new_v4(),
-                        serialized_slice: slice.serialize(function.props.node),
-                        main_function_name: function.get_name(),
-                        new_complexity,
-                        prev_complexity,
-                        old_text_content_string: None,
-                        new_text_content_string: None,
-                    }];
-
-                    suggestions_cache.insert(function_s_exp.clone(), new_suggestions.clone());
-                    new_suggestions
-                }
-            };
-            for suggestion in suggestions {
-                let slice =
-                    NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
-                let binded_text_content = text_content.clone();
-                let binded_file_path = file_path.clone();
-                let binded_s_exp = function_s_exp.clone();
-                let binded_suggestions_cache_arc = suggestions_cache_arc.clone();
-                do_method_extraction(
-                    slice,
-                    move |edits: Vec<Edit>| {
-                        Self::update_suggestion_with_text_diff(
-                            edits,
-                            binded_text_content,
-                            binded_suggestions_cache_arc,
-                            binded_file_path, //TODO,
-                            binded_s_exp,
-                            suggestion.id,
-                        )
-                    },
-                    &text_content.clone(),
-                    &file_path.clone().unwrap(), // TODO
-                );
-            }
-            s_exps.push(function_s_exp);
+            s_exps.push(function.props.node.to_sexp());
+            Self::get_suggestions_for_function(
+                function,
+                &text_content,
+                &file_path,
+                code_document.syntax_tree(),
+                self.suggestions.clone(),
+            )?;
         }
-        suggestions_cache.retain(|k, _| s_exps.contains(&k));
+        self.suggestions.lock().retain(|k, _| s_exps.contains(&k));
 
         Ok(())
+    }
+
+    fn get_suggestions_for_function(
+        function: SwiftFunction,
+        text_content: &XcodeText,
+        file_path: &Option<String>,
+        syntax_tree: &SwiftSyntaxTree,
+        suggestions_arc: Arc<Mutex<HashMap<String, Vec<RefactoringSuggestion>>>>,
+    ) -> Result<(), ComplexityRefactoringError> {
+        let function_s_exp = function.props.node.to_sexp();
+        let suggestions = {
+            let mut suggestions_guard = suggestions_arc.lock();
+
+            match suggestions_guard.get(&function_s_exp) {
+                Some(suggestions) => suggestions.clone(),
+                None => {
+                    let suggestions = Self::compute_suggestions_for_function(
+                        &function,
+                        &text_content,
+                        &syntax_tree,
+                    )?;
+                    suggestions_guard.insert(function_s_exp.clone(), suggestions.clone());
+                    suggestions
+                }
+            }
+        };
+        for suggestion in suggestions {
+            let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
+            let binded_text_content = text_content.clone();
+            let binded_file_path = file_path.clone();
+            let binded_s_exp = function_s_exp.clone();
+            let binded_suggestions_cache_arc = suggestions_arc.clone();
+            do_method_extraction(
+                slice,
+                move |edits: Vec<Edit>| {
+                    Self::update_suggestion_with_text_diff(
+                        edits,
+                        binded_text_content,
+                        binded_suggestions_cache_arc,
+                        binded_file_path, //TODO,
+                        binded_s_exp,
+                        suggestion.id,
+                    )
+                },
+                &text_content.clone(),
+                &file_path.clone().unwrap(), // TODO
+            )?;
+        }
+        Ok(())
+    }
+
+    fn compute_suggestions_for_function(
+        function: &SwiftFunction,
+        text_content: &XcodeText,
+        syntax_tree: &SwiftSyntaxTree,
+    ) -> Result<Vec<RefactoringSuggestion>, ComplexityRefactoringError> {
+        let prev_complexity = function.get_complexity();
+        if prev_complexity <= MAX_ALLOWED_COMPLEXITY {
+            return Ok(vec![]);
+        }
+        let (slice, new_complexity) =
+            match check_for_method_extraction(&function, &text_content, &syntax_tree)? {
+                Some(result) => result,
+                None => return Ok(vec![]),
+            };
+        let new_suggestions = vec![RefactoringSuggestion {
+            id: uuid::Uuid::new_v4(),
+            serialized_slice: slice.serialize(function.props.node),
+            main_function_name: function.get_name(),
+            new_complexity,
+            prev_complexity,
+            old_text_content_string: None,
+            new_text_content_string: None,
+        }];
+
+        Ok(new_suggestions)
     }
 
     fn update_suggestion_with_text_diff(
@@ -397,11 +418,10 @@ impl ComplexityRefactoring {
 
     fn should_compute(
         &self,
-        code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
     ) -> Option<ComplexityRefactoringProcedure> {
         match trigger {
-            CoreEngineTrigger::OnTextContentChange => {
+            CoreEngineTrigger::OnTextSelectionChange => {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
             }
             CoreEngineTrigger::OnUserCommand(msg) => {
@@ -409,46 +429,6 @@ impl ComplexityRefactoring {
             }
             _ => None,
         }
-    }
-}
-
-fn get_outermost_selected_function<'a>(
-    selected_text_range: &'a TextRange,
-    syntax_tree: &'a SwiftSyntaxTree,
-    text_content: &'a XcodeText,
-) -> Result<Option<SwiftFunction<'a>>, ComplexityRefactoringError> {
-    let mut result_node: Option<Node> = None;
-
-    let mut curr_node = match syntax_tree.get_code_node_by_text_range(&selected_text_range) {
-        Ok(node) => node,
-        Err(SwiftSyntaxTreeError::NoTreesitterNodeFound) => return Ok(None),
-        Err(err) => return Err(ComplexityRefactoringError::GenericError(err.into())),
-    };
-
-    loop {
-        let kind = curr_node.kind();
-        if kind == "function_declaration" || kind == "lambda_literal" {
-            result_node = Some(curr_node.clone());
-        }
-        match curr_node.parent() {
-            Some(node) => curr_node = node,
-            None => break,
-        }
-    }
-
-    if let Some(node) = result_node {
-        let node_metadata = syntax_tree
-            .get_node_metadata(&node)
-            .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
-
-        SwiftFunction::new(syntax_tree, node, node_metadata, &text_content)
-            .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))
-            .map(|f| match f {
-                SwiftCodeBlock::Function(f) => Some(f),
-                _ => panic!("Wrong codeblock type"),
-            })
-    } else {
-        Ok(None)
     }
 }
 
