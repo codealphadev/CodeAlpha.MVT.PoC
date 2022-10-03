@@ -10,22 +10,22 @@
 	let window_height: number | null = null;
 
 	let dom_id = 'main-window-container';
-
+	
 	afterUpdate(() => {
 		updateDimensions();
 
 		if (window_width && window_height) {
 			let appWindow: AppWindow = 'Main';
-
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
 				sizeY: window_height,
+
 				sizeX: window_width
 			});
 		}
 	});
 
-	const updateDimensions = async () => {
+	const updateDimensions =  () => {
 		let element = document.getElementById(dom_id);
 
 		if (element === null) {

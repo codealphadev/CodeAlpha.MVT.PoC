@@ -23,7 +23,7 @@
 
 	// Logic to always resize the content window to the size of the HTML
 	afterUpdate(() => {
-		updateDimensions();
+		 updateDimensions();
 
 		if (window_width && window_height) {
 			let appWindow: AppWindow = 'Explain';
@@ -36,7 +36,7 @@
 		}
 	});
 
-	const updateDimensions = async () => {
+	const updateDimensions = () => {
 		let element = document.getElementById(dom_id);
 
 		if (element === null) {
