@@ -1,13 +1,17 @@
 use std::collections::HashMap;
 
+use cached::proc_macro::cached;
 use tree_sitter::Node;
 
 use super::{complexity_refactoring::Edit, get_node_address, ComplexityRefactoringError};
 use crate::core_engine::{
-    features::complexity_refactoring::{refactor_function, NodeAddress, NodeSlice},
+    features::complexity_refactoring::{
+        refactor_function, NodeAddress, NodeSlice, SerializedNodeSlice,
+    },
     syntax_tree::{calculate_cognitive_complexities, Complexities, SwiftFunction, SwiftSyntaxTree},
     TextPosition, XcodeText,
 };
+use cached::SizedCache;
 use tracing::debug;
 use tracing::error;
 
@@ -16,11 +20,17 @@ use tracing::error;
 //     declarations: HashMap<XcodeText, Declaration>,
 // }
 
-pub fn check_for_method_extraction<'a>(
-    function: &SwiftFunction<'a>,
-    text_content: &'a XcodeText,
-    syntax_tree: &'a SwiftSyntaxTree,
-) -> Result<Option<(NodeSlice<'a>, isize)>, ComplexityRefactoringError> {
+#[cached(
+    type = "SizedCache<String, Option<(SerializedNodeSlice, isize)>>",
+    create = "{ SizedCache::with_size(100) }",
+    convert = r#"{ String::from(function.props.node.to_sexp()) }"#,
+    result = true
+)]
+pub fn check_for_method_extraction(
+    function: &SwiftFunction,
+    text_content: &XcodeText,
+    syntax_tree: &SwiftSyntaxTree,
+) -> Result<Option<(SerializedNodeSlice, isize)>, ComplexityRefactoringError> {
     let node = function.props.node;
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
@@ -44,14 +54,15 @@ pub fn check_for_method_extraction<'a>(
 
     const SCORE_THRESHOLD: f64 = 1.5;
 
-    get_best_extraction(
+    Ok(get_best_extraction(
         possible_extractions,
         syntax_tree,
         text_content,
         function_complexity.clone(),
         // &scopes,
         SCORE_THRESHOLD,
-    )
+    )?
+    .map(|(slice, remaining_complexity)| (slice.serialize(node), remaining_complexity)))
 }
 
 pub fn do_method_extraction(

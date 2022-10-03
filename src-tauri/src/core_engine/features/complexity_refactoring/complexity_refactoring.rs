@@ -86,7 +86,7 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
 }
 pub struct ComplexityRefactoring {
     is_activated: bool,
-    suggestions: Arc<Mutex<HashMap<String, Vec<RefactoringSuggestion>>>>, // Map function s-exp to suggestions
+    suggestions: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 2; // TODO: Raise to be more reasonable?
@@ -157,133 +157,133 @@ impl ComplexityRefactoring {
         let file_path = code_document.file_path().clone();
 
         let mut s_exps = vec![];
+        dbg!(top_level_functions.len());
+
+        let mut suggestions: HashMap<Uuid, RefactoringSuggestion> = HashMap::new();
+
         for function in top_level_functions {
             s_exps.push(function.props.node.to_sexp());
-            Self::get_suggestions_for_function(
+            suggestions.extend(Self::generate_suggestions_for_function(
                 function,
                 &text_content,
                 &file_path,
                 code_document.syntax_tree(),
                 self.suggestions.clone(),
-            )?;
+            )?);
         }
-        self.suggestions.lock().retain(|k, _| s_exps.contains(&k));
+        (*self.suggestions.lock()) = suggestions;
 
         Ok(())
     }
 
-    fn get_suggestions_for_function(
+    fn generate_suggestions_for_function(
         function: SwiftFunction,
         text_content: &XcodeText,
         file_path: &Option<String>,
         syntax_tree: &SwiftSyntaxTree,
-        suggestions_arc: Arc<Mutex<HashMap<String, Vec<RefactoringSuggestion>>>>,
-    ) -> Result<(), ComplexityRefactoringError> {
-        let function_s_exp = function.props.node.to_sexp();
-        let suggestions = {
-            let mut suggestions_guard = suggestions_arc.lock();
+        suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+    ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
+        let suggestions =
+            Self::compute_suggestions_for_function(&function, &text_content, &syntax_tree)?;
 
-            match suggestions_guard.get(&function_s_exp) {
-                Some(suggestions) => suggestions.clone(),
-                None => {
-                    let suggestions = Self::compute_suggestions_for_function(
-                        &function,
-                        &text_content,
-                        &syntax_tree,
-                    )?;
-                    suggestions_guard.insert(function_s_exp.clone(), suggestions.clone());
-                    suggestions
-                }
-            }
-        };
-        for suggestion in suggestions {
+        for suggestion in suggestions.values() {
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
             let binded_text_content = text_content.clone();
             let binded_file_path = file_path.clone();
-            let binded_s_exp = function_s_exp.clone();
+            let binded_suggestion = suggestion.clone();
             let binded_suggestions_cache_arc = suggestions_arc.clone();
             do_method_extraction(
                 slice,
                 move |edits: Vec<Edit>| {
-                    Self::update_suggestion_with_text_diff(
+                    Self::update_suggestion_with_formatted_text_diff(
+                        binded_suggestion,
                         edits,
                         binded_text_content,
                         binded_suggestions_cache_arc,
-                        binded_file_path, //TODO,
-                        binded_s_exp,
-                        suggestion.id,
+                        binded_file_path,
                     )
                 },
                 &text_content.clone(),
                 &file_path.clone().unwrap(), // TODO
             )?;
         }
-        Ok(())
+        Ok(suggestions)
     }
 
     fn compute_suggestions_for_function(
         function: &SwiftFunction,
         text_content: &XcodeText,
         syntax_tree: &SwiftSyntaxTree,
-    ) -> Result<Vec<RefactoringSuggestion>, ComplexityRefactoringError> {
+    ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
         let prev_complexity = function.get_complexity();
         if prev_complexity <= MAX_ALLOWED_COMPLEXITY {
-            return Ok(vec![]);
+            return Ok(HashMap::new());
         }
-        let (slice, new_complexity) =
+        let (serialized_node_slice, new_complexity) =
             match check_for_method_extraction(&function, &text_content, &syntax_tree)? {
                 Some(result) => result,
-                None => return Ok(vec![]),
+                None => return Ok(HashMap::new()),
             };
-        let new_suggestions = vec![RefactoringSuggestion {
-            id: uuid::Uuid::new_v4(),
-            serialized_slice: slice.serialize(function.props.node),
-            main_function_name: function.get_name(),
-            new_complexity,
-            prev_complexity,
-            old_text_content_string: None,
-            new_text_content_string: None,
-        }];
+
+        let mut new_suggestions = HashMap::new();
+        let id = uuid::Uuid::new_v4();
+        new_suggestions.insert(
+            id,
+            RefactoringSuggestion {
+                id,
+                serialized_slice: serialized_node_slice,
+                main_function_name: function.get_name(),
+                new_complexity,
+                prev_complexity,
+                old_text_content_string: None,
+                new_text_content_string: None,
+            },
+        );
 
         Ok(new_suggestions)
     }
 
-    fn update_suggestion_with_text_diff(
+    fn update_suggestion(
+        updated_suggestion: &RefactoringSuggestion,
+        suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+    ) {
+        let mut suggestions = suggestions_cache.lock();
+        let suggestion = suggestions.get_mut(&updated_suggestion.id);
+
+        if let Some(suggestion) = suggestion {
+            suggestion.clone_from(updated_suggestion);
+
+            let fe_suggestion = match map_refactoring_suggestion_to_fe_refactoring_suggestion(
+                suggestion.to_owned(),
+            ) {
+                Err(e) => {
+                    error!(?e, "Unable to map suggestion to FE suggestion");
+                    return;
+                }
+                Ok(res) => res,
+            };
+
+            SuggestionEvent::UpdateSuggestion(UpdateSuggestionMessage {
+                suggestion: fe_suggestion,
+            })
+            .publish_to_tauri(&app_handle());
+        }
+    }
+
+    fn update_suggestion_with_formatted_text_diff(
+        mut suggestion: RefactoringSuggestion,
         edits: Vec<Edit>,
         text_content: XcodeText,
-        suggestions_cache: Arc<Mutex<HashMap<String, Vec<RefactoringSuggestion>>>>,
+        suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
         file_path: Option<String>,
-        function_s_exp: String,
-        suggestion_id: Uuid,
     ) {
         tauri::async_runtime::spawn(async move {
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
-            let mut suggestions = suggestions_cache.lock();
-
-            if let Some(entry) = suggestions.get_mut(&function_s_exp) {
-                if let Some(suggestion) = entry.iter_mut().find(|s| s.id == suggestion_id) {
-                    suggestion.new_text_content_string = Some(new_content);
-                    suggestion.old_text_content_string = Some(old_content);
-
-                    let fe_suggestion =
-                        match map_refactoring_suggestion_to_fe_refactoring_suggestion(
-                            suggestion.to_owned(),
-                        ) {
-                            Err(e) => {
-                                error!(?e, "Unable to map suggestion to FE suggestion");
-                                return;
-                            }
-                            Ok(res) => res,
-                        };
-
-                    SuggestionEvent::UpdateSuggestion(UpdateSuggestionMessage {
-                        suggestion: fe_suggestion,
-                    })
-                    .publish_to_tauri(&app_handle());
-                }
-            }
+            suggestion.old_text_content_string = Some(old_content);
+            suggestion.new_text_content_string = Some(new_content);
+            Self::update_suggestion(&suggestion, suggestions_cache)
         });
     }
 
@@ -330,9 +330,7 @@ impl ComplexityRefactoring {
         let suggestions_cache = self.suggestions.lock().clone();
 
         let suggestion_to_apply = suggestions_cache
-            .values()
-            .flatten()
-            .find(|f| f.id == suggestion_id)
+            .get(&suggestion_id)
             .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
             .clone();
 
@@ -359,12 +357,7 @@ impl ComplexityRefactoring {
                         return;
                     }
                 }
-                let mut suggestions_cache = suggestions_arc.lock();
-                if let Some(suggestions_for_function) =
-                    suggestions_cache.get_mut(&suggestion_to_apply.serialized_slice.function_sexp)
-                {
-                    suggestions_for_function.retain(|s| s.id != suggestion_id);
-                }
+                suggestions_arc.lock().remove(&suggestion_id);
 
                 SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id: suggestion_id })
                     .publish_to_tauri(&app_handle());
