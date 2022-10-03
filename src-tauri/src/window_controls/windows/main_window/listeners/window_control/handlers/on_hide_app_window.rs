@@ -5,6 +5,7 @@ use tauri::Manager;
 
 use cocoa::base::id;
 use objc::{msg_send, sel, sel_impl};
+use tracing::debug;
 
 use crate::{
     app_handle,
@@ -21,7 +22,7 @@ pub fn on_hide_app_window(
         let main_window = main_window.lock();
 
         if main_window.hide().is_none() {
-            println!("Failed to hide main window");
+            debug!("Failed to hide MainWindow (on_hide_app_window.rs)");
         };
 
         // Restore parent child relationship

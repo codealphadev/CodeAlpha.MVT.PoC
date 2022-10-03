@@ -28,9 +28,7 @@ pub fn window_control_events_listener(main_window: &Arc<Mutex<MainWindow>>) {
                 EventWindowControls::AppWindowUpdate(msg) => {
                     on_update_app_window(&main_window, &msg);
                 }
-                _ => {
-                    // Do Nothing here
-                }
+                _ => {}
             }
         }
     });

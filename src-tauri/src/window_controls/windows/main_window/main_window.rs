@@ -298,7 +298,7 @@ fn rebind_main_and_widget_window() -> Option<()> {
     Some(())
 }
 #[cfg(test)]
-mod tests_main_window {
+mod tests {
 
     use crate::{
         utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
@@ -309,7 +309,7 @@ mod tests_main_window {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_calc_offscreen_distance() {
+    fn calc_offscreen_distance() {
         let main_window_size = LogicalSize {
             width: 48.,
             height: 48.,
@@ -348,7 +348,7 @@ mod tests_main_window {
     }
 
     #[test]
-    fn test_compute_widget_origin() {
+    fn compute_widget_origin() {
         let main_window_frame = LogicalFrame {
             origin: LogicalPosition { x: 0., y: 0. },
             size: LogicalSize {
@@ -432,7 +432,7 @@ mod tests_main_window {
     }
 
     #[test]
-    fn test_is_main_window_flipped_horizontally() {
+    fn is_main_window_flipped_horizontally() {
         let main_window_frame = LogicalFrame {
             origin: LogicalPosition { x: 0., y: 0. },
             size: LogicalSize {
