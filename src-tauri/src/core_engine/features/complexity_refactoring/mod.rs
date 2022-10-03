@@ -1,6 +1,6 @@
 pub use complexity_refactoring::ComplexityRefactoring;
 pub use complexity_refactoring::ComplexityRefactoringError;
-pub use complexity_refactoring::RefactoringOperation;
+pub use complexity_refactoring::FERefactoringSuggestion;
 pub use generate_function_name::*;
 pub use method_extraction::check_for_method_extraction;
 pub use swift_lsp::*;

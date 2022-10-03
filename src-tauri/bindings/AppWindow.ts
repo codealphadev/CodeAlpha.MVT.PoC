@@ -4,7 +4,6 @@ export type AppWindow =
   | "Settings"
   | "Analytics"
   | "Widget"
-  | "Content"
   | "Explain"
   | "CodeOverlay"
   | "Main";
