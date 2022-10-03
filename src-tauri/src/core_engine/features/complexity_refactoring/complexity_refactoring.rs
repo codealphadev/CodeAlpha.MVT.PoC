@@ -104,7 +104,10 @@ impl FeatureBase for ComplexityRefactoring {
         if let Some(procedure) = self.should_compute(trigger) {
             match procedure {
                 ComplexityRefactoringProcedure::ComputeSuggestions => {
-                    self.compute_suggestions(code_document)
+                    self.compute_suggestions(code_document).map_err(|e| {
+                        self.suggestions.lock().clear();
+                        e
+                    })
                 }
                 ComplexityRefactoringProcedure::PerformOperation(id) => self
                     .perform_operation(code_document, id)
