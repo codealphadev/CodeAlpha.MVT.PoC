@@ -26,8 +26,8 @@ pub static WIDGET_MAIN_WINDOW_OFFSET: f64 = 24.;
 pub struct WidgetWindow {
     app_handle: tauri::AppHandle,
 
-    // Is the main window shown
-    main_window_shown: Option<bool>,
+    // Is the main window shown; always false at startup.
+    main_window_shown: bool,
 
     // The widget window's size
     size: LogicalSize,
@@ -52,7 +52,7 @@ impl WidgetWindow {
                 width: default_properties::size(&AppWindow::Widget).0,
                 height: default_properties::size(&AppWindow::Widget).1,
             },
-            main_window_shown: None,
+            main_window_shown: false,
         })
     }
 
@@ -83,7 +83,7 @@ impl WidgetWindow {
     }
 
     pub fn set_main_window_shown(&mut self, main_window_shown: bool) {
-        self.main_window_shown = Some(main_window_shown);
+        self.main_window_shown = main_window_shown;
     }
 
     pub fn show(
@@ -285,7 +285,5 @@ mod tests_widget_window {
 
         assert_eq!(dist_x, None);
         assert_eq!(dist_y, None);
-
-        // with main window
     }
 }
