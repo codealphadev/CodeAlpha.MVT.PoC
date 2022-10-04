@@ -29,7 +29,7 @@ pub fn on_selected_text_changed(
                 index: msg.index,
                 length: msg.length,
             },
-            true,
+            false,
         );
 
         // Checking if the engine is active. If not, don't continue.

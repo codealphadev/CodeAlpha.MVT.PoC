@@ -35,6 +35,7 @@ pub fn on_editor_focused_uielement_changed(
 
     let core_engine = &mut core_engine_arc.lock();
 
+    let mut text_changed;
     {
         let code_documents = &mut core_engine.code_documents().lock();
 
@@ -47,12 +48,16 @@ pub fn on_editor_focused_uielement_changed(
         // Update code document properties
         let content_str = get_textarea_content(&GetVia::Pid(pid))?;
         let file_path = get_textarea_file_path(&GetVia::Pid(pid)).ok();
-        code_doc.update_doc_properties(&content_str, &file_path);
+        text_changed = code_doc.update_doc_properties(&content_str, &file_path);
 
         let selected_text_range = get_selected_text_range(&GetVia::Pid(pid))?;
-        code_doc.set_selected_text_range(&selected_text_range, true);
+        text_changed = text_changed || code_doc.set_selected_text_range(&selected_text_range, true);
+        dbg!(code_doc.file_path());
     }
 
-    core_engine.run_features(window_uid, &CoreEngineTrigger::OnTextSelectionChange)
-    // not chosing OnTextContentChange here, because bracket highlighting ignores OnTextContentChange for its own reasons
+    core_engine.run_features(window_uid, &CoreEngineTrigger::OnTextSelectionChange)?;
+    if text_changed {
+        core_engine.run_features(window_uid, &CoreEngineTrigger::OnTextContentChange)?;
+    }
+    Ok(())
 }

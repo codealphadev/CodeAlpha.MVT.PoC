@@ -298,7 +298,6 @@ mod tests {
                         function_sexp: old_function_sexp
                     }
                 );
-                dbg!(serialized_node_slice.clone());
                 original_node_kinds = node_slice
                     .nodes
                     .iter()

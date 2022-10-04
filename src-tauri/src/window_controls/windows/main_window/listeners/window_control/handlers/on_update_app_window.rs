@@ -16,8 +16,10 @@ pub fn on_update_app_window(
     _main_window: &Arc<Mutex<MainWindow>>,
     update_msg: &UpdateAppWindowMessage,
 ) -> Option<()> {
+    println!("on_update_app_window");
     if update_msg.app_windows.contains(&AppWindow::Main) {
         if let Some(main_window_size) = update_msg.window_size {
+            println!("on_update_app_window - 2");
             // We fetch the window where the widget is on
             let main_tauri_window = app_handle().get_window(&AppWindow::Main.to_string())?;
             let monitor = main_tauri_window.current_monitor().ok()??;
@@ -29,6 +31,7 @@ pub fn on_update_app_window(
             let monitor_size = LogicalSize::from_tauri_LogicalSize(
                 &monitor.size().to_logical::<f64>(scale_factor),
             );
+            dbg!(main_window_size);
 
             if MainWindow::update(
                 &main_window_size,

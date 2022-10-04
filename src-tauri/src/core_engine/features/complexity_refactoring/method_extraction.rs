@@ -91,6 +91,7 @@ pub fn do_method_extraction(
                     Ok(Some(res)) => res,
                     Ok(None) => {
                         debug!("Refactoring not possible");
+                        dbg!(file_path.clone());
                         return ();
                     }
                 };
@@ -135,12 +136,6 @@ fn get_best_extraction<'a>(
                 equality_preference_factor,
             );
 
-        println!(
-            "{:?}, {}, {}",
-            slice.parent_address,
-            slice.nodes.len(),
-            score,
-        );
         if score > best_score && score > score_threshold {
             best_possibility = Some(slice);
             best_score = score;

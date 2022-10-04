@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use parking_lot::Mutex;
+use tracing::error;
 
 use crate::{app_handle, platform::macos::XcodeError, CORE_ENGINE_ACTIVE_AT_STARTUP};
 
@@ -105,8 +106,12 @@ impl CoreEngine {
             .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
         for feature in self.features.iter_mut() {
-            _ = feature.compute(code_doc, trigger);
-            _ = feature.update_visualization(code_doc, trigger);
+            _ = feature
+                .compute(code_doc, trigger)
+                .map_err(|e| error!(?e, ?feature, "Error in feature compute()"));
+            _ = feature
+                .update_visualization(code_doc, trigger)
+                .map_err(|e| error!(?e, ?feature, "Error in feature update_visualization()"));
         }
 
         Ok(())

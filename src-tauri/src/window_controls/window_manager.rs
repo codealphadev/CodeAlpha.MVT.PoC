@@ -345,6 +345,7 @@ pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool)
 
 #[tauri::command]
 pub fn cmd_resize_window(app_window: AppWindow, size_x: u32, size_y: u32) {
+    dbg!(app_window, size_x, size_y);
     EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
         app_windows: vec![app_window],
         viewport: None,
