@@ -17,7 +17,6 @@
 		updateDimensions();
 
 		if (window_width && window_height) {
-			console.log('executing', window_width, window_height);
 			let appWindow: AppWindow = 'Main';
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
@@ -47,7 +46,6 @@
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
 		await listen(suggestion_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
-			console.log(payload);
 
 			switch (event_type) {
 				case 'UpdateSuggestion':
