@@ -92,11 +92,11 @@ impl MainWindow {
         };
 
         // If the `main_window_origin` would be within the menu bar area, we need to account for that.
-        corrected_position.y += dbg!(Self::compute_menu_bar_diff(
+        corrected_position.y += Self::compute_menu_bar_diff(
             &corrected_position,
             &monitor.origin,
             get_menu_bar_height(&monitor),
-        ));
+        );
 
         let is_flipped = Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
         if is_flipped {
