@@ -59,7 +59,6 @@ impl SwiftFunction<'_> {
             .map(|text| String::from_utf16_lossy(&text))
     }
 
-    // TODO: Test
     pub fn get_top_level_functions<'a>(
         syntax_tree: &'a SwiftSyntaxTree,
         text_content: &'a XcodeText,
@@ -181,5 +180,43 @@ impl SwiftCodeBlockBase<'_> for SwiftFunction<'_> {
     }
     fn get_parent_code_block(&self) -> Result<SwiftCodeBlock, SwiftCodeBlockError> {
         get_parent_code_block(&self.props)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    mod get_top_level_functions {
+        use crate::core_engine::{
+            syntax_tree::{SwiftFunction, SwiftSyntaxTree},
+            XcodeText,
+        };
+
+        #[test]
+        fn calculates_top_level_functions() {
+            let text_content = XcodeText::from_str(
+                r#"
+                public class LRUAnimationCache: AnimationCacheProvider {
+                    public func func1(input: String) {
+                    
+                    }
+                    func func2(input2: String) {
+                        func funcInner(input3: String) {
+                    
+                        }
+                    }
+                }
+            "#,
+            );
+
+            let mut swift_syntax_tree = SwiftSyntaxTree::new();
+            swift_syntax_tree.parse(&text_content).unwrap();
+
+            assert_eq!(
+                SwiftFunction::get_top_level_functions(&swift_syntax_tree, &text_content)
+                    .unwrap()
+                    .len(),
+                2
+            )
+        }
     }
 }
