@@ -3,7 +3,6 @@ use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
-use tracing::debug;
 
 use super::complexity_refactoring::Edit;
 
@@ -116,7 +115,6 @@ key.compilerargs:
     )
     .to_string();
 
-    debug!(?payload, "Querying LSP for function refactoring");
     let result_str = make_lsp_request(&file_path, payload).await?;
 
     let result: RefactoringResponse =

@@ -80,14 +80,14 @@ impl CodeDocument {
         &mut self,
         new_content_string: &String,
         file_path: &Option<String>,
-    ) {
+    ) -> bool {
         let new_content = XcodeText::from_str(new_content_string);
         let is_file_path_updated = self.is_file_path_updated(file_path);
         let is_file_text_updated = self.is_file_text_updated(&new_content);
 
         if !is_file_path_updated && !is_file_text_updated {
             // Return early if the file path and text did not change
-            return;
+            return false;
         }
 
         // Update Rule Properties
@@ -110,6 +110,8 @@ impl CodeDocument {
             Ok(_) => {}
         };
         self.text = Some(new_content);
+
+        return is_file_text_updated;
     }
 
     pub fn process_rules(&mut self) {
@@ -135,7 +137,7 @@ impl CodeDocument {
         );
     }
 
-    pub fn set_selected_text_range(&mut self, text_range: &TextRange, double_check: bool) {
+    pub fn set_selected_text_range(&mut self, text_range: &TextRange, double_check: bool) -> bool {
         // Check if content changed at same time - this is needed for the case that selected text range
         // is being delivered before text content change message
         if double_check {
@@ -155,11 +157,13 @@ impl CodeDocument {
                         Ok(_) => {}
                     };
                     self.text = Some(content_text_u16.clone());
+                    return true;
                 }
             }
         } else {
             self.selected_text_range = Some(text_range.clone());
         }
+        return false;
     }
 
     pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {

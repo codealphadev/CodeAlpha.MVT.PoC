@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{
     core_engine::{events::models::PerformRefactoringOperationMessage, CodeDocument},
     platform::macos::models::editor::EditorShortcutPressedMessage,
@@ -28,6 +30,17 @@ pub enum Feature {
     DocsGeneration(DocsGenerator),
     Formatter(SwiftFormatter),
     ComplexityRefactoring(ComplexityRefactoring),
+}
+impl fmt::Debug for Feature {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let name = match self {
+            Feature::BracketHighlighting(_) => "BracketHighlighting",
+            Feature::DocsGeneration(_) => "DocsGeneration",
+            Feature::Formatter(_) => "Formatter",
+            Feature::ComplexityRefactoring(_) => "ComplexityRefactoring",
+        };
+        write!(f, "{}", name)
+    }
 }
 
 #[derive(thiserror::Error, Debug)]

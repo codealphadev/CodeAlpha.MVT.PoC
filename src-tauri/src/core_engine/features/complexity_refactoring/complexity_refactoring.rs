@@ -1,5 +1,3 @@
-use std::{collections::HashMap, sync::Arc};
-
 use crate::{
     app_handle,
     core_engine::{
@@ -22,6 +20,8 @@ use crate::{
 };
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, sync::Arc};
+use tracing::debug;
 use tracing::error;
 use ts_rs::TS;
 use uuid::Uuid;
@@ -145,6 +145,7 @@ impl FeatureBase for ComplexityRefactoring {
 
 impl ComplexityRefactoring {
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
+        debug!("Computing suggestions for complexity refactoring");
         let text_content = code_document
             .text_content()
             .as_ref()
@@ -160,7 +161,6 @@ impl ComplexityRefactoring {
         let file_path = code_document.file_path().clone();
 
         let mut s_exps = vec![];
-        dbg!(top_level_functions.len());
 
         let mut suggestions: HashMap<Uuid, RefactoringSuggestion> = HashMap::new();
 
@@ -174,7 +174,21 @@ impl ComplexityRefactoring {
                 self.suggestions.clone(),
             )?);
         }
-        (*self.suggestions.lock()) = suggestions;
+        let ids_to_remove;
+        {
+            let mut suggestions_cache = self.suggestions.lock();
+            ids_to_remove = suggestions_cache
+                .clone()
+                .into_keys()
+                .filter(|id| !suggestions.contains_key(id))
+                .collect::<Vec<Uuid>>();
+            (*suggestions_cache) = suggestions.clone();
+        }
+
+        for id in ids_to_remove {
+            SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id })
+                .publish_to_tauri(&app_handle());
+        }
 
         Ok(())
     }
@@ -186,10 +200,31 @@ impl ComplexityRefactoring {
         syntax_tree: &SwiftSyntaxTree,
         suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
-        let suggestions =
+        let mut suggestions =
             Self::compute_suggestions_for_function(&function, &text_content, &syntax_tree)?;
 
-        for suggestion in suggestions.values() {
+        let function_s_exp = function.props.node.to_sexp();
+
+        let old_suggestions = suggestions_arc.lock().clone();
+
+        let old_suggestions_for_func: Vec<&RefactoringSuggestion> = old_suggestions
+            .values()
+            .filter(|s| s.serialized_slice.function_sexp == function_s_exp)
+            .collect();
+
+        for mut suggestion in suggestions.values_mut() {
+            let old_suggestions_with_same_serialization: Vec<&RefactoringSuggestion> =
+                old_suggestions_for_func
+                    .clone()
+                    .into_iter()
+                    .filter(|s| s.serialized_slice == suggestion.serialized_slice)
+                    .collect();
+
+            // Re-identify ID with previous value to avoid unnecessary removal and addition
+            if old_suggestions_with_same_serialization.len() == 1 {
+                suggestion.id = old_suggestions_with_same_serialization[0].id;
+            }
+
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
             let binded_text_content = text_content.clone();
             let binded_file_path = file_path.clone();
@@ -417,7 +452,7 @@ impl ComplexityRefactoring {
         trigger: &CoreEngineTrigger,
     ) -> Option<ComplexityRefactoringProcedure> {
         match trigger {
-            CoreEngineTrigger::OnTextSelectionChange => {
+            CoreEngineTrigger::OnTextContentChange => {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
             }
             CoreEngineTrigger::OnUserCommand(msg) => {

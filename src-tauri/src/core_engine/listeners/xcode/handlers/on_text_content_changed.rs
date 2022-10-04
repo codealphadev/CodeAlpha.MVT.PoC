@@ -19,6 +19,7 @@ pub fn on_text_content_changed(
 
     let core_engine_active_status = core_engine.engine_active();
 
+    let text_changed;
     {
         let code_documents = &mut core_engine.code_documents().lock();
 
@@ -34,7 +35,7 @@ pub fn on_text_content_changed(
                 content_changed_msg.window_uid,
             ))?;
 
-        code_doc.update_doc_properties(
+        text_changed = code_doc.update_doc_properties(
             &content_changed_msg.content,
             &content_changed_msg.file_path_as_str,
         );
@@ -48,10 +49,13 @@ pub fn on_text_content_changed(
         code_doc.compute_rule_visualizations();
     }
 
-    core_engine.run_features(
-        content_changed_msg.window_uid,
-        &CoreEngineTrigger::OnTextContentChange,
-    )
+    if text_changed {
+        core_engine.run_features(
+            content_changed_msg.window_uid,
+            &CoreEngineTrigger::OnTextContentChange,
+        )?
+    }
+    Ok(())
 }
 
 pub fn check_if_code_doc_needs_to_be_created(
