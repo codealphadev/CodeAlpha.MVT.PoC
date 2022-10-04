@@ -91,6 +91,13 @@ impl MainWindow {
             y: widget_frame.origin.y - updated_main_window_size.height,
         };
 
+        // If the `main_window_origin` would be within the menu bar area, we need to account for that.
+        corrected_position.y += dbg!(Self::compute_menu_bar_diff(
+            &corrected_position,
+            &monitor.origin,
+            get_menu_bar_height(&monitor),
+        ));
+
         let is_flipped = Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
         if is_flipped {
             corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET;
@@ -115,7 +122,6 @@ impl MainWindow {
                 origin: corrected_position,
                 size: *updated_main_window_size,
             },
-            &monitor,
             is_flipped,
         );
 
@@ -171,7 +177,6 @@ impl MainWindow {
 
     fn update_widget_position(
         main_window_frame: LogicalFrame,
-        monitor: &LogicalFrame,
         is_main_window_flipped: bool,
     ) -> Option<()> {
         let widget_tauri_window_frame = WidgetWindow::dimensions();
@@ -179,7 +184,6 @@ impl MainWindow {
         let updated_widget_window_origin = Self::compute_widget_origin(
             main_window_frame,
             widget_tauri_window_frame,
-            &monitor,
             is_main_window_flipped,
         );
 
@@ -245,7 +249,6 @@ impl MainWindow {
     fn compute_widget_origin(
         main_window_frame: LogicalFrame,
         widget_tauri_window_frame: LogicalFrame,
-        monitor: &LogicalFrame,
         is_main_window_flipped: bool,
     ) -> LogicalPosition {
         let mut updated_widget_window_origin = LogicalPosition {
@@ -259,16 +262,21 @@ impl MainWindow {
             updated_widget_window_origin.x = main_window_frame.origin.x + WIDGET_MAIN_WINDOW_OFFSET;
         }
 
-        // If monitor is the primary monitor, we need to account for the menu bar.
-        let menu_bar_height = get_menu_bar_height(&monitor);
-        if menu_bar_height > 0. {
-            if main_window_frame.origin.y < menu_bar_height && main_window_frame.origin.y >= 0. {
-                // Case: the main window is positioned where the menu bar is -> it will be pushed down
-                // and overlap with the repositioned widget.
-                updated_widget_window_origin.y += menu_bar_height - main_window_frame.origin.y;
-            }
-        }
         updated_widget_window_origin
+    }
+
+    fn compute_menu_bar_diff(
+        main_window_origin: &LogicalPosition,
+        monitor_origin: &LogicalPosition,
+        menu_bar_height: f64,
+    ) -> f64 {
+        // If the `main_window_origin` would be within the menu bar area, we need to account for that.
+        let mut menu_bar_diff = 0.;
+        if main_window_origin.y < monitor_origin.y + menu_bar_height {
+            menu_bar_diff = menu_bar_height + (monitor_origin.y - main_window_origin.y);
+        }
+
+        menu_bar_diff
     }
 }
 
@@ -363,47 +371,9 @@ mod tests {
                 height: 48.,
             },
         };
-        let primary_monitor = LogicalFrame {
-            origin: LogicalPosition { x: 0., y: 0. },
-            size: LogicalSize {
-                width: 1000.,
-                height: 1000.,
-            },
-        };
 
-        let secondary_monitor = LogicalFrame {
-            origin: LogicalPosition { x: -1., y: -1. },
-            size: LogicalSize {
-                width: 1000.,
-                height: 1000.,
-            },
-        };
-
-        let updated_widget_window_origin = MainWindow::compute_widget_origin(
-            main_window_frame,
-            widget_tauri_window_frame,
-            &primary_monitor,
-            false,
-        );
-
-        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
-        assert_eq!(
-            updated_widget_window_origin.x,
-            0. /*main_window_frame.origin.x*/ + 100. /*main_window_frame.size.width*/
-                    - 48. /*widget_tauri_window_frame.size.width*/
-                    - WIDGET_MAIN_WINDOW_OFFSET
-        );
-        assert_eq!(
-            updated_widget_window_origin.y,
-            100. /*main_window_frame.size.height*/ + 38. /*menu bar height*/
-        );
-
-        let updated_widget_window_origin = MainWindow::compute_widget_origin(
-            main_window_frame,
-            widget_tauri_window_frame,
-            &secondary_monitor,
-            false,
-        );
+        let updated_widget_window_origin =
+            MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, false);
 
         // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
         assert_eq!(
@@ -417,12 +387,23 @@ mod tests {
             100. /*main_window_frame.size.height*/
         );
 
-        let updated_widget_window_origin = MainWindow::compute_widget_origin(
-            main_window_frame,
-            widget_tauri_window_frame,
-            &secondary_monitor,
-            true,
+        let updated_widget_window_origin =
+            MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, false);
+
+        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
+        assert_eq!(
+            updated_widget_window_origin.x,
+            0. /*main_window_frame.origin.x*/ + 100. /*main_window_frame.size.width*/
+                    - 48. /*widget_tauri_window_frame.size.width*/
+                    - WIDGET_MAIN_WINDOW_OFFSET
         );
+        assert_eq!(
+            updated_widget_window_origin.y,
+            100. /*main_window_frame.size.height*/
+        );
+
+        let updated_widget_window_origin =
+            MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, true);
 
         // Placement should be bottom LEFT cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
         assert_eq!(
@@ -470,5 +451,74 @@ mod tests {
         );
 
         assert_eq!(is_flipped, true);
+    }
+
+    #[test]
+    fn menu_bar_diff() {
+        let main_window_origin1 = LogicalPosition { x: 0., y: 0. };
+        let main_window_origin2 = LogicalPosition {
+            x: -1000.,
+            y: -980.,
+        };
+        let main_window_origin3 = LogicalPosition {
+            x: -1000.,
+            y: -950.,
+        };
+        let main_window_origin4 = LogicalPosition {
+            x: -1000.,
+            y: -1000.,
+        };
+        let main_window_origin5 = LogicalPosition {
+            x: -1000.,
+            y: -1100.,
+        };
+
+        let monitor_origin1 = LogicalPosition { x: 0., y: 0. };
+        let monitor_origin2 = LogicalPosition {
+            x: -1000.,
+            y: -1000.,
+        };
+
+        let menu_bar_height = 38.;
+
+        let diff_scenario1 = MainWindow::compute_menu_bar_diff(
+            &main_window_origin1,
+            &monitor_origin1,
+            menu_bar_height,
+        );
+
+        assert_eq!(diff_scenario1, 38.);
+
+        let diff_scenario2 = MainWindow::compute_menu_bar_diff(
+            &main_window_origin2,
+            &monitor_origin2,
+            menu_bar_height,
+        );
+
+        assert_eq!(diff_scenario2, 18.);
+
+        let diff_scenario3 = MainWindow::compute_menu_bar_diff(
+            &main_window_origin3,
+            &monitor_origin2,
+            menu_bar_height,
+        );
+
+        assert_eq!(diff_scenario3, 0.);
+
+        let diff_scenario4 = MainWindow::compute_menu_bar_diff(
+            &main_window_origin4,
+            &monitor_origin2,
+            menu_bar_height,
+        );
+
+        assert_eq!(diff_scenario4, 38.);
+
+        let diff_scenario5 = MainWindow::compute_menu_bar_diff(
+            &main_window_origin5,
+            &monitor_origin2,
+            menu_bar_height,
+        );
+
+        assert_eq!(diff_scenario5, 138.);
     }
 }
