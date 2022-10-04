@@ -35,6 +35,21 @@
 		}
 	};
 
+	const handle_release_drag = async () => {
+		invoke('cmd_toggle_app_activation', { appActive: app_active });
+
+		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
+		// delay between setting a new position and recreating the parent/child relationship.
+		// Pausing the main thread is not possible. Also, running this task async is also not trivial.
+		// We send a message to the main thread to run this task.
+		// EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
+		if (app_active) {
+			setTimeout(() => {
+				invoke('cmd_rebind_main_widget');
+			}, 100);
+		}
+	};
+
 	const listenTauriEvents = async () => {
 		await listen('EventRuleExecutionState' as ChannelList, (event) => {
 			ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
@@ -96,6 +111,8 @@
 			diffY < minimum_move_distance_to_fire_click
 		) {
 			clickAction();
+		} else {
+			handle_release_drag();
 		}
 	}
 </script>
