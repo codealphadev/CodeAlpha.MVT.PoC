@@ -88,7 +88,7 @@ impl WidgetWindow {
         window_control_events_listener(widget_window);
     }
 
-    pub fn set_main_window_shown(&mut self, main_window_shown: bool) {
+    pub fn set_main_window_shown(&mut self, main_window_shown: Option<bool>) {
         self.main_window_shown = main_window_shown;
     }
 

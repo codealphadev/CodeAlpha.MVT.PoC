@@ -10,7 +10,7 @@ use crate::{
         rules::get_index_of_next_row,
         syntax_tree::SwiftSyntaxTreeError,
         utils::XcodeText,
-        CodeDocument, EditorWindowUid, TextPosition, TextRange,
+        CodeDocument, TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
         get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
@@ -510,7 +510,7 @@ struct StartAndEndTextPositions {
 
 #[derive(Copy, Clone, Debug)]
 struct BracketHighlightComputeResults {
-    window_uid: EditorWindowUid,
+    window_uid: WindowUid,
     opening_bracket: PositionAndIndex,
     closing_bracket: PositionAndIndex,
     line_opening_char: PositionAndIndex,

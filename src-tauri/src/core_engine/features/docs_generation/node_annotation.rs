@@ -16,7 +16,7 @@ use crate::{
         },
         syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
         utils::XcodeText,
-        EditorWindowUid, TextPosition, TextRange,
+        TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
         get_bounds_for_TextRange, get_code_document_frame_properties, get_viewport_frame,
@@ -73,7 +73,7 @@ impl NodeAnnotation {
     pub fn new(
         codeblock: AnnotationCodeBlock,
         text_content: &XcodeText,
-        window_uid: EditorWindowUid,
+        window_uid: WindowUid,
     ) -> Result<Self, DocsGenerationError> {
         let tracking_area = Self::create_tracking_area(text_content, &codeblock, window_uid)?;
 
@@ -191,7 +191,7 @@ impl NodeAnnotation {
     pub fn create_tracking_area(
         text: &XcodeText,
         code_block: &AnnotationCodeBlock,
-        window_uid: EditorWindowUid,
+        window_uid: WindowUid,
     ) -> Result<TrackingArea, DocsGenerationError> {
         // When we create the annotation, we need to compute the bounds for the frontend so it knows where to display the annotation
         // and we need to create a tracking area which the tracking area manager takes care of. The tracking area manager uses GLOBAL coordinates
