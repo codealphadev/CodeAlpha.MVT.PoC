@@ -331,16 +331,17 @@ fn get_resulting_complexities(
         new_function_complexity,
     });
 }
-/*
+
 #[cfg(test)]
 mod tests {
     mod method_extraction {
 
         use crate::core_engine::{
-            features::complexity_refactoring::check_for_method_extraction,
-            syntax_tree::SwiftSyntaxTree, XcodeText,
+            features::complexity_refactoring::{check_for_method_extraction, SerializedNodeSlice},
+            syntax_tree::{SwiftFunction, SwiftSyntaxTree},
+            XcodeText,
         };
-        // TODO: Add nullish coalescing operator to complexity
+
         #[test]
         fn makes_correct_suggestion() {
             let text_content = XcodeText::from_str(
@@ -379,35 +380,18 @@ mod tests {
             let root_node = tree.root_node();
             dbg!(root_node.clone().to_sexp());
 
-            let expected_node_kinds = vec![
-                "property_declaration",
-                "if_statement",
-                "property_declaration",
-                "property_declaration",
-                "for_statement",
-                "assignment",
-                "assignment",
-                "control_transfer_statement",
-            ];
-            let result = None;
-            check_for_method_extraction(
-                root_node,
-                &text_content,
-                &swift_syntax_tree,
-                &"file".to_string(),
-                |res| result = res,
-            )
-            .unwrap();
-            /*
-            assert_eq!(
-                result
+            let functions =
+                SwiftFunction::get_top_level_functions(&swift_syntax_tree, &text_content).unwrap();
+            assert_eq!(functions.len(), 1);
+
+            let result =
+                check_for_method_extraction(&functions[0], &text_content, &swift_syntax_tree)
                     .unwrap()
-                    .iter()
-                    .map(|n| n.kind().to_string())
-                    .collect::<Vec<String>>(),
-                expected_node_kinds
-            );*/
+                    .unwrap();
+            assert_eq!(result.0.count, 8);
+            assert_eq!(result.0.function_sexp, functions[0].props.node.to_sexp());
+            assert_eq!(result.0.path_from_function_root, vec![8, 1, 0, 7, 4, 0]);
+            assert_eq!(result.1, 3);
         }
     }
 }
-*/
