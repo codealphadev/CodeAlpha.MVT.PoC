@@ -8,7 +8,6 @@
 
 	import { convert_global_frame_to_local } from '../utils';
 
-
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
 	let annotation_section: LogicalFrame | null = null; // Relative to viewport
 	let active_window_uid: number | null = null;
@@ -63,8 +62,6 @@
 			}
 		});
 	};
-
-	
 
 	listenToViewportEvents();
 </script>

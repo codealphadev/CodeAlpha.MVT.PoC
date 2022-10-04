@@ -151,7 +151,7 @@ impl SwiftFormatter {
                     Err(err) => {
                         EventRuleExecutionState::SwiftFormatFailed()
                             .publish_to_tauri(&app_handle());
-                        error!(error = ?err, "SwiftFormatFailed");
+                        debug!(error = ?err, "SwiftFormatFailed");
                         return;
                     }
                 }

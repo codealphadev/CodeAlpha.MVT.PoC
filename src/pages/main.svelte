@@ -4,7 +4,6 @@
 	import Suggestions from '../components/suggestions/suggestions.svelte';
 
 	let dom_id = 'main-window-container';
-	
 
 	let bubbleOrientationRight = true;
 	const listenToGlobalEvents = async () => {
@@ -20,7 +19,7 @@
 
 <div class="flex flex-col justify-end transform overflow-hidden h-full">
 	<div id={dom_id} class="flex flex-col rounded-xl">
-		<Suggestions window_dom_id={dom_id}/>
+		<Suggestions window_dom_id={dom_id} />
 	</div>
 	<div class="h-6 mr-4 ml-4 {`${bubbleOrientationRight ? 'ml-auto' : 'ml-4'}`}">
 		<BubbleIcon />

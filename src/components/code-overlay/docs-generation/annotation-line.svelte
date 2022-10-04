@@ -1,6 +1,5 @@
 <script lang="ts">
-import { colors } from "../../../themes";
-
+	import { colors } from '../../../themes';
 
 	export let visible = false;
 	export let highlighted = false;
@@ -13,8 +12,7 @@ import { colors } from "../../../themes";
 	<div
 		class="annotation-line"
 		style="width: {ANNOTATION_LINE_WIDTH_PCT}%; top: 0%; left: {50 -
-			ANNOTATION_LINE_WIDTH_PCT /
-				2}%; height: 100%; position: absolute; background: {background};"
+			ANNOTATION_LINE_WIDTH_PCT / 2}%; height: 100%; position: absolute; background: {background};"
 	/>
 {/if}
 

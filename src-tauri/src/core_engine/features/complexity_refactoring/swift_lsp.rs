@@ -1,5 +1,6 @@
 use crate::core_engine::{TextPosition, XcodeText};
 use anyhow::anyhow;
+use cached::proc_macro::cached;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
@@ -18,8 +19,8 @@ pub enum SwiftLspError {
     CouldNotFindSdk(),
 }
 
-// TODO: Cache this?
-fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
+#[cached(result = true, time = 600)]
+async fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
     let sdk_path_output = std::process::Command::new("xcrun")
         .arg("--show-sdk-path")
         .arg("-sdk")
@@ -92,7 +93,7 @@ pub async fn refactor_function(
     length: usize,
     text_content: &XcodeText,
 ) -> Result<Option<Vec<Edit>>, SwiftLspError> {
-    let sdk_path = get_macos_sdk_path()?;
+    let sdk_path = get_macos_sdk_path().await?;
 
     let payload = format!(
         "key.request: source.request.semantic.refactoring
@@ -137,40 +138,6 @@ key.compilerargs:
     return Ok(Some(edits));
 }
 
-/*
-pub async fn get_type_for_index(
-    file_path: &String,
-    index: usize,
-) -> Result<String, SwiftLspError> {
-    debug!(?index, ?file_path, "Getting type at index");
-
-    let sdk_path = get_macos_sdk_path()?;
-
-    let payload = format!(
-        "key.request: source.request.cursorinfo
-key.name: \"{}\"
-key.sourcefile: \"{}\"
-key.offset: {}
-key.compilerargs:
-  - \"-j4\"
-  - \"{}\"
-  - \"-sdk\"
-  - \"{}\"",
-        file_path, file_path, index, file_path, sdk_path
-    )
-    .to_string();
-    let result_str = make_lsp_request(&file_path, payload).await?;
-
-    let result: Value =
-        serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
-    Ok(result
-        .get("key.typename")
-        .ok_or(SwiftLspError::CouldNotParseResult())?
-        .as_str()
-        .ok_or(SwiftLspError::CouldNotParseResult())?
-        .to_string())
-}
- */
 async fn make_lsp_request(file_path: &String, payload: String) -> Result<String, SwiftLspError> {
     if !Path::new(file_path).exists() {
         return Err(SwiftLspError::FileNotExisting(file_path.to_string()));

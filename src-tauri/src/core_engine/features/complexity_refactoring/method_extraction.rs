@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use cached::proc_macro::cached;
+
 use tree_sitter::Node;
 
 use super::{complexity_refactoring::Edit, get_node_address, ComplexityRefactoringError};
@@ -8,17 +9,15 @@ use crate::core_engine::{
     features::complexity_refactoring::{
         refactor_function, NodeAddress, NodeSlice, SerializedNodeSlice,
     },
+    rules::TemporaryFileOnDisk,
     syntax_tree::{calculate_cognitive_complexities, Complexities, SwiftFunction, SwiftSyntaxTree},
     TextPosition, XcodeText,
 };
 use cached::SizedCache;
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 use tracing::debug;
 use tracing::error;
-
-// #[derive(Clone, Debug)]
-// struct Scope {
-//     declarations: HashMap<XcodeText, Declaration>,
-// }
 
 #[cached(
     type = "SizedCache<String, Option<(SerializedNodeSlice, isize)>>",
@@ -35,16 +34,8 @@ pub fn check_for_method_extraction(
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
     let node_address = vec![node.id()];
-    // let mut scopes: HashMap<NodeAddress, Scope> = HashMap::new();
-    // scopes.insert(
-    //     node_address.clone(),
-    //     Scope {
-    //         declarations: HashMap::new(),
-    //     },
-    // );
-
     let possible_extractions: Vec<NodeSlice> =
-        walk_node(node, text_content, syntax_tree, node_address)?; // &mut scopes)?;
+        walk_node(node, text_content, syntax_tree, node_address)?;
 
     let function_complexity = syntax_tree
         .get_node_metadata(&node)
@@ -59,17 +50,16 @@ pub fn check_for_method_extraction(
         syntax_tree,
         text_content,
         function_complexity.clone(),
-        // &scopes,
         SCORE_THRESHOLD,
     )?
     .map(|(slice, remaining_complexity)| (slice.serialize(node), remaining_complexity)))
 }
 
+// TODO: Make async and handle error in one place, including tmp file deletion
 pub fn do_method_extraction(
     slice: NodeSlice,
     set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
     text_content: &XcodeText,
-    file_path: &String, // TODO: Code document? // TODO: Create temporary file
 ) -> Result<(), ComplexityRefactoringError> {
     let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
     let range_length =
@@ -77,29 +67,63 @@ pub fn do_method_extraction(
 
     // TODO: Create temporary file
     tauri::async_runtime::spawn({
-        let file_path = file_path.clone();
         let text_content = text_content.clone();
         async move {
-            let suggestion =
-                match refactor_function(&file_path, start_position, range_length, &text_content)
-                    .await
-                {
-                    Err(e) => {
-                        error!(?e, "Failed to query LSP for refactoring");
-                        return ();
+            let tmp_file_key = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(20)
+                .map(char::from)
+                .collect();
+            let temp_file = match create_temp_file(&text_content, tmp_file_key) {
+                Ok(res) => res,
+                Err(e) => {
+                    error!(?e, "Failed to create temporary file");
+                    return ();
+                }
+            };
+            let suggestion = match refactor_function(
+                &temp_file.path.to_string_lossy().to_string(),
+                start_position,
+                range_length,
+                &text_content,
+            )
+            .await
+            {
+                Err(e) => {
+                    error!(?e, "Failed to query LSP for refactoring");
+                    if let Err(e2) = TemporaryFileOnDisk::delete(&temp_file) {
+                        error!(?e2, "In cleaning up error, could not delete temporary file");
                     }
-                    Ok(Some(res)) => res,
-                    Ok(None) => {
-                        debug!("Refactoring not possible");
-                        dbg!(file_path.clone());
-                        return ();
+                    return ();
+                }
+                Ok(Some(res)) => res,
+                Ok(None) => {
+                    debug!("Refactoring not possible");
+                    if let Err(e2) = TemporaryFileOnDisk::delete(&temp_file) {
+                        error!(?e2, "In cleaning up, could not delete temporary file");
                     }
-                };
+                    return ();
+                }
+            };
             set_result_callback(suggestion);
         }
     });
 
     Ok(())
+}
+
+fn create_temp_file(
+    text_content: &XcodeText,
+    key: String,
+) -> Result<TemporaryFileOnDisk, ComplexityRefactoringError> {
+    let file_name = format!("codealpha_{}_method_extraction.swift", key);
+    let path_buf = std::env::temp_dir().join(file_name);
+
+    let file = TemporaryFileOnDisk::new(path_buf, text_content.as_string());
+    file.write()
+        .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
+
+    Ok(file)
 }
 
 fn get_best_extraction<'a>(
@@ -163,137 +187,31 @@ fn walk_node<'a>(
     text_content: &XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
     node_address: NodeAddress,
-    //scopes: &mut HashMap<NodeAddress, Scope>,
 ) -> Result<Vec<NodeSlice<'a>>, ComplexityRefactoringError> {
-    // TODO: Move all the logic out of the child and into the parent
-
     let mut possible_extractions: Vec<NodeSlice<'a>> = Vec::new();
-    for child in node.named_children(&mut node.walk()) {
-        let node_address = get_node_address(&node_address, &child);
+    let mut cursor = node.walk();
 
-        if node_children_are_candidates_for_extraction(&child) {
-            possible_extractions.push(NodeSlice {
-                nodes: child.children(&mut child.walk()).collect(),
-                parent_address: node_address.clone(),
-            });
-        }
-        // if node_has_own_scope(&child) {
-        //     scopes.insert(
-        //         node_address.clone(),
-        //         Scope {
-        //             declarations: HashMap::new(),
-        //         },
-        //     );
-        // }
+    if node_children_are_candidates_for_extraction(&node) {
+        possible_extractions.push(NodeSlice {
+            nodes: node.children(&mut cursor).collect(),
+            parent_address: node_address.clone(),
+        });
+    }
 
-        // if let Some(declaration) = try_get_declaration_node(&child) {
-        //     let name = get_node_text(&declaration, &text_content)
-        //         .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
-
-        //     get_scope(&node_address, scopes).declarations.insert(
-        //         name.clone(),
-        //         Declaration {
-        //             name,
-        //             var_type: DeclarationType::Unresolved(declaration.start_byte() / 2), // UTF-16
-        //             declared_in_node: node_address.clone(),
-        //             referenced_in_nodes: Vec::new(),
-        //         },
-        //     );
-        // }
-        // if let Some(name) = get_variable_name_if_reference(&child, &text_content) {
-        //     let mut curr_address: NodeAddress = node_address.clone();
-        //     while curr_address.len() > 0 {
-        //         if let Some(scope) = scopes.get_mut(&curr_address) {
-        //             if let Some(declaration) = scope.declarations.get_mut(&name) {
-        //                 declaration.referenced_in_nodes.push(node_address.clone());
-        //                 break;
-        //             }
-        //         }
-        //         curr_address.pop();
-        //     }
-        // }
+    for child in node.named_children(&mut cursor) {
         possible_extractions.append(&mut walk_node(
             child,
             text_content,
             syntax_tree,
-            node_address,
-            //scopes,
+            get_node_address(&node_address, &child),
         )?);
     }
     Ok(possible_extractions)
 }
 
-// fn get_scope<'a>(
-//     node_address: &NodeAddress,
-//     scopes: &'a mut HashMap<NodeAddress, Scope>,
-// ) -> &'a mut Scope {
-//     let mut curr_address: NodeAddress = node_address.clone();
-//     while curr_address.len() > 0 {
-//         if scopes.get(&curr_address).is_some() {
-//             return scopes.get_mut(&curr_address).unwrap();
-//         }
-//         curr_address.pop();
-//     }
-//     panic!("No parent scope for node!");
-// }
-
 fn node_children_are_candidates_for_extraction(node: &Node) -> bool {
     node.kind() == "statements" // Restricting to blocks for now
 }
-
-// fn node_has_own_scope(node: &Node) -> bool {
-//     node.kind() == "statements" // TODO: Is this true??
-// }
-
-// fn get_variable_name_if_reference(node: &Node, text_content: &XcodeText) -> Option<XcodeText> {
-//     if node.kind() == "simple_identifier" {
-//         get_node_text(node, text_content).ok()
-//     } else {
-//         None
-//     }
-// }
-
-// We need to track which variables were declared within each scope, because global variables should be ignored (and can't be found).
-// There can be cases where we have an ERROR node etc., so just return None if no name is found
-// TODO: Should we handle this differently? Maybe don't check for method extraction if an error is contained in the node. Then treat this as a real error if the assertion of simple_identifier fails.
-
-// fn try_get_declaration_node<'a>(node: &Node<'a>) -> Option<Node<'a>> {
-//     let mut result: Option<(XcodeText, DeclarationType)>;
-
-//     match node.kind() {
-//         "property_declaration" => {
-//             return Some(
-//                 node.child_by_field_name("name")?
-//                     .child_by_field_name("bound_identifier")?,
-//             );
-//         }
-//         "function_declaration" => {
-//             // TODO
-//         }
-//         "parameter" => {
-//             // Second "simple_identifier" is internal identifier, which matters; first will be overwritten
-//             let mut result = None;
-//             for child in node.children_by_field_name("name", &mut node.walk()) {
-//                 if child.kind() == "simple_identifier" {
-//                     result = Some(child);
-//                 }
-//             }
-//             return result;
-//         }
-//         "for_statement" => {
-//             return Some(
-//                 node.child_by_field_name("item")?
-//                     .child_by_field_name("bound_identifier")?,
-//             );
-//         }
-//         _ => {
-//             // TODO: Fill in other cases.
-//             return None;
-//         }
-//     }
-
-//     return None;
-// }
 
 struct ComplexitiesPrediction {
     removed_complexity: Complexities,
@@ -337,7 +255,7 @@ mod tests {
     mod method_extraction {
 
         use crate::core_engine::{
-            features::complexity_refactoring::{check_for_method_extraction, SerializedNodeSlice},
+            features::complexity_refactoring::check_for_method_extraction,
             syntax_tree::{SwiftFunction, SwiftSyntaxTree},
             XcodeText,
         };
@@ -376,9 +294,6 @@ mod tests {
 
             let mut swift_syntax_tree = SwiftSyntaxTree::new();
             swift_syntax_tree.parse(&text_content).unwrap();
-            let tree = swift_syntax_tree.tree().unwrap();
-            let root_node = tree.root_node();
-            dbg!(root_node.clone().to_sexp());
 
             let functions =
                 SwiftFunction::get_top_level_functions(&swift_syntax_tree, &text_content).unwrap();

@@ -26,8 +26,7 @@
 		await listen(node_annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
-			
-		) as NodeAnnotationEvent;
+			) as NodeAnnotationEvent;
 			switch (event_type) {
 				case 'UpdateNodeAnnotation':
 					annotation = payload;

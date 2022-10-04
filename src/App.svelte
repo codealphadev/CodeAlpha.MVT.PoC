@@ -1,5 +1,4 @@
-<script lang="ts">	
-
+<script lang="ts">
 	import { Router, Route } from 'yrv';
 	import CodeOverlay from './pages/code-overlay.svelte';
 	import Widget from './pages/widget.svelte';
@@ -20,7 +19,7 @@
 			<Explainer />
 		</Route>
 		<Route path="/main">
-			<Main/>
+			<Main />
 		</Route>
 	</Router>
 </ThemeContext>

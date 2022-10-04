@@ -158,7 +158,6 @@ impl ComplexityRefactoring {
             SwiftFunction::get_top_level_functions(code_document.syntax_tree(), &text_content)
                 .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
 
-        debug!("Computing suggestions for complexity refactoring2");
         let file_path = code_document.file_path().clone();
 
         let mut s_exps = vec![];
@@ -174,7 +173,6 @@ impl ComplexityRefactoring {
                 code_document.syntax_tree(),
                 self.suggestions.clone(),
             )?);
-            debug!("Computing suggestions for complexity refactoring3");
         }
         let ids_to_remove;
         {
@@ -186,7 +184,6 @@ impl ComplexityRefactoring {
                 .collect::<Vec<Uuid>>();
             (*suggestions_cache) = suggestions.clone();
         }
-        debug!("Computing suggestions for complexity refactoring4");
 
         for id in ids_to_remove {
             SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id })
@@ -232,7 +229,6 @@ impl ComplexityRefactoring {
                     )
                 },
                 &text_content.clone(),
-                &file_path.clone().unwrap(), // TODO
             )?;
         }
         Ok(suggestions)
@@ -411,39 +407,6 @@ impl ComplexityRefactoring {
         Ok(())
     }
 }
-/*
-fn check_for_if_combination(node: &Node, text_content: &XcodeText) {
-    let mut query_cursor = tree_sitter::QueryCursor::new();
-    let query = tree_sitter::Query::new(
-        language(),
-        r#"
-        (if_statement (statements . (if_statement) @inner-if . )) @outer-if
-        "#,
-    )
-    .unwrap(); // TODO
-    let text_string = text_content.as_string();
-    let matches = query_cursor.matches(&query, *node, text_string.as_bytes());
-    let outer_index = query.capture_index_for_name("outer-if").unwrap();
-
-    for each_match in matches {
-        let outer_if_capture = each_match
-            .captures
-            .iter()
-            .filter(|c| c.index == outer_index)
-            .last()
-            .unwrap();
-        let node: Node = outer_if_capture.node;
-        dbg!(node.id());
-        dbg!(node.child_count());
-        dbg!(node.named_child_count());
-        let mut cursor = node.walk();
-        for child in node.children(&mut cursor) {
-            dbg!(child.kind());
-        }
-    }
-}
-*/
-// TODO: Make a diff of all the node changes to be done, and then only apply text changes for those.
 
 impl ComplexityRefactoring {
     pub fn new() -> Self {
