@@ -479,5 +479,54 @@ mod tests {
             );
             assert_eq!(expected_complexity, calculated_complexity.unwrap());
         }
+
+        #[test]
+        fn higher_starting_depth() {
+            let text_content = XcodeText::from_str(
+                r#"
+                    if input is String {                                // + 1
+                        let start = String(input.prefix(1))
+                        let end = String(input.suffix(1));
+                        var result = start + end;
+                        return result;
+                    } else if input is Int {                            // + 1
+                        let result: Int;
+                        if (Int(input) ?? 0 < 1) {                      // + 2 (1 for nesting)
+                            result = 0;
+                        }
+                        var a = 0;
+                        var b = 1;
+                        for i in 1..<(Int(input) ?? 0) {                // + 2 (1 for nesting)
+                            let c = a + b;
+                            a = b;
+                            b = c;
+                        }
+                        result = c;
+                        result = b;
+                        return String(b);
+                    } else {                                            // + 1
+                        return "undefined";
+                    }
+            "#,
+            );
+
+            let mut parser = Parser::new();
+            parser
+                .set_language(tree_sitter_swift::language())
+                .expect("Swift Language not found");
+            let tree = parser.parse_utf16(text_content.clone(), None).unwrap();
+            let expected_complexity: Complexities = Complexities {
+                nesting_complexity: 2,
+                fundamental_complexity: 5,
+            };
+            let mut node_metadata = HashMap::<usize, NodeMetadata>::new();
+            let calculated_complexity = calculate_cognitive_complexities(
+                &tree.root_node(),
+                &text_content,
+                &mut node_metadata,
+                Some(1),
+            );
+            assert_eq!(expected_complexity, calculated_complexity.unwrap());
+        }
     }
 }

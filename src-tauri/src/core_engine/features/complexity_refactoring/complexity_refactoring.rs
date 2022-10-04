@@ -28,12 +28,6 @@ use uuid::Uuid;
 
 use super::{NodeSlice, SerializedNodeSlice};
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "bindings/features/refactoring/")]
-pub enum RefactoringKind {
-    MethodExtraction,
-}
-
 #[derive(Debug, Clone)]
 pub struct Edit {
     pub text: XcodeText,
