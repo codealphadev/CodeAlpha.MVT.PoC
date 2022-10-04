@@ -9,7 +9,7 @@ use crate::{
 
 pub async fn replace_text_content(
     text_content: &XcodeText,
-    new_content: &String,
+    new_content: &XcodeText,
     selected_text_range: &Option<TextRange>,
 ) -> Result<(), XcodeError> {
     // Store the position of the selected text to scroll to after formatting
@@ -19,7 +19,7 @@ pub async fn replace_text_content(
     };
 
     // Update textarea content
-    set_textarea_content(&new_content, &GetVia::Current)?;
+    set_textarea_content(&new_content.as_string(), &GetVia::Current)?;
 
     if let Some(selected_text_range) = selected_text_range {
         // Restore cursor position
@@ -28,7 +28,7 @@ pub async fn replace_text_content(
                 index: get_adjusted_cursor_index(
                     &text_content,
                     selected_text_range.index,
-                    &XcodeText::from_str(&new_content.as_str()),
+                    &new_content,
                 ),
                 length: selected_text_range.length,
             },

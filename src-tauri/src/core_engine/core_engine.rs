@@ -106,10 +106,12 @@ impl CoreEngine {
             .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
         for feature in self.features.iter_mut() {
-            _ = feature.compute(code_doc, trigger);
-            // .map_err(|e| error!(?e, ?feature, "Error in feature compute()"));// TODO
-            _ = feature.update_visualization(code_doc, trigger);
-            // .map_err(|e| error!(?e, ?feature, "Error in feature update_visualization()")); // TODO
+            _ = feature
+                .compute(code_doc, trigger)
+                .map_err(|e| error!(?e, ?feature, "Error in feature compute()"));
+            _ = feature
+                .update_visualization(code_doc, trigger)
+                .map_err(|e| error!(?e, ?feature, "Error in feature update_visualization()"));
         }
 
         Ok(())
