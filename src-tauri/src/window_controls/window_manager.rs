@@ -201,7 +201,7 @@ impl WindowManager {
     }
 
     pub fn temporarily_hide_app_windows(&mut self, app_windows: Vec<AppWindow>) {
-        self.hide_app_windows(app_windows);
+        self.hide_app_windows(app_windows.clone());
 
         // Check if another instance of this routine is already running
         // Update the Instant time stamp when the widget should be shown again
@@ -215,11 +215,17 @@ impl WindowManager {
                 Instant::now() + Duration::from_millis(HIDE_DELAY_ON_MOVE_OR_RESIZE_IN_MILLIS);
         }
 
+        let app_windows_shown;
+        if !self.is_core_engine_active && app_windows.contains(&AppWindow::Widget) {
+            app_windows_shown = vec![AppWindow::Widget];
+        } else {
+            app_windows_shown = AppWindow::shown_on_focus_gained(Some(app_windows.clone()));
+        }
+
         std::thread::spawn({
             let editor_windows = self.editor_windows.clone();
             let focused_editor_window = self.focused_editor_window.clone();
             let temporarily_hide = self.temporarily_hide_until.clone();
-            let is_core_engine_active = self.is_core_engine_active;
             move || {
                 loop {
                     let hide_until;
@@ -231,11 +237,10 @@ impl WindowManager {
                     let duration = hide_until.duration_since(Instant::now());
 
                     if duration.is_zero() {
-                        //
                         Self::delayed_show_app_windows(
                             &editor_windows,
                             &focused_editor_window,
-                            is_core_engine_active,
+                            app_windows_shown,
                         );
                         break;
                     }
@@ -249,7 +254,7 @@ impl WindowManager {
     pub fn delayed_show_app_windows(
         editor_windows_arc: &Arc<Mutex<HashMap<Uid, EditorWindow>>>,
         focused_editor_window_arc: &Arc<Mutex<Option<Uid>>>,
-        is_core_engine_active: bool,
+        app_windows_shown: Vec<AppWindow>,
     ) -> Option<()> {
         // Attempt try_lock() and early return if this fails; prevents deadlocks from happening.
         let editor_windows = editor_windows_arc.try_lock()?;
@@ -261,13 +266,6 @@ impl WindowManager {
 
         let textarea_position = editor_window.textarea_position(true)?;
         let textarea_size = editor_window.textarea_size()?;
-
-        let app_windows_shown;
-        if is_core_engine_active {
-            app_windows_shown = AppWindow::shown_on_focus_gained();
-        } else {
-            app_windows_shown = vec![AppWindow::Widget];
-        }
 
         EventWindowControls::AppWindowShow(ShowAppWindowMessage {
             app_windows: app_windows_shown,
