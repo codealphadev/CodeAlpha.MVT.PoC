@@ -59,7 +59,6 @@ pub struct FERefactoringSuggestion {
 
 #[derive(Debug, Clone)]
 pub struct RefactoringSuggestion {
-    pub id: uuid::Uuid,
     pub new_text_content_string: Option<String>, // TODO: Future? // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
     pub old_text_content_string: Option<String>, // TODO: Future?
     pub new_complexity: isize,
@@ -70,9 +69,10 @@ pub struct RefactoringSuggestion {
 
 pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
     suggestion: RefactoringSuggestion,
+    id: Uuid,
 ) -> Result<FERefactoringSuggestion, ComplexityRefactoringError> {
     Ok(FERefactoringSuggestion {
-        id: suggestion.id,
+        id,
         new_text_content_string: suggestion
             .new_text_content_string
             .ok_or(ComplexityRefactoringError::SuggestionIncomplete)?,
@@ -158,6 +158,7 @@ impl ComplexityRefactoring {
             SwiftFunction::get_top_level_functions(code_document.syntax_tree(), &text_content)
                 .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
 
+        debug!("Computing suggestions for complexity refactoring2");
         let file_path = code_document.file_path().clone();
 
         let mut s_exps = vec![];
@@ -173,6 +174,7 @@ impl ComplexityRefactoring {
                 code_document.syntax_tree(),
                 self.suggestions.clone(),
             )?);
+            debug!("Computing suggestions for complexity refactoring3");
         }
         let ids_to_remove;
         {
@@ -184,6 +186,7 @@ impl ComplexityRefactoring {
                 .collect::<Vec<Uuid>>();
             (*suggestions_cache) = suggestions.clone();
         }
+        debug!("Computing suggestions for complexity refactoring4");
 
         for id in ids_to_remove {
             SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id })
@@ -200,40 +203,27 @@ impl ComplexityRefactoring {
         syntax_tree: &SwiftSyntaxTree,
         suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
-        let mut suggestions =
-            Self::compute_suggestions_for_function(&function, &text_content, &syntax_tree)?;
-
-        let function_s_exp = function.props.node.to_sexp();
-
         let old_suggestions = suggestions_arc.lock().clone();
 
-        let old_suggestions_for_func: Vec<&RefactoringSuggestion> = old_suggestions
-            .values()
-            .filter(|s| s.serialized_slice.function_sexp == function_s_exp)
-            .collect();
+        let suggestions = Self::compute_suggestions_for_function(
+            &function,
+            &old_suggestions,
+            &text_content,
+            &syntax_tree,
+        )?;
 
-        for mut suggestion in suggestions.values_mut() {
-            let old_suggestions_with_same_serialization: Vec<&RefactoringSuggestion> =
-                old_suggestions_for_func
-                    .clone()
-                    .into_iter()
-                    .filter(|s| s.serialized_slice == suggestion.serialized_slice)
-                    .collect();
-
-            // Re-identify ID with previous value to avoid unnecessary removal and addition
-            if old_suggestions_with_same_serialization.len() == 1 {
-                suggestion.id = old_suggestions_with_same_serialization[0].id;
-            }
-
+        for (id, suggestion) in suggestions.iter() {
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
             let binded_text_content = text_content.clone();
             let binded_file_path = file_path.clone();
             let binded_suggestion = suggestion.clone();
+            let binded_id: Uuid = *id;
             let binded_suggestions_cache_arc = suggestions_arc.clone();
             do_method_extraction(
                 slice,
                 move |edits: Vec<Edit>| {
                     Self::update_suggestion_with_formatted_text_diff(
+                        binded_id,
                         binded_suggestion,
                         edits,
                         binded_text_content,
@@ -250,6 +240,7 @@ impl ComplexityRefactoring {
 
     fn compute_suggestions_for_function(
         function: &SwiftFunction,
+        old_suggestions: &HashMap<Uuid, RefactoringSuggestion>,
         text_content: &XcodeText,
         syntax_tree: &SwiftSyntaxTree,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
@@ -264,11 +255,23 @@ impl ComplexityRefactoring {
             };
 
         let mut new_suggestions = HashMap::new();
-        let id = uuid::Uuid::new_v4();
+
+        let old_suggestions_with_same_serialization: Vec<(&Uuid, &RefactoringSuggestion)> =
+            old_suggestions
+                .iter()
+                .filter(|&(_, suggestion)| suggestion.serialized_slice == serialized_node_slice)
+                .collect::<Vec<_>>();
+
+        // Re-identify ID with previous value to avoid unnecessary removal and addition
+        let id = if old_suggestions_with_same_serialization.len() == 1 {
+            *old_suggestions_with_same_serialization[0].0
+        } else {
+            uuid::Uuid::new_v4()
+        };
+
         new_suggestions.insert(
             id,
             RefactoringSuggestion {
-                id,
                 serialized_slice: serialized_node_slice,
                 main_function_name: function.get_name(),
                 new_complexity,
@@ -282,17 +285,19 @@ impl ComplexityRefactoring {
     }
 
     fn update_suggestion(
+        id: Uuid,
         updated_suggestion: &RefactoringSuggestion,
         suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
     ) {
         let mut suggestions = suggestions_cache.lock();
-        let suggestion = suggestions.get_mut(&updated_suggestion.id);
+        let suggestion = suggestions.get_mut(&id);
 
         if let Some(suggestion) = suggestion {
             suggestion.clone_from(updated_suggestion);
 
             let fe_suggestion = match map_refactoring_suggestion_to_fe_refactoring_suggestion(
                 suggestion.to_owned(),
+                id,
             ) {
                 Err(e) => {
                     error!(?e, "Unable to map suggestion to FE suggestion");
@@ -309,6 +314,7 @@ impl ComplexityRefactoring {
     }
 
     fn update_suggestion_with_formatted_text_diff(
+        id: Uuid,
         mut suggestion: RefactoringSuggestion,
         edits: Vec<Edit>,
         text_content: XcodeText,
@@ -321,7 +327,7 @@ impl ComplexityRefactoring {
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
-            Self::update_suggestion(&suggestion, suggestions_cache)
+            Self::update_suggestion(id, &suggestion, suggestions_cache)
         });
     }
 

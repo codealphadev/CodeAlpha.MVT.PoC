@@ -116,7 +116,6 @@ impl MainWindow {
         if let Some(offscreen_dist_y) = offscreen_dist_y {
             corrected_position.y += offscreen_dist_y;
         }
-        dbg!(updated_main_window_size.clone());
 
         Self::update_widget_position(
             LogicalFrame {
@@ -136,7 +135,6 @@ impl MainWindow {
                 .set_size(updated_main_window_size.as_tauri_LogicalSize())
                 .ok()?;
         }
-        dbg!("Successfully set size");
 
         Some(())
     }
