@@ -86,13 +86,14 @@ impl SwiftFunction<'_> {
                     _ => panic!("Wrong codeblock type"),
                 })?;
             results.push(new_func);
-        }
-        for child in node.named_children(&mut node.walk()) {
-            results.append(&mut Self::get_top_level_functions_recursive(
-                child,
-                syntax_tree,
-                text_content,
-            )?);
+        } else {
+            for child in node.named_children(&mut node.walk()) {
+                results.append(&mut Self::get_top_level_functions_recursive(
+                    child,
+                    syntax_tree,
+                    text_content,
+                )?);
+            }
         }
         Ok(results)
     }
