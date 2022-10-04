@@ -2,4 +2,5 @@
 
 export interface PerformRefactoringOperationMessage {
   id: string;
+  window_uid: number;
 }
