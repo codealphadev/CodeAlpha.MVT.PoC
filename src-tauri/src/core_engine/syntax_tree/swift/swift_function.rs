@@ -67,10 +67,10 @@ impl SwiftFunction<'_> {
             .tree()
             .ok_or(SwiftCodeBlockError::GenericError(anyhow!("No tree found")))?
             .root_node();
-        Self::get_top_level_functions_intl(node, syntax_tree, text_content)
+        Self::get_top_level_functions_recursive(node, syntax_tree, text_content)
     }
 
-    fn get_top_level_functions_intl<'a>(
+    fn get_top_level_functions_recursive<'a>(
         node: Node<'a>,
         syntax_tree: &'a SwiftSyntaxTree,
         text_content: &'a XcodeText,
@@ -88,7 +88,7 @@ impl SwiftFunction<'_> {
             results.push(new_func);
         }
         for child in node.named_children(&mut node.walk()) {
-            results.append(&mut Self::get_top_level_functions_intl(
+            results.append(&mut Self::get_top_level_functions_recursive(
                 child,
                 syntax_tree,
                 text_content,

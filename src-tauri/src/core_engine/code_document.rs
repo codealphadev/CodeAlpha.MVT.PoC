@@ -1,5 +1,5 @@
 use super::{
-    rules::{rule_base::RuleResults, RuleBase, RuleType, SwiftLinterProps},
+    rules::{rule_base::RuleResults, RuleBase, RuleType},
     syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
     utils::XcodeText,
     TextRange,
@@ -85,32 +85,21 @@ impl CodeDocument {
         let is_file_path_updated = self.is_file_path_updated(file_path);
         let is_file_text_updated = self.is_file_text_updated(&new_content);
 
-        if !is_file_path_updated && !is_file_text_updated {
-            // Return early if the file path and text did not change
-            return false;
+        if is_file_path_updated {
+            self.file_path = file_path.clone();
         }
 
-        // Update Rule Properties
-        for rule in self.rules_mut() {
-            match rule {
-                RuleType::_SwiftLinter(rule) => rule.update_properties(SwiftLinterProps {
-                    file_path_as_str: file_path.clone(),
-                    linter_config: None,
-                    file_content: Some(new_content.clone()),
-                }),
-            }
+        if is_file_text_updated {
+            match self.syntax_tree.parse(&new_content) {
+                Err(SwiftSyntaxTreeError::CouldNotParseTree) => {}
+                Err(e) => {
+                    error!(?e, "Error parsing syntax tree");
+                }
+                Ok(_) => {}
+            };
+
+            self.text = Some(new_content);
         }
-
-        self.file_path = file_path.clone();
-        match self.syntax_tree.parse(&new_content) {
-            Err(SwiftSyntaxTreeError::CouldNotParseTree) => {}
-            Err(e) => {
-                error!(?e, "Error parsing syntax tree");
-            }
-            Ok(_) => {}
-        };
-        self.text = Some(new_content);
-
         return is_file_text_updated;
     }
 
@@ -137,7 +126,11 @@ impl CodeDocument {
         );
     }
 
-    pub fn set_selected_text_range(&mut self, text_range: &TextRange, double_check: bool) -> bool {
+    pub fn set_selected_text_range_and_get_if_text_changed(
+        &mut self,
+        text_range: &TextRange,
+        double_check: bool,
+    ) -> bool {
         // Check if content changed at same time - this is needed for the case that selected text range
         // is being delivered before text content change message
         if double_check {
@@ -164,10 +157,6 @@ impl CodeDocument {
             self.selected_text_range = Some(text_range.clone());
         }
         return false;
-    }
-
-    pub fn rules_mut(&mut self) -> &mut Vec<RuleType> {
-        &mut self.rules
     }
 
     fn is_file_path_updated(&self, file_path_new: &Option<String>) -> bool {
@@ -250,7 +239,7 @@ pub mod tests {
 
         let mut code_doc = CodeDocument::new(&editor_window);
         code_doc.update_doc_properties(&code_snippet, &file_path);
-        code_doc.set_selected_text_range(&selected_text_range, false);
+        code_doc.set_selected_text_range_and_get_if_text_changed(&selected_text_range, false);
 
         code_doc
     }

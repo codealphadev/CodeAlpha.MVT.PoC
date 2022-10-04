@@ -6,12 +6,12 @@
 	import { afterUpdate } from 'svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import type { AppWindow } from '../../src-tauri/bindings/AppWindow';
-	import ComplexitySection from '../components/node-explainer/complexity-section.svelte';	
+	import ComplexitySection from '../components/node-explainer/complexity-section.svelte';
 	import type { NodeExplanationEvent } from '../../src-tauri/bindings/features/node_explanation/NodeExplanationEvent';
 	import ParametersSection from '../components/node-explainer/parameters-section.svelte';
 	import Footer from '../components/node-explainer/footer-section.svelte';
 	import Card from '../components/common/card.svelte';
-	
+
 	let explanation: NodeExplanation | null = null;
 	let complexity: number | null = null;
 	let node_name: string | null = null;
@@ -23,7 +23,7 @@
 
 	// Logic to always resize the content window to the size of the HTML
 	afterUpdate(() => {
-		 updateDimensions();
+		updateDimensions();
 
 		if (window_width && window_height) {
 			let appWindow: AppWindow = 'Explain';
@@ -65,7 +65,7 @@
 				case 'UpdateNodeExplanation':
 					explanation = payload.explanation;
 					node_name = payload.name;
-					complexity = payload.complexity
+					complexity = payload.complexity;
 					break;
 				default:
 					break;
@@ -78,19 +78,19 @@
 
 {#key JSON.stringify(explanation)}
 	{#if explanation !== null}
-		<div data-tauri-drag-region class="absolute w-full h-20"/>
+		<div data-tauri-drag-region class="absolute w-full h-20" />
 
 		<Card id={dom_id}>
 			<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
-			
+
 			{#if explanation.parameters}
-				<ParametersSection parameters={explanation.parameters}/>
+				<ParametersSection parameters={explanation.parameters} />
 			{/if}
 			{#if complexity !== null}
-			<ComplexitySection complexity={complexity}/>
+				<ComplexitySection {complexity} />
 			{/if}
-			<hr class="border-backgroundsecondary w-full"/>
-				<Footer />
+			<hr class="border-backgroundsecondary w-full" />
+			<Footer />
 		</Card>
 	{/if}
 {/key}

@@ -8,7 +8,6 @@
 	import { afterUpdate } from 'svelte';
 	import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
 	import omit from 'lodash/omit';
-	import keyBy from 'lodash/keyBy';
 
 	let window_width: number | null = null;
 	let window_height: number | null = null;

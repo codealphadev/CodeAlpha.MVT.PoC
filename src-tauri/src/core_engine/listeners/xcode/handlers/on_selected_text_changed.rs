@@ -16,7 +16,7 @@ pub fn on_selected_text_changed(
     let core_engine = &mut core_engine_arc.lock();
 
     let core_engine_active_status = core_engine.engine_active();
-
+    let text_changed;
     {
         let code_documents = &mut core_engine.code_documents().lock();
 
@@ -24,12 +24,12 @@ pub fn on_selected_text_changed(
             .get_mut(&msg.window_uid)
             .ok_or(CoreEngineError::CodeDocNotFound(msg.window_uid))?;
 
-        code_doc.set_selected_text_range(
+        text_changed = code_doc.set_selected_text_range_and_get_if_text_changed(
             &TextRange {
                 index: msg.index,
                 length: msg.length,
             },
-            false,
+            true,
         );
 
         // Checking if the engine is active. If not, don't continue.
@@ -38,5 +38,9 @@ pub fn on_selected_text_changed(
         }
     }
 
-    core_engine.run_features(msg.window_uid, &CoreEngineTrigger::OnTextSelectionChange)
+    core_engine.run_features(msg.window_uid, &CoreEngineTrigger::OnTextSelectionChange)?;
+    if text_changed {
+        core_engine.run_features(msg.window_uid, &CoreEngineTrigger::OnTextContentChange)?;
+    }
+    Ok(())
 }
