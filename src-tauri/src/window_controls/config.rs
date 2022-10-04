@@ -161,7 +161,7 @@ pub mod default_properties {
             AppWindow::Settings => (800.0, 600.0),
             AppWindow::Analytics => (1280.0, 786.0),
             AppWindow::Widget => (48.0, 48.0),
-            AppWindow::Explain => (368.0, 500.0),
+            AppWindow::Explain => (430.0, 500.0),
             AppWindow::CodeOverlay => (1.0, 1.0),
             AppWindow::Main => (320.0, 200.0),
         }
