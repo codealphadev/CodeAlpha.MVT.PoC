@@ -39,7 +39,7 @@ pub fn on_update_app_window(
             )
             .is_none()
             {
-                debug!("Failed to update MainWindow (on_update_app_window.rs)");
+                debug!("Failed to update MainWindow");
             }
         }
     }

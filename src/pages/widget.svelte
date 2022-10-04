@@ -33,26 +33,6 @@
 				invoke('cmd_rebind_main_widget');
 			}, 100);
 		}
-
-		// setTimeout(() => {
-		// 	let appWindow: AppWindow = 'Main';
-
-		// 	invoke('cmd_resize_window', {
-		// 		appWindow: appWindow,
-		// 		sizeY: 200,
-		// 		sizeX: 200
-		// 	});
-		// }, 3000);
-
-		// setTimeout(() => {
-		// 	let appWindow: AppWindow = 'Main';
-
-		// 	invoke('cmd_resize_window', {
-		// 		appWindow: appWindow,
-		// 		sizeY: 500,
-		// 		sizeX: 320
-		// 	});
-		// }, 6000);
 	};
 
 	const listenTauriEvents = async () => {
