@@ -28,7 +28,7 @@ pub fn on_activate_editor_app(
 
     if is_textarea_focused {
         window_manager.show_app_windows(
-            AppWindow::shown_on_focus_gained(),
+            AppWindow::shown_on_focus_gained(None),
             Some(activated_msg.window_uid),
             None,
         );

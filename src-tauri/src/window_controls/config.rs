@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
+use tauri::Manager;
 use ts_rs::TS;
+
+use crate::app_handle;
 
 #[derive(EnumIter, Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, TS)]
 #[ts(export)]
@@ -41,6 +44,31 @@ impl AppWindow {
             AppWindow::Explain,
         ]
     }
+    pub fn hidden_on_temporary_hide() -> Vec<AppWindow> {
+        let considered_windows = vec![
+            AppWindow::Widget,
+            AppWindow::CodeOverlay,
+            AppWindow::Explain,
+        ];
+
+        let code_overlay_window = app_handle()
+            .get_window(&AppWindow::CodeOverlay.to_string())
+            .expect("Could not get CodeOverlay window");
+        let code_overlay_window_monitor = code_overlay_window
+            .current_monitor()
+            .expect("Error when attempting to get current monitor for CodeOverlay window")
+            .expect("Could not get current monitor for CodeOverlay window");
+
+        let mut hidden_windows = vec![];
+        for window in considered_windows {
+            if Self::check_if_on_same_screen(window, &code_overlay_window_monitor) == Some(true) {
+                hidden_windows.push(window);
+            }
+        }
+
+        hidden_windows
+    }
+
     pub fn hiddon_on_zoom_level_change() -> Vec<AppWindow> {
         vec![AppWindow::CodeOverlay, AppWindow::Explain]
     }
@@ -49,8 +77,22 @@ impl AppWindow {
         vec![AppWindow::Main]
     }
 
-    pub fn shown_on_focus_gained() -> Vec<AppWindow> {
-        vec![AppWindow::Widget, AppWindow::CodeOverlay]
+    pub fn shown_on_focus_gained(hidden_app_windows: Option<Vec<AppWindow>>) -> Vec<AppWindow> {
+        let considered_windows = vec![AppWindow::Widget, AppWindow::CodeOverlay];
+
+        let mut shown_windows = vec![];
+
+        if let Some(hidden_app_windows) = hidden_app_windows {
+            for window in hidden_app_windows {
+                if considered_windows.contains(&window) {
+                    shown_windows.push(window);
+                }
+            }
+
+            shown_windows
+        } else {
+            considered_windows
+        }
     }
 
     pub fn shown_on_core_engine_activated() -> Vec<AppWindow> {
@@ -59,6 +101,17 @@ impl AppWindow {
 
     pub fn shown_on_click_widget() -> Vec<AppWindow> {
         vec![AppWindow::Main]
+    }
+
+    fn check_if_on_same_screen(app_window: AppWindow, monitor: &tauri::Monitor) -> Option<bool> {
+        let tauri_window = app_handle().get_window(&app_window.to_string())?;
+        let tauri_window_monitor = tauri_window.current_monitor().ok()??;
+
+        if monitor.position() == tauri_window_monitor.position() {
+            Some(true)
+        } else {
+            Some(false)
+        }
     }
 }
 

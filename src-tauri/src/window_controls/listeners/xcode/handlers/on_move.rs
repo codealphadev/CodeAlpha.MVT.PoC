@@ -25,7 +25,7 @@ pub fn on_move_editor_window(
         });
     }
 
-    window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_focus_lost());
+    window_manager.temporarily_hide_app_windows(AppWindow::hidden_on_temporary_hide());
 
     Some(())
 }
