@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     app_handle,
     core_engine::{events::EventUserInteraction, features::CoreEngineTrigger, CoreEngine},
-    platform::macos::get_focused_window,
     utils::messaging::ChannelList,
 };
 use parking_lot::Mutex;
@@ -24,11 +23,9 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 }
                 EventUserInteraction::PerformRefactoringOperation(msg) => {
                     debug!(?msg, "PerformRefactoringOperation request");
-                    let window_uid = get_focused_window().unwrap(); // TODO
-                    core_engine
+                    _ = core_engine
                         .lock()
-                        .run_features(window_uid, &CoreEngineTrigger::OnUserCommand(msg));
-                    // TODO: Handle error
+                        .run_features(msg.window_uid, &CoreEngineTrigger::OnUserCommand(msg));
                 }
                 _ => {}
             }

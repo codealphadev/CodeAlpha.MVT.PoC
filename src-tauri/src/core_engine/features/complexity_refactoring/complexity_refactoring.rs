@@ -13,7 +13,7 @@ use crate::{
         },
         format_code,
         syntax_tree::{SwiftFunction, SwiftSyntaxTree},
-        CodeDocument, TextPosition, XcodeText,
+        CodeDocument, TextPosition, WindowUid, XcodeText,
     },
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -49,6 +49,7 @@ enum ComplexityRefactoringProcedure {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub struct FERefactoringSuggestion {
+    pub window_uid: usize,
     pub id: uuid::Uuid,
     pub new_text_content_string: String,
     pub old_text_content_string: String,
@@ -70,6 +71,7 @@ pub struct RefactoringSuggestion {
 pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
     suggestion: RefactoringSuggestion,
     id: Uuid,
+    window_uid: usize,
 ) -> Result<FERefactoringSuggestion, ComplexityRefactoringError> {
     Ok(FERefactoringSuggestion {
         id,
@@ -82,6 +84,7 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
         new_complexity: suggestion.new_complexity,
         prev_complexity: suggestion.prev_complexity,
         main_function_name: suggestion.main_function_name,
+        window_uid,
     })
 }
 pub struct ComplexityRefactoring {
@@ -172,6 +175,7 @@ impl ComplexityRefactoring {
                 &file_path,
                 code_document.syntax_tree(),
                 self.suggestions.clone(),
+                code_document.editor_window_props().window_uid,
             )?);
         }
         let ids_to_remove;
@@ -199,6 +203,7 @@ impl ComplexityRefactoring {
         file_path: &Option<String>,
         syntax_tree: &SwiftSyntaxTree,
         suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+        window_uid: WindowUid,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
         let old_suggestions = suggestions_arc.lock().clone();
 
@@ -211,10 +216,6 @@ impl ComplexityRefactoring {
 
         for (id, suggestion) in suggestions.iter() {
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
-            let range_length = (slice.nodes.last().unwrap().end_byte()
-                - slice.nodes.first().unwrap().start_byte())
-                / 2; // UTF-16;
-            let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
 
             let range_length = (slice.nodes.last().unwrap().end_byte()
                 - slice.nodes.first().unwrap().start_byte())
@@ -240,6 +241,7 @@ impl ComplexityRefactoring {
                                 binded_text_content,
                                 binded_suggestions_cache_arc,
                                 binded_file_path,
+                                window_uid,
                             )
                         },
                         &binded_text_content_2,
@@ -302,6 +304,7 @@ impl ComplexityRefactoring {
         id: Uuid,
         updated_suggestion: &RefactoringSuggestion,
         suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+        window_uid: WindowUid,
     ) {
         let mut suggestions = suggestions_cache.lock();
         let suggestion = suggestions.get_mut(&id);
@@ -312,6 +315,7 @@ impl ComplexityRefactoring {
             let fe_suggestion = match map_refactoring_suggestion_to_fe_refactoring_suggestion(
                 suggestion.to_owned(),
                 id,
+                window_uid,
             ) {
                 Err(e) => {
                     error!(?e, "Unable to map suggestion to FE suggestion");
@@ -334,6 +338,7 @@ impl ComplexityRefactoring {
         text_content: XcodeText,
         suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
         file_path: Option<String>,
+        window_uid: WindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
             let (old_content, new_content) =
@@ -341,7 +346,7 @@ impl ComplexityRefactoring {
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
-            Self::update_suggestion(id, &suggestion, suggestions_cache)
+            Self::update_suggestion(id, &suggestion, suggestions_cache, window_uid)
         });
     }
 
