@@ -114,7 +114,6 @@ fn get_best_extraction<'a>(
     syntax_tree: &'a SwiftSyntaxTree,
     text_content: &'a XcodeText,
     original_complexity: Complexities,
-    //scopes: &HashMap<NodeAddress, Scope>,
     score_threshold: f64,
 ) -> Result<Option<(NodeSlice<'a>, isize)>, ComplexityRefactoringError> {
     let mut best_possibility = None;
