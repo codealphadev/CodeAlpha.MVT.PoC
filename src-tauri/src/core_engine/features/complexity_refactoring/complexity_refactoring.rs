@@ -50,17 +50,17 @@ enum ComplexityRefactoringProcedure {
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub struct FERefactoringSuggestion {
     pub id: uuid::Uuid,
-    pub new_text_content_string: String, // TODO: Future?
-    pub old_text_content_string: String, // TODO: Future?
+    pub new_text_content_string: String,
+    pub old_text_content_string: String,
     pub new_complexity: isize,
     pub prev_complexity: isize,
-    pub main_function_name: Option<String>, // TODO: Should it be an option?
+    pub main_function_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RefactoringSuggestion {
-    pub new_text_content_string: Option<String>, // TODO: Future? // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
-    pub old_text_content_string: Option<String>, // TODO: Future?
+    pub new_text_content_string: Option<String>, // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
+    pub old_text_content_string: Option<String>,
     pub new_complexity: isize,
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
@@ -89,7 +89,7 @@ pub struct ComplexityRefactoring {
     suggestions: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
 }
 
-const MAX_ALLOWED_COMPLEXITY: isize = 2; // TODO: Raise to be more reasonable?
+const MAX_ALLOWED_COMPLEXITY: isize = 5; // TODO: Raise to be more reasonable?
 
 impl FeatureBase for ComplexityRefactoring {
     fn compute(
@@ -216,14 +216,20 @@ impl ComplexityRefactoring {
                 / 2; // UTF-16;
             let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
 
+            let range_length = (slice.nodes.last().unwrap().end_byte()
+                - slice.nodes.first().unwrap().start_byte())
+                / 2; // UTF-16;
+            let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
+
             let binded_text_content = text_content.clone();
+            let binded_text_content_2 = text_content.clone();
             let binded_file_path = file_path.clone();
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
             let binded_suggestions_cache_arc = suggestions_arc.clone();
             tauri::async_runtime::spawn({
                 async move {
-                    do_method_extraction(
+                    _ = do_method_extraction(
                         start_position,
                         range_length,
                         move |edits: Vec<Edit>| {
@@ -236,7 +242,7 @@ impl ComplexityRefactoring {
                                 binded_file_path,
                             )
                         },
-                        &text_content.clone(),
+                        &binded_text_content_2,
                     )
                     .await
                     .map_err(|e| error!(?e, "Failed to perform refactoring"));
