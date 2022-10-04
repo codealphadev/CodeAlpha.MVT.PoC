@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tracing::error;
 
 #[cached(result = true, size = 100)]
-pub async fn generate_function_name(code: XcodeText) -> Result<String, reqwest::Error> {
+pub async fn _generate_function_name(code: XcodeText) -> Result<String, reqwest::Error> {
     let url = get_cloud_function_url();
     let req_body = GenerateFunctionNameRequest {
         version: "v1".to_string(),

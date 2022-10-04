@@ -1,5 +1,5 @@
-pub use swift_linter_rule::SwiftLinterProps;
-pub use swift_linter_rule::SwiftLinterRule;
+pub use swift_linter_rule::_SwiftLinterProps;
+pub use swift_linter_rule::_SwiftLinterRule;
 
 pub use types::LintLevel;
 
