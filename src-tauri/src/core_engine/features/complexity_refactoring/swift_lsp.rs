@@ -110,7 +110,7 @@ key.compilerargs:
   - \"-sdk\"
   - \"{}\"",
         file_path,
-        start_position.row + 1, // TODO check
+        start_position.row + 1,
         start_position.column + 1,
         length,
         file_path,

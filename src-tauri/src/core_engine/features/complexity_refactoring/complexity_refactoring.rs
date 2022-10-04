@@ -215,7 +215,7 @@ impl ComplexityRefactoring {
         )?;
 
         for (id, suggestion) in suggestions.iter() {
-            let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
+            let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
 
             let range_length = (slice.nodes.last().unwrap().end_byte()
                 - slice.nodes.first().unwrap().start_byte())
@@ -361,7 +361,6 @@ impl ComplexityRefactoring {
         edits.reverse();
 
         for edit in edits {
-            // TODO: replace_range for String is more efficient. In general, test feature with emojis and UTF16 etc.
             edited_content.replace_range(edit.start_index..edit.end_index, edit.text);
         }
 

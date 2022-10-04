@@ -54,7 +54,6 @@ pub fn check_for_method_extraction(
     .map(|(slice, remaining_complexity)| (slice.serialize(node), remaining_complexity)))
 }
 
-// TODO: Make async and handle error in one place, including tmp file deletion
 pub async fn do_method_extraction(
     start_position: TextPosition,
     range_length: usize,
@@ -165,7 +164,6 @@ fn get_p_norm(x: f64, y: f64, exponent: f64) -> f64 {
     )
 }
 
-// TODO: Move scope logic into core syntax tree, and put it in metadata?
 fn walk_node<'a>(
     node: Node<'a>,
     text_content: &XcodeText,
