@@ -13,7 +13,7 @@ use crate::{
     platform::macos::{get_menu_bar_height, models::app::AppWindowMovedMessage, AXEventApp},
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::{AppWindow, WindowLevel},
+        config::{default_properties, AppWindow, WindowLevel},
         utils::create_default_window_builder,
         windows::{widget_window::WIDGET_MAIN_WINDOW_OFFSET, WidgetWindow},
     },
@@ -24,6 +24,12 @@ use super::listeners::window_control_events_listener;
 #[derive(Clone, Debug)]
 pub struct MainWindow {
     app_handle: tauri::AppHandle,
+
+    // We keep track of the window's size purely because the parent-child relationship
+    // in macOS introduces weird behavior when tied windows between screens. If the child
+    // window was resized before it snaps back to initial size at startup the moment both
+    // move to a different screen. Our workaround for now is to reset the size on "show".
+    size: LogicalSize,
 }
 
 impl MainWindow {
@@ -39,7 +45,12 @@ impl MainWindow {
             create_default_window_builder(&app_handle, AppWindow::Main)?.build()?;
         }
 
-        Ok(Self { app_handle })
+        let (width, height) = default_properties::size(&AppWindow::Main);
+
+        Ok(Self {
+            app_handle,
+            size: LogicalSize { width, height },
+        })
     }
 
     pub fn set_macos_properties(&self) -> Option<()> {
@@ -68,9 +79,8 @@ impl MainWindow {
         window_control_events_listener(main_window);
     }
 
-    pub fn show(&self, monitor: &LogicalFrame) -> Option<()> {
-        let main_window_frame = Self::dimensions();
-        Self::update(&main_window_frame.size, monitor)?;
+    pub fn show(&mut self, monitor: &LogicalFrame) -> Option<()> {
+        self.update(&self.size.clone(), monitor, true)?;
 
         let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
         main_tauri_window.show().ok()?;
@@ -80,57 +90,68 @@ impl MainWindow {
         Some(())
     }
 
-    pub fn update(updated_main_window_size: &LogicalSize, monitor: &LogicalFrame) -> Option<()> {
-        let widget_frame = WidgetWindow::dimensions();
-
-        let mut corrected_position = LogicalPosition {
-            x: widget_frame.origin.x
-                - (updated_main_window_size.width
-                    - widget_frame.size.width
-                    - WIDGET_MAIN_WINDOW_OFFSET),
-            y: widget_frame.origin.y - updated_main_window_size.height,
-        };
-
-        // If the `main_window_origin` would be within the menu bar area, we need to account for that.
-        corrected_position.y += Self::compute_menu_bar_diff(
-            &corrected_position,
-            &monitor.origin,
-            get_menu_bar_height(&monitor),
-        );
-
-        let is_flipped = Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
-        if is_flipped {
-            corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET;
-        }
-
-        let (offscreen_dist_x, offscreen_dist_y) = Self::calc_off_screen_distance(
-            &updated_main_window_size,
-            &corrected_position,
-            &monitor,
-        );
-
-        if let Some(offscreen_dist_x) = offscreen_dist_x {
-            corrected_position.x += offscreen_dist_x;
-        }
-
-        if let Some(offscreen_dist_y) = offscreen_dist_y {
-            corrected_position.y += offscreen_dist_y;
-        }
-
-        Self::update_widget_position(
-            LogicalFrame {
-                origin: corrected_position,
-                size: *updated_main_window_size,
-            },
-            is_flipped,
-        );
-
+    pub fn update(
+        &mut self,
+        updated_main_window_size: &LogicalSize,
+        monitor: &LogicalFrame,
+        is_visible: bool,
+    ) -> Option<()> {
+        // Only update MainWindow origin when the window is visible or _goes_ directly visible afterwards
         let main_tauri_window = app_handle().get_window(&AppWindow::Main.to_string())?;
-        main_tauri_window
-            .set_position(corrected_position.as_tauri_LogicalPosition())
-            .ok()?;
 
-        if *updated_main_window_size != WidgetWindow::dimensions().size {
+        if is_visible == true {
+            let widget_frame = WidgetWindow::dimensions();
+
+            let mut corrected_position = LogicalPosition {
+                x: widget_frame.origin.x
+                    - (updated_main_window_size.width
+                        - widget_frame.size.width
+                        - WIDGET_MAIN_WINDOW_OFFSET),
+                y: widget_frame.origin.y - updated_main_window_size.height,
+            };
+
+            // If the `main_window_origin` would be within the menu bar area, we need to account for that.
+            corrected_position.y += Self::compute_menu_bar_diff(
+                &corrected_position,
+                &monitor.origin,
+                get_menu_bar_height(&monitor),
+            );
+
+            let is_flipped =
+                Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
+            if is_flipped {
+                corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET;
+            }
+
+            let (offscreen_dist_x, offscreen_dist_y) = Self::calc_off_screen_distance(
+                &updated_main_window_size,
+                &corrected_position,
+                &monitor,
+            );
+
+            if let Some(offscreen_dist_x) = offscreen_dist_x {
+                corrected_position.x += offscreen_dist_x;
+            }
+
+            if let Some(offscreen_dist_y) = offscreen_dist_y {
+                corrected_position.y += offscreen_dist_y;
+            }
+
+            Self::update_widget_position(
+                LogicalFrame {
+                    origin: corrected_position,
+                    size: *updated_main_window_size,
+                },
+                is_flipped,
+            );
+
+            main_tauri_window
+                .set_position(corrected_position.as_tauri_LogicalPosition())
+                .ok()?;
+        }
+
+        if *updated_main_window_size != MainWindow::dimensions().size {
+            self.size = *updated_main_window_size;
             main_tauri_window
                 .set_size(updated_main_window_size.as_tauri_LogicalSize())
                 .ok()?;

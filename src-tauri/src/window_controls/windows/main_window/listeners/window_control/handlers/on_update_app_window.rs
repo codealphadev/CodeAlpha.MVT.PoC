@@ -8,12 +8,13 @@ use crate::{
     app_handle,
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
-        config::AppWindow, models::app_window::UpdateAppWindowMessage, windows::MainWindow,
+        config::AppWindow, models::app_window::UpdateAppWindowMessage, utils::is_visible,
+        windows::MainWindow,
     },
 };
 
 pub fn on_update_app_window(
-    _main_window: &Arc<Mutex<MainWindow>>,
+    main_window: &Arc<Mutex<MainWindow>>,
     update_msg: &UpdateAppWindowMessage,
 ) -> Option<()> {
     if update_msg.app_windows.contains(&AppWindow::Main) {
@@ -30,14 +31,19 @@ pub fn on_update_app_window(
                 &monitor.size().to_logical::<f64>(scale_factor),
             );
 
-            if MainWindow::update(
-                &main_window_size,
-                &LogicalFrame {
-                    origin: monitor_origin,
-                    size: monitor_size,
-                },
-            )
-            .is_none()
+            let is_main_window_visible = is_visible(AppWindow::Main).ok().map_or(false, |f| f);
+
+            let mut main_window = main_window.lock();
+            if main_window
+                .update(
+                    &main_window_size,
+                    &LogicalFrame {
+                        origin: monitor_origin,
+                        size: monitor_size,
+                    },
+                    is_main_window_visible,
+                )
+                .is_none()
             {
                 debug!("Failed to update MainWindow");
             }

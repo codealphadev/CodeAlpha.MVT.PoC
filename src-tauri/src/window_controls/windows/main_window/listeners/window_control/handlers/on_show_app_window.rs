@@ -17,7 +17,7 @@ pub fn on_show_app_window(
     show_msg: &ShowAppWindowMessage,
 ) -> Option<()> {
     if show_msg.app_windows.contains(&AppWindow::Main) {
-        let main_window = main_window.lock();
+        let mut main_window = main_window.lock();
 
         // We fetch the window where the widget is on
         let widget_window = app_handle().get_window(&AppWindow::Widget.to_string())?;
