@@ -15,6 +15,7 @@ use objc::{msg_send, runtime::Class, sel, sel_impl};
 use parking_lot::Mutex;
 use rdev::{simulate, EventType};
 use throttle::Throttle;
+use tracing::debug;
 
 use super::{
     is_focused_uielement_xcode_editor_textarea,
@@ -71,7 +72,7 @@ pub fn subscribe_mouse_events() {
             tap.enable();
             CFRunLoop::run_current();
         },
-        Err(_) => println!("Error subscribing to mouse events"),
+        Err(_) => debug!("Error subscribing to mouse events"),
     }
 }
 

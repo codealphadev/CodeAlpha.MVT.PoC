@@ -411,7 +411,12 @@ impl ComplexityRefactoring {
             let suggestions_arc = self.suggestions.clone();
 
             async move {
-                match replace_text_content(&text_content, &new_content, &selected_text_range).await
+                match replace_text_content(
+                    &text_content,
+                    &XcodeText::from_str(&new_content),
+                    &selected_text_range,
+                )
+                .await
                 {
                     Ok(_) => {}
                     Err(err) => {

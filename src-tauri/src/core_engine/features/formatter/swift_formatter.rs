@@ -144,8 +144,12 @@ impl SwiftFormatter {
                     return;
                 }
 
-                match replace_text_content(&text_content, &formatted_content, &selected_text_range)
-                    .await
+                match replace_text_content(
+                    &text_content,
+                    &XcodeText::from_str(&formatted_content),
+                    &selected_text_range,
+                )
+                .await
                 {
                     Ok(_) => {}
                     Err(err) => {

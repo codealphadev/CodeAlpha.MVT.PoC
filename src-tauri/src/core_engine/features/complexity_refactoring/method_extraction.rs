@@ -125,8 +125,6 @@ fn get_best_extraction<'a>(
     let equality_preference_factor = 1.35;
 
     for slice in candidates {
-        //let inputs_and_outputs = slice.get_inputs_and_outputs(scopes);
-
         let ComplexitiesPrediction {
             removed_complexity,
             new_function_complexity,
