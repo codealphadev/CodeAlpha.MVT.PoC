@@ -107,11 +107,7 @@ impl AppWindow {
         let tauri_window = app_handle().get_window(&app_window.to_string())?;
         let tauri_window_monitor = tauri_window.current_monitor().ok()??;
 
-        if monitor.position() == tauri_window_monitor.position() {
-            Some(true)
-        } else {
-            Some(false)
-        }
+        Some(monitor.position() == tauri_window_monitor.position())
     }
 }
 
