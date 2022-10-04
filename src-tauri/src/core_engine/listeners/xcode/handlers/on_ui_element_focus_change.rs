@@ -52,7 +52,6 @@ pub fn on_editor_focused_uielement_changed(
 
         let selected_text_range = get_selected_text_range(&GetVia::Pid(pid))?;
         text_changed = text_changed || code_doc.set_selected_text_range(&selected_text_range, true);
-        dbg!(code_doc.file_path());
     }
 
     core_engine.run_features(window_uid, &CoreEngineTrigger::OnTextSelectionChange)?;
