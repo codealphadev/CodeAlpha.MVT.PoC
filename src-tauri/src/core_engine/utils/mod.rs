@@ -11,7 +11,7 @@ mod text_position;
 mod text_range;
 mod xcode_text;
 
-// The optional file_path is used for finding .swiftformat
+// The optional file_path is used for finding .swiftformat config files
 pub async fn format_code(
     input: &String,
     file_path: &Option<String>,
@@ -26,7 +26,7 @@ pub async fn format_code(
 
     let (mut rx, mut child) = command
         .spawn()
-        .map_err(|err| SwiftFormatError::GenericError(err.into()))?; // TODO: error handling
+        .map_err(|err| SwiftFormatError::GenericError(err.into()))?;
 
     child
         .write(input.as_bytes())

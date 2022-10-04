@@ -24,7 +24,7 @@ impl<'a> NodeSlice<'a> {
     pub fn deserialize(
         serialized_node_slice: &SerializedNodeSlice,
         function_node: Node<'a>,
-    ) -> NodeSlice<'a> {
+    ) -> Result<NodeSlice<'a>, ComplexityRefactoringError> {
         let mut curr_node: Node<'a> = function_node;
         let mut parent_address = vec![function_node.id()];
 
@@ -34,13 +34,11 @@ impl<'a> NodeSlice<'a> {
             .expect("path_from_function_root may not be empty");
 
         for index in path_to_parent {
-            curr_node = curr_node
-                .children(&mut curr_node.walk())
-                .nth(index)
-                .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
+            curr_node = curr_node.children(&mut curr_node.walk()).nth(index).ok_or(
+                ComplexityRefactoringError::GenericError(anyhow!(
                     "Invalid serialized_node_slice for current function"
-                )))
-                .unwrap();
+                )),
+            )?;
             parent_address.push(curr_node.id());
         }
 
@@ -49,10 +47,10 @@ impl<'a> NodeSlice<'a> {
         let nodes: Vec<Node<'a>> =
             (&children[first_node_index..first_node_index + serialized_node_slice.count]).to_vec();
 
-        Self {
+        Ok(Self {
             nodes,
             parent_address,
-        }
+        })
     }
 
     pub fn serialize(&self, function_node: Node) -> SerializedNodeSlice {
@@ -343,7 +341,7 @@ mod tests {
             let function_declaration = root_node.child(0).unwrap();
 
             let recovered_slice =
-                NodeSlice::deserialize(&serialized_node_slice, function_declaration);
+                NodeSlice::deserialize(&serialized_node_slice, function_declaration).unwrap();
 
             let reserialized_slice = recovered_slice.serialize(function_declaration);
             assert_eq!(reserialized_slice, serialized_node_slice);
