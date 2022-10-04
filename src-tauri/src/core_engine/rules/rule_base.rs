@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::{swift_linter::LintLevel, RuleMatch, SwiftLinterRule};
+use super::{swift_linter::LintLevel, RuleMatch, _SwiftLinterRule};
 
 pub enum RuleType {
-    _SwiftLinter(SwiftLinterRule),
+    _SwiftLinter(_SwiftLinterRule),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]

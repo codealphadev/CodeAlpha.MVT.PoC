@@ -16,25 +16,25 @@ use crate::{
 
 use super::types::{LintAlert, LintLevel, LintResults};
 
-pub struct SwiftLinterProps {
+pub struct _SwiftLinterProps {
     pub file_path_as_str: Option<String>,
     pub linter_config: Option<String>,
     pub file_content: Option<XcodeText>,
 }
 
-pub struct SwiftLinterRule {
+pub struct _SwiftLinterRule {
     rule_type: RuleName,
     rule_matches: Option<Vec<RuleMatch>>,
     file_path_updated: bool,
     file_path_as_str: Option<String>,
-    file_content: Option<XcodeText>,
+    _file_content: Option<XcodeText>,
     file_content_updated: bool,
-    linter_config: Option<String>,
+    _linter_config: Option<String>,
     linter_config_updated: bool,
     editor_app_pid: i32,
 }
 
-impl RuleBase for SwiftLinterRule {
+impl RuleBase for _SwiftLinterRule {
     fn rule_type(&self) -> RuleName {
         self.rule_type.clone()
     }
@@ -118,28 +118,28 @@ impl RuleBase for SwiftLinterRule {
     }
 }
 
-impl SwiftLinterRule {
+impl _SwiftLinterRule {
     pub fn _new(editor_app_pid: i32) -> Self {
         Self {
             rule_matches: None,
             file_path_updated: false,
             file_path_as_str: None,
-            linter_config: Some("--quiet".to_string()),
+            _linter_config: Some("--quiet".to_string()),
             linter_config_updated: false,
             rule_type: RuleName::SwiftLinter,
-            file_content: None,
+            _file_content: None,
             file_content_updated: false,
             editor_app_pid,
         }
     }
 
-    pub fn update_properties(&mut self, properties: SwiftLinterProps) {
-        self.update_file_path(properties.file_path_as_str);
-        self.update_linter_config(properties.linter_config);
-        self.update_file_content(properties.file_content);
+    pub fn _update_properties(&mut self, properties: _SwiftLinterProps) {
+        self._update_file_path(properties.file_path_as_str);
+        self._update_linter_config(properties.linter_config);
+        self._update_file_content(properties.file_content);
     }
 
-    fn update_file_path(&mut self, file_path_as_str: Option<String>) {
+    fn _update_file_path(&mut self, file_path_as_str: Option<String>) {
         if let Some(file_path) = file_path_as_str {
             if self.file_path_as_str.is_none()
                 || self.file_path_as_str.as_ref().unwrap() != &file_path
@@ -152,12 +152,12 @@ impl SwiftLinterRule {
         }
     }
 
-    fn update_linter_config(&mut self, linter_config: Option<String>) {
+    fn _update_linter_config(&mut self, linter_config: Option<String>) {
         if let Some(linter_config) = linter_config {
-            if self.linter_config.is_none()
-                || self.linter_config.as_ref().unwrap() != &linter_config
+            if self._linter_config.is_none()
+                || self._linter_config.as_ref().unwrap() != &linter_config
             {
-                self.linter_config = Some(linter_config);
+                self._linter_config = Some(linter_config);
                 self.linter_config_updated = true;
             } else {
                 self.linter_config_updated = false;
@@ -165,11 +165,12 @@ impl SwiftLinterRule {
         }
     }
 
-    fn update_file_content(&mut self, file_content: Option<XcodeText>) {
+    fn _update_file_content(&mut self, file_content: Option<XcodeText>) {
         if let Some(file_content) = file_content {
             // Update content if it has changed
-            if self.file_content.is_none() || self.file_content.as_ref().unwrap() != &file_content {
-                self.file_content = Some(file_content);
+            if self._file_content.is_none() || self._file_content.as_ref().unwrap() != &file_content
+            {
+                self._file_content = Some(file_content);
                 self.file_content_updated = true;
             } else {
                 self.file_content_updated = false;
@@ -227,14 +228,14 @@ impl SwiftLinterRule {
 mod tests {
     use crate::core_engine::rules::RuleBase;
 
-    use super::{SwiftLinterProps, SwiftLinterRule};
+    use super::{_SwiftLinterProps, _SwiftLinterRule};
 
     #[test]
     #[ignore]
     fn test_swift_linter() {
         let file_path_as_str = "/Users/adam/codealpha/code/adam-test/Shared/ContentView.swift";
-        let mut rule = SwiftLinterRule::_new(12345);
-        rule.update_properties(SwiftLinterProps {
+        let mut rule = _SwiftLinterRule::_new(12345);
+        rule._update_properties(_SwiftLinterProps {
             file_path_as_str: Some(file_path_as_str.to_string()),
             linter_config: None,
             file_content: None,
