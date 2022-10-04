@@ -28,7 +28,7 @@ pub fn get_menu_bar_height(monitor: &LogicalFrame) -> f64 {
         38.
     } else {
         // Case: any secondary monitor
-        0.0
+        24.
     }
 }
 
