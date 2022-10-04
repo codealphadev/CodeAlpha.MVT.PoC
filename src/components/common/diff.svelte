@@ -8,7 +8,6 @@
 	export let old_code: string;
 
 	let theme_name: ThemeName;
-	console.log(old_code);
 
 	getContext<ThemeContextType>('theme').theme.subscribe((t) => {
 		theme_name = t.name;

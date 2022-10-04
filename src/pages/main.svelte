@@ -14,7 +14,6 @@
 	};
 
 	listenToGlobalEvents();
-	console.log('hello');
 </script>
 
 <div class="flex flex-col justify-end transform overflow-hidden h-full">
