@@ -1,164 +1,169 @@
 {
-	"package": {
-		"productName": "CodeAlpha",
-		"version": "0.0.27"
-	},
-	"build": {
-		"distDir": "../dist",
-		"devPath": "http://localhost:5173",
-		"beforeDevCommand": "npm run start-frontend",
-		"beforeBuildCommand": "npm run build-frontend"
-	},
-	"tauri": {
-		"pattern": {
-			"use": "isolation",
-			"options": {
-				"dir": "../dist-isolation/"
-			}
-		},
-		"bundle": {
-			"active": true,
-			"targets": "all",
-			"identifier": "com.codealpha.dev",
-			"icon": [
-				"icons/32x32.png",
-				"icons/128x128.png",
-				"icons/128x128@2x.png",
-				"icons/icon.icns",
-				"icons/icon.ico"
-			],
-			"resources": [],
-			"externalBin": ["binaries/swiftformat", "binaries/sourcekitten"],
-			"copyright": "",
-			"category": "DeveloperTool",
-			"shortDescription": "",
-			"longDescription": "",
-			"deb": {
-				"depends": []
-			},
-			"macOS": {
-				"frameworks": [],
-				"minimumSystemVersion": "",
-				"exceptionDomain": "",
-				"signingIdentity": null,
-				"providerShortName": null,
-				"entitlements": null
-			},
-			"windows": {
-				"certificateThumbprint": null,
-				"digestAlgorithm": "sha256",
-				"timestampUrl": ""
-			}
-		},
-		"macOSPrivateApi": true,
-		"updater": {
-			"active": true,
-			"endpoints": ["https://storage.googleapis.com/codealpha-releases/manifest.json"],
-			"dialog": false,
-			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFQzExN0Y3OEY1RDlDRUYKUldUdm5GMlA5eGZCVGxBek5hL1NYUHNVTDMzblp3MHY4WnBQMDc4RGtsTitlcUVYQUZMa2JlbDYK"
-		},
-		"allowlist": {
-			"all": false,
-			"clipboard": {
-				"all": false,
-				"readText": false,
-				"writeText": false
-			},
-			"dialog": {
-				"all": false,
-				"ask": false,
-				"confirm": false,
-				"message": false,
-				"open": false,
-				"save": false
-			},
-			"fs": {
-				"all": false,
-				"copyFile": false,
-				"createDir": false,
-				"readDir": false,
-				"readFile": false,
-				"removeDir": false,
-				"removeFile": false,
-				"renameFile": false,
-				"scope": [],
-				"writeFile": false
-			},
-			"globalShortcut": {
-				"all": false
-			},
-			"http": {
-				"all": false,
-				"request": false,
-				"scope": []
-			},
-			"notification": {
-				"all": false
-			},
-			"os": {
-				"all": false
-			},
-			"path": {
-				"all": false
-			},
-			"process": {
-				"all": false,
-				"exit": false,
-				"relaunch": false,
-				"relaunchDangerousAllowSymlinkMacos": false
-			},
-			"protocol": {
-				"all": false,
-				"asset": false,
-				"assetScope": []
-			},
-			"shell": {
-				"all": false,
-				"execute": false,
-				"open": false,
-				"scope": [
-					{
-						"name": "binaries/swiftformat",
-						"sidecar": true
-					}
-				],
-				"sidecar": true
-			},
-			"window": {
-				"all": false,
-				"center": false,
-				"close": false,
-				"create": false,
-				"hide": true,
-				"maximize": false,
-				"minimize": false,
-				"print": false,
-				"requestUserAttention": false,
-				"setAlwaysOnTop": false,
-				"setDecorations": false,
-				"setFocus": false,
-				"setFullscreen": false,
-				"setIcon": false,
-				"setMaxSize": false,
-				"setMinSize": false,
-				"setPosition": false,
-				"setResizable": false,
-				"setSize": false,
-				"setSkipTaskbar": false,
-				"setTitle": false,
-				"show": false,
-				"startDragging": true,
-				"unmaximize": false,
-				"unminimize": false
-			}
-		},
-		"systemTray": {
-			"iconPath": "icons/icon-template.png",
-			"iconAsTemplate": true
-		},
-		"windows": [],
-		"security": {
-			"csp": null
-		}
-	}
+  "package": {
+    "productName": "CodeAlpha",
+    "version": "0.0.28"
+  },
+  "build": {
+    "distDir": "../dist",
+    "devPath": "http://localhost:5173",
+    "beforeDevCommand": "npm run start-frontend",
+    "beforeBuildCommand": "npm run build-frontend"
+  },
+  "tauri": {
+    "pattern": {
+      "use": "isolation",
+      "options": {
+        "dir": "../dist-isolation/"
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.codealpha.dev",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "externalBin": [
+        "binaries/swiftformat",
+        "binaries/sourcekitten"
+      ],
+      "copyright": "",
+      "category": "DeveloperTool",
+      "shortDescription": "",
+      "longDescription": "",
+      "deb": {
+        "depends": []
+      },
+      "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "",
+        "exceptionDomain": "",
+        "signingIdentity": null,
+        "providerShortName": null,
+        "entitlements": null
+      },
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "macOSPrivateApi": true,
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://storage.googleapis.com/codealpha-releases/manifest.json"
+      ],
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFQzExN0Y3OEY1RDlDRUYKUldUdm5GMlA5eGZCVGxBek5hL1NYUHNVTDMzblp3MHY4WnBQMDc4RGtsTitlcUVYQUZMa2JlbDYK"
+    },
+    "allowlist": {
+      "all": false,
+      "clipboard": {
+        "all": false,
+        "readText": false,
+        "writeText": false
+      },
+      "dialog": {
+        "all": false,
+        "ask": false,
+        "confirm": false,
+        "message": false,
+        "open": false,
+        "save": false
+      },
+      "fs": {
+        "all": false,
+        "copyFile": false,
+        "createDir": false,
+        "readDir": false,
+        "readFile": false,
+        "removeDir": false,
+        "removeFile": false,
+        "renameFile": false,
+        "scope": [],
+        "writeFile": false
+      },
+      "globalShortcut": {
+        "all": false
+      },
+      "http": {
+        "all": false,
+        "request": false,
+        "scope": []
+      },
+      "notification": {
+        "all": false
+      },
+      "os": {
+        "all": false
+      },
+      "path": {
+        "all": false
+      },
+      "process": {
+        "all": false,
+        "exit": false,
+        "relaunch": false,
+        "relaunchDangerousAllowSymlinkMacos": false
+      },
+      "protocol": {
+        "all": false,
+        "asset": false,
+        "assetScope": []
+      },
+      "shell": {
+        "all": false,
+        "execute": false,
+        "open": false,
+        "scope": [
+          {
+            "name": "binaries/swiftformat",
+            "sidecar": true
+          }
+        ],
+        "sidecar": true
+      },
+      "window": {
+        "all": false,
+        "center": false,
+        "close": false,
+        "create": false,
+        "hide": true,
+        "maximize": false,
+        "minimize": false,
+        "print": false,
+        "requestUserAttention": false,
+        "setAlwaysOnTop": false,
+        "setDecorations": false,
+        "setFocus": false,
+        "setFullscreen": false,
+        "setIcon": false,
+        "setMaxSize": false,
+        "setMinSize": false,
+        "setPosition": false,
+        "setResizable": false,
+        "setSize": false,
+        "setSkipTaskbar": false,
+        "setTitle": false,
+        "show": false,
+        "startDragging": true,
+        "unmaximize": false,
+        "unminimize": false
+      }
+    },
+    "systemTray": {
+      "iconPath": "icons/icon-template.png",
+      "iconAsTemplate": true
+    },
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  }
 }
