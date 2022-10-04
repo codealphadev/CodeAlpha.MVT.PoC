@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     core_engine::{
-        core_engine::EditorWindowUid,
+        core_engine::WindowUid,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
         syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
@@ -36,7 +36,7 @@ enum DocsGenComputeProcedure {
 }
 
 pub struct DocsGenerator {
-    node_annotations: HashMap<EditorWindowUid, NodeAnnotation>,
+    node_annotations: HashMap<WindowUid, NodeAnnotation>,
     is_activated: bool,
     compute_results_updated: bool,
 }
@@ -329,7 +329,7 @@ impl DocsGenerator {
         &mut self,
         codeblock: AnnotationCodeBlock,
         text_content: &XcodeText,
-        window_uid: EditorWindowUid,
+        window_uid: WindowUid,
     ) -> Result<(), DocsGenerationError> {
         let new_annotation = NodeAnnotation::new(codeblock, text_content, window_uid)?;
 
@@ -339,7 +339,7 @@ impl DocsGenerator {
         Ok(())
     }
 
-    fn is_docs_gen_task_running(&self, window_uid: &EditorWindowUid) -> bool {
+    fn is_docs_gen_task_running(&self, window_uid: &WindowUid) -> bool {
         if let Some(current_annotation) = self.node_annotations.get(&window_uid) {
             current_annotation.state() == NodeAnnotationState::FetchingExplanation
         } else {

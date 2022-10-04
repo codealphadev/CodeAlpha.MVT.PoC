@@ -28,7 +28,7 @@ pub fn on_show_app_window(
     if show_msg.app_windows.contains(&AppWindow::Main) {
         let mut widget_window = widget_window.lock();
 
-        widget_window.set_main_window_shown(true);
+        widget_window.set_main_window_shown(Some(true));
     }
 
     Some(())
