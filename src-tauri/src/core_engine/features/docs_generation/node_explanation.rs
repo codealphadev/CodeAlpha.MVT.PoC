@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::env;
 use textwrap::{wrap, Options};
 use tracing::error;
 use ts_rs::TS;

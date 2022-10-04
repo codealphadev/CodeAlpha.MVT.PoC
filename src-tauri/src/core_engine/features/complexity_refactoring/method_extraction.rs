@@ -16,7 +16,6 @@ use crate::core_engine::{
 use cached::SizedCache;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
-use tracing::debug;
 use tracing::error;
 
 #[cached(
@@ -56,60 +55,45 @@ pub fn check_for_method_extraction(
 }
 
 // TODO: Make async and handle error in one place, including tmp file deletion
-pub fn do_method_extraction(
-    slice: NodeSlice,
+pub async fn do_method_extraction(
+    start_position: TextPosition,
+    range_length: usize,
     set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
     text_content: &XcodeText,
 ) -> Result<(), ComplexityRefactoringError> {
-    let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
-    let range_length =
-        (slice.nodes.last().unwrap().end_byte() - slice.nodes.first().unwrap().start_byte()) / 2; // UTF-16;
+    // Create temporary file
+    let tmp_file_key = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(20)
+        .map(char::from)
+        .collect();
+    let temp_file = create_temp_file(&text_content, tmp_file_key)?;
+    let suggestion = refactor_function(
+        &temp_file.path.to_string_lossy().to_string(),
+        start_position,
+        range_length,
+        &text_content,
+    )
+    .await
+    .map_err(|e| {
+        delete_temp_file(&temp_file);
+        ComplexityRefactoringError::GenericError(e.into())
+    })?;
 
-    // TODO: Create temporary file
-    tauri::async_runtime::spawn({
-        let text_content = text_content.clone();
-        async move {
-            let tmp_file_key = rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(20)
-                .map(char::from)
-                .collect();
-            let temp_file = match create_temp_file(&text_content, tmp_file_key) {
-                Ok(res) => res,
-                Err(e) => {
-                    error!(?e, "Failed to create temporary file");
-                    return ();
-                }
-            };
-            let suggestion = match refactor_function(
-                &temp_file.path.to_string_lossy().to_string(),
-                start_position,
-                range_length,
-                &text_content,
-            )
-            .await
-            {
-                Err(e) => {
-                    error!(?e, "Failed to query LSP for refactoring");
-                    if let Err(e2) = TemporaryFileOnDisk::delete(&temp_file) {
-                        error!(?e2, "In cleaning up error, could not delete temporary file");
-                    }
-                    return ();
-                }
-                Ok(Some(res)) => res,
-                Ok(None) => {
-                    debug!("Refactoring not possible");
-                    if let Err(e2) = TemporaryFileOnDisk::delete(&temp_file) {
-                        error!(?e2, "In cleaning up, could not delete temporary file");
-                    }
-                    return ();
-                }
-            };
-            set_result_callback(suggestion);
-        }
-    });
+    delete_temp_file(&temp_file);
+
+    set_result_callback(suggestion);
 
     Ok(())
+}
+
+fn delete_temp_file(temp_file: &TemporaryFileOnDisk) {
+    match TemporaryFileOnDisk::delete(&temp_file) {
+        Err(e) => {
+            error!(?e, "Could not clean up temp file")
+        }
+        Ok(_) => (),
+    }
 }
 
 fn create_temp_file(

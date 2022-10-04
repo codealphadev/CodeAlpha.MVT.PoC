@@ -11,6 +11,8 @@ use super::complexity_refactoring::Edit;
 pub enum SwiftLspError {
     #[error("File does not exist: '{0}'")]
     FileNotExisting(String),
+    #[error("Refactoring could not be carried out")]
+    RefactoringNotPossible,
     #[error("Command failed")]
     CommandFailed(),
     #[error("Something went wrong when querying Swift LSP.")]
@@ -92,7 +94,7 @@ pub async fn refactor_function(
     start_position: TextPosition,
     length: usize,
     text_content: &XcodeText,
-) -> Result<Option<Vec<Edit>>, SwiftLspError> {
+) -> Result<Vec<Edit>, SwiftLspError> {
     let sdk_path = get_macos_sdk_path().await?;
 
     let payload = format!(
@@ -122,7 +124,7 @@ key.compilerargs:
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
 
     if result.categorized_edits.len() == 0 {
-        return Ok(None);
+        return Err(SwiftLspError::RefactoringNotPossible);
     }
 
     let edits: Vec<Edit> = result
@@ -135,7 +137,7 @@ key.compilerargs:
         })
         .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
-    return Ok(Some(edits));
+    return Ok(edits);
 }
 
 async fn make_lsp_request(file_path: &String, payload: String) -> Result<String, SwiftLspError> {

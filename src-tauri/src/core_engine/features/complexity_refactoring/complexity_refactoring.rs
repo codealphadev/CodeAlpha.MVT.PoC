@@ -13,7 +13,7 @@ use crate::{
         },
         format_code,
         syntax_tree::{SwiftFunction, SwiftSyntaxTree},
-        CodeDocument, XcodeText,
+        CodeDocument, TextPosition, XcodeText,
     },
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -211,25 +211,37 @@ impl ComplexityRefactoring {
 
         for (id, suggestion) in suggestions.iter() {
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node);
+            let range_length = (slice.nodes.last().unwrap().end_byte()
+                - slice.nodes.first().unwrap().start_byte())
+                / 2; // UTF-16;
+            let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
+
             let binded_text_content = text_content.clone();
             let binded_file_path = file_path.clone();
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
             let binded_suggestions_cache_arc = suggestions_arc.clone();
-            do_method_extraction(
-                slice,
-                move |edits: Vec<Edit>| {
-                    Self::update_suggestion_with_formatted_text_diff(
-                        binded_id,
-                        binded_suggestion,
-                        edits,
-                        binded_text_content,
-                        binded_suggestions_cache_arc,
-                        binded_file_path,
+            tauri::async_runtime::spawn({
+                async move {
+                    do_method_extraction(
+                        start_position,
+                        range_length,
+                        move |edits: Vec<Edit>| {
+                            Self::update_suggestion_with_formatted_text_diff(
+                                binded_id,
+                                binded_suggestion,
+                                edits,
+                                binded_text_content,
+                                binded_suggestions_cache_arc,
+                                binded_file_path,
+                            )
+                        },
+                        &text_content.clone(),
                     )
-                },
-                &text_content.clone(),
-            )?;
+                    .await
+                    .map_err(|e| error!(?e, "Failed to perform refactoring"));
+                }
+            });
         }
         Ok(suggestions)
     }
