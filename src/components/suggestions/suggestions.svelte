@@ -10,17 +10,15 @@
 	import omit from 'lodash/omit';
 	import keyBy from 'lodash/keyBy';
 
-
 	let window_width: number | null = null;
 	let window_height: number | null = null;
 	export let window_dom_id: string;
 
-
 	afterUpdate(() => {
 		updateDimensions();
-		
-		console.log('executing', window_width, window_height);
+
 		if (window_width && window_height) {
+			console.log('executing', window_width, window_height);
 			let appWindow: AppWindow = 'Main';
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
@@ -31,7 +29,7 @@
 		}
 	});
 
-	const updateDimensions =  () => {
+	const updateDimensions = () => {
 		let element = document.getElementById(window_dom_id);
 
 		if (element === null) {
@@ -43,16 +41,13 @@
 		window_width = positionInfo.width;
 		window_height = positionInfo.height;
 	};
-    let suggestions: {[id: string]: FERefactoringSuggestion}  = {};
+	let suggestions: { [id: string]: FERefactoringSuggestion } = {};
 	$: sorted_suggestions = Object.values(suggestions).sort((a, b) => a.id.localeCompare(b.id));
 
 	const listenToSuggestionEvents = async () => {
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
 		await listen(suggestion_channel, (event) => {
-			
-			const { payload, event: event_type } = JSON.parse(
-				event.payload as string
-			) as SuggestionEvent;
+			const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
 			console.log(payload);
 
 			switch (event_type) {
@@ -78,7 +73,7 @@
 	{#if sorted_suggestions.length > 0}
 		{#each sorted_suggestions as suggestion}
 			{#key suggestion.id}
-				<Suggestion suggestion={suggestion}/>
+				<Suggestion {suggestion} />
 			{/key}
 		{/each}
 	{/if}
