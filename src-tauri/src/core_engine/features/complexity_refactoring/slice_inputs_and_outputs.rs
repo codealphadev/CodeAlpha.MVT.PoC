@@ -59,17 +59,17 @@ pub struct SliceInputsAndOutputs {
     pub output_names: Vec<XcodeText>,
 }
 
-pub fn get_inputs_and_outputs(
+pub fn get_slice_inputs_and_outputs(
     slice: &NodeSlice,
     scopes: &HashMap<NodeAddress, Scope>,
 ) -> SliceInputsAndOutputs {
-    get_inputs_and_outputs_internal(
+    get_slice_inputs_and_outputs_internal(
         &slice.nodes.iter().map(|n| n.id()).collect(),
         &slice.parent_address,
         scopes,
     )
 }
-fn get_inputs_and_outputs_internal(
+fn get_slice_inputs_and_outputs_internal(
     node_ids: &Vec<usize>,
     parent_address: &NodeAddress,
     scopes: &HashMap<NodeAddress, Scope>,
@@ -321,8 +321,8 @@ mod tests {
 
         use crate::core_engine::{
             features::complexity_refactoring::{
-                inputs_outputs::get_inputs_and_outputs_internal, Declaration, NodeAddress, Scope,
-                SliceInputsAndOutputs,
+                slice_inputs_and_outputs::get_slice_inputs_and_outputs_internal, Declaration,
+                NodeAddress, Scope, SliceInputsAndOutputs,
             },
             XcodeText,
         };
@@ -345,7 +345,7 @@ mod tests {
             let slice_node_ids = vec![15, 16, 17];
             let parent_address = vec![1];
             assert_eq!(
-                get_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
+                get_slice_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
                 SliceInputsAndOutputs {
                     input_names: vec![],
                     output_names: vec![]
@@ -371,7 +371,7 @@ mod tests {
             let slice_node_ids = vec![15, 16];
             let parent_address = vec![1];
             assert_eq!(
-                get_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
+                get_slice_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
                 SliceInputsAndOutputs {
                     input_names: vec![],
                     output_names: vec![var_x]
@@ -397,7 +397,7 @@ mod tests {
             let slice_node_ids = vec![16];
             let parent_address = vec![1];
             assert_eq!(
-                get_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
+                get_slice_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
                 SliceInputsAndOutputs {
                     input_names: vec![],
                     output_names: vec![]
@@ -423,7 +423,7 @@ mod tests {
             let slice_node_ids = vec![15, 16, 17];
             let parent_address = vec![1];
             assert_eq!(
-                get_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
+                get_slice_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
                 SliceInputsAndOutputs {
                     input_names: vec![var_x],
                     output_names: vec![]
@@ -451,7 +451,7 @@ mod tests {
             let parent_address = vec![1, 15];
 
             assert_eq!(
-                get_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
+                get_slice_inputs_and_outputs_internal(&slice_node_ids, &parent_address, &scopes),
                 SliceInputsAndOutputs {
                     input_names: vec![var_x],
                     output_names: vec![]

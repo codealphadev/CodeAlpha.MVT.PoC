@@ -5,8 +5,8 @@ use cached::proc_macro::cached;
 use tree_sitter::Node;
 
 use super::{
-    complexity_refactoring::Edit, get_inputs_and_outputs, get_node_address, update_scopes_for_node,
-    ComplexityRefactoringError, Scope, SliceInputsAndOutputs,
+    complexity_refactoring::Edit, get_node_address, get_slice_inputs_and_outputs,
+    update_scopes_for_node, ComplexityRefactoringError, Scope, SliceInputsAndOutputs,
 };
 use crate::core_engine::{
     features::complexity_refactoring::{
@@ -133,11 +133,11 @@ fn get_best_extraction<'a>(
 
     let mut output_remaining_complexity: Option<isize> = None;
 
-    for slice in candidates {
+    for candidate_slice in candidates {
         let ComplexitiesPrediction {
             removed_complexity,
             new_function_complexity,
-        } = get_resulting_complexities(slice.clone(), syntax_tree, text_content)?;
+        } = get_resulting_complexities(candidate_slice.clone(), syntax_tree, text_content)?;
 
         let remaining_complexity =
             (original_complexity.clone() - removed_complexity).get_total_complexity();
@@ -145,7 +145,7 @@ fn get_best_extraction<'a>(
         let SliceInputsAndOutputs {
             input_names,
             output_names,
-        } = get_inputs_and_outputs(&slice, &scopes);
+        } = get_slice_inputs_and_outputs(&candidate_slice, &scopes);
 
         let score = evaluate_suggestion_score(
             input_names.len(),
@@ -156,7 +156,7 @@ fn get_best_extraction<'a>(
         );
 
         if score > best_score && score > score_threshold {
-            best_possibility = Some(slice);
+            best_possibility = Some(candidate_slice);
             best_score = score;
             output_remaining_complexity = Some(remaining_complexity);
         }

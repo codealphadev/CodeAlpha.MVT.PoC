@@ -19,14 +19,6 @@ pub struct SerializedNodeSlice {
 }
 
 impl<'a> NodeSlice<'a> {
-    /*fn is_candidate_for_extraction(&self) -> bool {
-        if nodes.iter().any(|n| n.has_error()) {
-            return false;
-        }
-        // TODO: Check for guard statements
-        return true;
-    }*/
-
     pub fn deserialize(
         serialized_node_slice: &SerializedNodeSlice,
         function_node: Node<'a>,
