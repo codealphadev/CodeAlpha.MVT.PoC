@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use crate::{
     core_engine::{
-        core_engine::WindowUid,
-        features::{CoreEngineTrigger, FeatureBase, FeatureError},
+        core_engine::EditorWindowUid,
+        events::models::NodeAnnotationClickedMessage,
+        features::{CoreEngineTrigger, FeatureBase, FeatureError, UserCommand},
         syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange, XcodeChar,
     },
-    window_controls::models::TrackingAreaClickedMessage,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
@@ -21,22 +21,17 @@ use super::{
 pub enum DocsGenerationError {
     #[error("The docs generator does not have sufficient context to proceed.")]
     MissingContext,
-    #[error(
-        "Updating a node annotation has failed. DocsGenManager is advised to drop the annotation."
-    )]
-    NodeAnnotationUpdateFailed,
     #[error("Something went wrong when executing the DocsGenerator feature.")]
     GenericError(#[source] anyhow::Error),
 }
 
 enum DocsGenComputeProcedure {
     CreateNewNodeAnnotation,
-    UpdateExistingNodeAnnotation,
-    FetchNodeExplanation(TrackingAreaClickedMessage),
+    FetchNodeExplanation(NodeAnnotationClickedMessage),
 }
 
 pub struct DocsGenerator {
-    node_annotations: HashMap<WindowUid, NodeAnnotation>,
+    node_annotations: HashMap<EditorWindowUid, NodeAnnotation>,
     is_activated: bool,
     compute_results_updated: bool,
 }
@@ -53,9 +48,6 @@ impl FeatureBase for DocsGenerator {
 
         if let Some(procedure) = self.should_compute(code_document, trigger) {
             match procedure {
-                DocsGenComputeProcedure::UpdateExistingNodeAnnotation => {
-                    self.procedure_update_existing_node_annotation(code_document)?;
-                }
                 DocsGenComputeProcedure::FetchNodeExplanation(msg) => {
                     self.procedure_fetch_node_explanation(code_document, msg)?;
                 }
@@ -156,20 +148,14 @@ impl DocsGenerator {
             CoreEngineTrigger::OnTextSelectionChange => {
                 no_annotation_is_running.then(|| DocsGenComputeProcedure::CreateNewNodeAnnotation)
             }
-            CoreEngineTrigger::OnTrackingAreaClicked(msg) => {
-                Some(DocsGenComputeProcedure::FetchNodeExplanation(msg.clone()))
-            }
-            CoreEngineTrigger::OnVisibleTextRangeChange => {
-                Some(DocsGenComputeProcedure::UpdateExistingNodeAnnotation)
-            }
-            CoreEngineTrigger::OnViewportMove => {
-                Some(DocsGenComputeProcedure::UpdateExistingNodeAnnotation)
-            }
-            CoreEngineTrigger::OnViewportDimensionsChange => {
-                Some(DocsGenComputeProcedure::UpdateExistingNodeAnnotation)
-            }
             CoreEngineTrigger::OnShortcutPressed(_) => None,
-            CoreEngineTrigger::OnUserCommand(_) => None,
+            CoreEngineTrigger::OnUserCommand(cmd) => match cmd {
+                UserCommand::NodeAnnotationClicked(msg) => {
+                    Some(DocsGenComputeProcedure::FetchNodeExplanation(msg.clone()))
+                }
+                _ => None,
+            },
+            _ => None,
         }
     }
 
@@ -219,7 +205,7 @@ impl DocsGenerator {
     fn procedure_fetch_node_explanation(
         &mut self,
         code_document: &CodeDocument,
-        msg: TrackingAreaClickedMessage,
+        msg: NodeAnnotationClickedMessage,
     ) -> Result<(), FeatureError> {
         let text_content =
             code_document
@@ -229,39 +215,13 @@ impl DocsGenerator {
                     DocsGenerationError::MissingContext.into(),
                 ))?;
         Ok(
-            if let Some(annotation) = self.node_annotations.get_mut(&msg.editor_window_uid) {
-                if msg.id == annotation.id() {
+            if let Some(annotation) = self.node_annotations.get_mut(&msg.window_uid) {
+                if msg.annotation_id == annotation.id() {
                     annotation.prepare_docs_insertion_position(text_content)?;
                     annotation.generate_node_explanation()?;
                 }
             },
         )
-    }
-
-    fn procedure_update_existing_node_annotation(
-        &mut self,
-        code_document: &CodeDocument,
-    ) -> Result<(), FeatureError> {
-        if let Some(annotation) = self
-            .node_annotations
-            .get_mut(&code_document.editor_window_props().window_uid)
-        {
-            let text_content =
-                code_document
-                    .text_content()
-                    .as_ref()
-                    .ok_or(FeatureError::GenericError(
-                        DocsGenerationError::MissingContext.into(),
-                    ))?;
-
-            if let Err(error) = annotation.update_annotation_tracking_area(text_content) {
-                self.node_annotations
-                    .remove(&code_document.editor_window_props().window_uid);
-                return Err(FeatureError::GenericError(error.into()));
-            }
-        }
-
-        Ok(())
     }
 
     pub fn clear_node_annotations(&mut self) {
@@ -329,7 +289,7 @@ impl DocsGenerator {
         &mut self,
         codeblock: AnnotationCodeBlock,
         text_content: &XcodeText,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
     ) -> Result<(), DocsGenerationError> {
         let new_annotation = NodeAnnotation::new(codeblock, text_content, window_uid)?;
 
@@ -339,7 +299,7 @@ impl DocsGenerator {
         Ok(())
     }
 
-    fn is_docs_gen_task_running(&self, window_uid: &WindowUid) -> bool {
+    fn is_docs_gen_task_running(&self, window_uid: &EditorWindowUid) -> bool {
         if let Some(current_annotation) = self.node_annotations.get(&window_uid) {
             current_annotation.state() == NodeAnnotationState::FetchingExplanation
         } else {

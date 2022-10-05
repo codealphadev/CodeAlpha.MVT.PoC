@@ -30,6 +30,7 @@ pub struct TrackingAreasManager {
     previous_mouse_position: Option<(f64, f64)>,
 }
 
+#[derive(Debug)]
 struct TrackingEvent {
     tracking_area: TrackingArea,
     event_type: TrackingEventType,
@@ -253,24 +254,26 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseEntered => {
                         EventWindowControls::TrackingAreaEntered(TrackingAreaEnteredMessage {
                             id: tracking_area.id,
-                            editor_window_uid: tracking_area.editor_window_uid,
+                            window_uid: tracking_area.window_uid,
                             app_window: tracking_area.app_window,
+                            mouse_position: *mouse_position,
                         })
                         .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseExited => {
                         EventWindowControls::TrackingAreaExited(TrackingAreaExitedMessage {
                             id: tracking_area.id,
-                            editor_window_uid: tracking_area.editor_window_uid,
+                            window_uid: tracking_area.window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: tracking_area.app_window,
+                            mouse_position: *mouse_position,
                         })
                         .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseOver => {
                         EventWindowControls::TrackingAreaMouseOver(TrackingAreaMouseOverMessage {
                             id: tracking_area.id,
-                            editor_window_uid: tracking_area.editor_window_uid,
+                            window_uid: tracking_area.window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: tracking_area.app_window,
                             mouse_position: *mouse_position,
@@ -280,9 +283,10 @@ impl TrackingAreasManager {
                     TrackingEventType::MouseClicked => {
                         EventWindowControls::TrackingAreaClicked(TrackingAreaClickedMessage {
                             id: tracking_area.id,
-                            editor_window_uid: tracking_area.editor_window_uid,
+                            window_uid: tracking_area.window_uid,
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: tracking_area.app_window,
+                            mouse_position: *mouse_position,
                         })
                         .publish_tracking_area(&tracking_area.subscriber);
                     }
@@ -290,7 +294,7 @@ impl TrackingAreasManager {
                         EventWindowControls::TrackingAreaClickedOutside(
                             TrackingAreaClickedOutsideMessage {
                                 id: tracking_area.id,
-                                editor_window_uid: tracking_area.editor_window_uid,
+                                window_uid: tracking_area.window_uid,
                                 app_window: tracking_area.app_window,
                             },
                         )

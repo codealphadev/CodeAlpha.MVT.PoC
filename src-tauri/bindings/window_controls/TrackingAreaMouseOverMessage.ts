@@ -4,7 +4,7 @@ import type { LogicalPosition } from "../geometry/LogicalPosition";
 
 export interface TrackingAreaMouseOverMessage {
   id: string;
-  editor_window_uid: number;
+  window_uid: number;
   app_window: AppWindow;
   mouse_position: LogicalPosition;
   duration_ms: bigint;

@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 
 use crate::{
     core_engine::{
-        core_engine::{CoreEngineError, WindowUid},
+        core_engine::{CoreEngineError, EditorWindowUid},
         features::CoreEngineTrigger,
         CodeDocument, CoreEngine, EditorWindowProps,
     },
@@ -59,17 +59,17 @@ pub fn on_text_content_changed(
 }
 
 pub fn check_if_code_doc_needs_to_be_created(
-    code_documents: &mut HashMap<WindowUid, CodeDocument>,
+    code_documents: &mut HashMap<EditorWindowUid, CodeDocument>,
     editor_pid: i32,
-    editor_window_uid: WindowUid,
+    window_uid: EditorWindowUid,
 ) {
     let new_code_doc = CodeDocument::new(&EditorWindowProps {
-        window_uid: editor_window_uid,
+        window_uid,
         pid: editor_pid,
     });
 
     // check if code document is already contained in list of documents
-    if (*code_documents).get(&editor_window_uid).is_none() {
-        (*code_documents).insert(editor_window_uid, new_code_doc);
+    if (*code_documents).get(&window_uid).is_none() {
+        (*code_documents).insert(window_uid, new_code_doc);
     }
 }

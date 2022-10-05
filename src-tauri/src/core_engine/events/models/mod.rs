@@ -1,3 +1,4 @@
+pub use code_annotation::NodeAnnotationClickedMessage;
 pub use code_annotation::RemoveNodeAnnotationMessage;
 pub use code_annotation::UpdateNodeAnnotationMessage;
 

@@ -24,7 +24,7 @@ pub fn user_interaction_listener(window_manager: &Arc<Mutex<WindowManager>>) {
                 EventUserInteraction::ToggleMainWindow(msg) => {
                     on_main_window_toggle(&window_manager, msg);
                 }
-                EventUserInteraction::PerformRefactoringOperation(_) => (),
+                _ => {}
             }
         }
     });

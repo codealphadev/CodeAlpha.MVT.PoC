@@ -2,7 +2,11 @@ use std::sync::Arc;
 
 use crate::{
     app_handle,
-    core_engine::{events::EventUserInteraction, features::CoreEngineTrigger, CoreEngine},
+    core_engine::{
+        events::EventUserInteraction,
+        features::{CoreEngineTrigger, UserCommand},
+        CoreEngine,
+    },
     utils::messaging::ChannelList,
 };
 use parking_lot::Mutex;
@@ -21,11 +25,20 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventUserInteraction::CoreActivationStatus(msg) => {
                     on_core_activation_status_update(&core_engine, &msg);
                 }
+                EventUserInteraction::NodeAnnotationClicked(msg) => {
+                    _ = core_engine.lock().run_features(
+                        msg.window_uid,
+                        &CoreEngineTrigger::OnUserCommand(UserCommand::NodeAnnotationClicked(msg)),
+                    );
+                }
                 EventUserInteraction::PerformRefactoringOperation(msg) => {
                     debug!(?msg, "PerformRefactoringOperation request");
-                    _ = core_engine
-                        .lock()
-                        .run_features(msg.window_uid, &CoreEngineTrigger::OnUserCommand(msg));
+                    _ = core_engine.lock().run_features(
+                        msg.window_uid,
+                        &CoreEngineTrigger::OnUserCommand(
+                            UserCommand::PerformRefactoringOperation(msg),
+                        ),
+                    );
                 }
                 _ => {}
             }

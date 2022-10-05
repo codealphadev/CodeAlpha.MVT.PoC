@@ -1,9 +1,11 @@
 use std::fmt;
 
 use crate::{
-    core_engine::{events::models::PerformRefactoringOperationMessage, CodeDocument},
+    core_engine::{
+        events::models::{NodeAnnotationClickedMessage, PerformRefactoringOperationMessage},
+        CodeDocument,
+    },
     platform::macos::models::editor::EditorShortcutPressedMessage,
-    window_controls::models::TrackingAreaClickedMessage,
 };
 
 use super::{
@@ -14,6 +16,12 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
+pub enum UserCommand {
+    PerformRefactoringOperation(PerformRefactoringOperationMessage),
+    NodeAnnotationClicked(NodeAnnotationClickedMessage),
+}
+
+#[derive(Debug, Clone)]
 pub enum CoreEngineTrigger {
     OnShortcutPressed(EditorShortcutPressedMessage),
     OnTextContentChange,
@@ -21,8 +29,7 @@ pub enum CoreEngineTrigger {
     OnViewportMove,
     OnViewportDimensionsChange,
     OnVisibleTextRangeChange,
-    OnTrackingAreaClicked(TrackingAreaClickedMessage),
-    OnUserCommand(PerformRefactoringOperationMessage),
+    OnUserCommand(UserCommand),
 }
 
 pub enum Feature {

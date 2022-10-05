@@ -10,10 +10,11 @@ use crate::{
                 check_for_method_extraction, method_extraction::do_method_extraction,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
+            UserCommand,
         },
         format_code,
         syntax_tree::{SwiftFunction, SwiftSyntaxTree},
-        CodeDocument, TextPosition, WindowUid, XcodeText,
+        CodeDocument, EditorWindowUid, TextPosition, XcodeText,
     },
     platform::macos::replace_text_content,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -197,7 +198,7 @@ impl ComplexityRefactoring {
         file_path: &Option<String>,
         syntax_tree: &SwiftSyntaxTree,
         suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
         let old_suggestions = suggestions_arc.lock().clone();
 
@@ -298,7 +299,7 @@ impl ComplexityRefactoring {
         id: Uuid,
         updated_suggestion: &RefactoringSuggestion,
         suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
     ) {
         let mut suggestions = suggestions_cache.lock();
         let suggestion = suggestions.get_mut(&id);
@@ -332,7 +333,7 @@ impl ComplexityRefactoring {
         text_content: XcodeText,
         suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
         file_path: Option<String>,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
             let (old_content, new_content) =
@@ -445,7 +446,7 @@ impl ComplexityRefactoring {
             CoreEngineTrigger::OnTextContentChange => {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
             }
-            CoreEngineTrigger::OnUserCommand(msg) => {
+            CoreEngineTrigger::OnUserCommand(UserCommand::PerformRefactoringOperation(msg)) => {
                 Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
             }
             _ => None,
