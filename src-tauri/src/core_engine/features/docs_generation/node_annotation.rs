@@ -16,17 +16,13 @@ use crate::{
         },
         syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
         utils::XcodeText,
-        TextPosition, TextRange, WindowUid,
+        EditorWindowUid, TextPosition, TextRange,
     },
     platform::macos::{
-        get_bounds_for_TextRange, get_code_document_frame_properties, get_viewport_frame,
-        get_viewport_properties, GetVia, ViewportProperties,
+        get_bounds_for_TextRange, get_code_document_frame_properties, get_viewport_properties,
+        GetVia, ViewportProperties,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
-    window_controls::{
-        config::AppWindow, get_position, EventTrackingArea, TrackingArea, TrackingEventSubscriber,
-        TrackingEventType, TrackingEvents,
-    },
     NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
 
@@ -56,7 +52,9 @@ pub struct AnnotationCodeBlock {
 
 #[derive(Debug, Clone)]
 pub struct NodeAnnotation {
-    tracking_area: TrackingArea,
+    global_frame: Option<LogicalFrame>,
+    id: uuid::Uuid,
+    window_uid: EditorWindowUid,
     node_code_block: AnnotationCodeBlock,
     state: Arc<Mutex<NodeAnnotationState>>,
     explanation: Arc<Mutex<Option<NodeExplanation>>>,
@@ -64,22 +62,23 @@ pub struct NodeAnnotation {
 
 impl PartialEq for NodeAnnotation {
     fn eq(&self, other: &Self) -> bool {
-        self.tracking_area.eq_props(&other.tracking_area)
-            && self.node_code_block == other.node_code_block
+        self.node_code_block == other.node_code_block
     }
 }
 
 impl NodeAnnotation {
     pub fn new(
-        codeblock: AnnotationCodeBlock,
+        code_block: AnnotationCodeBlock,
         text_content: &XcodeText,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
     ) -> Result<Self, DocsGenerationError> {
-        let tracking_area = Self::create_tracking_area(text_content, &codeblock, window_uid)?;
+        let (global_frame, _) = Self::calculate_annotation_bounds(text_content, &code_block)?;
 
         Ok(Self {
-            tracking_area,
-            node_code_block: codeblock,
+            global_frame,
+            id: uuid::Uuid::new_v4(),
+            window_uid,
+            node_code_block: code_block,
             state: Arc::new(Mutex::new(NodeAnnotationState::New)),
             explanation: Arc::new(Mutex::new(None)),
         })
@@ -90,7 +89,7 @@ impl NodeAnnotation {
     }
 
     pub fn id(&self) -> uuid::Uuid {
-        self.tracking_area.id
+        self.id
     }
 
     pub fn codeblock(&self) -> &AnnotationCodeBlock {
@@ -110,12 +109,12 @@ impl NodeAnnotation {
 
         // 3. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
         NodeAnnotationEvent::UpdateNodeAnnotation(UpdateNodeAnnotationMessage {
-            id: self.tracking_area.id,
+            id: self.id,
             annotation_icon: annotation_rect_opt
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
             annotation_codeblock: codeblock_bounds
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
-            window_uid: self.tracking_area.editor_window_uid,
+            window_uid: self.window_uid,
         })
         .publish_to_tauri(&app_handle());
 
@@ -144,7 +143,8 @@ impl NodeAnnotation {
         tauri::async_runtime::spawn({
             let state = self.state.clone();
             let explanation = self.explanation.clone();
-            let tracking_area = self.tracking_area.clone();
+            let window_uid = self.window_uid;
+            let global_frame = self.global_frame;
             let name = self.node_code_block.name.clone();
 
             let codeblock = self.node_code_block.clone();
@@ -165,12 +165,8 @@ impl NodeAnnotation {
 
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
-                            window_uid: tracking_area.editor_window_uid,
-                            annotation_frame: Some(
-                                tracking_area
-                                    .rectangle
-                                    .to_global(&tracking_area.global_origin()),
-                            ),
+                            window_uid,
+                            annotation_frame: global_frame,
                         },
                     )
                     .publish_to_tauri(&app_handle());
@@ -186,81 +182,6 @@ impl NodeAnnotation {
         });
 
         Ok(())
-    }
-
-    pub fn create_tracking_area(
-        text: &XcodeText,
-        code_block: &AnnotationCodeBlock,
-        window_uid: WindowUid,
-    ) -> Result<TrackingArea, DocsGenerationError> {
-        // When we create the annotation, we need to compute the bounds for the frontend so it knows where to display the annotation
-        // and we need to create a tracking area which the tracking area manager takes care of. The tracking area manager uses GLOBAL coordinates
-        // whereas the frontend uses LOCAL coordinates; local to the CodeDocumentFrame.
-
-        // 1. Get the annotation bounds, naturally in global coordinates
-        let (annotation_rect_opt, _) = Self::calculate_annotation_bounds(text, code_block)?;
-
-        let code_overlay_origin =
-            get_position(AppWindow::CodeOverlay).expect("NodeAnnotation: CodeOverlay not found");
-        let tracking_area = TrackingArea {
-            id: uuid::Uuid::new_v4(),
-            editor_window_uid: window_uid,
-            rectangle: annotation_rect_opt.map_or(LogicalFrame::default(), |rect| {
-                rect.to_local(&code_overlay_origin)
-            }),
-            events: TrackingEvents::TrackingEventTypes(vec![
-                TrackingEventType::MouseClicked,
-                TrackingEventType::MouseEntered,
-                TrackingEventType::MouseExited,
-            ]),
-            app_window: AppWindow::CodeOverlay,
-            subscriber: vec![
-                TrackingEventSubscriber::AppWindow(AppWindow::CodeOverlay),
-                TrackingEventSubscriber::Backend,
-            ],
-        };
-
-        // 3. Publish to the tracking area manager with its original GLOBAL coordinates
-        EventTrackingArea::Add(vec![tracking_area.clone()]).publish_to_tauri(&app_handle());
-
-        Ok(tracking_area)
-    }
-
-    pub fn update_annotation_tracking_area(
-        &mut self,
-        text: &XcodeText,
-    ) -> Result<(), DocsGenerationError> {
-        // 2. Get the local coordinates of the AnnotationSectionFrame
-        if let Ok((annotation_rect_opt, _)) =
-            Self::calculate_annotation_bounds(text, &self.node_code_block)
-        {
-            let code_overlay_origin = get_position(AppWindow::CodeOverlay)
-                .expect("NodeAnnotation: CodeOverlay not found");
-            self.tracking_area.rectangle = annotation_rect_opt
-                .map_or(LogicalFrame::default(), |rect| {
-                    rect.to_local(&code_overlay_origin)
-                });
-
-            // Check if the annotation is outside of the viewport and if so, remove the tracking areas
-            let viewport = get_viewport_frame(&GetVia::Current).map_err(|_| {
-                DocsGenerationError::GenericError(anyhow!("Could not derive textarea dimensions"))
-            })?;
-
-            if let Some(annotation_rect) = annotation_rect_opt {
-                if !viewport.contains_position(&annotation_rect.top_left())
-                    && !viewport.contains_position(&annotation_rect.bottom_left())
-                {
-                    self.tracking_area.rectangle = LogicalFrame::default();
-                }
-            }
-
-            EventTrackingArea::Update(vec![self.tracking_area.clone()])
-                .publish_to_tauri(&app_handle());
-
-            Ok(())
-        } else {
-            Err(DocsGenerationError::NodeAnnotationUpdateFailed)
-        }
     }
 
     /// It calculates the bounds of the annotation icon and the codeblock rectangle
@@ -361,10 +282,9 @@ impl NodeAnnotation {
 impl Drop for NodeAnnotation {
     fn drop(&mut self) {
         NodeAnnotationEvent::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
-            id: self.id(),
-            window_uid: self.tracking_area.editor_window_uid,
+            id: self.id,
+            window_uid: self.window_uid,
         })
         .publish_to_tauri(&app_handle());
-        EventTrackingArea::Remove(vec![self.id()]).publish_to_tauri(&app_handle());
     }
 }

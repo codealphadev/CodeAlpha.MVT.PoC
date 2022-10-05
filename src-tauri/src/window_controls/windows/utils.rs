@@ -76,7 +76,7 @@ pub fn register_tracking_area(app_window: AppWindow) -> TrackingArea {
 
     let tracking_area = TrackingArea {
         id: uuid::Uuid::new_v4(),
-        editor_window_uid: 0,
+        window_uid: 0,
         rectangle: LogicalFrame {
             origin: LogicalPosition::default(),
             size: app_window_frame.size,
@@ -85,6 +85,7 @@ pub fn register_tracking_area(app_window: AppWindow) -> TrackingArea {
             TrackingEventType::MouseOver,
             TrackingEventType::MouseEntered,
             TrackingEventType::MouseExited,
+            TrackingEventType::MouseClicked,
         ]),
         app_window,
         subscriber: vec![TrackingEventSubscriber::AppWindow(app_window)],

@@ -1,13 +1,10 @@
 <script lang="ts">
-	import { listen } from '@tauri-apps/api/event';
+	import { emit, listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { NodeAnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/NodeAnnotationEvent';
 	import type { UpdateNodeAnnotationMessage } from '../../../../src-tauri/bindings/features/node_annotation/UpdateNodeAnnotationMessage';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
-	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
-	import type { TrackingAreaClickedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
-	import type { TrackingAreaEnteredMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaEnteredMessage';
-	import type { TrackingAreaExitedMessage } from '../../../../src-tauri/bindings/window_controls/TrackingAreaExitedMessage';
+	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
 
@@ -21,7 +18,7 @@
 
 	let processing_timeout = 15000; // ms
 
-	const listenToNodeAnnotationEvents = async () => {
+	const listen_to_node_annotation_events = async () => {
 		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
 		await listen(node_annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(
@@ -42,9 +39,9 @@
 		});
 	};
 
-	listenToNodeAnnotationEvents();
+	listen_to_node_annotation_events();
 
-	const listenToDocsGenerationEvents = async () => {
+	const listen_to_docs_generation_events = async () => {
 		// Listen for rule execution events to determine if the processing icon should be displayed
 		await listen('EventRuleExecutionState' as ChannelList, (event) => {
 			const ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
@@ -67,39 +64,24 @@
 			}
 		});
 	};
-	listenToDocsGenerationEvents();
+	listen_to_docs_generation_events();
 
-	const listenToTrackingAreaEvents = async () => {
-		// Listen for click & hover events on the tracking area
-		let WindowControlsChannel: ChannelList = 'EventWindowControls';
-		await listen(WindowControlsChannel, (event) => {
-			const tracking_area_event = JSON.parse(event.payload as string) as EventWindowControls;
-			switch (tracking_area_event.event) {
-				case 'TrackingAreaClicked':
-					let clicked_msg = tracking_area_event.payload as unknown as TrackingAreaClickedMessage;
-					if (clicked_msg.id === annotation?.id) {
-						is_hovered = false;
-					}
-					break;
-				case 'TrackingAreaEntered':
-					let entered_msg = tracking_area_event.payload as unknown as TrackingAreaEnteredMessage;
-					if (entered_msg.id === annotation?.id) {
-						is_hovered = true;
-					}
-					break;
-				case 'TrackingAreaExited':
-					let exited_msg = tracking_area_event.payload as unknown as TrackingAreaExitedMessage;
-					if (exited_msg.id === annotation?.id) {
-						is_hovered = false;
-					}
-					break;
-				default:
-					break;
-			}
-		});
+	const annotation_click = async () => {
+		is_hovered = false;
+
+		// invoke click on annotation
+		if (annotation) {
+			const event: EventUserInteraction = {
+				event: 'NodeAnnotationClicked',
+				payload: {
+					annotation_id: annotation.id,
+					window_uid: annotation.window_uid
+				}
+			};
+			const channel: ChannelList = 'EventUserInteractions';
+			await emit(channel, event);
+		}
 	};
-
-	listenToTrackingAreaEvents();
 
 	const round_value = (value: number, precision: number): number => {
 		const factor = Math.pow(10, precision || 0);
@@ -114,6 +96,10 @@
 			top: {round_value(annotation.annotation_icon.origin.y, 2)}px; 
 			width: {round_value(annotation.annotation_icon.size.width, 2)}px; 
 			height: {round_value(annotation.annotation_icon.size.height, 2)}px;"
+			on:mouseenter={() => (is_hovered = true)}
+			on:mouseleave={() => (is_hovered = false)}
+			on:click={annotation_click}
+			on:focus={null}
 		>
 			<AnnotationIcon {is_hovered} {is_processing} />
 		</div>

@@ -3,6 +3,6 @@ import type { AppWindow } from "../AppWindow";
 
 export interface TrackingAreaClickedOutsideMessage {
   id: string;
-  editor_window_uid: number;
+  window_uid: number;
   app_window: AppWindow;
 }

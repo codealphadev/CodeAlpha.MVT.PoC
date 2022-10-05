@@ -10,21 +10,18 @@ use super::{
         BracketHighlight, ComplexityRefactoring, CoreEngineTrigger, DocsGenerator, Feature,
         FeatureBase, FeatureError, SwiftFormatter,
     },
-    listeners::{
-        user_interaction::user_interaction_listener, window_control::window_control_listener,
-        xcode::xcode_listener,
-    },
+    listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     CodeDocument,
 };
 
-pub type WindowUid = usize;
+pub type EditorWindowUid = usize;
 
-pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<WindowUid, CodeDocument>>>;
+pub type CodeDocumentsArcMutex = Arc<Mutex<HashMap<EditorWindowUid, CodeDocument>>>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum CoreEngineError {
     #[error("There exists no CodeDocument with window_uid {0}.")]
-    CodeDocNotFound(WindowUid),
+    CodeDocNotFound(EditorWindowUid),
     #[error("Context missing to proceed: {0}.")]
     MissingContext(String),
     #[error("Something went wrong.")]
@@ -97,7 +94,7 @@ impl CoreEngine {
 
     pub fn run_features(
         &mut self,
-        window_uid: WindowUid,
+        window_uid: EditorWindowUid,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), CoreEngineError> {
         let code_documents = self.code_documents.lock();
@@ -126,6 +123,5 @@ impl CoreEngine {
     pub fn start_core_engine_listeners(core_engine: &Arc<Mutex<CoreEngine>>) {
         xcode_listener(&core_engine);
         user_interaction_listener(&core_engine);
-        window_control_listener(&core_engine);
     }
 }

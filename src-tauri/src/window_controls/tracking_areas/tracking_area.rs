@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core_engine::WindowUid,
+    core_engine::EditorWindowUid,
     utils::geometry::{LogicalFrame, LogicalPosition},
     window_controls::{config::AppWindow, utils::get_position},
 };
@@ -32,7 +32,7 @@ pub enum TrackingEventSubscriber {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TrackingArea {
     pub id: uuid::Uuid,
-    pub editor_window_uid: WindowUid, // Set to '0' if not associated with an editor window.
+    pub window_uid: EditorWindowUid, // Set to '0' if not associated with an editor window.
     pub app_window: AppWindow,
     pub rectangle: LogicalFrame, // In coordinates relative to the containing app window.
     pub events: TrackingEvents,
@@ -47,12 +47,6 @@ impl TrackingArea {
         self.rectangle = updated_tracking_area.rectangle.clone();
         self.events = updated_tracking_area.events.clone();
         self.subscriber = updated_tracking_area.subscriber.clone();
-    }
-
-    pub fn eq_props(&self, other: &Self) -> bool {
-        self.editor_window_uid == other.editor_window_uid
-            && self.rectangle == other.rectangle
-            && self.events == other.events
     }
 
     pub fn rect_as_global(&self) -> LogicalFrame {

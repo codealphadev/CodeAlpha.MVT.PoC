@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    core_engine::WindowUid,
+    core_engine::EditorWindowUid,
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
 };
 
@@ -18,7 +18,7 @@ use super::{
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/macOS_specific/xcode/")]
 pub struct ViewportProperties {
-    pub window_uid: WindowUid,
+    pub window_uid: EditorWindowUid,
     pub dimensions: LogicalFrame,
     pub annotation_section: Option<LogicalFrame>,
     pub code_section: Option<LogicalFrame>,
@@ -34,7 +34,7 @@ pub struct CodeDocumentFrameProperties {
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref LAST_KNOWN_VIEWPORT_FRAME: parking_lot::Mutex<Option<(WindowUid, LogicalFrame)>> =
+    pub static ref LAST_KNOWN_VIEWPORT_FRAME: parking_lot::Mutex<Option<(EditorWindowUid, LogicalFrame)>> =
         parking_lot::Mutex::new(None);
 }
 
