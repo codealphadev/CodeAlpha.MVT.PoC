@@ -13,7 +13,8 @@ use crate::{
         CodeDocument, TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
-        get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
+        get_code_document_frame_properties, get_visible_text_range, AXTextareaContentUtils, GetVia,
+        TextAreaContent,
     },
     utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
@@ -249,10 +250,12 @@ impl BracketHighlight {
         // Check if the first line is wrapped.
         let mut is_first_line_wrapped = false;
         if opening_bracket_rect.is_some() {
-            is_first_line_wrapped =
-                is_text_of_line_wrapped(line_opening_char.position.row, &GetVia::Current)
-                    .map_err(|err| BracketHighlightError::GenericError(err.into()))?
-                    .0;
+            is_first_line_wrapped = TextAreaContent::is_text_of_line_wrapped(
+                line_opening_char.position.row,
+                &GetVia::Current,
+            )
+            .map_err(|err| BracketHighlightError::GenericError(err.into()))?
+            .0;
         }
 
         // Case: opening and closing bracket are on the same line -> no elbow is computed.

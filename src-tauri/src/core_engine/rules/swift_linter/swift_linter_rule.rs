@@ -10,7 +10,7 @@ use crate::{
         utils::XcodeText,
         TextRange,
     },
-    platform::macos::{get_text_range_of_line, GetVia},
+    platform::macos::{AXTextareaContentUtils, GetVia, TextAreaContent},
     utils::rule_types::MatchRange,
 };
 
@@ -66,8 +66,10 @@ impl RuleBase for _SwiftLinterRule {
 
             for lint_alert in linter_results.lints.iter().enumerate() {
                 let char_range_for_line = if let Ok(char_range_for_line) =
-                    get_text_range_of_line(lint_alert.1.line - 1, &GetVia::Pid(self.editor_app_pid))
-                {
+                    TextAreaContent::get_text_range_of_line(
+                        lint_alert.1.line - 1,
+                        &GetVia::Pid(self.editor_app_pid),
+                    ) {
                     char_range_for_line
                 } else {
                     continue;

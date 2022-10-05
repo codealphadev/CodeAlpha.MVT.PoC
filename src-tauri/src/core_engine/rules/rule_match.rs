@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    platform::macos::{calc_rectangles_and_line_matches, GetVia},
+    platform::macos::{AXTextareaContentUtils, GetVia, TextAreaContent},
     utils::{
         geometry::LogicalFrame,
         rule_types::{LineMatch, MatchRange},
@@ -63,7 +63,10 @@ impl RuleMatch {
 
     pub fn update_rectangles(&mut self, editor_app_pid: i32) {
         if let Ok((rule_match_rectangles, line_matches)) =
-            calc_rectangles_and_line_matches(&self.match_range, &GetVia::Pid(editor_app_pid))
+            TextAreaContent::calc_rectangles_and_line_matches(
+                &self.match_range,
+                &GetVia::Pid(editor_app_pid),
+            )
         {
             self.rectangles = rule_match_rectangles;
             self.line_matches = line_matches;

@@ -3,7 +3,7 @@ use tree_sitter::Node;
 
 use crate::{
     core_engine::{utils::XcodeText, TextPosition, TextRange},
-    platform::macos::{get_bounds_for_TextRange, GetVia, XcodeError},
+    platform::macos::{AXTextareaContentUtils, GetVia, TextAreaContent, XcodeError},
     utils::geometry::LogicalFrame,
 };
 
@@ -25,7 +25,10 @@ fn code_block_kinds_with_declaration() -> Vec<&'static str> {
 pub fn get_char_rectangle_from_text_index(
     index: usize,
 ) -> Result<Option<LogicalFrame>, BracketHighlightError> {
-    match get_bounds_for_TextRange(&TextRange { index, length: 1 }, &GetVia::Current) {
+    match TextAreaContent::get_bounds_for_TextRange(
+        &TextRange { index, length: 1 },
+        &GetVia::Current,
+    ) {
         Ok(bounds) => Ok(Some(bounds)),
         Err(XcodeError::NotContainedVisibleTextRange) => Ok(None),
         Err(err) => Err(BracketHighlightError::GenericError(err.into())),

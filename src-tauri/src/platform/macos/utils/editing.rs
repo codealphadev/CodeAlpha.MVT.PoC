@@ -1,11 +1,13 @@
 use crate::{
     core_engine::{TextPosition, TextRange, XcodeText},
     platform::macos::{
-        get_bounds_for_TextRange, get_viewport_frame, send_event_mouse_wheel,
-        set_selected_text_range, set_textarea_content, GetVia, XcodeError,
+        get_viewport_frame, send_event_mouse_wheel, set_selected_text_range, set_textarea_content,
+        GetVia, TextAreaContent, XcodeError,
     },
     utils::geometry::LogicalSize,
 };
+
+use super::AXTextareaContentUtils;
 
 pub async fn replace_text_content(
     text_content: &XcodeText,
@@ -65,7 +67,7 @@ fn scroll_dist_after_formatting(
     selected_text_range: &TextRange,
 ) -> Result<LogicalSize, XcodeError> {
     if let Ok(textarea_frame) = get_viewport_frame(&GetVia::Current) {
-        if let Ok(bounds_of_selected_text) = get_bounds_for_TextRange(
+        if let Ok(bounds_of_selected_text) = TextAreaContent::get_bounds_for_TextRange(
             &TextRange {
                 index: selected_text_range.index,
                 length: 1,

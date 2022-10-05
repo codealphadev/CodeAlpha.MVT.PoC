@@ -19,8 +19,8 @@ use crate::{
         TextPosition, TextRange, WindowUid,
     },
     platform::macos::{
-        get_bounds_for_TextRange, get_code_document_frame_properties, get_viewport_frame,
-        get_viewport_properties, GetVia, ViewportProperties,
+        get_code_document_frame_properties, get_viewport_frame, get_viewport_properties,
+        AXTextareaContentUtils, GetVia, TextAreaContent, ViewportProperties,
     },
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     window_controls::{
@@ -268,7 +268,7 @@ impl NodeAnnotation {
             code_block.first_char_pos.as_TextIndex(&text),
             code_block.last_char_pos.as_TextIndex(&text),
         ) {
-            let first_char_bounds_opt = get_bounds_for_TextRange(
+            let first_char_bounds_opt = TextAreaContent::get_bounds_for_TextRange(
                 &TextRange {
                     index: first_char_text_pos,
                     length: 1,
@@ -276,7 +276,7 @@ impl NodeAnnotation {
                 &GetVia::Current,
             );
 
-            let last_char_bounds_opt = get_bounds_for_TextRange(
+            let last_char_bounds_opt = TextAreaContent::get_bounds_for_TextRange(
                 &TextRange {
                     index: last_char_text_pos,
                     length: 1,
