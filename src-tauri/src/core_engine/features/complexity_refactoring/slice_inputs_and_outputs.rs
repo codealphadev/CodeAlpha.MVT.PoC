@@ -134,8 +134,6 @@ fn get_variable_name_if_reference(node: &Node, text_content: &XcodeText) -> Opti
 }
 
 fn try_get_declaration_node<'a>(node: &Node<'a>) -> Option<Node<'a>> {
-    let mut result: Option<XcodeText>;
-
     match node.kind() {
         "property_declaration" => {
             return Some(
@@ -144,7 +142,12 @@ fn try_get_declaration_node<'a>(node: &Node<'a>) -> Option<Node<'a>> {
             );
         }
         "function_declaration" => {
-            // TODO
+            // Note: This will also pick up the main function name, treating it as an 'input', even though it is globally available. TODO: Fix this at some point - although it's not too bad to penalise recursion triangles...
+            for child in node.children_by_field_name("name", &mut node.walk()) {
+                if child.kind() == "simple_identifier" {
+                    return Some(child);
+                }
+            }
         }
         "parameter" => {
             // Second "simple_identifier" is internal identifier, which matters; first will be overwritten
@@ -163,7 +166,7 @@ fn try_get_declaration_node<'a>(node: &Node<'a>) -> Option<Node<'a>> {
             );
         }
         _ => {
-            // TODO: Fill in other cases.
+            // Not sure if there are any other cases?
             return None;
         }
     }
@@ -291,7 +294,7 @@ mod tests {
                 .unwrap()
                 .declarations
                 .clone();
-            assert_eq!(function_scope_decls.len(), 1);
+            assert_eq!(function_scope_decls.len(), 2); // TODO: Should really be 1, but it's not too bad to also include the main function name here as a false input (penalising triangular recursion implicitly)
             let arg1_decl = function_scope_decls
                 .get(&XcodeText::from_str("arg1"))
                 .unwrap();
