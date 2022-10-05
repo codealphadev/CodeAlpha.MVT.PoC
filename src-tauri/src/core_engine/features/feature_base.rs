@@ -25,6 +25,13 @@ pub enum CoreEngineTrigger {
     OnUserCommand(PerformRefactoringOperationMessage),
 }
 
+pub enum FeatureKind {
+    BracketHighlight,
+    ComplexityRefactoring,
+    DocsGeneration,
+    Formatter,
+}
+
 pub enum Feature {
     BracketHighlighting(BracketHighlight),
     DocsGeneration(DocsGenerator),
