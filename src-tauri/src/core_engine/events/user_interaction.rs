@@ -5,7 +5,7 @@ use ts_rs::TS;
 use crate::utils::messaging::ChannelList;
 
 use super::models::{
-    CoreActivationStatusMessage, NodeAnnotationClickedMessage, PerformRefactoringOperationMessage,
+    CoreActivationStatusMessage, NodeAnnotationClickedMessage, RefactoringMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
@@ -13,7 +13,8 @@ use super::models::{
 #[serde(tag = "event", content = "payload")]
 pub enum EventUserInteraction {
     CoreActivationStatus(CoreActivationStatusMessage),
-    PerformRefactoringOperation(PerformRefactoringOperationMessage),
+    PerformRefactoringOperation(RefactoringMessage),
+    DismissRefactoringSuggestion(RefactoringMessage),
     ToggleMainWindow(bool),
     NodeAnnotationClicked(NodeAnnotationClickedMessage),
 }

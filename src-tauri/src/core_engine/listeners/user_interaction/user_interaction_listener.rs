@@ -40,6 +40,15 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         ),
                     );
                 }
+                EventUserInteraction::DismissRefactoringSuggestion(msg) => {
+                    debug!(?msg, "DismissRefactoringSuggestion request");
+                    _ = core_engine.lock().run_features(
+                        msg.editor_window_uid,
+                        &CoreEngineTrigger::OnUserCommand(
+                            UserCommand::DismissRefactoringSuggestion(msg),
+                        ),
+                    );
+                }
                 _ => {}
             }
         }

@@ -17,11 +17,15 @@ use crate::{
         CodeDocument, EditorWindowUid, TextPosition, XcodeText,
     },
     platform::macos::replace_text_content,
+    utils::calculate_hash,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 use tracing::debug;
 use tracing::error;
 use ts_rs::TS;
@@ -39,6 +43,7 @@ pub struct Edit {
 enum ComplexityRefactoringProcedure {
     ComputeSuggestions,
     PerformOperation(uuid::Uuid),
+    DismissSuggestion(uuid::Uuid),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -82,9 +87,13 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
         window_uid,
     })
 }
+
+type SuggestionHash = u64;
+
 pub struct ComplexityRefactoring {
     is_activated: bool,
     suggestions: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+    dismissed_suggestions: Arc<Mutex<HashSet<SuggestionHash>>>,
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 5; // TODO: Raise to be more reasonable?
@@ -110,6 +119,9 @@ impl FeatureBase for ComplexityRefactoring {
                 ComplexityRefactoringProcedure::PerformOperation(id) => self
                     .perform_operation(code_document, id)
                     .map_err(|e| e.into()),
+                ComplexityRefactoringProcedure::DismissSuggestion(id) => {
+                    self.dismiss_suggestion(id).map_err(|e| e.into())
+                }
             }
         } else {
             Ok(())
@@ -170,6 +182,7 @@ impl ComplexityRefactoring {
                 &file_path,
                 code_document.syntax_tree(),
                 self.suggestions.clone(),
+                self.dismissed_suggestions.clone(),
                 code_document.editor_window_props().window_uid,
             )?);
         }
@@ -198,6 +211,7 @@ impl ComplexityRefactoring {
         file_path: &Option<String>,
         syntax_tree: &SwiftSyntaxTree,
         suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+        dismissed_suggestions_arc: Arc<Mutex<HashSet<SuggestionHash>>>,
         window_uid: EditorWindowUid,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
         let old_suggestions = suggestions_arc.lock().clone();
@@ -205,6 +219,7 @@ impl ComplexityRefactoring {
         let suggestions = Self::compute_suggestions_for_function(
             &function,
             &old_suggestions,
+            dismissed_suggestions_arc,
             &text_content,
             &syntax_tree,
         )?;
@@ -252,6 +267,7 @@ impl ComplexityRefactoring {
     fn compute_suggestions_for_function(
         function: &SwiftFunction,
         old_suggestions: &HashMap<Uuid, RefactoringSuggestion>,
+        dismissed_suggestions_arc: Arc<Mutex<HashSet<SuggestionHash>>>,
         text_content: &XcodeText,
         syntax_tree: &SwiftSyntaxTree,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
@@ -264,6 +280,13 @@ impl ComplexityRefactoring {
                 Some(result) => result,
                 None => return Ok(HashMap::new()),
             };
+
+        if dismissed_suggestions_arc
+            .lock()
+            .contains(&calculate_hash(&serialized_node_slice))
+        {
+            return Ok(HashMap::new());
+        }
 
         let mut new_suggestions = HashMap::new();
 
@@ -428,6 +451,27 @@ impl ComplexityRefactoring {
 
         Ok(())
     }
+    fn dismiss_suggestion(
+        &mut self,
+        suggestion_id: uuid::Uuid,
+    ) -> Result<(), ComplexityRefactoringError> {
+        let hash = calculate_hash::<SerializedNodeSlice>(
+            &self
+                .suggestions
+                .lock()
+                .clone()
+                .get(&suggestion_id)
+                .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
+                .serialized_slice,
+        );
+
+        self.dismissed_suggestions.lock().insert(hash);
+        // Remove from frontend
+        SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id: suggestion_id })
+            .publish_to_tauri(&app_handle());
+
+        Ok(())
+    }
 }
 
 impl ComplexityRefactoring {
@@ -435,6 +479,7 @@ impl ComplexityRefactoring {
         Self {
             suggestions: Arc::new(Mutex::new(HashMap::new())),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            dismissed_suggestions: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 
@@ -448,6 +493,9 @@ impl ComplexityRefactoring {
             }
             CoreEngineTrigger::OnUserCommand(UserCommand::PerformRefactoringOperation(msg)) => {
                 Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
+            }
+            CoreEngineTrigger::OnUserCommand(UserCommand::DismissRefactoringSuggestion(msg)) => {
+                Some(ComplexityRefactoringProcedure::DismissSuggestion(msg.id))
             }
             _ => None,
         }
