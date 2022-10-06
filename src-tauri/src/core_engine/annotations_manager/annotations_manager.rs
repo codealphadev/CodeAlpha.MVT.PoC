@@ -1,13 +1,18 @@
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use ts_rs::TS;
 
 use crate::{
     core_engine::{features::FeatureKind, EditorWindowUid},
+    platform::macos::{get_code_document_frame_properties, get_visible_text_range, GetVia},
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
 
-use super::annotation_job::{AnnotationJob, AnnotationKind, ViewportPositioning};
+use super::{
+    listeners::{annotation_events::annotation_events_listener, xcode::xcode_listener},
+    AnnotationJobGroup, AnnotationJobGroupTrait, AnnotationKind, ViewportPositioning,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AnnotationError {
@@ -47,20 +52,91 @@ pub struct AnnotationResult {
     pub bounds: Option<Vec<LogicalFrame>>,
 }
 
-type AnnotationResults = HashMap<uuid::Uuid, AnnotationResult>;
+pub trait AnnotationsManagerTrait {
+    fn new() -> Self;
+    fn add_annotation_job_group(&mut self, group: AnnotationJobGroup);
+    fn update_annotation_job_group(&mut self, group: AnnotationJobGroup);
+    fn update_annotations(&mut self, editor_window_uid: EditorWindowUid);
 
-trait AnnotationsManagerTrait {
-    fn add_annotation_job(&mut self, job: AnnotationJob);
-    fn update_annotation_job(&mut self, job: AnnotationJob);
-    fn remove_annotation_job(&mut self, job_id: uuid::Uuid);
-    fn get_annotation_job(&self, job_id: uuid::Uuid) -> Option<AnnotationJob>;
-    fn compute_annotations(&mut self) -> AnnotationResults;
-    fn scroll_to_annotation(&mut self, job_id: uuid::Uuid);
-    fn publish_all(&mut self);
-    fn publish_jobs_slice(&mut self, job_ids: &Vec<uuid::Uuid>);
+    fn remove_annotation_job_group(&mut self, group_id: uuid::Uuid);
+    fn remove_annotation_job_group_of_editor_window(&mut self, editor_window_uid: EditorWindowUid);
+    fn reset(&mut self);
+
+    fn scroll_to_annotation(&mut self, group_id: uuid::Uuid);
 }
 
 pub struct AnnotationsManager {
-    jobs: HashMap<uuid::Uuid, AnnotationJob>,
-    results: HashMap<uuid::Uuid, AnnotationResult>,
+    groups: HashMap<uuid::Uuid, AnnotationJobGroup>,
+}
+
+impl AnnotationsManagerTrait for AnnotationsManager {
+    fn new() -> Self {
+        Self {
+            groups: HashMap::new(),
+        }
+    }
+
+    fn add_annotation_job_group(&mut self, group: AnnotationJobGroup) {
+        self.groups.insert(group.id(), group.clone());
+        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
+            get_visible_text_range(GetVia::Hash(group.editor_window_uid())),
+            get_code_document_frame_properties(&GetVia::Hash(group.editor_window_uid())),
+        ) {
+            self.groups
+                .get_mut(&group.id())
+                .unwrap() // Unwrap safe here because we just inserted the group
+                .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
+        }
+    }
+
+    fn update_annotation_job_group(&mut self, group: AnnotationJobGroup) {
+        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
+            get_visible_text_range(GetVia::Hash(group.editor_window_uid())),
+            get_code_document_frame_properties(&GetVia::Hash(group.editor_window_uid())),
+        ) {
+            if let Some(existing_group) = self.groups.get_mut(&group.id()) {
+                existing_group.update(group);
+                existing_group
+                    .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
+            }
+        }
+    }
+
+    fn update_annotations(&mut self, editor_window_uid: EditorWindowUid) {
+        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
+            get_visible_text_range(GetVia::Hash(editor_window_uid)),
+            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
+        ) {
+            for group in self.groups.values_mut() {
+                if group.editor_window_uid() == editor_window_uid {
+                    group
+                        .update_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
+                }
+            }
+        }
+    }
+
+    fn remove_annotation_job_group(&mut self, group_id: uuid::Uuid) {
+        self.groups.remove(&group_id);
+    }
+
+    fn remove_annotation_job_group_of_editor_window(&mut self, editor_window_uid: EditorWindowUid) {
+        self.groups
+            .retain(|_, group| group.editor_window_uid() != editor_window_uid);
+    }
+
+    fn reset(&mut self) {
+        self.groups.clear();
+    }
+
+    fn scroll_to_annotation(&mut self, group_id: uuid::Uuid) {
+        todo!()
+    }
+}
+
+impl AnnotationsManager {
+    pub fn start_event_listeners(annotations_manager: &Arc<Mutex<Self>>) {
+        annotation_events_listener(annotations_manager);
+        xcode_listener(annotations_manager);
+    }
 }

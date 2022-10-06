@@ -38,10 +38,9 @@ impl AnnotationEvent {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
 pub enum AnnotationManagerEvent {
-    Add(Vec<AnnotationJobGroup>), // Appends the already present list of AnnotationJobGroup with the new ones.
-    Update(Vec<AnnotationJobGroup>), // Updates existing AnnotationJobGroup with the new ones.
-    Replace(Vec<AnnotationJobGroup>), // Replaces the already present list of AnnotationJobGroup with the new ones.
-    Remove(Vec<uuid::Uuid>), // Removes the AnnotationJobGroup with the given IDs from the list.
+    Add(AnnotationJobGroup), // Appends the already present list of AnnotationJobGroup with the new ones.
+    Update(AnnotationJobGroup), // Updates existing AnnotationJobGroup with the new ones.
+    Remove(uuid::Uuid),      // Removes the AnnotationJobGroup with the given IDs from the list.
 }
 
 impl AnnotationManagerEvent {
