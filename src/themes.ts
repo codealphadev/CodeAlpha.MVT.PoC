@@ -4,6 +4,7 @@ export type ThemeName = 'light' | 'dark';
 
 export const colorNames = [
 	'primary_gradient',
+	'secondary_gradient',
 	'secondary',
 	'inactive',
 	'contrast',
@@ -31,6 +32,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 	light: {
 		colors: {
 			primary_gradient: 'linear-gradient(225deg, #0b9cda 0%, #054b8b 100%)',
+			secondary_gradient: 'linear-gradient(225deg, #076b95 0%, #032d54 100%)',
 
 			background: '#ffffff',
 			backgroundsecondary: '#e5e5e5',
@@ -49,7 +51,8 @@ export const themes: { [name in ThemeName]: Theme } = {
 	},
 	dark: {
 		colors: {
-			primary_gradient: 'linear-gradient(219.24deg, #ff9c64 1.87%, #f84545 68.89%)',
+			primary_gradient: 'linear-gradient(225deg, #ff9c64 1.87%, #f84545 68.89%)',
+			secondary_gradient: 'linear-gradient(225deg, #bf5d25 1.87%, #a83131 66.89%)',
 			background: '#262626',
 			backgroundsecondary: '#404040',
 
