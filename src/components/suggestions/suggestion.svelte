@@ -12,6 +12,7 @@
 	import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
 	import IconButton from '../common/icon-button.svelte';
 	import IconRubbishBin from './icons/icon-rubbish-bin.svelte';
+	import ComplexityBadge from './complexity-badge.svelte';
 
 	export let suggestion: FERefactoringSuggestion;
 
@@ -36,27 +37,6 @@
 		console.log('DISMISSING SUGGESTION');
 		await emit(channel, event);
 	};
-
-	function map_complexity_to_text(complexity: number): { text: string; class: string } {
-		if (complexity < 10) {
-			return { text: `low (${complexity})`, class: 'text-signalgood' };
-		} else if (complexity < 15) {
-			return { text: `medium (${complexity})`, class: 'text-signalmedium' };
-		} else if (complexity < 20) {
-			return { text: `high (${complexity})`, class: 'text-signalbad' };
-		} else {
-			return { text: `very high (${complexity})`, class: 'text-signalverybad' };
-		}
-	}
-	$: prev_complexity = map_complexity_to_text(suggestion.prev_complexity);
-	$: new_complexity = map_complexity_to_text(suggestion.new_complexity);
-
-	function title_case(str: string) {
-		if (str.length === 0) {
-			return str;
-		}
-		return str[0]!.toUpperCase() + str.slice(1).toLowerCase();
-	}
 </script>
 
 <Card>
@@ -69,13 +49,9 @@
 	</header>
 	<H4>Impact on complexity</H4>
 	<div class="flex items-center gap-1">
-		<div class="text-sm font-bold {prev_complexity.class}">
-			{title_case(prev_complexity.text)}
-		</div>
+		<ComplexityBadge complexity={suggestion.prev_complexity} />
 		<Arrow />
-		<div class="text-sm font-bold {new_complexity.class}">
-			{new_complexity.text}
-		</div>
+		<ComplexityBadge complexity={suggestion.new_complexity} />
 	</div>
 
 	<div class="flex justify-between w-full items-center">
