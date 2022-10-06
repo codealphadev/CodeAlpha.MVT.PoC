@@ -7,7 +7,7 @@ use tree_sitter::Node;
 use super::{
     complexity_refactoring::Edit, get_node_address, get_slice_inputs_and_outputs,
     get_sub_slice_inputs_and_outputs, is_child_of, update_parsing_metadata_for_node,
-    ComplexityRefactoringError, NodeSubSlice, SliceInputsAndOutputs,
+    ComplexityRefactoringError, NodeSubSlice, SliceInputsAndOutputs, SwiftLspError,
 };
 use crate::core_engine::{
     features::complexity_refactoring::{
@@ -91,7 +91,12 @@ pub async fn do_method_extraction(
     .await
     .map_err(|e| {
         delete_temp_file(&temp_file);
-        ComplexityRefactoringError::GenericError(e.into())
+        match e {
+            SwiftLspError::RefactoringNotPossible => {
+                ComplexityRefactoringError::LspRejectedRefactoring
+            }
+            _ => ComplexityRefactoringError::GenericError(e.into()),
+        }
     })?;
 
     delete_temp_file(&temp_file);
