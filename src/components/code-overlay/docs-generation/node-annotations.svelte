@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { emit, listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
-	import type { NodeAnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/NodeAnnotationEvent';
+	import type { AnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
 	import type { UpdateNodeAnnotationMessage } from '../../../../src-tauri/bindings/features/node_annotation/UpdateNodeAnnotationMessage';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
@@ -21,9 +21,7 @@
 	const listen_to_node_annotation_events = async () => {
 		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
 		await listen(node_annotation_channel, (event) => {
-			const { payload, event: event_type } = JSON.parse(
-				event.payload as string
-			) as NodeAnnotationEvent;
+			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
 			switch (event_type) {
 				case 'UpdateNodeAnnotation':
 					annotation = payload;
