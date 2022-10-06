@@ -45,7 +45,7 @@
 		} else if (complexity < 20) {
 			return { text: `high (${complexity})`, class: 'text-signalbad' };
 		} else {
-			return { text: `very high (${complexity})`, class: 'text-signalbad' };
+			return { text: `very high (${complexity})`, class: 'text-signalverybad' };
 		}
 	}
 	$: prev_complexity = map_complexity_to_text(suggestion.prev_complexity);
