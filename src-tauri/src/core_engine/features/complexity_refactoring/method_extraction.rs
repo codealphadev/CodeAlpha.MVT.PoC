@@ -6,11 +6,12 @@ use tree_sitter::Node;
 
 use super::{
     complexity_refactoring::Edit, get_node_address, get_slice_inputs_and_outputs,
-    update_scopes_for_node, ComplexityRefactoringError, Scope, SliceInputsAndOutputs,
+    get_sub_slice_inputs_and_outputs, is_child_of, update_parsing_metadata_for_node,
+    ComplexityRefactoringError, NodeSubSlice, SliceInputsAndOutputs,
 };
 use crate::core_engine::{
     features::complexity_refactoring::{
-        refactor_function, NodeAddress, NodeSlice, SerializedNodeSlice,
+        refactor_function, NodeAddress, NodeSlice, ParsingMetadata, SerializedNodeSlice,
     },
     rules::TemporaryFileOnDisk,
     syntax_tree::{calculate_cognitive_complexities, Complexities, SwiftFunction, SwiftSyntaxTree},
@@ -36,15 +37,15 @@ pub fn check_for_method_extraction(
     // Build up a list of possible nodes to extract, each with relevant metrics used for comparison
 
     let node_address = vec![node.id()];
-    let mut scopes: HashMap<NodeAddress, Scope> = HashMap::new();
-    scopes.insert(
-        node_address.clone(),
-        Scope {
-            declarations: HashMap::new(),
-        },
-    );
-    let possible_extractions: Vec<NodeSlice> =
-        walk_node(node, text_content, syntax_tree, node_address, &mut scopes)?;
+    let mut parsing_metadata = ParsingMetadata::new(node_address.clone());
+
+    let possible_extractions: Vec<NodeSlice> = walk_node(
+        node,
+        text_content,
+        syntax_tree,
+        node_address,
+        &mut parsing_metadata,
+    )?;
 
     let function_complexity = syntax_tree
         .get_node_metadata(&node)
@@ -59,7 +60,7 @@ pub fn check_for_method_extraction(
         syntax_tree,
         text_content,
         function_complexity.clone(),
-        &scopes,
+        &parsing_metadata,
         SCORE_THRESHOLD,
     )?
     .map(|(slice, remaining_complexity)| (slice.serialize(node), remaining_complexity)))
@@ -125,7 +126,7 @@ fn get_best_extraction<'a>(
     syntax_tree: &'a SwiftSyntaxTree,
     text_content: &'a XcodeText,
     original_complexity: Complexities,
-    scopes: &HashMap<NodeAddress, Scope>,
+    parsing_metadata: &ParsingMetadata,
     score_threshold: f64,
 ) -> Result<Option<(NodeSlice<'a>, isize)>, ComplexityRefactoringError> {
     let mut best_possibility = None;
@@ -145,7 +146,7 @@ fn get_best_extraction<'a>(
         let SliceInputsAndOutputs {
             input_names,
             output_names,
-        } = get_slice_inputs_and_outputs(&candidate_slice, &scopes);
+        } = get_slice_inputs_and_outputs(&candidate_slice, &parsing_metadata);
 
         let score = evaluate_suggestion_score(
             input_names.len(),
@@ -200,18 +201,13 @@ fn walk_node<'a>(
     text_content: &XcodeText,
     syntax_tree: &'a SwiftSyntaxTree,
     node_address: NodeAddress,
-    scopes: &mut HashMap<NodeAddress, Scope>,
+    parsing_metadata: &mut ParsingMetadata,
 ) -> Result<Vec<NodeSlice<'a>>, ComplexityRefactoringError> {
     let mut possible_extractions: Vec<NodeSlice<'a>> = Vec::new();
+
     let mut cursor = node.walk();
 
-    if node_children_are_candidates_for_extraction(&node) {
-        possible_extractions.push(NodeSlice {
-            nodes: node.children(&mut cursor).collect(),
-            parent_address: node_address.clone(),
-        });
-    }
-    update_scopes_for_node(scopes, &node, &node_address, &text_content)?;
+    update_parsing_metadata_for_node(parsing_metadata, &node, &node_address, &text_content)?;
 
     for child in node.named_children(&mut cursor) {
         possible_extractions.append(&mut walk_node(
@@ -219,10 +215,97 @@ fn walk_node<'a>(
             text_content,
             syntax_tree,
             get_node_address(&node_address, child.id()),
-            scopes,
+            parsing_metadata,
         )?);
     }
+    if node_children_are_candidates_for_extraction(&node) {
+        let node_children = node.children(&mut cursor).collect::<Vec<Node<'a>>>();
+
+        possible_extractions.append(&mut get_candidate_slices_for_extraction(
+            node_children,
+            &node_address,
+            &parsing_metadata,
+        ));
+    }
+
     Ok(possible_extractions)
+}
+
+fn get_candidate_slices_for_extraction<'a, 'b>(
+    nodes: Vec<Node<'a>>,
+    parent_address: &NodeAddress,
+    parsing_metadata: &'b ParsingMetadata,
+) -> Vec<NodeSlice<'a>> {
+    let mut result: Vec<NodeSlice> = vec![];
+    for (i, start_node) in nodes.iter().enumerate() {
+        for (j, end_node) in nodes.iter().enumerate().skip(i) {
+            if !(start_node.is_named() && end_node.is_named()) {
+                continue;
+            }
+            if is_slice_candidate_for_extraction(
+                NodeSubSlice {
+                    nodes: &nodes[i..=j],
+                    parent_address: &parent_address.clone(),
+                },
+                parsing_metadata,
+            ) {
+                result.push(NodeSlice {
+                    nodes: (&nodes[i..=j]).to_vec(),
+                    parent_address: parent_address.clone(),
+                })
+            }
+        }
+    }
+    result
+}
+
+fn is_slice_candidate_for_extraction(
+    slice: NodeSubSlice,
+    parsing_metadata: &ParsingMetadata,
+) -> bool {
+    let SliceInputsAndOutputs {
+        input_names: _,
+        output_names,
+    } = get_sub_slice_inputs_and_outputs(&slice, parsing_metadata);
+
+    if output_names.len() > 0 {
+        // SourceKit cannot extract method if any declaration declared within the slice is referred to after it
+        return false;
+    }
+
+    for node in slice.nodes {
+        // Any top-level guard_statement in the function is not allowed since it interrupts control flow
+        if node.kind() == "guard_statement" {
+            return false;
+        }
+    }
+    // No orphan 'continue' or 'break' statements allowed (if the slice doesn't also contain their target loop) // TODO: Labeled loops are not yet supported
+    for continue_or_break in &parsing_metadata.continues_and_breaks {
+        if is_child_of(&slice.parent_address, &continue_or_break.node_address) {
+            // Find the node of the slice that contains the continue statement, if one of them does
+            let containing_node_address = slice
+                .nodes
+                .iter()
+                .find(|n| {
+                    is_child_of(
+                        &get_node_address(&slice.parent_address, n.id()),
+                        &continue_or_break.node_address,
+                    )
+                })
+                .map(|n| get_node_address(&slice.parent_address, n.id()));
+
+            if let Some(containing_node_address) = containing_node_address {
+                if !is_child_of(
+                    &containing_node_address,
+                    &continue_or_break.target_node_address,
+                ) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
 }
 
 fn node_children_are_candidates_for_extraction(node: &Node) -> bool {

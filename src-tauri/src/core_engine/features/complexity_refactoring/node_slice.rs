@@ -10,6 +10,11 @@ pub struct NodeSlice<'a> {
     pub parent_address: NodeAddress,
 }
 
+pub struct NodeSubSlice<'a> {
+    pub nodes: &'a [Node<'a>],
+    pub parent_address: &'a NodeAddress,
+}
+
 // A serialized identifier for a NodeSlice relative to a function's s-exp which does not rely on lifetimes/IDs
 #[derive(Hash, Debug, Clone, PartialEq)]
 pub struct SerializedNodeSlice {

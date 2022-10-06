@@ -4,21 +4,47 @@ use tree_sitter::Node;
 
 use crate::core_engine::{syntax_tree::get_node_text, XcodeText};
 
-use super::{get_node_address, is_child_of, ComplexityRefactoringError, NodeAddress, NodeSlice};
+use super::{
+    get_node_address, is_child_of, ComplexityRefactoringError, NodeAddress, NodeSlice, NodeSubSlice,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Scope {
     pub declarations: HashMap<XcodeText, Declaration>,
 }
 
-pub fn update_scopes_for_node(
-    scopes: &mut HashMap<NodeAddress, Scope>,
+#[derive(Clone, Debug)]
+pub struct ContinueOrBreak {
+    pub node_address: NodeAddress,
+    pub target_node_address: NodeAddress,
+}
+
+pub struct ParsingMetadata {
+    pub scopes: HashMap<NodeAddress, Scope>,
+    pub continues_and_breaks: Vec<ContinueOrBreak>,
+}
+
+impl ParsingMetadata {
+    pub fn new(function_node_address: NodeAddress) -> Self {
+        Self {
+            scopes: HashMap::from([(
+                function_node_address,
+                Scope {
+                    declarations: HashMap::new(),
+                },
+            )]),
+            continues_and_breaks: Vec::new(),
+        }
+    }
+}
+pub fn update_parsing_metadata_for_node(
+    parsing_metadata: &mut ParsingMetadata,
     node: &Node,
     node_address: &NodeAddress,
     text_content: &XcodeText,
 ) -> Result<(), ComplexityRefactoringError> {
     if node_has_own_scope(&node) {
-        scopes.insert(
+        parsing_metadata.scopes.insert(
             node_address.clone(),
             Scope {
                 declarations: HashMap::new(),
@@ -30,18 +56,20 @@ pub fn update_scopes_for_node(
         let name = get_node_text(&declaration, &text_content)
             .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?;
 
-        get_scope(&node_address, scopes).declarations.insert(
-            name.clone(),
-            Declaration {
-                declared_in_node: node_address.clone(),
-                referenced_in_nodes: Vec::new(),
-            },
-        );
+        get_scope(&node_address, &mut parsing_metadata.scopes)
+            .declarations
+            .insert(
+                name.clone(),
+                Declaration {
+                    declared_in_node: node_address.clone(),
+                    referenced_in_nodes: Vec::new(),
+                },
+            );
     }
     if let Some(name) = get_variable_name_if_reference(&node, &text_content) {
         let mut curr_address: NodeAddress = node_address.clone();
         while curr_address.len() > 0 {
-            if let Some(scope) = scopes.get_mut(&curr_address) {
+            if let Some(scope) = parsing_metadata.scopes.get_mut(&curr_address) {
                 if let Some(declaration) = scope.declarations.get_mut(&name) {
                     declaration.referenced_in_nodes.push(node_address.clone());
                     break;
@@ -50,7 +78,42 @@ pub fn update_scopes_for_node(
             curr_address.pop();
         }
     }
+    if node.kind() == "control_transfer_statement" {
+        let child_kind = node.child(0).map(|n| n.kind());
+        if child_kind == Some("continue") || child_kind == Some("break") {
+            let target_address =
+                get_target_for_continue_or_break_statement(node.clone(), &node_address);
+            if let Some(target_node_address) = target_address {
+                parsing_metadata.continues_and_breaks.push(ContinueOrBreak {
+                    node_address: node_address.clone(),
+                    target_node_address,
+                })
+            }
+        }
+    }
     Ok(())
+}
+
+fn get_target_for_continue_or_break_statement(
+    node: Node,
+    node_address: &NodeAddress,
+) -> Option<NodeAddress> {
+    let mut curr_address = node_address.clone();
+    let mut curr_node = node;
+    while curr_address.len() > 0 {
+        curr_address.pop();
+        curr_node = curr_node.parent()?;
+
+        let curr_node_kind = curr_node.kind();
+        if curr_node_kind == "for_statement"
+            || curr_node_kind == "while_statement"
+            || curr_node_kind == "repeat_while_statement"
+        {
+            // TODO: handle labeled continue or break statements
+            return Some(curr_address);
+        }
+    }
+    return None;
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -61,12 +124,23 @@ pub struct SliceInputsAndOutputs {
 
 pub fn get_slice_inputs_and_outputs(
     slice: &NodeSlice,
-    scopes: &HashMap<NodeAddress, Scope>,
+    parsing_metadata: &ParsingMetadata,
 ) -> SliceInputsAndOutputs {
     get_slice_inputs_and_outputs_internal(
         &slice.nodes.iter().map(|n| n.id()).collect(),
         &slice.parent_address,
-        scopes,
+        &parsing_metadata.scopes,
+    )
+}
+
+pub fn get_sub_slice_inputs_and_outputs(
+    slice: &NodeSubSlice,
+    parsing_metadata: &ParsingMetadata,
+) -> SliceInputsAndOutputs {
+    get_slice_inputs_and_outputs_internal(
+        &slice.nodes.iter().map(|n| n.id()).collect(),
+        &slice.parent_address,
+        &parsing_metadata.scopes,
     )
 }
 fn get_slice_inputs_and_outputs_internal(
@@ -221,14 +295,13 @@ pub struct Declaration {
 
 #[cfg(test)]
 mod tests {
-    mod update_scopes_for_node {
-        use std::collections::HashMap;
+    mod update_parsing_metadata_for_node {
 
         use tree_sitter::Node;
 
         use crate::core_engine::{
             features::complexity_refactoring::{
-                get_node_address, update_scopes_for_node, NodeAddress, Scope,
+                get_node_address, update_parsing_metadata_for_node, NodeAddress, ParsingMetadata,
             },
             syntax_tree::{SwiftFunction, SwiftSyntaxTree},
             XcodeText,
@@ -239,9 +312,10 @@ mod tests {
             text_content: &XcodeText,
             syntax_tree: &'a SwiftSyntaxTree,
             node_address: NodeAddress,
-            scopes: &mut HashMap<NodeAddress, Scope>,
+            parsing_metadata: &mut ParsingMetadata,
         ) -> () {
-            update_scopes_for_node(scopes, &node, &node_address, &text_content).unwrap();
+            update_parsing_metadata_for_node(parsing_metadata, &node, &node_address, &text_content)
+                .unwrap();
 
             for child in node.named_children(&mut node.walk()) {
                 walk_node_test(
@@ -249,9 +323,124 @@ mod tests {
                     text_content,
                     syntax_tree,
                     get_node_address(&node_address, child.id()),
-                    scopes,
+                    parsing_metadata,
                 );
             }
+        }
+
+        #[test]
+        fn handles_continues_and_breaks() {
+            let text_content = XcodeText::from_str(
+                r#"
+                func function(arg1: Int) {
+                    for i in 1...3 {
+                        if i == 2 {
+                            break;
+                        }
+                    }
+                }
+            "#,
+            );
+            let mut syntax_tree = SwiftSyntaxTree::new();
+            syntax_tree.parse(&text_content).unwrap();
+
+            let functions =
+                SwiftFunction::get_top_level_functions(&syntax_tree, &text_content).unwrap();
+            assert_eq!(functions.len(), 1);
+
+            let function_decl_node = functions[0].props.node;
+            let function_node_address = vec![function_decl_node.clone().id()];
+
+            let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
+            walk_node_test(
+                function_decl_node,
+                &text_content,
+                &syntax_tree,
+                function_node_address.clone(),
+                &mut parsing_metadata,
+            );
+            assert_eq!(parsing_metadata.continues_and_breaks.clone().len(), 1);
+
+            let statement = parsing_metadata.continues_and_breaks[0].clone();
+            assert_eq!(statement.node_address.len(), 8); // function_decl, function_body, statements, for_statement, statements, if_statement, statements, control_transfer_statement
+            assert_eq!(statement.target_node_address.len(), 4); // function_decl, function_body, statements, for_statement
+        }
+
+        #[test]
+        fn handles_while_loops_and_continues() {
+            let text_content = XcodeText::from_str(
+                r#"
+                func function(arg1: Int) {
+                    for i in 1...2 {
+                        while true {
+                            continue;
+                        }
+                    }
+                }
+            "#,
+            );
+            let mut syntax_tree = SwiftSyntaxTree::new();
+            syntax_tree.parse(&text_content).unwrap();
+
+            let functions =
+                SwiftFunction::get_top_level_functions(&syntax_tree, &text_content).unwrap();
+            assert_eq!(functions.len(), 1);
+
+            let function_decl_node = functions[0].props.node;
+            let function_node_address = vec![function_decl_node.clone().id()];
+
+            let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
+            walk_node_test(
+                function_decl_node,
+                &text_content,
+                &syntax_tree,
+                function_node_address.clone(),
+                &mut parsing_metadata,
+            );
+            assert_eq!(parsing_metadata.continues_and_breaks.clone().len(), 1);
+
+            let statement = parsing_metadata.continues_and_breaks[0].clone();
+            assert_eq!(statement.node_address.len(), 8); // function_decl, function_body, statements, for_statement, statements, while_statement, statements, control_transfer_statement
+            assert_eq!(statement.target_node_address.len(), 6); // function_decl, function_body, statements, for_statement, statements, while_statement
+        }
+
+        #[test]
+        fn handles_labeled_loops() {
+            let text_content = XcodeText::from_str(
+                r#"
+                func function(arg1: Int) {
+                    labelly: repeat {
+                        while true {
+                            break labelly;
+                        }
+                    } while true;
+                    return;
+                }
+            "#,
+            );
+            let mut syntax_tree = SwiftSyntaxTree::new();
+            syntax_tree.parse(&text_content).unwrap();
+
+            let functions =
+                SwiftFunction::get_top_level_functions(&syntax_tree, &text_content).unwrap();
+            assert_eq!(functions.len(), 1);
+
+            let function_decl_node = functions[0].props.node;
+            let function_node_address = vec![function_decl_node.clone().id()];
+
+            let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
+            walk_node_test(
+                function_decl_node,
+                &text_content,
+                &syntax_tree,
+                function_node_address.clone(),
+                &mut parsing_metadata,
+            );
+            assert_eq!(parsing_metadata.continues_and_breaks.clone().len(), 1);
+
+            let statement = parsing_metadata.continues_and_breaks[0].clone();
+            assert_eq!(statement.node_address.len(), 8); // function_decl, function_body, statements, repeat_while_statement, statements, while_statement, statements, control_transfer_statement
+            assert_eq!(statement.target_node_address.len(), 4); // function_decl, function_body, statements, repeat_while_statement
         }
 
         #[test]
@@ -273,23 +462,20 @@ mod tests {
 
             let function_decl_node = functions[0].props.node;
             let function_node_address = vec![function_decl_node.clone().id()];
-            let mut scopes: HashMap<NodeAddress, Scope> = HashMap::new();
-            scopes.insert(
-                function_node_address.clone(),
-                Scope {
-                    declarations: HashMap::new(),
-                },
-            );
+
+            let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
             walk_node_test(
                 function_decl_node,
                 &text_content,
                 &syntax_tree,
                 function_node_address.clone(),
-                &mut scopes,
+                &mut parsing_metadata,
             );
 
-            assert_eq!(scopes.len(), 2); // Starting scope, statements scope
-            let function_scope_decls = scopes
+            assert_eq!(parsing_metadata.continues_and_breaks.len(), 0);
+            assert_eq!(parsing_metadata.scopes.len(), 2); // Starting scope, statements scope
+            let function_scope_decls = parsing_metadata
+                .scopes
                 .get(&vec![function_decl_node.id()])
                 .unwrap()
                 .declarations
@@ -303,12 +489,29 @@ mod tests {
             assert_eq!(arg1_decl.referenced_in_nodes[0].len(), 3); // function_decl, parameter, simple_expression
             assert_eq!(arg1_decl.referenced_in_nodes[1].len(), 6); // function_decl, function_body, statements, property_declaration, additive_expression, simple_identifier
 
-            scopes.remove(&vec![function_decl_node.id()]);
-            assert_eq!(scopes.keys().len(), 1);
-            assert_eq!(scopes.keys().next().unwrap().len(), 3); // function_decl, function_body, statements
-            assert_eq!(scopes.values().next().unwrap().declarations.len(), 1);
+            parsing_metadata
+                .scopes
+                .remove(&vec![function_decl_node.id()]);
+            assert_eq!(parsing_metadata.scopes.keys().len(), 1);
+            assert_eq!(parsing_metadata.scopes.keys().next().unwrap().len(), 3); // function_decl, function_body, statements
+            assert_eq!(
+                parsing_metadata
+                    .scopes
+                    .values()
+                    .next()
+                    .unwrap()
+                    .declarations
+                    .len(),
+                1
+            );
 
-            let statements_scope_decls = scopes.values().next().unwrap().declarations.clone();
+            let statements_scope_decls = parsing_metadata
+                .scopes
+                .values()
+                .next()
+                .unwrap()
+                .declarations
+                .clone();
             let newNum_decl = statements_scope_decls
                 .get(&XcodeText::from_str("newNum"))
                 .unwrap();
