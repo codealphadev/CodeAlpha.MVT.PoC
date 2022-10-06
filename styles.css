@@ -12,6 +12,10 @@ code {
 	font-weight: 600;
 }
 
+button.hover.hover {
+  background-image: var(--theme-secondary_gradient);
+}
+
 /* inter-100 - latin */
 @font-face {
 	font-family: 'Inter';
