@@ -96,7 +96,7 @@ pub struct ComplexityRefactoring {
     dismissed_suggestions: Arc<Mutex<HashSet<SuggestionHash>>>,
 }
 
-const MAX_ALLOWED_COMPLEXITY: isize = 5; // TODO: Raise to be more reasonable?
+const MAX_ALLOWED_COMPLEXITY: isize = 1; // TODO: Raise to be more reasonable?
 
 impl FeatureBase for ComplexityRefactoring {
     fn compute(

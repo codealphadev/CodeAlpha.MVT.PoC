@@ -14,14 +14,17 @@ use crate::core_engine::{
         refactor_function, NodeAddress, NodeSlice, ParsingMetadata, SerializedNodeSlice,
     },
     rules::TemporaryFileOnDisk,
-    syntax_tree::{calculate_cognitive_complexities, Complexities, SwiftFunction, SwiftSyntaxTree},
+    syntax_tree::{
+        calculate_cognitive_complexities, is_expression, is_l_expression, Complexities,
+        SwiftFunction, SwiftSyntaxTree,
+    },
     TextPosition, XcodeText,
 };
 use cached::SizedCache;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
+use tracing::debug;
 use tracing::error;
-
 #[cached(
     type = "SizedCache<String, Option<(SerializedNodeSlice, isize)>>",
     create = "{ SizedCache::with_size(100) }",
@@ -53,7 +56,7 @@ pub fn check_for_method_extraction(
         .complexities
         .clone();
 
-    const SCORE_THRESHOLD: f64 = 1.0;
+    const SCORE_THRESHOLD: f64 = 0.0;
 
     Ok(get_best_extraction(
         possible_extractions,
@@ -162,9 +165,19 @@ fn get_best_extraction<'a>(
             output_remaining_complexity = Some(remaining_complexity);
         }
     }
-    Ok(best_possibility.map(|p| {
+    Ok(best_possibility.map(|slice| {
+        let slice_kinds = slice.nodes.iter().map(|n| n.kind()).collect::<Vec<&str>>();
+        let parent = slice.nodes.first().unwrap().parent().map(|n| n.kind());
+        debug!(
+            ?slice_kinds,
+            ?best_score,
+            ?original_complexity,
+            ?output_remaining_complexity,
+            ?parent,
+            "Found refactoring suggestion"
+        );
         (
-            p,
+            slice,
             output_remaining_complexity.expect("Remaining complexity should be set"),
         )
     }))
@@ -227,6 +240,16 @@ fn walk_node<'a>(
             &parsing_metadata,
         ));
     }
+
+    if node_is_candidate_for_extraction(&node) {
+        let mut parent_address = node_address;
+        parent_address.pop();
+        possible_extractions.append(&mut get_candidate_slices_for_extraction(
+            vec![node],
+            &parent_address,
+            &parsing_metadata,
+        ));
+    };
 
     Ok(possible_extractions)
 }
@@ -311,6 +334,12 @@ fn is_slice_candidate_for_extraction(
 fn node_children_are_candidates_for_extraction(node: &Node) -> bool {
     node.kind() == "statements" // Restricting to blocks for now
 }
+
+fn node_is_candidate_for_extraction(node: &Node) -> bool {
+    is_expression(node.kind())
+        && !is_l_expression(node.kind())
+        && node.parent().map(|n| is_expression(n.kind())) != Some(true) // Disallow any expressions who are themselves parts of expressions(PartOfExpression)
+}
 // We need to track which variables were declared within each scope, because global variables should be ignored (and can't be found).
 // There can be cases where we have an ERROR node etc., so just return None if no name is found
 // TODO: Should we handle this differently? Maybe don't check for method extraction if an error is contained in the node. Then treat this as a real error if the assertion of simple_identifier fails.
@@ -363,7 +392,7 @@ mod tests {
         };
 
         #[test]
-        fn makes_correct_suggestion() {
+        fn makes_correct_suggestion_for_block_of_statements() {
             let text_content = XcodeText::from_str(
                 r#"
                 public func extractName(input: String) -> String {
@@ -408,6 +437,44 @@ mod tests {
             assert_eq!(result.0.count, 8);
             assert_eq!(result.0.function_sexp, functions[0].props.node.to_sexp());
             assert_eq!(result.0.path_from_function_root, vec![8, 1, 0, 7, 4, 0]);
+            assert_eq!(result.1, 3);
+        }
+
+        #[test]
+        fn extracts_expression() {
+            let text_content = XcodeText::from_str(
+                r#"
+                import Foundation
+
+                public func compute(input1: Int, input2: Int) -> Int {
+                    if (input1 > 3 && input1 < 2) || (input2 > 4 && input2 > 6) {
+                        let resolvedValue = input1 + input2 + 3;
+                        let b = resolvedValue + 2
+                    }
+                    return 4;
+                }
+                
+            "#,
+            );
+
+            let mut swift_syntax_tree = SwiftSyntaxTree::new();
+            swift_syntax_tree.parse(&text_content).unwrap();
+
+            let functions =
+                SwiftFunction::get_top_level_functions(&swift_syntax_tree, &text_content).unwrap();
+            assert_eq!(functions.len(), 1);
+
+            let result =
+                check_for_method_extraction(&functions[0], &text_content, &swift_syntax_tree)
+                    .unwrap()
+                    .unwrap();
+            assert_eq!(result.0.count, 1);
+            assert_eq!(
+                result.clone().0.clone().function_sexp.clone(),
+                functions[0].props.node.to_sexp()
+            );
+            dbg!(result.0.function_sexp);
+            assert_eq!(result.0.path_from_function_root, vec![10, 1, 0, 1, 0]);
             assert_eq!(result.1, 3);
         }
     }

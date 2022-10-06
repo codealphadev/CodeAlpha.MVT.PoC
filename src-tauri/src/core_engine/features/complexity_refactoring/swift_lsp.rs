@@ -38,7 +38,7 @@ async fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
     Ok(sdk_path_string.trim().to_string())
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
     #[serde(rename = "key.column")]
     column: usize,
@@ -52,13 +52,13 @@ struct EditDto {
     text: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct CategorizedEditDto {
     #[serde(rename = "key.edits")]
     edits: Vec<EditDto>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct RefactoringResponse {
     #[serde(rename = "key.categorizededits")]
     categorized_edits: Vec<CategorizedEditDto>,

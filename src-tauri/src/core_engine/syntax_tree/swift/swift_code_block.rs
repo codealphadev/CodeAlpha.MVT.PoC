@@ -230,3 +230,41 @@ impl FromStr for SwiftCodeBlockKind {
         }
     }
 }
+
+// https://github.com/alex-pinkus/tree-sitter-swift/blob/main/corpus/expressions.txt
+pub fn is_expression(kind: &str) -> bool {
+    [
+        "multiplicative_expression",
+        "additive_expression",
+        "nil_coalescing_expression",
+        "comparison_expression",
+        "conjunction_expression",
+        "disjunction_expression",
+        "call_expression",
+        "navigation_expression", // TODO
+        "bitwise_operation",
+        "ternary_expression",
+        "equality_expression",
+        "directly_assignable_expression", // Means whatever's inside is an l-expression
+        "prefix_expression",
+        "tuple_expression",
+        "constructor_expression",
+        "selector_expression",
+        "self_expression",
+        "open_start_range_expression",
+        "range_expression",
+        "open_end_range_expression",
+        "postfix_expression",
+        "key_path_expression",
+        "key_path_string_expression",
+        "check_expression",
+        "try_expression",
+        "await_expression",
+        "prefix_expression",
+    ]
+    .contains(&kind)
+}
+
+pub fn is_l_expression(kind: &str) -> bool {
+    kind == "directly_assignable_expression"
+}
