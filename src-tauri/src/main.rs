@@ -27,7 +27,7 @@ use lazy_static::lazy_static;
 
 use crate::{
     utils::{tracing::TracingSubscriber, updater::listen_for_updates},
-    window_controls::{cmd_rebind_main_widget, cmd_resize_window, cmd_toggle_app_activation},
+    window_controls::{cmd_rebind_main_widget, cmd_resize_window, cmd_toggle_main_window},
 };
 
 use utils::feedback::cmd_send_feedback;
@@ -95,7 +95,7 @@ fn main() {
 
     let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            cmd_toggle_app_activation,
+            cmd_toggle_main_window,
             cmd_resize_window,
             cmd_send_feedback,
             cmd_paste_docs,

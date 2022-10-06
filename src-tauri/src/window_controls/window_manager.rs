@@ -331,15 +331,8 @@ impl WindowManager {
 }
 
 #[tauri::command]
-pub fn cmd_toggle_app_activation(app_handle: tauri::AppHandle, app_active: bool) {
-    EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
-        engine_active: app_active,
-        active_feature: None,
-    })
-    .publish_to_tauri(&app_handle);
-
-    EventUserInteraction::ToggleMainWindow(app_active).publish_to_tauri(&app_handle);
-    debug!(?app_active, "Toggle app activation");
+pub fn cmd_toggle_main_window(app_handle: tauri::AppHandle, main_window_active: bool) {
+    EventUserInteraction::ToggleMainWindow(main_window_active).publish_to_tauri(&app_handle);
 }
 
 #[tauri::command]
