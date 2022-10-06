@@ -4,6 +4,8 @@ use tracing::{debug, error, info};
 
 const CHECKING_INTERVAL_SECONDS: u64 = 60 * 5;
 
+// This code is not dead; it is only unused in debug mode
+#[allow(dead_code)]
 pub fn listen_for_updates(handle: AppHandle) {
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(CHECKING_INTERVAL_SECONDS));

@@ -13,7 +13,7 @@ code {
 }
 
 button.hover.hover {
-	background-image: var(--theme-secondary_gradient);
+	filter: brightness(125%);
 }
 button > div.hover.hover {
 	filter: brightness(125%);

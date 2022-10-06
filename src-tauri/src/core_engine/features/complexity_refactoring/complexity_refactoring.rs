@@ -238,6 +238,16 @@ impl ComplexityRefactoring {
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
             let binded_suggestions_cache_arc = suggestions_arc.clone();
+
+            // For error reporting
+            let serialized_slice = suggestion.serialized_slice.clone();
+            let node_kinds = slice.nodes.iter().map(|n| n.kind()).collect::<Vec<_>>();
+
+            let parent_node_kind = slice
+                .nodes
+                .first()
+                .and_then(|n| n.parent())
+                .map(|n| n.kind());
             tauri::async_runtime::spawn({
                 async move {
                     _ = do_method_extraction(
@@ -257,7 +267,17 @@ impl ComplexityRefactoring {
                         &binded_text_content_2,
                     )
                     .await
-                    .map_err(|e| error!(?e, "Failed to perform refactoring"));
+                    .map_err(|e| match e {
+                        ComplexityRefactoringError::LspRejectedRefactoring => {
+                            error!(
+                                ?serialized_slice,
+                                ?node_kinds,
+                                ?parent_node_kind,
+                                "LSP rejected refactoring"
+                            );
+                        }
+                        _ => error!(?e, "Failed to perform refactoring"),
+                    });
                 }
             });
         }
@@ -510,6 +530,8 @@ pub enum ComplexityRefactoringError {
     SuggestionNotFound,
     #[error("Suggestion has incomplete state")]
     SuggestionIncomplete,
+    #[error("LSP rejected refactoring operation")]
+    LspRejectedRefactoring,
     #[error("Something went wrong when executing this ComplexityRefactoring feature.")]
     GenericError(#[source] anyhow::Error),
 }
