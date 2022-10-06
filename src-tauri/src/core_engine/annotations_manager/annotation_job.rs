@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{
-    core_engine::{features::FeatureKind, TextRange},
-    utils::geometry::LogicalPosition,
-};
+use crate::{core_engine::TextRange, utils::geometry::LogicalPosition};
 
 use super::{
     annotations_manager::{Annotation, AnnotationError, AnnotationResult},

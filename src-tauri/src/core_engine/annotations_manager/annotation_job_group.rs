@@ -19,7 +19,7 @@ pub trait AnnotationJobGroupTrait {
     fn update_jobs(&mut self, jobs: Vec<AnnotationJob>);
     fn compute_annotations(&mut self);
     fn update_annotations(&mut self);
-    fn publish_updated_annotations(&mut self);
+
     fn get_annotation_group(&self) -> Option<AnnotationGroup>;
     fn get_annotation_job(&self, job_id: uuid::Uuid) -> Option<AnnotationJob>;
     fn get_annotation(&self, annotation_id: uuid::Uuid) -> Option<Annotation>;
@@ -30,6 +30,7 @@ pub struct AnnotationJobGroup {
     id: uuid::Uuid,
     editor_window_uid: EditorWindowUid,
     feature: FeatureKind,
+    group: Option<AnnotationGroup>,
     jobs: HashMap<uuid::Uuid, AnnotationJob>,
     results: HashMap<uuid::Uuid, AnnotationResult>,
 }
@@ -51,6 +52,7 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
             jobs,
             editor_window_uid,
             results: HashMap::new(),
+            group: None,
         }
     }
 
@@ -79,10 +81,7 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
                 }
             }
 
-            // publish the results
-            if let Some(annotation_group) = self.get_annotation_group() {
-                AnnotationEvent::AddAnnotationGroup(annotation_group).publish_to_tauri();
-            }
+            self.publish_annotations();
         }
     }
 
@@ -91,12 +90,11 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
             get_visible_text_range(GetVia::Current),
             get_code_document_frame_properties(&GetVia::Current),
         ) {
-            let mut updated_results = HashMap::new();
             for job in self.jobs.values_mut() {
                 if let Ok(result) = job
                     .attempt_compute_bounds(&visible_text_range, &code_doc_props.dimensions.origin)
                 {
-                    updated_results.insert(result.id, result);
+                    self.results.insert(result.id, result);
                 } else {
                     debug!(
                         "Failed `attempt_compute_bounds` for job: {:?} for feature: {:?}",
@@ -105,22 +103,7 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
                 }
             }
 
-            // if the previous_results didn't contain results for all the jobs, then we emit a "add" event.
-            // Otherwise, we emit an "update" event.
-
-            if self.results.len() == self.jobs.len() {
-                self.publish_updated_annotations();
-            } else {
-                if let Some(annotation_group) = self.get_annotation_group() {
-                    AnnotationEvent::AddAnnotationGroup(annotation_group).publish_to_tauri();
-                }
-            }
-        }
-    }
-
-    fn publish_updated_annotations(&mut self) {
-        if let Some(annotation_group) = self.get_annotation_group() {
-            AnnotationEvent::UpdateAnnotationGroup(annotation_group).publish_to_tauri();
+            self.publish_annotations();
         }
     }
 
@@ -155,7 +138,26 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
     }
 }
 
-impl AnnotationJobGroup {}
+impl AnnotationJobGroup {
+    fn publish_annotations(&mut self) {
+        if let Some(annotation_group) = self.get_annotation_group() {
+            if let Some(previous_group) = self.group.take() {
+                // Case: new group is different from the previous group -> publish update
+                if previous_group != annotation_group {
+                    AnnotationEvent::UpdateAnnotationGroup(annotation_group.clone())
+                        .publish_to_tauri();
+                } else {
+                    //  Case: new group is the same as the previous group -> no publish
+                }
+            } else {
+                // Case: no previous group -> publish add
+                AnnotationEvent::AddAnnotationGroup(annotation_group.clone()).publish_to_tauri();
+            }
+
+            self.group = Some(annotation_group);
+        }
+    }
+}
 
 impl Drop for AnnotationJobGroup {
     fn drop(&mut self) {
