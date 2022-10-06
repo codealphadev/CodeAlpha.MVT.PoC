@@ -2,7 +2,7 @@ use crate::core_engine::features::SwiftFormatError;
 
 // The optional file_path is used for finding .swiftformat config files
 pub async fn format_code(
-    input: &String,
+    input: &str,
     file_path: &Option<String>,
 ) -> Result<String, SwiftFormatError> {
     let mut command = tauri::api::process::Command::new_sidecar("swiftformat")
@@ -22,11 +22,16 @@ pub async fn format_code(
         .expect("Failed to write to swiftformat");
 
     drop(child);
-    let mut formatted_content = "".to_string();
+
+    let mut formatted_content = String::new();
+
     while let Some(event) = rx.recv().await {
         if let tauri::api::process::CommandEvent::Stdout(line) = event {
             formatted_content.push_str(&(line + "\n"));
         }
+    }
+    if formatted_content.len() == 0 && input.len() != 0 {
+        return Err(SwiftFormatError::FormatFailed);
     }
     Ok(formatted_content)
 }
