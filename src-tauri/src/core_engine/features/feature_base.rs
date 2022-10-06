@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     core_engine::{
-        events::models::{NodeAnnotationClickedMessage, PerformRefactoringOperationMessage},
+        events::models::{NodeAnnotationClickedMessage, RefactoringMessage},
         CodeDocument,
     },
     platform::macos::models::editor::EditorShortcutPressedMessage,
@@ -17,7 +17,8 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub enum UserCommand {
-    PerformRefactoringOperation(PerformRefactoringOperationMessage),
+    PerformRefactoringOperation(RefactoringMessage),
+    DismissRefactoringSuggestion(RefactoringMessage),
     NodeAnnotationClicked(NodeAnnotationClickedMessage),
 }
 

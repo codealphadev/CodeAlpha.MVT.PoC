@@ -10,6 +10,8 @@
 	import H4 from '../common/typography/h4.svelte';
 	import Arrow from './icons/arrow.svelte';
 	import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
+	import IconButton from '../common/icon-button.svelte';
+	import IconRubbishBin from './icons/icon-rubbish-bin.svelte';
 
 	export let suggestion: FERefactoringSuggestion;
 
@@ -24,6 +26,17 @@
 		//<div class="flex flex-col items-start p-3 gap-2 w-full rounded-xl border-backgroundsecondary">
 		//    <Diff old_code={suggestion.old_text_content_string} new_code={suggestion.new_text_content_string}  />
 	};
+
+	const dismiss_suggestion = async () => {
+		const event: EventUserInteraction = {
+			event: 'DismissRefactoringSuggestion',
+			payload: { id: suggestion.id, editor_window_uid: suggestion.window_uid }
+		};
+		const channel: ChannelList = 'EventUserInteractions';
+		console.log('DISMISSING SUGGESTION');
+		await emit(channel, event);
+	};
+
 	function map_complexity_to_text(complexity: number): { text: string; class: string } {
 		if (complexity < 10) {
 			return { text: `low (${complexity})`, class: 'text-signalgood' };
@@ -65,7 +78,15 @@
 		</div>
 	</div>
 
-	<div class="flex justify-end w-full items-center">
+	<div class="flex justify-between w-full items-center">
+		<IconButton on:click={dismiss_suggestion}>
+			<div
+				class="p-2 border-secondary rounded bg-backgroundsecondary"
+				style=".hover.hover: brighten(25%)"
+			>
+				<IconRubbishBin />
+			</div>
+		</IconButton>
 		<Button on:click={apply_suggestion}>Extract function</Button>
 	</div>
 </Card>

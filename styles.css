@@ -13,7 +13,10 @@ code {
 }
 
 button.hover.hover {
-  background-image: var(--theme-secondary_gradient);
+	background-image: var(--theme-secondary_gradient);
+}
+button > div.hover.hover {
+	filter: brightness(125%);
 }
 
 /* inter-100 - latin */
