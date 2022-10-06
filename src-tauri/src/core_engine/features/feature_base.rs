@@ -1,4 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
+use ts_rs::TS;
 
 use crate::{
     core_engine::{
@@ -33,6 +35,8 @@ pub enum CoreEngineTrigger {
     OnUserCommand(UserCommand),
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS)]
+#[ts(export, export_to = "bindings/features/code_annotations/")]
 pub enum FeatureKind {
     BracketHighlight,
     ComplexityRefactoring,

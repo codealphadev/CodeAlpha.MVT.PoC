@@ -12,7 +12,7 @@ use crate::{
                 NodeExplanationFetchedMessage, RemoveNodeAnnotationMessage,
                 UpdateNodeAnnotationMessage, UpdateNodeExplanationMessage,
             },
-            EventRuleExecutionState, NodeAnnotationEvent, NodeExplanationEvent,
+            AnnotationEvent, EventRuleExecutionState, NodeExplanationEvent,
         },
         syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
         utils::XcodeText,
@@ -108,7 +108,7 @@ impl NodeAnnotation {
             Self::calculate_annotation_bounds(text, &self.node_code_block)?;
 
         // 3. Publish annotation_rect and codeblock_rect to frontend, this time in LOCAL coordinates. Even if empty, publish to remove ghosts from previous messages.
-        NodeAnnotationEvent::UpdateNodeAnnotation(UpdateNodeAnnotationMessage {
+        AnnotationEvent::UpdateNodeAnnotation(UpdateNodeAnnotationMessage {
             id: self.id,
             annotation_icon: annotation_rect_opt
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
@@ -281,7 +281,7 @@ impl NodeAnnotation {
 
 impl Drop for NodeAnnotation {
     fn drop(&mut self) {
-        NodeAnnotationEvent::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
+        AnnotationEvent::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
             id: self.id,
             editor_window_uid: self.window_uid,
         })

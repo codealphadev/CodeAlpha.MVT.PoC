@@ -1,8 +1,13 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use ts_rs::TS;
 
-use crate::utils::geometry::LogicalFrame;
+use crate::{
+    core_engine::features::FeatureKind,
+    utils::geometry::{LogicalFrame, LogicalPosition},
+};
 
-use super::annotation_job::{AnnotationJob, ViewportPositioning};
+use super::annotation_job::{AnnotationJob, AnnotationKind, ViewportPositioning};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AnnotationError {
@@ -10,11 +15,28 @@ pub enum AnnotationError {
     GenericError(#[source] anyhow::Error),
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS)]
+#[ts(export, export_to = "bindings/features/code_annotations/")]
+pub enum AnnotationShape {
+    Rectangle(LogicalFrame),
+    Point(LogicalPosition),
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS)]
+#[ts(export, export_to = "bindings/features/code_annotations/")]
+pub struct Annotation {
+    pub id: uuid::Uuid,
+    pub kind: AnnotationKind,
+    pub feature: FeatureKind,
+    pub position_relative_to_viewport: ViewportPositioning,
+    pub shapes: Vec<AnnotationShape>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AnnotationResult {
     pub id: uuid::Uuid,
     pub position_relative_to_viewport: ViewportPositioning,
     pub bounds: Option<Vec<LogicalFrame>>,
-    pub single_bounds: Option<LogicalFrame>,
 }
 
 type AnnotationResults = HashMap<uuid::Uuid, AnnotationResult>;

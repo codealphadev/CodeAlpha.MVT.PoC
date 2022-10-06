@@ -72,8 +72,8 @@ pub fn set_selected_text_range(text_range: &TextRange, get_via: &GetVia) -> Resu
         .map_err(|err| XcodeError::AXError(err.into()))
 }
 
-pub fn get_visible_text_range(get_via: &GetVia) -> Result<TextRange, XcodeError> {
-    let textarea_uielement = get_textarea_uielement(get_via)?;
+pub fn get_visible_text_range(get_via: GetVia) -> Result<TextRange, XcodeError> {
+    let textarea_uielement = get_textarea_uielement(&get_via)?;
 
     let visible_text_range_ax =
         ax_attribute(&textarea_uielement, AXAttribute::visible_character_range())?;

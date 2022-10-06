@@ -396,7 +396,7 @@ impl BracketHighlight {
         match trigger {
             CoreEngineTrigger::OnViewportDimensionsChange => Ok(true),
             CoreEngineTrigger::OnVisibleTextRangeChange => {
-                let visible_text_range = get_visible_text_range(&GetVia::Current)
+                let visible_text_range = get_visible_text_range(GetVia::Current)
                     .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
                 if let Some(BracketHighlightResults {
                     lines,
