@@ -5,6 +5,6 @@ use crate::{core_engine::EditorWindowUid, utils::geometry::LogicalFrame};
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct NodeExplanationFetchedMessage {
-    pub window_uid: EditorWindowUid,
+    pub editor_window_uid: EditorWindowUid,
     pub annotation_frame: Option<LogicalFrame>,
 }

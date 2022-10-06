@@ -215,7 +215,7 @@ impl DocsGenerator {
                     DocsGenerationError::MissingContext.into(),
                 ))?;
         Ok(
-            if let Some(annotation) = self.node_annotations.get_mut(&msg.window_uid) {
+            if let Some(annotation) = self.node_annotations.get_mut(&msg.editor_window_uid) {
                 if msg.annotation_id == annotation.id() {
                     annotation.prepare_docs_insertion_position(text_content)?;
                     annotation.generate_node_explanation()?;

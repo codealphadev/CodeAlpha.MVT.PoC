@@ -38,7 +38,7 @@ fn on_node_explanation_fetched(
 
     window_manager.show_app_windows(
         vec![AppWindow::Explain],
-        Some(fetched_msg.window_uid),
+        Some(fetched_msg.editor_window_uid),
         fetched_msg.annotation_frame,
     );
 

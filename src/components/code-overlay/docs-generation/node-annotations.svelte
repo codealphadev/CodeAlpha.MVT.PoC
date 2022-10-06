@@ -75,7 +75,7 @@
 				event: 'NodeAnnotationClicked',
 				payload: {
 					annotation_id: annotation.id,
-					window_uid: annotation.window_uid
+					editor_window_uid: annotation.editor_window_uid
 				}
 			};
 			const channel: ChannelList = 'EventUserInteractions';
@@ -89,7 +89,7 @@
 	};
 </script>
 
-{#if annotation && annotation.window_uid == active_window_uid}
+{#if annotation && annotation.editor_window_uid == active_window_uid}
 	{#if annotation.annotation_icon !== null}
 		<div
 			style="position: absolute; 

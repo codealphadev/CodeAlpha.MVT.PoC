@@ -114,7 +114,7 @@ impl NodeAnnotation {
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
             annotation_codeblock: codeblock_bounds
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
-            window_uid: self.window_uid,
+            editor_window_uid: self.window_uid,
         })
         .publish_to_tauri(&app_handle());
 
@@ -165,7 +165,7 @@ impl NodeAnnotation {
 
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
-                            window_uid,
+                            editor_window_uid: window_uid,
                             annotation_frame: global_frame,
                         },
                     )
@@ -283,7 +283,7 @@ impl Drop for NodeAnnotation {
     fn drop(&mut self) {
         NodeAnnotationEvent::RemoveNodeAnnotation(RemoveNodeAnnotationMessage {
             id: self.id,
-            window_uid: self.window_uid,
+            editor_window_uid: self.window_uid,
         })
         .publish_to_tauri(&app_handle());
     }

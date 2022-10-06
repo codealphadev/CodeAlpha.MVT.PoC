@@ -27,14 +27,14 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 }
                 EventUserInteraction::NodeAnnotationClicked(msg) => {
                     _ = core_engine.lock().run_features(
-                        msg.window_uid,
+                        msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::NodeAnnotationClicked(msg)),
                     );
                 }
                 EventUserInteraction::PerformRefactoringOperation(msg) => {
                     debug!(?msg, "PerformRefactoringOperation request");
                     _ = core_engine.lock().run_features(
-                        msg.window_uid,
+                        msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(
                             UserCommand::PerformRefactoringOperation(msg),
                         ),
