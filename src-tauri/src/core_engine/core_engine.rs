@@ -94,13 +94,13 @@ impl CoreEngine {
 
     pub fn run_features(
         &mut self,
-        window_uid: EditorWindowUid,
+        editor_window_uid: EditorWindowUid,
         trigger: &CoreEngineTrigger,
     ) -> Result<(), CoreEngineError> {
         let code_documents = self.code_documents.lock();
         let code_doc = code_documents
-            .get(&window_uid)
-            .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
+            .get(&editor_window_uid)
+            .ok_or(CoreEngineError::CodeDocNotFound(editor_window_uid))?;
 
         for feature in self.features.iter_mut() {
             _ = feature

@@ -2,5 +2,5 @@
 
 export interface NodeAnnotationClickedMessage {
   annotation_id: string;
-  window_uid: number;
+  editor_window_uid: number;
 }

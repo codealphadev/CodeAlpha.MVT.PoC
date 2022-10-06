@@ -2,5 +2,5 @@
 
 export interface RemoveNodeAnnotationMessage {
   id: string;
-  window_uid: number;
+  editor_window_uid: number;
 }
