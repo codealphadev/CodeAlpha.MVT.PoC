@@ -116,7 +116,7 @@ impl NodeAnnotation {
                 .map(|rect| rect.to_local(&code_document_frame_origin)),
             editor_window_uid: self.window_uid,
         })
-        .publish_to_tauri(&app_handle());
+        .publish_to_tauri();
 
         Ok(())
     }
@@ -285,6 +285,6 @@ impl Drop for NodeAnnotation {
             id: self.id,
             editor_window_uid: self.window_uid,
         })
-        .publish_to_tauri(&app_handle());
+        .publish_to_tauri();
     }
 }
