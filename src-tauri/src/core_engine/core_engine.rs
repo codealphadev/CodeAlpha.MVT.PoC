@@ -6,6 +6,7 @@ use tracing::error;
 use crate::{app_handle, platform::macos::XcodeError, CORE_ENGINE_ACTIVE_AT_STARTUP};
 
 use super::{
+    annotations_manager::{AnnotationsManager, AnnotationsManagerTrait},
     features::{
         BracketHighlight, ComplexityRefactoring, CoreEngineTrigger, DocsGenerator, Feature,
         FeatureBase, FeatureError, SwiftFormatter,
@@ -51,10 +52,16 @@ pub struct CoreEngine {
 
     /// Identifier indicating if the app is currently active and supposed to give suggestions
     engine_active: bool,
+
+    /// Annotations manager handles where to draw annotations on the code editor via the CodeOverlay window
+    _annotations_manager: Arc<Mutex<AnnotationsManager>>,
 }
 
 impl CoreEngine {
     pub fn new() -> Self {
+        let annotations_manager = Arc::new(Mutex::new(AnnotationsManager::new()));
+        AnnotationsManager::start_event_listeners(&annotations_manager);
+
         Self {
             app_handle: app_handle(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
@@ -65,6 +72,7 @@ impl CoreEngine {
                 Feature::DocsGeneration(DocsGenerator::new()),
                 Feature::ComplexityRefactoring(ComplexityRefactoring::new()),
             ],
+            _annotations_manager: annotations_manager,
         }
     }
 
