@@ -12,7 +12,7 @@
 	import SwiftFormat from '../components/widget/swift-format.svelte';
 	import DocsGeneration from '../components/widget/docs-generation.svelte';
 
-	let app_active = true;
+	let main_window_active = false;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
 	let processing_timeout = 15000; // ms
 	let show_alternate_icon_duration = 2000; // ms
@@ -20,15 +20,15 @@
 	// Important logic! Don't change this unless you know what you're doing. :-P
 	// Should be moved into a separate file.
 	const clickAction = async () => {
-		app_active = !app_active;
-		invoke('cmd_toggle_app_activation', { appActive: app_active });
+		main_window_active = !main_window_active;
+		invoke('cmd_toggle_main_window', { mainWindowActive: main_window_active });
 
 		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
 		// delay between setting a new position and recreating the parent/child relationship.
 		// Pausing the main thread is not possible. Also, running this task async is also not trivial.
 		// We send a message to the main thread to run this task.
 		// EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
-		if (app_active) {
+		if (main_window_active) {
 			setTimeout(() => {
 				invoke('cmd_rebind_main_widget');
 			}, 100);
@@ -36,14 +36,14 @@
 	};
 
 	const handle_release_drag = async () => {
-		invoke('cmd_toggle_app_activation', { appActive: app_active });
+		// invoke('cmd_toggle_app_activation', { appActive: app_active });
 
 		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
 		// delay between setting a new position and recreating the parent/child relationship.
 		// Pausing the main thread is not possible. Also, running this task async is also not trivial.
 		// We send a message to the main thread to run this task.
 		// EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
-		if (app_active) {
+		if (main_window_active) {
 			setTimeout(() => {
 				invoke('cmd_rebind_main_widget');
 			}, 100);
@@ -100,7 +100,6 @@
 
 	function handleMouseUp(event: MouseEvent) {
 		if (startX === undefined || startY === undefined) {
-			clickAction();
 			return;
 		}
 		const diffX = Math.abs(event.screenX - startX);
@@ -118,20 +117,16 @@
 </script>
 
 <div class="relative overflow-hidden w-full h-full">
-	{#if app_active === false}
+	{#if main_window_active === false}
 		<WidgetBackgroundGreyscale />
 	{:else}
 		<WidgetBackground />
 	{/if}
 
 	<div class="absolute bottom-0 right-0 w-12 h-12">
-		<div
-			data-tauri-drag-region
-			on:click={clickAction}
-			class="flex items-center justify-center h-screen"
-		>
+		<div data-tauri-drag-region class="flex items-center justify-center h-screen">
 			<div class="w-[36px]">
-				{#if app_active === false}
+				{#if main_window_active === false}
 					<div in:fade={{ duration: 200 }}>
 						<IconLogoGreyscale />
 					</div>

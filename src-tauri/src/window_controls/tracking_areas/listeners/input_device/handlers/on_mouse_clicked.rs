@@ -13,7 +13,7 @@ pub fn on_mouse_clicked(
 ) {
     let mut tracking_area_manager = tracking_area_manager_arc.lock();
 
-    if click_msg.button == MouseButton::Left && click_msg.click_type == ClickType::Down {
+    if click_msg.button == MouseButton::Left && click_msg.click_type == ClickType::Up {
         tracking_area_manager
             .track_mouse_click(click_msg.cursor_position.x, click_msg.cursor_position.y);
     }
