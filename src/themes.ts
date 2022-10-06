@@ -62,7 +62,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 
 			inactive: '#80808080',
 			signalgood: '#09F6B3',
-			signalmedium: '#5D9DFD',
+			signalmedium: '#7CB0FE',
 			signalbad: '#FCA05F',
 			signalverybad: '#E2366A'
 		},

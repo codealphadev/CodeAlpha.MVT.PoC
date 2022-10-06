@@ -6,7 +6,7 @@
 
 <div
 	{id}
-	class="rounded-xl bg-background overflow-hidden p-4 flex flex-col items-start gap-3 border-none"
+	class="rounded-xl bg-background overflow-hidden py-4 px-5 flex flex-col items-start gap-3 border-none"
 	in:fade={{ duration: 100 }}
 >
 	<slot />
