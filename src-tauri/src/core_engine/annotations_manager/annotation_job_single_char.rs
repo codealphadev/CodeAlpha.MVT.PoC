@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core_engine::{features::FeatureKind, TextRange},
+    core_engine::TextRange,
     platform::macos::{get_bounds_for_TextRange, GetVia},
     utils::geometry::LogicalPosition,
 };
@@ -17,7 +17,6 @@ pub struct AnnotationJobSingleChar {
     id: uuid::Uuid,
     char_index: usize,
     kind: AnnotationKind,
-    feature: FeatureKind,
     instructions: AnnotationJobInstructions,
     result: Option<AnnotationResult>,
 }
@@ -26,17 +25,19 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
     fn new(
         range: &TextRange,
         kind: AnnotationKind,
-        feature: FeatureKind,
         instructions: AnnotationJobInstructions,
     ) -> Self {
         Self {
             id: uuid::Uuid::new_v4(),
             char_index: range.index,
             kind,
-            feature,
             instructions,
             result: None,
         }
+    }
+
+    fn id(&self) -> uuid::Uuid {
+        self.id
     }
 
     fn compute_bounds(
@@ -128,7 +129,6 @@ impl AnnotationJobSingleChar {
         let mut annotation = Annotation {
             id: result.id,
             kind: annotation_job.kind.clone(),
-            feature: annotation_job.feature.clone(),
             position_relative_to_viewport: result.position_relative_to_viewport.clone(),
             shapes: vec![],
         };
@@ -183,7 +183,6 @@ mod tests {
                 annotation_job::InstructionBoundsPropertyOfInterest,
                 annotations_manager::{Annotation, AnnotationResult, AnnotationShape},
             },
-            features::FeatureKind,
             TextRange,
         },
         utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
@@ -208,7 +207,6 @@ mod tests {
                 length: 1,
             },
             AnnotationKind::CodeblockFirstChar,
-            FeatureKind::ComplexityRefactoring,
             AnnotationJobInstructions::default(),
         );
 
@@ -218,7 +216,6 @@ mod tests {
                 length: 1,
             },
             AnnotationKind::CodeblockFirstChar,
-            FeatureKind::ComplexityRefactoring,
             instructions_prop_as_top_left_point,
         );
 
@@ -237,7 +234,6 @@ mod tests {
         let expected_annotation = Annotation {
             id: annotation_job1.clone().id,
             kind: annotation_job1.clone().kind,
-            feature: annotation_job1.clone().feature,
             position_relative_to_viewport: ViewportPositioning::Visible,
             shapes: vec![AnnotationShape::Rectangle(LogicalFrame {
                 origin: LogicalPosition { x: 0.0, y: 0.0 },
@@ -256,7 +252,6 @@ mod tests {
         let expected_annotation = Annotation {
             id: annotation_job1.clone().id,
             kind: annotation_job1.clone().kind,
-            feature: annotation_job1.clone().feature,
             position_relative_to_viewport: ViewportPositioning::Visible,
             shapes: vec![AnnotationShape::Point(LogicalPosition { x: 0.0, y: 0.0 })],
         };

@@ -3,7 +3,8 @@ use tauri::Manager;
 use ts_rs::TS;
 
 use crate::{
-    core_engine::annotations_manager::{AnnotationGroup, AnnotationJob},
+    app_handle,
+    core_engine::annotations_manager::{AnnotationGroup, AnnotationJobGroup},
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
@@ -22,11 +23,11 @@ pub enum AnnotationEvent {
 }
 
 impl AnnotationEvent {
-    pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
+    pub fn publish_to_tauri(&self) {
         let event_name = ChannelList::NodeAnnotationEvent.to_string();
 
         // Emit to frontend
-        _ = app_handle.emit_to(
+        _ = app_handle().emit_to(
             &AppWindow::CodeOverlay.to_string(),
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
@@ -37,25 +38,18 @@ impl AnnotationEvent {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
 pub enum AnnotationManagerEvent {
-    Add(Vec<AnnotationJob>), // Appends the already present list of AnnotationJob with the new ones.
-    Update(Vec<AnnotationJob>), // Updates existing AnnotationJob with the new ones.
-    Replace(Vec<AnnotationJob>), // Replaces the already present list of AnnotationJob with the new ones.
-    Remove(Vec<uuid::Uuid>),     // Removes the AnnotationJob with the given IDs from the list.
+    Add(Vec<AnnotationJobGroup>), // Appends the already present list of AnnotationJobGroup with the new ones.
+    Update(Vec<AnnotationJobGroup>), // Updates existing AnnotationJobGroup with the new ones.
+    Replace(Vec<AnnotationJobGroup>), // Replaces the already present list of AnnotationJobGroup with the new ones.
+    Remove(Vec<uuid::Uuid>), // Removes the AnnotationJobGroup with the given IDs from the list.
 }
 
 impl AnnotationManagerEvent {
-    pub fn publish_to_tauri(&self, app_handle: &tauri::AppHandle) {
+    pub fn publish_to_tauri(&self) {
         let event_name = ChannelList::NodeAnnotationEvent.to_string();
 
         // Emit to rust listeners
-        app_handle.trigger_global(
-            event_name.as_str(),
-            Some(serde_json::to_string(self).unwrap()),
-        );
-
-        // Emit to frontend
-        _ = app_handle.emit_to(
-            &AppWindow::CodeOverlay.to_string(),
+        app_handle().trigger_global(
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );

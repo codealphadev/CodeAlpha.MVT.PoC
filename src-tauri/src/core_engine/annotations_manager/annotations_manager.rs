@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use ts_rs::TS;
 
 use crate::{
-    core_engine::features::FeatureKind,
+    core_engine::{features::FeatureKind, EditorWindowUid},
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
 
@@ -27,9 +27,17 @@ pub enum AnnotationShape {
 pub struct Annotation {
     pub id: uuid::Uuid,
     pub kind: AnnotationKind,
-    pub feature: FeatureKind,
     pub position_relative_to_viewport: ViewportPositioning,
     pub shapes: Vec<AnnotationShape>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "bindings/features/code_annotations/")]
+pub struct AnnotationGroup {
+    pub id: uuid::Uuid,
+    pub editor_window_uid: EditorWindowUid,
+    pub feature: FeatureKind,
+    pub annotations: Vec<Annotation>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

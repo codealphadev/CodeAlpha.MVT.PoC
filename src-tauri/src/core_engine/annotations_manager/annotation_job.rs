@@ -89,9 +89,10 @@ pub trait AnnotationJobTrait {
     fn new(
         range: &TextRange,
         kind: AnnotationKind,
-        feature: FeatureKind,
         instructions: AnnotationJobInstructions,
     ) -> Self;
+
+    fn id(&self) -> uuid::Uuid;
 
     // Computes the bounds for the given text range. Resets any previous result.
     fn compute_bounds(
@@ -109,4 +110,48 @@ pub trait AnnotationJobTrait {
     ) -> Result<AnnotationResult, AnnotationError>;
 
     fn get_annotation(&self) -> Option<Annotation>;
+}
+
+impl AnnotationJobTrait for AnnotationJob {
+    fn new(
+        range: &TextRange,
+        kind: AnnotationKind,
+        instructions: AnnotationJobInstructions,
+    ) -> Self {
+        Self::SingleChar(AnnotationJobSingleChar::new(range, kind, instructions))
+    }
+
+    fn id(&self) -> uuid::Uuid {
+        match self {
+            Self::SingleChar(job) => job.id(),
+        }
+    }
+
+    fn compute_bounds(
+        &mut self,
+        visible_text_range: &TextRange,
+        code_doc_origin: &LogicalPosition,
+    ) -> Result<AnnotationResult, AnnotationError> {
+        match self {
+            Self::SingleChar(job) => job.compute_bounds(visible_text_range, code_doc_origin),
+        }
+    }
+
+    fn attempt_compute_bounds(
+        &mut self,
+        visible_text_range: &TextRange,
+        code_doc_origin: &LogicalPosition,
+    ) -> Result<AnnotationResult, AnnotationError> {
+        match self {
+            Self::SingleChar(job) => {
+                job.attempt_compute_bounds(visible_text_range, code_doc_origin)
+            }
+        }
+    }
+
+    fn get_annotation(&self) -> Option<Annotation> {
+        match self {
+            Self::SingleChar(job) => job.get_annotation(),
+        }
+    }
 }
