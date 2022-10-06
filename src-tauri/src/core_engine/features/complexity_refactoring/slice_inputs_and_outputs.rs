@@ -81,8 +81,16 @@ pub fn update_parsing_metadata_for_node(
     if node.kind() == "control_transfer_statement" {
         let child_kind = node.child(0).map(|n| n.kind());
         if child_kind == Some("continue") || child_kind == Some("break") {
-            let target_address =
-                get_target_for_continue_or_break_statement(node.clone(), &node_address);
+            let target_label = node
+                .child_by_field_name("result")
+                .and_then(|n| get_node_text(&n, text_content).ok());
+
+            let target_address = get_target_for_continue_or_break_statement(
+                node.clone(),
+                &node_address,
+                target_label,
+                text_content,
+            );
             if let Some(target_node_address) = target_address {
                 parsing_metadata.continues_and_breaks.push(ContinueOrBreak {
                     node_address: node_address.clone(),
@@ -97,6 +105,8 @@ pub fn update_parsing_metadata_for_node(
 fn get_target_for_continue_or_break_statement(
     node: Node,
     node_address: &NodeAddress,
+    target_label: Option<XcodeText>,
+    text_content: &XcodeText,
 ) -> Option<NodeAddress> {
     let mut curr_address = node_address.clone();
     let mut curr_node = node;
@@ -109,8 +119,22 @@ fn get_target_for_continue_or_break_statement(
             || curr_node_kind == "while_statement"
             || curr_node_kind == "repeat_while_statement"
         {
-            // TODO: handle labeled continue or break statements
-            return Some(curr_address);
+            if let Some(ref label) = target_label {
+                if let Some(prev_sibling) = curr_node.prev_named_sibling() {
+                    let label_node_str = get_node_text(&prev_sibling, text_content)
+                        .ok()?
+                        .as_string()
+                        .replace(":", "")
+                        .replace(" ", "");
+                    if prev_sibling.kind() == "statement_label"
+                        && label_node_str == label.as_string()
+                    {
+                        return Some(curr_address);
+                    }
+                }
+            } else {
+                return Some(curr_address);
+            }
         }
     }
     return None;
