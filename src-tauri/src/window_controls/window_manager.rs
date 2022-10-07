@@ -9,7 +9,6 @@ use tracing::debug;
 
 use crate::{
     app_handle,
-    core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
     platform::macos::models::viewport::ViewportPropertiesUpdateMessage,
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -328,11 +327,6 @@ impl WindowManager {
         rule_execution_listener(window_manager);
         viewport_update_listener(window_manager);
     }
-}
-
-#[tauri::command]
-pub fn cmd_toggle_main_window(app_handle: tauri::AppHandle, main_window_active: bool) {
-    EventUserInteraction::ToggleMainWindow(main_window_active).publish_to_tauri(&app_handle);
 }
 
 #[tauri::command]

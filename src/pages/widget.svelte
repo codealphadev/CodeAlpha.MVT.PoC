@@ -3,7 +3,7 @@
 	import WidgetBackground from '../components/widget/widget-background.svelte';
 	import IconLogo from '../components/widget/icons/icon-logo.svelte';
 	import IconLogoGreyscale from '../components/widget/icons/icon-logo-greyscale.svelte';
-	import { listen } from '@tauri-apps/api/event';
+	import { emit, listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { EventRuleExecutionState } from '../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import WidgetProcessing from '../components/widget/widget-processing.svelte';
@@ -11,6 +11,7 @@
 	import { fade } from 'svelte/transition';
 	import SwiftFormat from '../components/widget/swift-format.svelte';
 	import DocsGeneration from '../components/widget/docs-generation.svelte';
+	import type { EventUserInteraction } from '../../src-tauri/bindings/user_interaction/EventUserInteraction';
 
 	let main_window_active = false;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
@@ -21,7 +22,13 @@
 	// Should be moved into a separate file.
 	const clickAction = async () => {
 		main_window_active = !main_window_active;
-		invoke('cmd_toggle_main_window', { mainWindowActive: main_window_active });
+		const event: EventUserInteraction = {
+			event: 'ToggleMainWindow',
+			payload: main_window_active
+		};
+		const channel: ChannelList = 'EventUserInteractions';
+
+		await emit(channel, event);
 
 		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
 		// delay between setting a new position and recreating the parent/child relationship.
