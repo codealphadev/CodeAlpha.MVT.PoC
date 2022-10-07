@@ -2,7 +2,6 @@ pub use events::*;
 pub use tracking_areas::*;
 pub use utils::*;
 pub use window_manager::cmd_resize_window;
-pub use window_manager::cmd_toggle_main_window;
 pub use window_manager::WindowManager;
 pub use windows::cmd_rebind_main_widget;
 
