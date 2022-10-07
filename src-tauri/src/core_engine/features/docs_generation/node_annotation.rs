@@ -19,7 +19,7 @@ use crate::{
         utils::XcodeText,
         EditorWindowUid, TextPosition, TextRange,
     },
-    utils::geometry::LogicalFrame,
+    platform::macos::{get_bounds_for_TextRange, GetVia},
     NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
 
@@ -165,14 +165,27 @@ impl NodeAnnotation {
                         name,
                         complexity,
                     };
+
                     // Notify the frontend that loading has finished
                     NodeExplanationEvent::UpdateNodeExplanation(node_explanation_msg.clone())
                         .publish_to_tauri(&app_handle());
 
+                    let annotation_frame = if let Ok(ax_bounds_global) = get_bounds_for_TextRange(
+                        &TextRange {
+                            index: *NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock(),
+                            length: 1,
+                        },
+                        &GetVia::Current,
+                    ) {
+                        Some(ax_bounds_global)
+                    } else {
+                        None
+                    };
+
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
                             editor_window_uid: window_uid,
-                            annotation_frame: Some(LogicalFrame::default()), // TODO get the frame
+                            annotation_frame,
                         },
                     )
                     .publish_to_tauri(&app_handle());

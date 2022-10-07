@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::utils::geometry::LogicalPosition;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export, export_to = "bindings/window_controls/")]
 pub enum MouseButton {
     Left,
     Right,
@@ -10,14 +12,16 @@ pub enum MouseButton {
     None,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export, export_to = "bindings/window_controls/")]
 pub enum ClickType {
     Down,
     Up,
     Drag,
+    None,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct MouseClickMessage {
     pub button: MouseButton,
     pub click_type: ClickType,

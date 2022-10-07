@@ -4,6 +4,7 @@ use parking_lot::Mutex;
 
 use crate::{
     app_handle,
+    platform::macos::models::input_device::{ClickType, MouseButton, MouseClickMessage},
     utils::geometry::LogicalPosition,
     window_controls::{
         config::AppWindow,
@@ -35,6 +36,8 @@ struct TrackingEvent {
     tracking_area: TrackingArea,
     event_type: TrackingEventType,
     mouse_position_local: LogicalPosition,
+    button: MouseButton,
+    click_type: ClickType,
     duration_in_area_ms: Option<u64>,
 }
 
@@ -114,6 +117,8 @@ impl TrackingAreasManager {
                                 y: mouse_y,
                             }
                             .to_local(&tracking_area.0.global_origin()),
+                            button: MouseButton::None,
+                            click_type: ClickType::None,
                         });
                         tracking_area.1 = None;
                         continue;
@@ -127,6 +132,8 @@ impl TrackingAreasManager {
                                 y: mouse_y,
                             }
                             .to_local(&tracking_area.0.global_origin()),
+                            button: MouseButton::None,
+                            click_type: ClickType::None,
                         });
                     }
                 } else {
@@ -145,6 +152,8 @@ impl TrackingAreasManager {
                                 y: mouse_y,
                             }
                             .to_local(&tracking_area.0.global_origin()),
+                            button: MouseButton::None,
+                            click_type: ClickType::None,
                         });
                     }
                 }
@@ -163,6 +172,8 @@ impl TrackingAreasManager {
                             y: mouse_y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
+                        button: MouseButton::None,
+                        click_type: ClickType::None,
                     });
                 }
             }
@@ -173,8 +184,9 @@ impl TrackingAreasManager {
         Some(())
     }
 
-    pub fn track_mouse_click(&mut self, mouse_x: f64, mouse_y: f64) -> Option<()> {
-        self.previous_mouse_position = Some((mouse_x, mouse_y));
+    pub fn track_mouse_click(&mut self, click_msg: &MouseClickMessage) -> Option<()> {
+        self.previous_mouse_position =
+            Some((click_msg.cursor_position.x, click_msg.cursor_position.y));
 
         // `Option<u128>` contains the duration in millis for how long the mouse has been in this tracking area.
         let mut tracking_results: Vec<TrackingEvent> = Vec::new();
@@ -184,14 +196,18 @@ impl TrackingAreasManager {
                 continue;
             }
 
-            if is_blocked_by_other_app_window(tracking_area.0.app_window, mouse_x, mouse_y) {
+            if is_blocked_by_other_app_window(
+                tracking_area.0.app_window,
+                click_msg.cursor_position.x,
+                click_msg.cursor_position.y,
+            ) {
                 continue;
             }
 
             if tracking_area
                 .0
                 .rect_as_global()
-                .contains_point(mouse_x, mouse_y)
+                .contains_point(click_msg.cursor_position.x, click_msg.cursor_position.y)
             {
                 if let Some(tracking_start) = tracking_area.1 {
                     tracking_results.push(TrackingEvent {
@@ -199,10 +215,12 @@ impl TrackingAreasManager {
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: Some(tracking_start.elapsed().as_millis() as u64),
                         mouse_position_local: LogicalPosition {
-                            x: mouse_x,
-                            y: mouse_y,
+                            x: click_msg.cursor_position.x,
+                            y: click_msg.cursor_position.y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
+                        button: click_msg.button.clone(),
+                        click_type: click_msg.click_type.clone(),
                     });
                 } else {
                     tracking_results.push(TrackingEvent {
@@ -210,10 +228,12 @@ impl TrackingAreasManager {
                         event_type: TrackingEventType::MouseClicked,
                         duration_in_area_ms: None,
                         mouse_position_local: LogicalPosition {
-                            x: mouse_x,
-                            y: mouse_y,
+                            x: click_msg.cursor_position.x,
+                            y: click_msg.cursor_position.y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
+                        button: click_msg.button.clone(),
+                        click_type: click_msg.click_type.clone(),
                     });
                 }
             } else {
@@ -227,10 +247,12 @@ impl TrackingAreasManager {
                         event_type: TrackingEventType::MouseClickedOutside,
                         duration_in_area_ms: None,
                         mouse_position_local: LogicalPosition {
-                            x: mouse_x,
-                            y: mouse_y,
+                            x: click_msg.cursor_position.x,
+                            y: click_msg.cursor_position.y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
+                        button: click_msg.button.clone(),
+                        click_type: click_msg.click_type.clone(),
                     });
                 }
             }
@@ -247,6 +269,8 @@ impl TrackingAreasManager {
             duration_in_area_ms,
             event_type,
             mouse_position_local: mouse_position,
+            button,
+            click_type,
         } in tracking_results.iter()
         {
             if Self::evaluate_event_subscriptions(event_type, &tracking_area.events) {
@@ -287,6 +311,8 @@ impl TrackingAreasManager {
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: tracking_area.app_window,
                             mouse_position: *mouse_position,
+                            button: button.clone(),
+                            click_type: click_type.clone(),
                         })
                         .publish_tracking_area(&tracking_area.subscriber);
                     }
@@ -296,6 +322,9 @@ impl TrackingAreasManager {
                                 id: tracking_area.id,
                                 window_uid: tracking_area.window_uid,
                                 app_window: tracking_area.app_window,
+                                mouse_position: *mouse_position,
+                                button: button.clone(),
+                                click_type: click_type.clone(),
                             },
                         )
                         .publish_tracking_area(&tracking_area.subscriber);

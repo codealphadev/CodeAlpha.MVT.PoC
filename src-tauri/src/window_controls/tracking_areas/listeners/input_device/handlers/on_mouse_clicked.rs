@@ -3,8 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-    platform::macos::models::input_device::{ClickType, MouseButton, MouseClickMessage},
-    window_controls::TrackingAreasManager,
+    platform::macos::models::input_device::MouseClickMessage, window_controls::TrackingAreasManager,
 };
 
 pub fn on_mouse_clicked(
@@ -13,8 +12,5 @@ pub fn on_mouse_clicked(
 ) {
     let mut tracking_area_manager = tracking_area_manager_arc.lock();
 
-    if click_msg.button == MouseButton::Left && click_msg.click_type == ClickType::Up {
-        tracking_area_manager
-            .track_mouse_click(click_msg.cursor_position.x, click_msg.cursor_position.y);
-    }
+    tracking_area_manager.track_mouse_click(&click_msg);
 }

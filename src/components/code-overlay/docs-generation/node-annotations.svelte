@@ -189,12 +189,10 @@
 	listen_to_docs_generation_events();
 
 	const annotation_click = async () => {
-		console.log('annotation_click');
 		is_hovered = false;
 
 		// invoke click on annotation
 		if (annotation_group) {
-			console.log('annotation_click2');
 			const event: EventUserInteraction = {
 				event: 'NodeAnnotationClicked',
 				payload: {
@@ -222,7 +220,7 @@
 			height: {round_value(annotation_icon.size.height, 2)}px;"
 			on:mouseenter={() => (is_hovered = true)}
 			on:mouseleave={() => (is_hovered = false)}
-			on:click={annotation_click}
+			on:mousedown={annotation_click}
 			on:focus={null}
 		>
 			<AnnotationIcon {is_hovered} {is_processing} />
