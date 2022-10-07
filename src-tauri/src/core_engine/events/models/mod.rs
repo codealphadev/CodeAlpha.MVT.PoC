@@ -2,6 +2,7 @@ pub use code_annotation::NodeAnnotationClickedMessage;
 pub use code_annotation::RemoveNodeAnnotationMessage;
 pub use code_annotation::UpdateNodeAnnotationMessage;
 
+pub use add_and_remove_refactoring_suggestions::AddAndRemoveSuggestionsMessage;
 pub use core_activation_status::CoreActivationStatusMessage;
 pub use node_explanation_fetched::NodeExplanationFetchedMessage;
 pub use perform_refactoring_operation::*;
@@ -9,6 +10,7 @@ pub use remove_refactoring_suggestion::RemoveSuggestionMessage;
 pub use search_query::SearchQueryMessage;
 pub use update_node_explanation::UpdateNodeExplanationMessage;
 pub use update_refactoring_suggestion::UpdateSuggestionMessage;
+mod add_and_remove_refactoring_suggestions;
 mod code_annotation;
 mod core_activation_status;
 mod node_explanation_fetched;

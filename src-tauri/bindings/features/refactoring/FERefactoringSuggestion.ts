@@ -3,8 +3,8 @@
 export interface FERefactoringSuggestion {
   window_uid: number;
   id: string;
-  new_text_content_string: string;
-  old_text_content_string: string;
+  new_text_content_string: string | null;
+  old_text_content_string: string | null;
   new_complexity: number;
   prev_complexity: number;
   main_function_name: string | null;

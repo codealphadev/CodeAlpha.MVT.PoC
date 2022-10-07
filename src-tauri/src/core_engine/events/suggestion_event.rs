@@ -4,6 +4,7 @@ use ts_rs::TS;
 
 use crate::{utils::messaging::ChannelList, window_controls::config::AppWindow};
 
+use super::models::AddAndRemoveSuggestionsMessage;
 use super::models::RemoveSuggestionMessage;
 use super::models::UpdateSuggestionMessage;
 
@@ -12,6 +13,7 @@ use super::models::UpdateSuggestionMessage;
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub enum SuggestionEvent {
     UpdateSuggestion(UpdateSuggestionMessage),
+    AddAndRemoveSuggestions(AddAndRemoveSuggestionsMessage),
     RemoveSuggestion(RemoveSuggestionMessage),
 }
 
