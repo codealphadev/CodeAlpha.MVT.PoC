@@ -1,10 +1,10 @@
 <script lang="ts">
 	import IconDocsGen from './icons/icon-docs-gen.svelte';
 
-	export let event: String | null = null;
+	export let state: 'NodeExplanationFetched' | 'NodeExplanationFailed';
 </script>
 
-{#if event && event == 'NodeExplanationFailed'}
+{#if state == 'NodeExplanationFailed'}
 	<div class="shake-animation">
 		<IconDocsGen fill="#FD7A58" blur={false} />
 	</div>

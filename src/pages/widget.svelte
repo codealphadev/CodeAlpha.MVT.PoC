@@ -11,6 +11,10 @@
 	import { fade } from 'svelte/transition';
 	import SwiftFormat from '../components/widget/swift-format.svelte';
 	import DocsGeneration from '../components/widget/docs-generation.svelte';
+	import type { FERefactoringSuggestion } from '../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
+	import omit from 'lodash/omit';
+	import type { SuggestionEvent } from '../../src-tauri/bindings/features/refactoring/SuggestionEvent';
+	import SuggestionsNumber from '../components/widget/suggestions-number.svelte';
 	import type { EventUserInteraction } from '../../src-tauri/bindings/user_interaction/EventUserInteraction';
 
 	let main_window_active = false;
@@ -56,6 +60,31 @@
 			}, 100);
 		}
 	};
+
+	let suggestions: { [id: string]: FERefactoringSuggestion } = {};
+
+	const listenToSuggestionEvents = async () => {
+		let suggestion_channel: ChannelList = 'SuggestionEvent';
+		await listen(suggestion_channel, (event) => {
+			const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
+
+			switch (event_type) {
+				case 'UpdateSuggestion':
+					suggestions[payload.suggestion.id] = payload.suggestion;
+					suggestions = suggestions;
+					break;
+
+				case 'RemoveSuggestion':
+					suggestions = omit(suggestions, payload.id);
+					break;
+
+				default:
+					break;
+			}
+		});
+	};
+
+	listenToSuggestionEvents();
 
 	const listenTauriEvents = async () => {
 		await listen('EventRuleExecutionState' as ChannelList, (event) => {
@@ -121,6 +150,36 @@
 			handle_release_drag();
 		}
 	}
+	type WidgetMode =
+		| 'idle'
+		| 'processing'
+		| number
+		| 'inactive'
+		| 'SwiftFormatFailed'
+		| 'SwiftFormatFinished'
+		| 'NodeExplanationFailed'
+		| 'NodeExplanationFetched';
+
+	function get_widget_mode(
+		rule_execution_state: EventRuleExecutionState | null,
+		suggestions: { [id: string]: FERefactoringSuggestion }
+	): WidgetMode {
+		switch (rule_execution_state?.event) {
+			case 'NodeExplanationFailed':
+			case 'NodeExplanationFetched':
+			case 'SwiftFormatFailed':
+			case 'SwiftFormatFinished':
+				return rule_execution_state.event;
+			case 'NodeExplanationStarted':
+				return 'processing';
+		}
+		let suggestions_count = Object.keys(suggestions).length;
+		if (suggestions_count > 0) {
+			return suggestions_count;
+		}
+		return 'idle';
+	}
+	$: widget_mode = get_widget_mode(ruleExecutionState, suggestions);
 </script>
 
 <div class="relative overflow-hidden w-full h-full">
@@ -132,29 +191,28 @@
 
 	<div class="absolute bottom-0 right-0 w-12 h-12">
 		<div data-tauri-drag-region class="flex items-center justify-center h-screen">
-			<div class="w-[36px]">
-				{#if main_window_active === false}
-					<div in:fade={{ duration: 200 }}>
+			{#key widget_mode}
+				<div
+					class="w-[38px] h-[38px] rounded-full overflow-hidden"
+					in:fade={{
+						duration: 200
+					}}
+				>
+					{#if widget_mode === 'inactive'}
 						<IconLogoGreyscale />
-					</div>
-				{:else if ruleExecutionState != null && (ruleExecutionState.event === 'SwiftFormatFinished' || ruleExecutionState.event === 'SwiftFormatFailed')}
-					<div in:fade={{ duration: 200 }}>
-						<SwiftFormat event={ruleExecutionState.event} />
-					</div>
-				{:else if ruleExecutionState != null && (ruleExecutionState.event === 'NodeExplanationFetched' || ruleExecutionState.event === 'NodeExplanationFailed')}
-					<div in:fade={{ duration: 200 }}>
-						<DocsGeneration event={ruleExecutionState.event} />
-					</div>
-				{:else if ruleExecutionState != null && ruleExecutionState.event === 'NodeExplanationStarted'}
-					<div in:fade={{ duration: 200 }}>
+					{:else if widget_mode === 'SwiftFormatFinished' || widget_mode === 'SwiftFormatFailed'}
+						<SwiftFormat state={widget_mode} />
+					{:else if widget_mode === 'NodeExplanationFetched' || widget_mode === 'NodeExplanationFailed'}
+						<DocsGeneration state={widget_mode} />
+					{:else if widget_mode === 'processing'}
 						<WidgetProcessing />
-					</div>
-				{:else}
-					<div in:fade={{ duration: 200 }}>
+					{:else if typeof widget_mode === 'number'}
+						<SuggestionsNumber count={widget_mode} />
+					{:else}
 						<IconLogo />
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
+			{/key}
 		</div>
 	</div>
 	<div

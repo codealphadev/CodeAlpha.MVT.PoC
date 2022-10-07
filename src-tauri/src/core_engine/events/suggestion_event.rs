@@ -31,5 +31,12 @@ impl SuggestionEvent {
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );
+
+        // Emit to Widget FE window
+        _ = app_handle.emit_to(
+            &AppWindow::Widget.to_string(),
+            event_name.as_str(),
+            Some(serde_json::to_string(self).unwrap()),
+        );
     }
 }

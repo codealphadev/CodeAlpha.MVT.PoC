@@ -1,10 +1,10 @@
 <script lang="ts">
 	import IconSwiftFormat from './icons/icon-swift-format.svelte';
 
-	export let event: String | null = null;
+	export let state: 'SwiftFormatFinished' | 'SwiftFormatFailed';
 </script>
 
-{#if event && event == 'SwiftFormatFailed'}
+{#if state == 'SwiftFormatFailed'}
 	<div class="shake-animation">
 		<IconSwiftFormat fill="#FD7A58" blur={false} />
 	</div>
