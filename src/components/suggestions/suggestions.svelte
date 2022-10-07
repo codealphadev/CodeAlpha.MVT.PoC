@@ -7,7 +7,7 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { afterUpdate } from 'svelte';
 	import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
-
+	import NoSuggestions from '../suggestions/no-suggestions.svelte';
 	let window_width: number | null = null;
 	let window_height: number | null = null;
 	export let window_dom_id: string;
@@ -67,5 +67,7 @@
 				<Suggestion {suggestion} />
 			{/key}
 		{/each}
+	{:else}
+		<NoSuggestions />
 	{/if}
 </div>
