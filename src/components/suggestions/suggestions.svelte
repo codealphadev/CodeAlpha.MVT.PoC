@@ -49,14 +49,22 @@
 
 			switch (event_type) {
 				case 'UpdateSuggestion':
-					suggestions[payload.suggestion.id] = payload.suggestion;
-					suggestions = suggestions;
+					if (suggestions[payload.suggestion.id]) {
+						suggestions[payload.suggestion.id] = payload.suggestion;
+						suggestions = suggestions;
+					}
 					break;
 
 				case 'RemoveSuggestion':
 					suggestions = omit(suggestions, payload.id);
 					break;
 
+				case 'AddAndRemoveSuggestions':
+					for (let [id, suggestion] of Object.entries(payload.additions)) {
+						suggestions[id] = suggestion;
+					}
+					suggestions = omit(suggestions, payload.removals);
+					break;
 				default:
 					break;
 			}

@@ -2,7 +2,9 @@ use crate::{
     app_handle,
     core_engine::{
         events::{
-            models::{RemoveSuggestionMessage, UpdateSuggestionMessage},
+            models::{
+                AddAndRemoveSuggestionsMessage, RemoveSuggestionMessage, UpdateSuggestionMessage,
+            },
             SuggestionEvent,
         },
         features::{
@@ -51,8 +53,8 @@ enum ComplexityRefactoringProcedure {
 pub struct FERefactoringSuggestion {
     pub window_uid: usize,
     pub id: uuid::Uuid,
-    pub new_text_content_string: String,
-    pub old_text_content_string: String,
+    pub new_text_content_string: Option<String>,
+    pub old_text_content_string: Option<String>,
     pub new_complexity: isize,
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
@@ -72,20 +74,16 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
     suggestion: RefactoringSuggestion,
     id: Uuid,
     window_uid: usize,
-) -> Result<FERefactoringSuggestion, ComplexityRefactoringError> {
-    Ok(FERefactoringSuggestion {
+) -> FERefactoringSuggestion {
+    FERefactoringSuggestion {
         id,
-        new_text_content_string: suggestion
-            .new_text_content_string
-            .ok_or(ComplexityRefactoringError::SuggestionIncomplete)?,
-        old_text_content_string: suggestion
-            .old_text_content_string
-            .ok_or(ComplexityRefactoringError::SuggestionIncomplete)?,
+        new_text_content_string: suggestion.new_text_content_string,
+        old_text_content_string: suggestion.old_text_content_string,
         new_complexity: suggestion.new_complexity,
         prev_complexity: suggestion.prev_complexity,
         main_function_name: suggestion.main_function_name,
         window_uid,
-    })
+    }
 }
 
 type SuggestionHash = u64;
@@ -186,20 +184,41 @@ impl ComplexityRefactoring {
                 code_document.editor_window_props().window_uid,
             )?);
         }
-        let ids_to_remove;
+        let ids_to_remove: Vec<Uuid>;
+        let suggestions_to_add: HashMap<Uuid, FERefactoringSuggestion>;
+        let window_uid = code_document.editor_window_props().window_uid;
         {
             let mut suggestions_cache = self.suggestions.lock();
-            ids_to_remove = suggestions_cache
+            let old_suggestions = suggestions_cache.clone();
+            (*suggestions_cache) = suggestions.clone();
+
+            suggestions_to_add = suggestions
+                .clone()
+                .into_iter()
+                .filter(|(id, _)| !old_suggestions.contains_key(&id))
+                .map(|(id, suggestion)| {
+                    (
+                        id,
+                        map_refactoring_suggestion_to_fe_refactoring_suggestion(
+                            suggestion, id, window_uid,
+                        ),
+                    )
+                })
+                .collect::<HashMap<Uuid, FERefactoringSuggestion>>();
+
+            ids_to_remove = old_suggestions
                 .clone()
                 .into_keys()
                 .filter(|id| !suggestions.contains_key(id))
                 .collect::<Vec<Uuid>>();
-            (*suggestions_cache) = suggestions.clone();
         }
 
-        for id in ids_to_remove {
-            SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id })
-                .publish_to_tauri(&app_handle());
+        if ids_to_remove.len() > 0 || suggestions_to_add.len() > 0 {
+            SuggestionEvent::AddAndRemoveSuggestions(AddAndRemoveSuggestionsMessage {
+                additions: suggestions_to_add,
+                removals: ids_to_remove,
+            })
+            .publish_to_tauri(&app_handle());
         }
 
         Ok(())
@@ -350,17 +369,11 @@ impl ComplexityRefactoring {
         if let Some(suggestion) = suggestion {
             suggestion.clone_from(updated_suggestion);
 
-            let fe_suggestion = match map_refactoring_suggestion_to_fe_refactoring_suggestion(
+            let fe_suggestion = map_refactoring_suggestion_to_fe_refactoring_suggestion(
                 suggestion.to_owned(),
                 id,
                 window_uid,
-            ) {
-                Err(e) => {
-                    error!(?e, "Unable to map suggestion to FE suggestion");
-                    return;
-                }
-                Ok(res) => res,
-            };
+            );
 
             SuggestionEvent::UpdateSuggestion(UpdateSuggestionMessage {
                 suggestion: fe_suggestion,
