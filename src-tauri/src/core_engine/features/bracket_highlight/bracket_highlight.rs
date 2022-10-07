@@ -6,15 +6,21 @@ use tree_sitter::Node;
 use crate::{
     app_handle,
     core_engine::{
-        features::feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
+        annotations_manager::{
+            AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
+            AnnotationKind, InstructionBoundsPropertyOfInterest,
+        },
+        events::AnnotationManagerEvent,
+        features::{
+            feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
+            FeatureKind,
+        },
         rules::get_index_of_next_row,
         syntax_tree::SwiftSyntaxTreeError,
         utils::XcodeText,
         CodeDocument, EditorWindowUid, TextPosition, TextRange,
     },
-    platform::macos::{
-        get_code_document_frame_properties, get_visible_text_range, is_text_of_line_wrapped, GetVia,
-    },
+    platform::macos::{get_visible_text_range, is_text_of_line_wrapped, GetVia},
     utils::{geometry::LogicalPosition, messaging::ChannelList},
     window_controls::config::AppWindow,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -25,7 +31,8 @@ use super::{
     utils::{
         get_char_rectangle_from_text_index, get_code_block_parent,
         get_indexes_of_first_and_last_char_in_node, get_text_index_of_left_most_char_in_range,
-        length_to_code_block_body_start, only_whitespace_on_line_until_position,
+        get_text_pos_and_index_of_left_most_char_in_range, length_to_code_block_body_start,
+        only_whitespace_on_line_until_position,
     },
 };
 
@@ -34,6 +41,8 @@ pub struct BracketHighlight {
     visualization_results: Option<BracketHighlightResults>,
 
     is_activated: bool,
+
+    group_id: Option<uuid::Uuid>,
 }
 
 impl FeatureBase for BracketHighlight {
@@ -46,6 +55,69 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
+        let current_group_id = self.group_id;
+        if let Ok(()) = self.compute_procedure(code_document) {
+            if let Some(group_id) = current_group_id {
+                AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
+            }
+        }
+
+        Ok(())
+    }
+
+    fn update_visualization(
+        &mut self,
+        _code_document: &CodeDocument,
+        _trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
+        // if !self.is_activated || !self.should_update_visualization(code_document, trigger)? {
+        //     return Ok(());
+        // }
+
+        // let code_doc_frame_props = get_code_document_frame_properties(&GetVia::Current)
+        //     .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
+
+        // let dimensions = code_doc_frame_props.dimensions;
+        // let text_offset =
+        //     code_doc_frame_props
+        //         .text_offset
+        //         .ok_or(BracketHighlightError::GenericError(anyhow!(
+        //             "Textoffset None - should never happen"
+        //         )))?;
+
+        // self.visualization_results = self
+        //     .calculate_visualization_results(code_document, text_offset + dimensions.origin.x)?
+        //     .map(|res| res.to_local(&dimensions.origin));
+
+        // self.publish_visualization(code_document);
+
+        Ok(())
+    }
+
+    fn activate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = true;
+
+        Ok(())
+    }
+
+    fn deactivate(&mut self) -> Result<(), FeatureError> {
+        self.is_activated = false;
+
+        self.compute_results = None;
+        self.visualization_results = None;
+
+        Ok(())
+    }
+
+    fn reset(&mut self) -> Result<(), FeatureError> {
+        self.compute_results = None;
+        self.visualization_results = None;
+        Ok(())
+    }
+}
+
+impl BracketHighlight {
+    fn compute_procedure(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         let selected_text_range = match code_document.selected_text_range() {
             Some(range) => range,
             None => {
@@ -105,65 +177,210 @@ impl FeatureBase for BracketHighlight {
                 Err(e)
             })?;
 
-        self.compute_results = Some(BracketHighlightComputeResults {
-            opening_bracket,
-            closing_bracket,
-            line_opening_char: line_opening_character,
-            line_closing_char: line_closing_character,
-            window_uid: code_document.editor_window_props().window_uid,
-        });
+        let mut first_line_is_wrapped = false;
+        if let Ok(is_first_line_wrapped) =
+            is_text_of_line_wrapped(line_opening_character.position.row, &GetVia::Current)
+        {
+            first_line_is_wrapped = is_first_line_wrapped.0;
+            // Case: opening and closing bracket are on the same line -> no elbow is computed.
+            let code_block_spans_multiple_lines = is_first_line_wrapped.0
+                || (line_opening_character.position.row != line_closing_character.position.row);
 
-        Ok(())
-    }
+            if !code_block_spans_multiple_lines {
+                self.register_annotation_jobs(
+                    InstructionBoundsPropertyOfInterest::PosBotRight,
+                    InstructionBoundsPropertyOfInterest::PosBotLeft,
+                    line_closing_character,
+                    opening_bracket,
+                    closing_bracket,
+                    line_opening_character,
+                    None,
+                    code_document,
+                );
 
-    fn update_visualization(
-        &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
-        if !self.is_activated || !self.should_update_visualization(code_document, trigger)? {
-            return Ok(());
+                return Ok(());
+            }
         }
 
-        let code_doc_frame_props = get_code_document_frame_properties(&GetVia::Current)
-            .map_err(|e| BracketHighlightError::GenericError(e.into()))?;
+        let elbow_bottom_line_top = only_whitespace_on_line_until_position(
+            TextPosition {
+                row: line_closing_character.position.row,
+                column: if line_closing_character.position.column == 0 {
+                    0
+                } else {
+                    line_closing_character.position.column - 1
+                },
+            },
+            &text_content,
+        )?;
 
-        let dimensions = code_doc_frame_props.dimensions;
-        let text_offset =
-            code_doc_frame_props
-                .text_offset
-                .ok_or(BracketHighlightError::GenericError(anyhow!(
-                    "Textoffset None - should never happen"
-                )))?;
+        // Check if the first line is wrapped.
+        let line_end_corner;
+        if elbow_bottom_line_top {
+            line_end_corner = InstructionBoundsPropertyOfInterest::PosTopLeft;
+        } else {
+            line_end_corner = InstructionBoundsPropertyOfInterest::PosBotLeft
+        }
 
-        self.visualization_results = self
-            .calculate_visualization_results(code_document, text_offset + dimensions.origin.x)?
-            .map(|res| res.to_local(&dimensions.origin));
+        // To determine the elbow point we are interested of the left-most text position
+        // in the codeblock between opening and closing bracket.
+        let mut left_most_char: PositionAndIndex = match get_elbow_text_position(
+            &text_content,
+            &line_opening_character,
+            &line_closing_character,
+        ) {
+            Err(_) => {
+                self.register_annotation_jobs(
+                    InstructionBoundsPropertyOfInterest::PosBotLeft,
+                    line_end_corner.clone(),
+                    line_closing_character,
+                    opening_bracket,
+                    closing_bracket,
+                    line_opening_character,
+                    None,
+                    code_document,
+                );
 
-        self.publish_visualization(code_document);
+                return Ok(());
+            }
+            Ok(left_most_char) => PositionAndIndex {
+                position: left_most_char.0,
+                index: left_most_char.1,
+            },
+        };
+
+        // Check if maybe opening or closing bracket are further left than the elbow point.
+        if line_opening_character.position.column < left_most_char.position.column {
+            left_most_char.index = left_most_char.index
+                - (left_most_char.position.column - line_opening_character.position.column);
+        } else if line_closing_character.position.column < left_most_char.position.column {
+            left_most_char.index = left_most_char.index
+                - (left_most_char.position.column - line_closing_character.position.column);
+        }
+
+        // println all variables from above
+        debug!(
+            "opening_bracket: {:?}, closing_bracket: {:?}, line_opening_character: {:?}, line_closing_character: {:?}, elbow_bottom_line_top: {:?}",
+            opening_bracket, closing_bracket, line_opening_character, line_closing_character, elbow_bottom_line_top
+        );
+
+        let elbow = if first_line_is_wrapped {
+            debug!("Bracket Highlight: rendered wrapped line");
+            Some(left_most_char)
+        } else {
+            Some(left_most_char)
+        };
+
+        self.register_annotation_jobs(
+            InstructionBoundsPropertyOfInterest::PosBotLeft,
+            line_end_corner,
+            line_closing_character,
+            opening_bracket,
+            closing_bracket,
+            line_opening_character,
+            elbow,
+            code_document,
+        );
 
         Ok(())
     }
+}
 
-    fn activate(&mut self) -> Result<(), FeatureError> {
-        self.is_activated = true;
+impl BracketHighlight {
+    fn register_annotation_jobs(
+        &mut self,
+        line_start_corner: InstructionBoundsPropertyOfInterest,
+        line_end_corner: InstructionBoundsPropertyOfInterest,
+        line_closing_character: PositionAndIndex,
+        opening_bracket: PositionAndIndex,
+        closing_bracket: PositionAndIndex,
+        line_opening_character: PositionAndIndex,
+        elbow: Option<PositionAndIndex>,
+        code_document: &CodeDocument,
+    ) {
+        let instructions_default = AnnotationJobInstructions::default();
+        let instructions_line_start = AnnotationJobInstructions {
+            bounds_property_of_interest: line_start_corner,
+            ..instructions_default.clone()
+        };
 
-        Ok(())
-    }
+        let instructions_line_end = AnnotationJobInstructions {
+            bounds_property_of_interest: line_end_corner,
+            ..instructions_default.clone()
+        };
 
-    fn deactivate(&mut self) -> Result<(), FeatureError> {
-        self.is_activated = false;
+        let bracket_open = AnnotationJobSingleChar::new(
+            &TextRange {
+                index: opening_bracket.index,
+                length: 1,
+            },
+            AnnotationKind::OpeningBracket,
+            instructions_default.clone(),
+        );
 
-        self.compute_results = None;
-        self.visualization_results = None;
+        let bracket_close = AnnotationJobSingleChar::new(
+            &TextRange {
+                index: closing_bracket.index,
+                length: 1,
+            },
+            AnnotationKind::ClosingBracket,
+            instructions_default.clone(),
+        );
 
-        Ok(())
-    }
+        let line_start = AnnotationJobSingleChar::new(
+            &TextRange {
+                index: line_opening_character.index,
+                length: 1,
+            },
+            AnnotationKind::LineStart,
+            instructions_line_start,
+        );
 
-    fn reset(&mut self) -> Result<(), FeatureError> {
-        self.compute_results = None;
-        self.visualization_results = None;
-        Ok(())
+        let line_end = AnnotationJobSingleChar::new(
+            &TextRange {
+                index: line_closing_character.index,
+                length: 1,
+            },
+            AnnotationKind::LineEnd,
+            instructions_line_end,
+        );
+
+        let new_group_id = uuid::Uuid::new_v4();
+
+        let mut jobs = vec![
+            AnnotationJob::SingleChar(bracket_open),
+            AnnotationJob::SingleChar(bracket_close),
+            AnnotationJob::SingleChar(line_start),
+            AnnotationJob::SingleChar(line_end),
+        ];
+
+        if let Some(elbow) = elbow {
+            let instructions_elbow = AnnotationJobInstructions {
+                bounds_property_of_interest: InstructionBoundsPropertyOfInterest::PosTopLeft,
+                ..instructions_default.clone()
+            };
+
+            let elbow_job = AnnotationJobSingleChar::new(
+                &TextRange {
+                    index: elbow.index,
+                    length: 1,
+                },
+                AnnotationKind::Elbow,
+                instructions_elbow,
+            );
+            jobs.push(AnnotationJob::SingleChar(elbow_job));
+        }
+
+        AnnotationManagerEvent::Add((
+            new_group_id,
+            FeatureKind::BracketHighlight,
+            jobs,
+            code_document.editor_window_props().window_uid,
+        ))
+        .publish_to_tauri();
+        println!("Bracket Highlight: published annotation jobs");
+
+        self.group_id = Some(new_group_id);
     }
 }
 
@@ -204,12 +421,50 @@ fn get_left_most_char_x(
     }
 }
 
+fn get_elbow_text_position(
+    text_content: &XcodeText,
+    line_opening_char: &PositionAndIndex,
+    line_closing_char: &PositionAndIndex,
+) -> Result<(TextPosition, usize), BracketHighlightError> {
+    if line_opening_char.position.row == line_closing_char.position.row {
+        return Err(BracketHighlightError::GenericError(anyhow!(
+            "No Elbow needed"
+        )));
+    }
+
+    if line_opening_char.position.row > line_closing_char.position.row {
+        return Err(BracketHighlightError::GenericError(anyhow!(
+            "Opening bracket is after closing bracket"
+        )));
+    }
+    // Elbow needed because the open and closing bracket are on different lines
+    let next_row_index = get_index_of_next_row(line_opening_char.index, &text_content).ok_or(
+        BracketHighlightError::GenericError(anyhow!(
+            "Malformed text content; could not find another row"
+        )),
+    )?;
+
+    let left_most_char_index = get_text_pos_and_index_of_left_most_char_in_range(
+        TextRange {
+            index: next_row_index,
+            length: line_closing_char.index - next_row_index + 1,
+        },
+        &text_content,
+    )
+    .ok_or(BracketHighlightError::GenericError(anyhow!(
+        "Malformed text content; could not find another row"
+    )))?;
+
+    Ok(left_most_char_index)
+}
+
 impl BracketHighlight {
     pub fn new() -> Self {
         Self {
             compute_results: None,
             visualization_results: None,
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            group_id: None,
         }
     }
 
@@ -436,7 +691,6 @@ impl BracketHighlight {
     }
 }
 
-// TODO: Move to code document?
 fn get_selected_code_block_node(
     code_document: &CodeDocument,
 ) -> Result<Option<Node>, BracketHighlightError> {

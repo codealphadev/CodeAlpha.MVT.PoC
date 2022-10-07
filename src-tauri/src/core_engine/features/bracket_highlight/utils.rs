@@ -199,7 +199,51 @@ pub fn get_text_index_of_left_most_char_in_range(
 
     if rows_data.len() > 0 {
         let (_, index, non_whitespace_column_i) = rows_data[0];
+
         return Some(index + non_whitespace_column_i);
+    }
+    None
+}
+
+pub fn get_text_pos_and_index_of_left_most_char_in_range(
+    range: TextRange,
+    text: &XcodeText,
+) -> Option<(TextPosition, usize)> {
+    if range.index > range.index + range.length {
+        // Debugging weird panic https://console.cloud.google.com/logs/query;cursorTimestamp=2022-09-20T14:56:38.421723Z;query=logName%3D%22projects%2Fclient-backend-x%2Flogs%2Fclient%22%0Aseverity%3DERROR%0Atimestamp%3D%222022-09-20T14:56:38.421723Z%22%0AinsertId%3D%221escc8rfirfxe1%22;summaryFields=labels%252Fmachine_id:false:32:beginning;timeRange=P1D?project=client-backend-x
+        error!(
+            ?text,
+            ?range,
+            "Range index is greater than range index + length"
+        );
+    }
+    if text.len() < range.index + range.length {
+        return None;
+    }
+    let text = XcodeText::from_array(&text[range.index..range.index + range.length]);
+    let mut index = range.index;
+    let mut rows_data = vec![];
+
+    for (row_i, row) in text.rows_iter().enumerate() {
+        if let Some(non_whitespace_column_i) =
+            row.iter().position(|c| !XcodeText::char_is_whitespace(c))
+        {
+            rows_data.push((row_i, index, non_whitespace_column_i));
+        }
+        index += row.len() + 1;
+    }
+    rows_data.sort_by(|a, b| a.2.cmp(&b.2));
+
+    if rows_data.len() > 0 {
+        let (row, index, non_whitespace_column_i) = rows_data[0];
+
+        return Some((
+            TextPosition {
+                row: row,
+                column: non_whitespace_column_i,
+            },
+            index + non_whitespace_column_i,
+        ));
     }
     None
 }
