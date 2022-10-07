@@ -1,3 +1,4 @@
+use super::{NodeSlice, SerializedNodeSlice};
 use crate::{
     app_handle,
     core_engine::{
@@ -25,10 +26,9 @@ use std::{
 };
 use tracing::debug;
 use tracing::error;
+use tracing::warn;
 use ts_rs::TS;
 use uuid::Uuid;
-
-use super::{NodeSlice, SerializedNodeSlice};
 
 #[derive(Debug, Clone)]
 pub struct Edit {
@@ -290,7 +290,7 @@ impl ComplexityRefactoring {
                     .await
                     .map_err(|e| match e {
                         ComplexityRefactoringError::LspRejectedRefactoring => {
-                            error!(
+                            warn!(
                                 ?serialized_slice,
                                 ?node_kinds,
                                 ?parent_node_kind,
