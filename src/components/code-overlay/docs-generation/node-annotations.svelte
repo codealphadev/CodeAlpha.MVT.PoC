@@ -31,6 +31,15 @@
 						annotation = undefined;
 					}
 					break;
+				case 'AddAnnotationGroup':
+					console.log('AddAnnotationGroup', payload);
+					break;
+				case 'UpdateAnnotationGroup':
+					console.log('UpdateAnnotationGroup', payload);
+					break;
+				case 'RemoveAnnotationGroup':
+					console.log('RemoveAnnotationGroup', payload);
+					break;
 				default:
 					break;
 			}

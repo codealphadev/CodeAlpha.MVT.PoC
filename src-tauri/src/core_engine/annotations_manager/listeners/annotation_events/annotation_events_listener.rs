@@ -18,15 +18,15 @@ pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<Annotation
             let annotation_event: AnnotationManagerEvent =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
             match annotation_event {
-                AnnotationManagerEvent::Add(annotation_job_group) => {
+                AnnotationManagerEvent::Add((group_id, feature, jobs, window_uid)) => {
                     annotations_manager
                         .lock()
-                        .add_annotation_job_group(annotation_job_group);
+                        .add_annotation_jobs(group_id, feature, jobs, window_uid);
                 }
-                AnnotationManagerEvent::Update(annotation_job_group) => {
+                AnnotationManagerEvent::Update((group_id, jobs)) => {
                     annotations_manager
                         .lock()
-                        .update_annotation_job_group(annotation_job_group);
+                        .update_annotation_job_group(group_id, jobs);
                 }
                 AnnotationManagerEvent::Remove(id) => {
                     annotations_manager.lock().remove_annotation_job_group(id);
