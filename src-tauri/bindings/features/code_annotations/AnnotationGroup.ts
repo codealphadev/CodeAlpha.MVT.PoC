@@ -4,6 +4,7 @@ import type { FeatureKind } from "./FeatureKind";
 
 export interface AnnotationGroup {
   id: string;
+  editor_window_uid: number;
   feature: FeatureKind;
   annotations: Array<Annotation>;
 }

@@ -11,7 +11,8 @@ use crate::{
 
 use super::{
     listeners::{annotation_events::annotation_events_listener, xcode::xcode_listener},
-    AnnotationJobGroup, AnnotationJobGroupTrait, AnnotationKind, ViewportPositioning,
+    AnnotationJob, AnnotationJobGroup, AnnotationJobGroupTrait, AnnotationKind,
+    ViewportPositioning,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -54,9 +55,15 @@ pub struct AnnotationResult {
 
 pub trait AnnotationsManagerTrait {
     fn new() -> Self;
-    fn add_annotation_job_group(&mut self, group: AnnotationJobGroup);
-    fn update_annotation_job_group(&mut self, group: AnnotationJobGroup);
-    fn update_annotations(&mut self, editor_window_uid: EditorWindowUid);
+    fn add_annotation_jobs(
+        &mut self,
+        group_id: uuid::Uuid,
+        feature: FeatureKind,
+        jobs: Vec<AnnotationJob>,
+        editor_window_uid: EditorWindowUid,
+    );
+    fn update_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>);
+    fn recompute_annotations(&mut self, editor_window_uid: EditorWindowUid);
 
     fn remove_annotation_job_group(&mut self, group_id: uuid::Uuid);
     fn remove_annotation_job_group_of_editor_window(&mut self, editor_window_uid: EditorWindowUid);
@@ -76,37 +83,50 @@ impl AnnotationsManagerTrait for AnnotationsManager {
         }
     }
 
-    fn add_annotation_job_group(&mut self, group: AnnotationJobGroup) {
-        self.groups.insert(group.id(), group.clone());
+    fn add_annotation_jobs(
+        &mut self,
+        group_id: uuid::Uuid,
+        feature: FeatureKind,
+        jobs: Vec<AnnotationJob>,
+        editor_window_uid: EditorWindowUid,
+    ) {
+        self.groups.insert(
+            group_id,
+            AnnotationJobGroup::new(group_id, feature, jobs, editor_window_uid),
+        );
         if let (Ok(visible_text_range), Ok(code_doc_props)) = (
-            get_visible_text_range(GetVia::Hash(group.editor_window_uid())),
-            get_code_document_frame_properties(&GetVia::Hash(group.editor_window_uid())),
+            get_visible_text_range(GetVia::Hash(editor_window_uid)),
+            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
         ) {
             self.groups
-                .get_mut(&group.id())
+                .get_mut(&group_id)
                 .unwrap() // Unwrap safe here because we just inserted the group
                 .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
         }
     }
 
-    fn update_annotation_job_group(&mut self, group: AnnotationJobGroup) {
-        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
-            get_visible_text_range(GetVia::Hash(group.editor_window_uid())),
-            get_code_document_frame_properties(&GetVia::Hash(group.editor_window_uid())),
-        ) {
-            if let Some(existing_group) = self.groups.get_mut(&group.id()) {
-                existing_group.update(group);
-                existing_group
-                    .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
+    fn update_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>) {
+        if let Some(group) = self.groups.get_mut(&group_id) {
+            if let (Ok(visible_text_range), Ok(code_doc_props)) = (
+                get_visible_text_range(GetVia::Hash(group.editor_window_uid())),
+                get_code_document_frame_properties(&GetVia::Hash(group.editor_window_uid())),
+            ) {
+                group.update(jobs);
+                group.compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
             }
         }
     }
 
-    fn update_annotations(&mut self, editor_window_uid: EditorWindowUid) {
+    fn recompute_annotations(&mut self, editor_window_uid: EditorWindowUid) {
+        println!(
+            "Recomputing annotations for editor window {:?}",
+            editor_window_uid
+        );
         if let (Ok(visible_text_range), Ok(code_doc_props)) = (
             get_visible_text_range(GetVia::Hash(editor_window_uid)),
             get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
         ) {
+            println!("Recomputing annotations for editor window {:?} - Got visible text range and code doc props", editor_window_uid);
             for group in self.groups.values_mut() {
                 if group.editor_window_uid() == editor_window_uid {
                     group

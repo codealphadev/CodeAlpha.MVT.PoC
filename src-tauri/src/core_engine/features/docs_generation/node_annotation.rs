@@ -7,13 +7,18 @@ use tracing::debug;
 use crate::{
     app_handle,
     core_engine::{
+        annotations_manager::{
+            AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
+            AnnotationKind,
+        },
         events::{
             models::{
                 NodeExplanationFetchedMessage, RemoveNodeAnnotationMessage,
                 UpdateNodeAnnotationMessage, UpdateNodeExplanationMessage,
             },
-            AnnotationEvent, EventRuleExecutionState, NodeExplanationEvent,
+            AnnotationEvent, AnnotationManagerEvent, EventRuleExecutionState, NodeExplanationEvent,
         },
+        features::FeatureKind,
         syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
         utils::XcodeText,
         EditorWindowUid, TextPosition, TextRange,
@@ -196,7 +201,7 @@ impl NodeAnnotation {
             dimensions: viewport,
             annotation_section,
             code_section: _,
-            window_uid: _,
+            window_uid,
         } = get_viewport_properties(&GetVia::Current).map_err(|_| {
             DocsGenerationError::GenericError(anyhow!("Could not derive textarea dimensions"))
         })?;
@@ -206,6 +211,37 @@ impl NodeAnnotation {
             code_block.first_char_pos.as_TextIndex(&text),
             code_block.last_char_pos.as_TextIndex(&text),
         ) {
+            // test annotation manager
+            let first_char = AnnotationJobSingleChar::new(
+                &TextRange {
+                    index: first_char_text_pos,
+                    length: 1,
+                },
+                AnnotationKind::CodeblockFirstChar,
+                AnnotationJobInstructions::default(),
+            );
+
+            let last_char = AnnotationJobSingleChar::new(
+                &TextRange {
+                    index: last_char_text_pos,
+                    length: 1,
+                },
+                AnnotationKind::CodeblockLastChar,
+                AnnotationJobInstructions::default(),
+            );
+
+            AnnotationManagerEvent::Add((
+                uuid::Uuid::new_v4(),
+                FeatureKind::DocsGeneration,
+                vec![
+                    AnnotationJob::SingleChar(first_char),
+                    AnnotationJob::SingleChar(last_char),
+                ],
+                window_uid,
+            ))
+            .publish_to_tauri();
+            println!("AnnotationManagerEvent::Add(job_group).publish_to_tauri();");
+
             let first_char_bounds_opt = get_bounds_for_TextRange(
                 &TextRange {
                     index: first_char_text_pos,

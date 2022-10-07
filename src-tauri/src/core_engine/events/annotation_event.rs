@@ -4,7 +4,11 @@ use ts_rs::TS;
 
 use crate::{
     app_handle,
-    core_engine::annotations_manager::{AnnotationGroup, AnnotationJobGroup},
+    core_engine::{
+        annotations_manager::{AnnotationGroup, AnnotationJob},
+        features::FeatureKind,
+        EditorWindowUid,
+    },
     utils::messaging::ChannelList,
     window_controls::config::AppWindow,
 };
@@ -38,9 +42,9 @@ impl AnnotationEvent {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
 pub enum AnnotationManagerEvent {
-    Add(AnnotationJobGroup), // Appends the already present list of AnnotationJobGroup with the new ones.
-    Update(AnnotationJobGroup), // Updates existing AnnotationJobGroup with the new ones.
-    Remove(uuid::Uuid),      // Removes the AnnotationJobGroup with the given IDs from the list.
+    Add((uuid::Uuid, FeatureKind, Vec<AnnotationJob>, EditorWindowUid)), // Creates a new annotation group for the given jobs; we don't let the caller submit a "JobsGroup" because of the JobsGroup's Drop implementation
+    Update((uuid::Uuid, Vec<AnnotationJob>)), // Updates existing AnnotationJobGroup with a new set of jobs.
+    Remove(uuid::Uuid), // Removes the AnnotationJobGroup with the given IDs from the list.
 }
 
 impl AnnotationManagerEvent {

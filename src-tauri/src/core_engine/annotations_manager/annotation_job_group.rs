@@ -12,13 +12,14 @@ use super::{Annotation, AnnotationGroup, AnnotationJob, AnnotationJobTrait, Anno
 
 pub trait AnnotationJobGroupTrait {
     fn new(
+        id: uuid::Uuid, // We require the caller to provide an id upfront, so that we can update the group later
         feature: FeatureKind,
         jobs: Vec<AnnotationJob>,
         editor_window_uid: EditorWindowUid,
     ) -> Self;
     fn id(&self) -> uuid::Uuid;
     fn editor_window_uid(&self) -> EditorWindowUid;
-    fn update(&mut self, group: AnnotationJobGroup);
+    fn update(&mut self, jobs: Vec<AnnotationJob>);
     fn compute_annotations(
         &mut self,
         visible_text_range: &TextRange,
@@ -47,11 +48,11 @@ pub struct AnnotationJobGroup {
 
 impl AnnotationJobGroupTrait for AnnotationJobGroup {
     fn new(
+        id: uuid::Uuid,
         feature: FeatureKind,
         jobs: Vec<AnnotationJob>,
         editor_window_uid: EditorWindowUid,
     ) -> Self {
-        let id = uuid::Uuid::new_v4();
         let jobs = jobs
             .into_iter()
             .map(|job| (job.id(), job))
@@ -74,12 +75,11 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
         self.editor_window_uid
     }
 
-    fn update(&mut self, jobs_group: AnnotationJobGroup) {
-        if self.id != jobs_group.id {
-            return;
-        }
-
-        self.jobs = jobs_group.jobs.clone();
+    fn update(&mut self, jobs: Vec<AnnotationJob>) {
+        self.jobs = jobs
+            .into_iter()
+            .map(|job| (job.id(), job))
+            .collect::<HashMap<uuid::Uuid, AnnotationJob>>();
         self.results = HashMap::new();
         self.group = None;
     }
@@ -159,12 +159,15 @@ impl AnnotationJobGroup {
             if let Some(previous_group) = self.group.take() {
                 // Case: new group is different from the previous group -> publish update
                 if previous_group != annotation_group {
+                    println!("publish_annotations: update");
                     AnnotationEvent::UpdateAnnotationGroup(annotation_group.clone())
                         .publish_to_tauri();
                 } else {
+                    println!("publish_annotations: no update");
                     //  Case: new group is the same as the previous group -> no publish
                 }
             } else {
+                println!("publish_annotations: new");
                 // Case: no previous group -> publish add
                 AnnotationEvent::AddAnnotationGroup(annotation_group.clone()).publish_to_tauri();
             }
