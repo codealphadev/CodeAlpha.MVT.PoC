@@ -1,6 +1,4 @@
 pub use code_annotation::NodeAnnotationClickedMessage;
-pub use code_annotation::RemoveNodeAnnotationMessage;
-pub use code_annotation::UpdateNodeAnnotationMessage;
 
 pub use core_activation_status::CoreActivationStatusMessage;
 pub use node_explanation_fetched::NodeExplanationFetchedMessage;
