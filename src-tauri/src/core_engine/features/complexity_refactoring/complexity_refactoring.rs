@@ -20,10 +20,7 @@ use crate::{
 };
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashMap, fs, sync::Arc};
 use tracing::debug;
 use tracing::error;
 use tracing::warn;
@@ -86,7 +83,7 @@ type SuggestionHash = u64;
 pub struct ComplexityRefactoring {
     is_activated: bool,
     suggestions: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
-    dismissed_suggestions: Arc<Mutex<HashSet<SuggestionHash>>>,
+    dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 9;
@@ -232,7 +229,7 @@ impl ComplexityRefactoring {
         file_path: &Option<String>,
         syntax_tree: &SwiftSyntaxTree,
         suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
-        dismissed_suggestions_arc: Arc<Mutex<HashSet<SuggestionHash>>>,
+        dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
         let old_suggestions = suggestions_arc.lock().clone();
@@ -240,9 +237,9 @@ impl ComplexityRefactoring {
         let suggestions = Self::compute_suggestions_for_function(
             &function,
             &old_suggestions,
-            dismissed_suggestions_arc,
             &text_content,
             &syntax_tree,
+            dismissed_suggestions_arc,
         )?;
 
         for (id, suggestion) in suggestions.iter() {
@@ -308,9 +305,9 @@ impl ComplexityRefactoring {
     fn compute_suggestions_for_function(
         function: &SwiftFunction,
         old_suggestions: &HashMap<Uuid, RefactoringSuggestion>,
-        dismissed_suggestions_arc: Arc<Mutex<HashSet<SuggestionHash>>>,
         text_content: &XcodeText,
         syntax_tree: &SwiftSyntaxTree,
+        dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
     ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
         let prev_complexity = function.get_complexity();
         if prev_complexity <= MAX_ALLOWED_COMPLEXITY {
@@ -485,24 +482,21 @@ impl ComplexityRefactoring {
         suggestion_id: uuid::Uuid,
     ) -> Result<(), ComplexityRefactoringError> {
         let suggestions;
-        let hash;
+        let suggestion_to_dismiss;
         {
             let mut suggestions_guard = self.suggestions.lock();
-
-            hash = calculate_hash::<SerializedNodeSlice>(
-                &suggestions_guard
-                    .get(&suggestion_id)
-                    .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
-                    .serialized_slice,
-            );
-
+            suggestion_to_dismiss = suggestions_guard
+                .get(&suggestion_id)
+                .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
+                .serialized_slice
+                .clone();
             suggestions_guard.remove(&suggestion_id);
             suggestions = suggestions_guard.clone();
         }
-        self.dismissed_suggestions.lock().insert(hash);
+        let hash = write_dismissed_suggestion(&suggestion_to_dismiss)?;
+        self.dismissed_suggestions.lock().push(hash);
 
         Self::publish_to_frontend(suggestions, code_document.editor_window_props().window_uid);
-
         Ok(())
     }
 }
@@ -512,7 +506,7 @@ impl ComplexityRefactoring {
         Self {
             suggestions: Arc::new(Mutex::new(HashMap::new())),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
-            dismissed_suggestions: Arc::new(Mutex::new(HashSet::new())),
+            dismissed_suggestions: Arc::new(Mutex::new(read_dismissed_suggestions())),
         }
     }
 
@@ -535,6 +529,56 @@ impl ComplexityRefactoring {
     }
 }
 
+const DISMISSED_SUGGESTIONS_FILE_NAME: &str = "dismissed_suggestions.json";
+
+fn write_dismissed_suggestion(
+    suggestion: &SerializedNodeSlice,
+) -> Result<SuggestionHash, ComplexityRefactoringError> {
+    let hash = calculate_hash::<SerializedNodeSlice>(&suggestion);
+    let app_dir = app_handle()
+        .path_resolver()
+        .app_dir()
+        .ok_or(ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
+    let path = app_dir.join(DISMISSED_SUGGESTIONS_FILE_NAME);
+    let mut suggestions: Vec<SuggestionHash> = vec![];
+    if path.exists() {
+        if let Ok(file) = fs::read_to_string(&path) {
+            suggestions = serde_json::from_str(&file).unwrap();
+        }
+    }
+
+    if suggestions.contains(&hash) {
+        return Ok(hash);
+    }
+
+    suggestions.push(hash);
+    let suggestions_string = serde_json::to_string(&suggestions)
+        .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
+    fs::write(&path, suggestions_string)
+        .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
+
+    Ok(hash)
+}
+
+fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
+    if let Some(app_dir) = app_handle().path_resolver().app_dir() {
+        let path = app_dir.join(DISMISSED_SUGGESTIONS_FILE_NAME);
+        if let Ok(file) = fs::read_to_string(&path) {
+            if let Ok(suggestions) = serde_json::from_str::<Vec<SuggestionHash>>(&file) {
+                debug!(?suggestions, "Read {}", DISMISSED_SUGGESTIONS_FILE_NAME);
+                return suggestions;
+            } else {
+                error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error parsing file");
+            }
+        } else {
+            error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error reading file");
+        }
+    } else {
+        error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error getting app dir");
+    }
+    vec![]
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
@@ -545,6 +589,8 @@ pub enum ComplexityRefactoringError {
     SuggestionIncomplete,
     #[error("LSP rejected refactoring operation")]
     LspRejectedRefactoring,
+    #[error("Failed to read or write dismissed suggestions file")]
+    ReadWriteDismissedSuggestionsFailed,
     #[error("Something went wrong when executing this ComplexityRefactoring feature.")]
     GenericError(#[source] anyhow::Error),
 }
