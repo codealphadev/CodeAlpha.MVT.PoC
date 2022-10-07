@@ -38,6 +38,7 @@
 			const color = theme.colors[colorName];
 			document.documentElement.style.setProperty(cssVar, color);
 		}
+		document.documentElement.style.colorScheme = themeName;
 		document.documentElement.style.setProperty('--theme-name', themeName);
 	};
 
