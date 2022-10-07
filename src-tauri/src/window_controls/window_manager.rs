@@ -9,7 +9,6 @@ use tracing::debug;
 
 use crate::{
     app_handle,
-    core_engine::events::EventUserInteraction,
     platform::macos::models::viewport::ViewportPropertiesUpdateMessage,
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     CORE_ENGINE_ACTIVE_AT_STARTUP,
