@@ -80,7 +80,7 @@
 			left:{code_document_rect.origin.x}px; position: relative"
 			class="h-full w-full overflow-hidden relative"
 		>
-			<BracketHighlight {code_document_rect} {active_window_uid} />
+			<BracketHighlight {code_document_rect} {annotation_section} {active_window_uid} />
 		</div>
 		<div
 			style="

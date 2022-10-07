@@ -10,6 +10,7 @@
 	import { BORDER_WIDTH, compute_bracket_highlight_lines } from './bracket_highlight';
 
 	export let code_document_rect: LogicalFrame;
+	export let annotation_section: LogicalFrame;
 	export let active_window_uid: number;
 
 	let annotation_group: AnnotationGroup | undefined;
@@ -19,33 +20,6 @@
 
 	let opening_bracket_box: LogicalFrame | null = null;
 	let closing_bracket_box: LogicalFrame | null = null;
-
-	// const listenTauriEvents = async () => {
-	// 	let BracketHighlightChannel: ChannelList = 'BracketHighlightResults';
-	// 	await listen(BracketHighlightChannel, (event) => {
-	// 		const bracket_highlights = event.payload as BracketHighlightResults | null;
-	// 		if (bracket_highlights == null) {
-	// 			opening_bracket_box = null;
-	// 			closing_bracket_box = null;
-	// 			top_rectangle = null;
-	// 			bottom_rectangle = null;
-	// 			results_window_uid = null;
-	// 			return;
-	// 		}
-
-	// 		opening_bracket_box = bracket_highlights.boxes.opening_bracket;
-	// 		closing_bracket_box = bracket_highlights.boxes.closing_bracket;
-	// 		const rectangles = compute_bracket_highlight_rects(
-	// 			bracket_highlights.lines,
-	// 			code_document_rect.size.height
-	// 		);
-	// 		top_rectangle = rectangles.top_rect;
-	// 		bottom_rectangle = rectangles.bottom_rect;
-
-	// 		results_window_uid = bracket_highlights.window_uid;
-	// 	});
-	// };
-	// listenTauriEvents();
 
 	const listen_to_node_annotation_events = async () => {
 		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
@@ -61,15 +35,6 @@
 						update_closing_bracket();
 						update_opening_bracket();
 						update_rectangles();
-
-						console.log('AddAnnotationGroup', payload);
-						// 					et top_rectangle: LogicalFrame | null = null;
-						// let bottom_rectangle: LogicalFrame | null = null;
-
-						// let opening_bracket_box: LogicalFrame | null = null;
-						// let closing_bracket_box: LogicalFrame | null = null;
-
-						console.log(top_rectangle, bottom_rectangle, opening_bracket_box, closing_bracket_box);
 					}
 
 					break;
@@ -82,9 +47,6 @@
 						update_closing_bracket();
 						update_opening_bracket();
 						update_rectangles();
-
-						console.log('UpdateAnnotationGroup', payload);
-						console.log(top_rectangle, bottom_rectangle, opening_bracket_box, closing_bracket_box);
 					}
 
 					break;
@@ -99,7 +61,6 @@
 						bottom_rectangle = null;
 					}
 
-					console.log('RemoveAnnotationGroup', payload);
 					break;
 				default:
 					break;
@@ -182,32 +143,38 @@
 
 		let elbow = annotation_group.annotations.find((annotation) => annotation.kind === 'Elbow');
 
-		if (!lines_start || !lines_end || !elbow) {
-			return;
-		}
-
-		if (lines_start.shapes[0] !== undefined) {
+		if (lines_start && lines_start.shapes[0] !== undefined) {
 			if (is_point(lines_start.shapes[0])) {
 				lines_start_pos = lines_start.shapes[0].Point;
 			}
 		}
 
-		if (lines_end.shapes[0] !== undefined) {
+		if (lines_end && lines_end.shapes[0] !== undefined) {
 			if (is_point(lines_end.shapes[0])) {
 				lines_end_pos = lines_end.shapes[0].Point;
 			}
 		}
 
-		if (elbow.shapes[0] !== undefined) {
-			if (is_point(elbow.shapes[0])) {
-				elbow_pos = elbow.shapes[0].Point;
+		if (elbow) {
+			if (elbow.shapes[0] !== undefined) {
+				if (is_point(elbow.shapes[0])) {
+					elbow_pos = elbow.shapes[0].Point;
+				}
+			} else {
+				elbow_pos = {
+					x:
+						annotation_section.origin.x -
+						code_document_rect.origin.x +
+						annotation_section.size.width,
+					y: 0
+				};
 			}
 		}
 
 		const rectangles = compute_bracket_highlight_lines(
 			lines_start_pos,
 			lines_end_pos,
-			elbow_pos?.x,
+			elbow_pos,
 			code_document_rect.size.height
 		);
 
