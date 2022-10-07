@@ -56,7 +56,7 @@ pub fn check_for_method_extraction(
         .complexities
         .clone();
 
-    const SCORE_THRESHOLD: f64 = 0.3;
+    const SCORE_THRESHOLD: f64 = 0.5;
 
     Ok(get_best_extraction(
         possible_extractions,
@@ -484,6 +484,7 @@ mod tests {
                 public func compute(input1: Int, input2: Int) -> Int {
                     if (input1 > 3 && input1 < 2) || (input2 > 4 && input2 > 6) && input1 > 0 {
                         let resolvedValue = input1 + input2 + 3;
+                        break label;
                         let b = resolvedValue + 2
                     }
                     if input1 > 2 {
@@ -512,7 +513,7 @@ mod tests {
                 functions[0].props.node.to_sexp()
             );
             assert_eq!(result.0.path_from_function_root, vec![10, 1, 0, 1]); // Extracts (input1 > 3 && input1 < 2) || (input2 > 4 && input2 > 6)
-            assert_eq!(result.1, 2); // Remaining complexity in the function is just from the two if statements
+            assert_eq!(result.1, 3); // Remaining complexity in the function is from the two if statements and the break label
         }
     }
 }
