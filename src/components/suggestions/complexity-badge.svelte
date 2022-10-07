@@ -31,7 +31,7 @@
 	class="flex rounded items-center font-bold gap-[6px] py-[5px] pl-[8px] pr-[6px] {styled_complexity.color} text-sm border-[1.5px] border-current"
 >
 	{styled_complexity.text}
-	<div class="rounded px-[3px] py-[3px] {styled_complexity.bg_color} text-background text-xs">
+	<div class="rounded px-[6px] py-[3px] {styled_complexity.bg_color} text-background text-xs">
 		{complexity}
 	</div>
 </div>
