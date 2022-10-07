@@ -239,7 +239,7 @@ fn walk_node<'a>(
     if node_children_are_candidates_for_extraction(&node) {
         let node_children = node.children(&mut cursor).collect::<Vec<Node<'a>>>();
 
-        possible_extractions.append(&mut get_candidate_slices_for_extraction(
+        possible_extractions.append(&mut get_valid_slices_for_extraction(
             node_children,
             &node_address,
             &parsing_metadata,
@@ -249,7 +249,7 @@ fn walk_node<'a>(
     if node_is_candidate_for_extraction(&node) {
         let mut parent_address = node_address;
         parent_address.pop();
-        possible_extractions.append(&mut get_candidate_slices_for_extraction(
+        possible_extractions.append(&mut get_valid_slices_for_extraction(
             vec![node],
             &parent_address,
             &parsing_metadata,
@@ -259,18 +259,35 @@ fn walk_node<'a>(
     Ok(possible_extractions)
 }
 
-fn get_candidate_slices_for_extraction<'a, 'b>(
+fn get_valid_slices_for_extraction<'a, 'b>(
     nodes: Vec<Node<'a>>,
     parent_address: &NodeAddress,
     parsing_metadata: &'b ParsingMetadata,
 ) -> Vec<NodeSlice<'a>> {
     let mut result: Vec<NodeSlice> = vec![];
+
+    // SourceKit refactoring fails if range is contained by, or contains, a lambda closure
+    if has_parent_of_kind(nodes[0], "lambda_literal") {
+        return vec![];
+    }
+
     for (i, start_node) in nodes.iter().enumerate() {
+        if !start_node.is_named() {
+            // A slice may only consiste of named nodes
+            continue;
+        }
+        if !is_node_valid_for_extraction(start_node, parsing_metadata, parent_address) {
+            continue;
+        }
         for (j, end_node) in nodes.iter().enumerate().skip(i) {
-            if !(start_node.is_named() && end_node.is_named()) {
+            if !end_node.is_named() {
+                // A slice may only consiste of named nodes
                 continue;
             }
-            if is_slice_candidate_for_extraction(
+            if !is_node_valid_for_extraction(end_node, parsing_metadata, parent_address) {
+                break;
+            }
+            if is_slice_valid_for_extraction(
                 NodeSubSlice {
                     nodes: &nodes[i..=j],
                     parent_address: &parent_address.clone(),
@@ -287,10 +304,54 @@ fn get_candidate_slices_for_extraction<'a, 'b>(
     result
 }
 
-fn is_slice_candidate_for_extraction(
-    slice: NodeSubSlice,
-    parsing_metadata: &ParsingMetadata,
+fn has_parent_of_kind(node: Node, kind: &str) -> bool {
+    let mut curr_node = node.parent();
+    while let Some(n) = curr_node {
+        if n.kind() == kind {
+            return true;
+        }
+        curr_node = n.parent();
+    }
+    false
+}
+
+fn is_or_has_named_child_of_kind(node: &Node, kind: &str) -> bool {
+    if node.kind() == kind {
+        return true;
+    }
+    for child in node.named_children(&mut node.walk()) {
+        if is_or_has_named_child_of_kind(&child, kind) {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_node_valid_for_extraction<'a, 'b>(
+    node: &'a Node,
+    parsing_metadata: &'b ParsingMetadata,
+    parent_address: &NodeAddress,
 ) -> bool {
+    if node.kind() == "guard_statement" {
+        return false;
+    }
+
+    let node_address = get_node_address(&parent_address, node.id());
+
+    if is_or_has_named_child_of_kind(node, "lambda_literal") {
+        return false;
+    }
+    for continue_or_break in &parsing_metadata.continues_and_breaks {
+        if is_child_of(&node_address, &continue_or_break.node_address)
+            && !is_child_of(&node_address, &continue_or_break.target_node_address)
+        {
+            return false;
+        }
+    }
+    true
+}
+
+fn is_slice_valid_for_extraction(slice: NodeSubSlice, parsing_metadata: &ParsingMetadata) -> bool {
     let SliceInputsAndOutputs {
         input_names: _,
         output_names,
@@ -299,38 +360,6 @@ fn is_slice_candidate_for_extraction(
     if output_names.len() > 0 {
         // SourceKit cannot extract method if any declaration declared within the slice is referred to after it
         return false;
-    }
-
-    for node in slice.nodes {
-        // Any top-level guard_statement in the function is not allowed since it interrupts control flow
-        if node.kind() == "guard_statement" {
-            return false;
-        }
-    }
-    // No orphan 'continue' or 'break' statements allowed (if the slice doesn't also contain their target loop) // TODO: Labeled loops are not yet supported
-    for continue_or_break in &parsing_metadata.continues_and_breaks {
-        if is_child_of(&slice.parent_address, &continue_or_break.node_address) {
-            // Find the node of the slice that contains the continue statement, if one of them does
-            let containing_node_address = slice
-                .nodes
-                .iter()
-                .find(|n| {
-                    is_child_of(
-                        &get_node_address(&slice.parent_address, n.id()),
-                        &continue_or_break.node_address,
-                    )
-                })
-                .map(|n| get_node_address(&slice.parent_address, n.id()));
-
-            if let Some(containing_node_address) = containing_node_address {
-                if !is_child_of(
-                    &containing_node_address,
-                    &continue_or_break.target_node_address,
-                ) {
-                    return false;
-                }
-            }
-        }
     }
 
     return true;
