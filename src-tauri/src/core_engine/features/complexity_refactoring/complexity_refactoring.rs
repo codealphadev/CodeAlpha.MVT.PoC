@@ -179,36 +179,28 @@ impl ComplexityRefactoring {
                 code_document.editor_window_props().window_uid,
             )?);
         }
-        let ids_to_remove: Vec<Uuid>;
-        let suggestions_to_add: HashMap<Uuid, FERefactoringSuggestion>;
+        let removed_suggestions_count: usize;
+        let added_suggestions_count: usize;
         let window_uid = code_document.editor_window_props().window_uid;
         {
             let mut suggestions_cache = self.suggestions.lock();
             let old_suggestions = suggestions_cache.clone();
             (*suggestions_cache) = suggestions.clone();
 
-            suggestions_to_add = suggestions
+            added_suggestions_count = suggestions
                 .clone()
-                .into_iter()
+                .iter()
                 .filter(|(id, _)| !old_suggestions.contains_key(&id))
-                .map(|(id, suggestion)| {
-                    (
-                        id,
-                        map_refactoring_suggestion_to_fe_refactoring_suggestion(
-                            suggestion, id, window_uid,
-                        ),
-                    )
-                })
-                .collect::<HashMap<Uuid, FERefactoringSuggestion>>();
+                .count();
 
-            ids_to_remove = old_suggestions
+            removed_suggestions_count = old_suggestions
                 .clone()
                 .into_keys()
                 .filter(|id| !suggestions.contains_key(id))
-                .collect::<Vec<Uuid>>();
+                .count();
         }
 
-        if ids_to_remove.len() > 0 || suggestions_to_add.len() > 0 {
+        if removed_suggestions_count > 0 || added_suggestions_count > 0 {
             Self::publish_to_frontend(suggestions, window_uid);
         }
 
