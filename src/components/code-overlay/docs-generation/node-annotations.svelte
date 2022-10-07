@@ -11,7 +11,6 @@
 	import type { AnnotationShape } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationShape';
 
 	let annotation_group: AnnotationGroup | undefined;
-	let annotation_window_uid: number | null;
 	let annotation_icon: LogicalFrame | null;
 	let annotation_codeblock: LogicalFrame | null;
 
@@ -34,38 +33,32 @@
 
 					if (added_group.feature === 'DocsGeneration') {
 						annotation_group = added_group;
-						annotation_window_uid = added_group.editor_window_uid;
 
 						derive_annotation_icon();
 						derive_annotation_codeblock();
 					}
 
-					console.log('AddAnnotationGroup', payload);
 					break;
 				case 'UpdateAnnotationGroup':
 					let updated_group = payload as AnnotationGroup;
 
 					if (updated_group.feature === 'DocsGeneration') {
 						annotation_group = updated_group;
-						annotation_window_uid = updated_group.editor_window_uid;
 
 						derive_annotation_icon();
 						derive_annotation_codeblock();
 					}
 
-					console.log('UpdateAnnotationGroup', payload);
 					break;
 				case 'RemoveAnnotationGroup':
 					let group_id = payload as string;
 
 					if (annotation_group?.id === group_id) {
 						annotation_group = undefined;
-						annotation_window_uid = null;
 						annotation_icon = null;
 						annotation_codeblock = null;
 					}
 
-					console.log('RemoveAnnotationGroup', payload);
 					break;
 				default:
 					break;
@@ -220,7 +213,7 @@
 	};
 </script>
 
-{#if annotation_window_uid && annotation_window_uid == active_window_uid}
+{#if annotation_group && annotation_group.editor_window_uid == active_window_uid}
 	{#if annotation_icon !== null}
 		<div
 			style="position: absolute; 
