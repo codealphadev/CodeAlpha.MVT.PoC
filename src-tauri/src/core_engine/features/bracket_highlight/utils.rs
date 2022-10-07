@@ -168,43 +168,6 @@ pub struct IndexAndRow {
     pub row: usize,
 }
 
-pub fn get_text_index_of_left_most_char_in_range(
-    range: TextRange,
-    text: &XcodeText,
-) -> Option<usize> {
-    if range.index > range.index + range.length {
-        // Debugging weird panic https://console.cloud.google.com/logs/query;cursorTimestamp=2022-09-20T14:56:38.421723Z;query=logName%3D%22projects%2Fclient-backend-x%2Flogs%2Fclient%22%0Aseverity%3DERROR%0Atimestamp%3D%222022-09-20T14:56:38.421723Z%22%0AinsertId%3D%221escc8rfirfxe1%22;summaryFields=labels%252Fmachine_id:false:32:beginning;timeRange=P1D?project=client-backend-x
-        error!(
-            ?text,
-            ?range,
-            "Range index is greater than range index + length"
-        );
-    }
-    if text.len() < range.index + range.length {
-        return None;
-    }
-    let text = XcodeText::from_array(&text[range.index..range.index + range.length]);
-    let mut index = range.index;
-    let mut rows_data = vec![];
-
-    for (row_i, row) in text.rows_iter().enumerate() {
-        if let Some(non_whitespace_column_i) =
-            row.iter().position(|c| !XcodeText::char_is_whitespace(c))
-        {
-            rows_data.push((row_i, index, non_whitespace_column_i));
-        }
-        index += row.len() + 1;
-    }
-    rows_data.sort_by(|a, b| a.2.cmp(&b.2));
-
-    if rows_data.len() > 0 {
-        let (_, index, non_whitespace_column_i) = rows_data[0];
-
-        return Some(index + non_whitespace_column_i);
-    }
-    None
-}
-
 pub fn get_text_pos_and_index_of_left_most_char_in_range(
     range: TextRange,
     text: &XcodeText,
@@ -362,13 +325,18 @@ mod tests {
     #[cfg(test)]
     mod get_left_most_column_in_rows {
         use crate::core_engine::{
-            features::bracket_highlight::utils::get_text_index_of_left_most_char_in_range,
-            utils::XcodeText, TextRange,
+            features::bracket_highlight::utils::get_text_pos_and_index_of_left_most_char_in_range,
+            utils::XcodeText, TextPosition, TextRange,
         };
 
-        fn test_fn(text: &str, index: usize, length: usize, expected: Option<usize>) {
+        fn test_fn(
+            text: &str,
+            index: usize,
+            length: usize,
+            expected: Option<(TextPosition, usize)>,
+        ) {
             assert_eq!(
-                get_text_index_of_left_most_char_in_range(
+                get_text_pos_and_index_of_left_most_char_in_range(
                     TextRange { index, length },
                     &XcodeText::from_str(text)
                 ),
@@ -384,7 +352,7 @@ mod tests {
            }",
                 12,
                 33,
-                Some(44),
+                Some((TextPosition { row: 1, column: 11 }, 44)),
             );
         }
 
@@ -398,7 +366,7 @@ mod tests {
                   }",
                 12,
                 78,
-                Some(55),
+                Some((TextPosition { row: 1, column: 16 }, 55)),
             );
         }
 
@@ -410,7 +378,7 @@ mod tests {
             print(y)}",
                 12,
                 48,
-                Some(51),
+                Some((TextPosition { row: 1, column: 12 }, 51)),
             );
         }
 
@@ -423,7 +391,7 @@ mod tests {
                   forKnownProcessID: app.processIdentifier)",
                 11,
                 61,
-                Some(31),
+                Some((TextPosition { row: 2, column: 18 }, 31)),
             );
         }
 
