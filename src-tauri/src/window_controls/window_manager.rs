@@ -9,6 +9,7 @@ use tracing::debug;
 
 use crate::{
     app_handle,
+    core_engine::events::EventUserInteraction,
     platform::macos::models::viewport::ViewportPropertiesUpdateMessage,
     utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
     CORE_ENGINE_ACTIVE_AT_STARTUP,
@@ -146,7 +147,6 @@ impl WindowManager {
             app_windows: app_windows.clone(),
         })
         .publish_to_tauri(&app_handle());
-        debug!(?app_windows, "Hide app windows");
     }
 
     pub fn show_app_windows(
@@ -195,7 +195,6 @@ impl WindowManager {
             code_document: editor_window.code_document()?,
         })
         .publish_to_tauri(&app_handle());
-        debug!(?app_windows, "Show app windows");
 
         Some(())
     }

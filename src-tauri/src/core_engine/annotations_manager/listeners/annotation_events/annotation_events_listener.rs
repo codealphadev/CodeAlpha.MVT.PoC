@@ -26,7 +26,7 @@ pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<Annotation
                 AnnotationManagerEvent::Update((group_id, jobs)) => {
                     annotations_manager
                         .lock()
-                        .update_annotation_job_group(group_id, jobs);
+                        .replace_annotation_job_group(group_id, jobs);
                 }
                 AnnotationManagerEvent::Remove(id) => {
                     annotations_manager.lock().remove_annotation_job_group(id);

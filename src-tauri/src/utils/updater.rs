@@ -1,3 +1,4 @@
+#![cfg(not(debug_assertions))]
 use std::time::Duration;
 use tauri::AppHandle;
 use tracing::{debug, error, info};

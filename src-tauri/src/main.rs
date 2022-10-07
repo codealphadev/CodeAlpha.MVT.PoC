@@ -26,10 +26,13 @@ mod window_controls;
 // listen_for_updates is used in release builds
 #[allow(unused_imports)]
 use crate::{
-    utils::{tracing::TracingSubscriber, updater::listen_for_updates},
+    utils::tracing::TracingSubscriber,
     window_controls::{cmd_rebind_main_widget, cmd_resize_window},
 };
 use lazy_static::lazy_static;
+
+#[cfg(not(debug_assertions))]
+use crate::utils::updater::listen_for_updates;
 
 use utils::feedback::cmd_send_feedback;
 lazy_static! {

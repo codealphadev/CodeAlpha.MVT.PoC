@@ -62,8 +62,9 @@ pub trait AnnotationsManagerTrait {
         jobs: Vec<AnnotationJob>,
         editor_window_uid: EditorWindowUid,
     );
-    fn update_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>);
+    fn replace_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>);
     fn recompute_annotations(&mut self, editor_window_uid: EditorWindowUid);
+    fn update_annotations(&mut self, editor_window_uid: EditorWindowUid);
 
     fn remove_annotation_job_group(&mut self, group_id: uuid::Uuid);
     fn remove_annotation_job_group_of_editor_window(&mut self, editor_window_uid: EditorWindowUid);
@@ -105,28 +106,39 @@ impl AnnotationsManagerTrait for AnnotationsManager {
         }
     }
 
-    fn update_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>) {
+    fn replace_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>) {
         if let Some(group) = self.groups.get_mut(&group_id) {
             if let (Ok(visible_text_range), Ok(code_doc_props)) = (
                 get_visible_text_range(GetVia::Hash(group.editor_window_uid())),
                 get_code_document_frame_properties(&GetVia::Hash(group.editor_window_uid())),
             ) {
-                group.update(jobs);
+                group.replace(jobs);
                 group.compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
             }
         }
     }
 
     fn recompute_annotations(&mut self, editor_window_uid: EditorWindowUid) {
-        println!(
-            "Recomputing annotations for editor window {:?}",
-            editor_window_uid
-        );
         if let (Ok(visible_text_range), Ok(code_doc_props)) = (
             get_visible_text_range(GetVia::Hash(editor_window_uid)),
             get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
         ) {
-            println!("Recomputing annotations for editor window {:?} - Got visible text range and code doc props", editor_window_uid);
+            for group in self.groups.values_mut() {
+                if group.editor_window_uid() == editor_window_uid {
+                    group.compute_annotations(
+                        &visible_text_range,
+                        &code_doc_props.dimensions.origin,
+                    );
+                }
+            }
+        }
+    }
+
+    fn update_annotations(&mut self, editor_window_uid: EditorWindowUid) {
+        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
+            get_visible_text_range(GetVia::Hash(editor_window_uid)),
+            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
+        ) {
             for group in self.groups.values_mut() {
                 if group.editor_window_uid() == editor_window_uid {
                     group
@@ -149,7 +161,7 @@ impl AnnotationsManagerTrait for AnnotationsManager {
         self.groups.clear();
     }
 
-    fn scroll_to_annotation(&mut self, group_id: uuid::Uuid) {
+    fn scroll_to_annotation(&mut self, _group_id: uuid::Uuid) {
         todo!()
     }
 }
