@@ -44,7 +44,7 @@
     "react": "^16.14.0",
     "react-diff-viewer": "^3.1.1",
     "react-dom": "^16.14.0",
-    "vite": "^3.1.3",
+    "vite": "^3.1.6",
     "yrv": "^0.0.57"
   },
   "type": "module"
