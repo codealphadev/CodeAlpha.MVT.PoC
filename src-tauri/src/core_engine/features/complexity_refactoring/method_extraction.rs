@@ -266,7 +266,8 @@ fn get_valid_slices_for_extraction<'a, 'b>(
 ) -> Vec<NodeSlice<'a>> {
     let mut result: Vec<NodeSlice> = vec![];
 
-    // SourceKit refactoring fails if range is contained by, or contains, a lambda closure
+    // If range is contained by, or contains, a lambda closure, SourceKit does not correctly determine the input parameters to the function.
+    // This would leave the code in a broken state. (We might be able to fix this upstream, or patch in the params ourselves with more resources.)
     if has_parent_of_kind(nodes[0], "lambda_literal") {
         return vec![];
     }
