@@ -13,14 +13,10 @@ use crate::{
     window_controls::config::AppWindow,
 };
 
-use super::models::{RemoveNodeAnnotationMessage, UpdateNodeAnnotationMessage};
-
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[serde(tag = "event", content = "payload")]
 #[ts(export, export_to = "bindings/features/node_annotation/")]
 pub enum AnnotationEvent {
-    UpdateNodeAnnotation(UpdateNodeAnnotationMessage),
-    RemoveNodeAnnotation(RemoveNodeAnnotationMessage),
     AddAnnotationGroup(AnnotationGroup),
     UpdateAnnotationGroup(AnnotationGroup),
     RemoveAnnotationGroup(uuid::Uuid),
