@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use parking_lot::Mutex;
-use tauri::Manager;
-
 use crate::{
     app_handle, core_engine::events::EventUserInteraction, utils::messaging::ChannelList,
     window_controls::WindowManager,
 };
+use parking_lot::Mutex;
+use tauri::Manager;
+use tracing::info;
 
 use super::handlers::{on_core_activation_status_update, on_main_window_toggle};
 
@@ -22,6 +22,7 @@ pub fn user_interaction_listener(window_manager: &Arc<Mutex<WindowManager>>) {
                     on_core_activation_status_update(&window_manager, &msg);
                 }
                 EventUserInteraction::ToggleMainWindow(msg) => {
+                    info!("ToggleMainWindow: {:?}", msg);
                     on_main_window_toggle(&window_manager, msg);
                 }
                 _ => {}
