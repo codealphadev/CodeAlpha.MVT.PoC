@@ -48,13 +48,16 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         let viewport_positioning =
             Self::compare_with_visible_text_range(self.char_index, visible_text_range);
 
+        let mut result = AnnotationResult {
+            id: self.id,
+            position_relative_to_viewport: viewport_positioning.clone(),
+            bounds: None,
+        };
+
         // If the character is not within the VisibleTextRange, we can't compute the bounds
         if viewport_positioning != ViewportPositioning::Visible {
-            return Ok(AnnotationResult {
-                id: self.id,
-                position_relative_to_viewport: viewport_positioning,
-                bounds: None,
-            });
+            self.result = Some(result.clone());
+            return Ok(result);
         }
 
         let ax_bounds_global = get_bounds_for_TextRange(
@@ -66,11 +69,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         )
         .map_err(|e| AnnotationError::GenericError(e.into()))?;
 
-        let result = AnnotationResult {
-            id: self.id,
-            position_relative_to_viewport: viewport_positioning,
-            bounds: Some(vec![ax_bounds_global.to_local(code_doc_origin)]),
-        };
+        result.bounds = Some(vec![ax_bounds_global.to_local(code_doc_origin)]);
 
         self.result = Some(result.clone());
         Ok(result)

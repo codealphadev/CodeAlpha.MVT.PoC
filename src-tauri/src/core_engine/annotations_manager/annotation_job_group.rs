@@ -19,7 +19,7 @@ pub trait AnnotationJobGroupTrait {
     ) -> Self;
     fn id(&self) -> uuid::Uuid;
     fn editor_window_uid(&self) -> EditorWindowUid;
-    fn update(&mut self, jobs: Vec<AnnotationJob>);
+    fn replace(&mut self, jobs: Vec<AnnotationJob>);
     fn compute_annotations(
         &mut self,
         visible_text_range: &TextRange,
@@ -75,7 +75,7 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
         self.editor_window_uid
     }
 
-    fn update(&mut self, jobs: Vec<AnnotationJob>) {
+    fn replace(&mut self, jobs: Vec<AnnotationJob>) {
         self.jobs = jobs
             .into_iter()
             .map(|job| (job.id(), job))
@@ -159,15 +159,12 @@ impl AnnotationJobGroup {
             if let Some(previous_group) = self.group.take() {
                 // Case: new group is different from the previous group -> publish update
                 if previous_group != annotation_group {
-                    println!("publish_annotations: update");
                     AnnotationEvent::UpdateAnnotationGroup(annotation_group.clone())
                         .publish_to_tauri();
                 } else {
-                    println!("publish_annotations: no update");
                     //  Case: new group is the same as the previous group -> no publish
                 }
             } else {
-                println!("publish_annotations: new");
                 // Case: no previous group -> publish add
                 AnnotationEvent::AddAnnotationGroup(annotation_group.clone()).publish_to_tauri();
             }

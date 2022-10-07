@@ -52,7 +52,10 @@ impl FeatureBase for DocsGenerator {
                     self.procedure_fetch_node_explanation(code_document, msg)?;
                 }
                 DocsGenComputeProcedure::CreateNewNodeAnnotation => {
-                    self.procedure_create_new_annotation(code_document)?;
+                    if self.procedure_create_new_annotation(code_document).is_err() {
+                        self.node_annotations
+                            .remove(&code_document.editor_window_props().window_uid);
+                    }
                 }
             }
         }
@@ -62,25 +65,9 @@ impl FeatureBase for DocsGenerator {
 
     fn update_visualization(
         &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
+        _code_document: &CodeDocument,
+        _trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated || !self.should_update_visualization(trigger) {
-            return Ok(());
-        }
-
-        let window_uid = code_document.editor_window_props().window_uid;
-
-        if let Some(text_content) = code_document.text_content() {
-            if let Some(annotation) = self.node_annotations.get_mut(&window_uid) {
-                // Visualize the existing annotation. If this fails, we remove the annotation from the map.
-                if let Err(error) = annotation.update_visualization(text_content) {
-                    self.node_annotations.remove(&window_uid);
-                    return Err(FeatureError::GenericError(error.into()));
-                }
-            }
-        }
-
         Ok(())
     }
 
@@ -110,26 +97,6 @@ impl DocsGenerator {
             node_annotations: HashMap::new(),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
             compute_results_updated: false,
-        }
-    }
-
-    fn should_update_visualization(&mut self, trigger: &CoreEngineTrigger) -> bool {
-        match trigger {
-            CoreEngineTrigger::OnTextContentChange => true,
-            CoreEngineTrigger::OnTextSelectionChange => {
-                if self.compute_results_updated {
-                    // Reset the flag.
-                    self.compute_results_updated = false;
-                    true
-                } else {
-                    false
-                }
-            }
-            CoreEngineTrigger::OnVisibleTextRangeChange => false,
-            CoreEngineTrigger::OnViewportMove => true,
-            CoreEngineTrigger::OnViewportDimensionsChange => true,
-
-            _ => false,
         }
     }
 
