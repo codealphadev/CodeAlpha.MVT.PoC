@@ -56,7 +56,7 @@ pub fn check_for_method_extraction(
         .complexities
         .clone();
 
-    const SCORE_THRESHOLD: f64 = 0.5;
+    const SCORE_THRESHOLD: f64 = 0.6;
 
     Ok(get_best_extraction(
         possible_extractions,
@@ -197,13 +197,14 @@ fn evaluate_suggestion_score(
 ) -> f64 {
     // Should be higher than 1, to incentivise equalizing complexity of the two functions
     let equality_preference_factor = 1.35;
+    let input_count_exponent = 1.7;
     original_complexity as f64
         - get_p_norm(
             remaining_complexity as f64,
             new_function_complexity as f64,
             equality_preference_factor,
         )
-        - input_count as f64 * 0.25
+        - f64::powf(input_count as f64, input_count_exponent) * 0.19
         - output_count as f64 * 0.25
 }
 
@@ -484,8 +485,10 @@ mod tests {
                 public func compute(input1: Int, input2: Int) -> Int {
                     if (input1 > 3 && input1 < 2) || (input2 > 4 && input2 > 6) && input1 > 0 {
                         let resolvedValue = input1 + input2 + 3;
-                        break label;
                         let b = resolvedValue + 2
+                    }
+                    guard let a = input1 else {             // Guard statement prevents extraction of whole block
+                        return 0;
                     }
                     if input1 > 2 {
                         return 3;
@@ -513,7 +516,7 @@ mod tests {
                 functions[0].props.node.to_sexp()
             );
             assert_eq!(result.0.path_from_function_root, vec![10, 1, 0, 1]); // Extracts (input1 > 3 && input1 < 2) || (input2 > 4 && input2 > 6)
-            assert_eq!(result.1, 3); // Remaining complexity in the function is from the two if statements and the break label
+            assert_eq!(result.1, 4); // Remaining complexity in the function
         }
     }
 }
