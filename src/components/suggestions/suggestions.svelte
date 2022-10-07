@@ -7,7 +7,6 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { afterUpdate } from 'svelte';
 	import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
-	import omit from 'lodash/omit';
 
 	let window_width: number | null = null;
 	let window_height: number | null = null;
@@ -48,23 +47,10 @@
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
 
 			switch (event_type) {
-				case 'UpdateSuggestion':
-					if (suggestions[payload.suggestion.id]) {
-						suggestions[payload.suggestion.id] = payload.suggestion;
-						suggestions = suggestions;
-					}
+				case 'ReplaceSuggestions':
+					suggestions = payload.suggestions;
 					break;
 
-				case 'RemoveSuggestion':
-					suggestions = omit(suggestions, payload.id);
-					break;
-
-				case 'AddAndRemoveSuggestions':
-					for (let [id, suggestion] of Object.entries(payload.additions)) {
-						suggestions[id] = suggestion;
-					}
-					suggestions = omit(suggestions, payload.removals);
-					break;
 				default:
 					break;
 			}

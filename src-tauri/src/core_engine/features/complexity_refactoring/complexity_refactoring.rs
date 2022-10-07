@@ -1,12 +1,7 @@
 use crate::{
     app_handle,
     core_engine::{
-        events::{
-            models::{
-                AddAndRemoveSuggestionsMessage, RemoveSuggestionMessage, UpdateSuggestionMessage,
-            },
-            SuggestionEvent,
-        },
+        events::{models::ReplaceSuggestionsMessage, SuggestionEvent},
         features::{
             complexity_refactoring::{
                 check_for_method_extraction, method_extraction::do_method_extraction,
@@ -117,9 +112,9 @@ impl FeatureBase for ComplexityRefactoring {
                 ComplexityRefactoringProcedure::PerformOperation(id) => self
                     .perform_operation(code_document, id)
                     .map_err(|e| e.into()),
-                ComplexityRefactoringProcedure::DismissSuggestion(id) => {
-                    self.dismiss_suggestion(id).map_err(|e| e.into())
-                }
+                ComplexityRefactoringProcedure::DismissSuggestion(id) => self
+                    .dismiss_suggestion(code_document, id)
+                    .map_err(|e| e.into()),
             }
         } else {
             Ok(())
@@ -214,14 +209,29 @@ impl ComplexityRefactoring {
         }
 
         if ids_to_remove.len() > 0 || suggestions_to_add.len() > 0 {
-            SuggestionEvent::AddAndRemoveSuggestions(AddAndRemoveSuggestionsMessage {
-                additions: suggestions_to_add,
-                removals: ids_to_remove,
-            })
-            .publish_to_tauri(&app_handle());
+            Self::publish_to_frontend(suggestions, window_uid);
         }
 
         Ok(())
+    }
+
+    fn publish_to_frontend(suggestions: HashMap<Uuid, RefactoringSuggestion>, window_uid: usize) {
+        let fe_suggestions = suggestions
+            .into_iter()
+            .map(|(id, suggestion)| {
+                (
+                    id,
+                    map_refactoring_suggestion_to_fe_refactoring_suggestion(
+                        suggestion, id, window_uid,
+                    ),
+                )
+            })
+            .collect::<HashMap<Uuid, FERefactoringSuggestion>>();
+
+        SuggestionEvent::ReplaceSuggestions(ReplaceSuggestionsMessage {
+            suggestions: fe_suggestions,
+        })
+        .publish_to_tauri(&app_handle());
     }
 
     fn generate_suggestions_for_function(
@@ -369,16 +379,7 @@ impl ComplexityRefactoring {
         if let Some(suggestion) = suggestion {
             suggestion.clone_from(updated_suggestion);
 
-            let fe_suggestion = map_refactoring_suggestion_to_fe_refactoring_suggestion(
-                suggestion.to_owned(),
-                id,
-                window_uid,
-            );
-
-            SuggestionEvent::UpdateSuggestion(UpdateSuggestionMessage {
-                suggestion: fe_suggestion,
-            })
-            .publish_to_tauri(&app_handle());
+            Self::publish_to_frontend(suggestions.clone(), window_uid);
         }
     }
 
@@ -460,6 +461,7 @@ impl ComplexityRefactoring {
             let selected_text_range = code_document.selected_text_range().clone();
             let text_content = text_content.clone();
             let suggestions_arc = self.suggestions.clone();
+            let editor_window_uid = code_document.editor_window_props().window_uid;
 
             async move {
                 match replace_text_content(
@@ -475,33 +477,39 @@ impl ComplexityRefactoring {
                         return;
                     }
                 }
-                suggestions_arc.lock().remove(&suggestion_id);
+                let mut suggestions = suggestions_arc.lock();
+                suggestions.remove(&suggestion_id);
 
-                SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id: suggestion_id })
-                    .publish_to_tauri(&app_handle());
+                Self::publish_to_frontend(suggestions.clone(), editor_window_uid);
             }
         });
 
         Ok(())
     }
+
     fn dismiss_suggestion(
         &mut self,
+        code_document: &CodeDocument,
         suggestion_id: uuid::Uuid,
     ) -> Result<(), ComplexityRefactoringError> {
-        let hash = calculate_hash::<SerializedNodeSlice>(
-            &self
-                .suggestions
-                .lock()
-                .clone()
-                .get(&suggestion_id)
-                .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
-                .serialized_slice,
-        );
+        let suggestions;
+        let hash;
+        {
+            let mut suggestions_guard = self.suggestions.lock();
 
+            hash = calculate_hash::<SerializedNodeSlice>(
+                &suggestions_guard
+                    .get(&suggestion_id)
+                    .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
+                    .serialized_slice,
+            );
+
+            suggestions_guard.remove(&suggestion_id);
+            suggestions = suggestions_guard.clone();
+        }
         self.dismissed_suggestions.lock().insert(hash);
-        // Remove from frontend
-        SuggestionEvent::RemoveSuggestion(RemoveSuggestionMessage { id: suggestion_id })
-            .publish_to_tauri(&app_handle());
+
+        Self::publish_to_frontend(suggestions, code_document.editor_window_props().window_uid);
 
         Ok(())
     }

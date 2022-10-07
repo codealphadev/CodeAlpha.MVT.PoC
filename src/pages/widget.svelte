@@ -12,7 +12,6 @@
 	import SwiftFormat from '../components/widget/swift-format.svelte';
 	import DocsGeneration from '../components/widget/docs-generation.svelte';
 	import type { FERefactoringSuggestion } from '../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
-	import omit from 'lodash/omit';
 	import type { SuggestionEvent } from '../../src-tauri/bindings/features/refactoring/SuggestionEvent';
 	import SuggestionsNumber from '../components/widget/suggestions-number.svelte';
 	import type { EventUserInteraction } from '../../src-tauri/bindings/user_interaction/EventUserInteraction';
@@ -67,25 +66,12 @@
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
 		await listen(suggestion_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
-			console.log(event_type, payload);
+
 			switch (event_type) {
-				case 'UpdateSuggestion':
-					if (suggestions[payload.suggestion.id]) {
-						suggestions[payload.suggestion.id] = payload.suggestion;
-						suggestions = suggestions;
-					}
+				case 'ReplaceSuggestions':
+					suggestions = payload.suggestions;
 					break;
 
-				case 'RemoveSuggestion':
-					suggestions = omit(suggestions, payload.id);
-					break;
-
-				case 'AddAndRemoveSuggestions':
-					for (let [id, suggestion] of Object.entries(payload.additions)) {
-						suggestions[id] = suggestion;
-					}
-					suggestions = omit(suggestions, payload.removals);
-					break;
 				default:
 					break;
 			}
