@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{core_engine::TextRange, utils::geometry::LogicalPosition};
+use crate::{
+    core_engine::{EditorWindowUid, TextRange},
+    utils::geometry::LogicalPosition,
+};
 
 use super::{
     annotations_manager::{Annotation, AnnotationError, AnnotationResult},
@@ -96,6 +99,7 @@ pub trait AnnotationJobTrait {
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
+        editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError>;
 
     // Attempts to compute the bounds for the given text range only if no result is present yet, indicating that a previous
@@ -104,6 +108,7 @@ pub trait AnnotationJobTrait {
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
+        editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError>;
 
     fn get_annotation(&self) -> Option<Annotation>;
@@ -128,9 +133,12 @@ impl AnnotationJobTrait for AnnotationJob {
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
+        editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
         match self {
-            Self::SingleChar(job) => job.compute_bounds(visible_text_range, code_doc_origin),
+            Self::SingleChar(job) => {
+                job.compute_bounds(visible_text_range, code_doc_origin, editor_window_uid)
+            }
         }
     }
 
@@ -138,10 +146,11 @@ impl AnnotationJobTrait for AnnotationJob {
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
+        editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
         match self {
             Self::SingleChar(job) => {
-                job.attempt_compute_bounds(visible_text_range, code_doc_origin)
+                job.attempt_compute_bounds(visible_text_range, code_doc_origin, editor_window_uid)
             }
         }
     }

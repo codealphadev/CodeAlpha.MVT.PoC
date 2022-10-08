@@ -8,7 +8,7 @@ use crate::{
     utils::geometry::LogicalPosition,
 };
 
-use super::{Annotation, AnnotationGroup, AnnotationJob, AnnotationJobTrait, AnnotationResult};
+use super::{AnnotationGroup, AnnotationJob, AnnotationJobTrait, AnnotationResult};
 
 pub trait AnnotationJobGroupTrait {
     fn new(
@@ -32,8 +32,6 @@ pub trait AnnotationJobGroupTrait {
     );
 
     fn get_annotation_group(&self) -> Option<AnnotationGroup>;
-    fn get_annotation_job(&self, job_id: uuid::Uuid) -> Option<AnnotationJob>;
-    fn get_annotation(&self, annotation_id: uuid::Uuid) -> Option<Annotation>;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -90,7 +88,9 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
         code_doc_origin: &LogicalPosition,
     ) {
         for job in self.jobs.values_mut() {
-            if let Ok(result) = job.compute_bounds(visible_text_range, code_doc_origin) {
+            if let Ok(result) =
+                job.compute_bounds(visible_text_range, code_doc_origin, self.editor_window_uid)
+            {
                 self.results.insert(result.id, result);
             } else {
                 debug!(
@@ -109,7 +109,11 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
         code_doc_origin: &LogicalPosition,
     ) {
         for job in self.jobs.values_mut() {
-            if let Ok(result) = job.attempt_compute_bounds(visible_text_range, code_doc_origin) {
+            if let Ok(result) = job.attempt_compute_bounds(
+                visible_text_range,
+                code_doc_origin,
+                self.editor_window_uid,
+            ) {
                 self.results.insert(result.id, result);
             } else {
                 debug!(
@@ -138,18 +142,6 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
             annotations,
             editor_window_uid: self.editor_window_uid,
         })
-    }
-
-    fn get_annotation_job(&self, job_id: uuid::Uuid) -> Option<AnnotationJob> {
-        self.jobs.get(&job_id).cloned()
-    }
-
-    fn get_annotation(&self, annotation_id: uuid::Uuid) -> Option<Annotation> {
-        if let Some(annotation_job) = self.jobs.values().find(|job| job.id() == annotation_id) {
-            annotation_job.get_annotation()
-        } else {
-            None
-        }
     }
 }
 
