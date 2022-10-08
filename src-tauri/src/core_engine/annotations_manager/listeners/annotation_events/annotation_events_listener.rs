@@ -21,7 +21,7 @@ pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<Annotation
                 AnnotationManagerEvent::Add((group_id, feature, jobs, window_uid)) => {
                     annotations_manager
                         .lock()
-                        .add_annotation_jobs(group_id, feature, jobs, window_uid);
+                        .add_annotation_jobs_group(group_id, feature, jobs, window_uid);
                 }
                 AnnotationManagerEvent::Update((group_id, jobs)) => {
                     annotations_manager

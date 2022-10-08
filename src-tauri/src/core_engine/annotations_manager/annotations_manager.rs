@@ -55,7 +55,7 @@ pub struct AnnotationResult {
 
 pub trait AnnotationsManagerTrait {
     fn new() -> Self;
-    fn add_annotation_jobs(
+    fn add_annotation_jobs_group(
         &mut self,
         group_id: uuid::Uuid,
         feature: FeatureKind,
@@ -84,7 +84,7 @@ impl AnnotationsManagerTrait for AnnotationsManager {
         }
     }
 
-    fn add_annotation_jobs(
+    fn add_annotation_jobs_group(
         &mut self,
         group_id: uuid::Uuid,
         feature: FeatureKind,

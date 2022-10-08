@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core_engine::TextRange,
+    core_engine::{EditorWindowUid, TextRange},
     platform::macos::{get_bounds_for_TextRange, GetVia},
     utils::geometry::LogicalPosition,
 };
@@ -44,9 +44,10 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
+        editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
         let viewport_positioning =
-            Self::compare_with_visible_text_range(self.char_index, visible_text_range);
+            Self::get_position_relative_to_viewport(self.char_index, visible_text_range);
 
         let mut result = AnnotationResult {
             id: self.id,
@@ -65,7 +66,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
                 index: self.char_index,
                 length: 1,
             },
-            &GetVia::Current,
+            &GetVia::Hash(editor_window_uid),
         )
         .map_err(|e| AnnotationError::GenericError(e.into()))?;
 
@@ -79,9 +80,10 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
+        editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
         let viewport_positioning =
-            Self::compare_with_visible_text_range(self.char_index, visible_text_range);
+            Self::get_position_relative_to_viewport(self.char_index, visible_text_range);
 
         if let Some(previous_result) = self.result.as_ref() {
             if let Some(bounds) = previous_result.bounds.as_ref() {
@@ -98,7 +100,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
             }
         }
 
-        self.compute_bounds(visible_text_range, code_doc_origin)
+        self.compute_bounds(visible_text_range, code_doc_origin, editor_window_uid)
     }
 
     fn get_annotation(&self) -> Option<Annotation> {
@@ -111,7 +113,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
 }
 
 impl AnnotationJobSingleChar {
-    fn compare_with_visible_text_range(
+    fn get_position_relative_to_viewport(
         char_index: usize,
         visible_text_range: &TextRange,
     ) -> ViewportPositioning {
