@@ -4,8 +4,10 @@ use crate::{
         get_bounds_for_TextRange, get_viewport_frame, send_event_mouse_wheel,
         set_selected_text_range, set_textarea_content, GetVia, XcodeError,
     },
-    utils::geometry::LogicalSize,
+    utils::geometry::{LogicalPosition, LogicalSize},
 };
+
+use super::get_minimal_viewport_properties;
 
 pub async fn replace_text_content(
     text_content: &XcodeText,
@@ -15,7 +17,9 @@ pub async fn replace_text_content(
     // Store the position of the selected text to scroll to after formatting
     let scroll_delta = match selected_text_range {
         None => None,
-        Some(selected_text_range) => scroll_dist_after_formatting(&selected_text_range).ok(),
+        Some(selected_text_range) => {
+            scroll_dist_viewport_to_TextRange_start(&selected_text_range).ok()
+        }
     };
 
     // Update textarea content
@@ -61,7 +65,7 @@ fn get_adjusted_cursor_index(
     new_index
 }
 
-fn scroll_dist_after_formatting(
+pub fn scroll_dist_viewport_to_TextRange_start(
     selected_text_range: &TextRange,
 ) -> Result<LogicalSize, XcodeError> {
     if let Ok(textarea_frame) = get_viewport_frame(&GetVia::Current) {
@@ -82,4 +86,19 @@ fn scroll_dist_after_formatting(
     Err(XcodeError::GenericError(anyhow::Error::msg(
         "Could not get first char as TextRange",
     )))
+}
+
+pub fn scroll_dist_viewport_to_local_position(
+    local_position: &LogicalPosition,
+) -> Result<LogicalSize, XcodeError> {
+    let (viewport_props, code_doc_props) = get_minimal_viewport_properties(&GetVia::Current)?;
+
+    let global_position = local_position.to_global(&code_doc_props.dimensions.origin);
+
+    let offset_viewport_origin_local_position = LogicalSize {
+        width: viewport_props.dimensions.origin.x - global_position.x,
+        height: viewport_props.dimensions.origin.y - global_position.y,
+    };
+
+    Ok(offset_viewport_origin_local_position)
 }
