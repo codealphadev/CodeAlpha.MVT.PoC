@@ -8,7 +8,7 @@ use crate::{
     core_engine::{
         annotations_manager::{
             AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
-            AnnotationKind,
+            AnnotationKind, AnnotationsManager,
         },
         events::{
             models::{NodeExplanationFetchedMessage, UpdateNodeExplanationMessage},
@@ -19,7 +19,8 @@ use crate::{
         utils::XcodeText,
         EditorWindowUid, TextPosition, TextRange,
     },
-    platform::macos::{get_bounds_for_TextRange, GetVia},
+    platform::macos::{get_code_document_frame_properties, GetVia},
+    utils::geometry::{LogicalFrame, LogicalPosition},
     NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
 
@@ -150,7 +151,6 @@ impl NodeAnnotation {
             let state = self.state.clone();
             let explanation = self.explanation.clone();
             let window_uid = self.window_uid;
-            // let global_frame = self.global_frame;
             let name = self.node_code_block.name.clone();
 
             let codeblock = self.node_code_block.clone();
@@ -170,22 +170,32 @@ impl NodeAnnotation {
                     NodeExplanationEvent::UpdateNodeExplanation(node_explanation_msg.clone())
                         .publish_to_tauri(&app_handle());
 
-                    let annotation_frame = if let Ok(ax_bounds_global) = get_bounds_for_TextRange(
-                        &TextRange {
-                            index: *NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock(),
-                            length: 1,
-                        },
-                        &GetVia::Current,
+                    let mut annotation_frame_opt =
+                        AnnotationsManager::get_annotation_rect_for_TextRange(
+                            &TextRange {
+                                index: *NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock(),
+                                length: 1,
+                            },
+                            None,
+                        );
+
+                    if let (Some(annotation_frame), Ok(code_doc_props)) = (
+                        annotation_frame_opt,
+                        get_code_document_frame_properties(&GetVia::Current),
                     ) {
-                        Some(ax_bounds_global)
-                    } else {
-                        None
-                    };
+                        annotation_frame_opt = Some(LogicalFrame {
+                            origin: LogicalPosition {
+                                x: code_doc_props.dimensions.origin.x,
+                                y: annotation_frame.origin.y,
+                            },
+                            size: annotation_frame.size,
+                        })
+                    }
 
                     EventRuleExecutionState::NodeExplanationFetched(
                         NodeExplanationFetchedMessage {
                             editor_window_uid: window_uid,
-                            annotation_frame,
+                            annotation_frame: annotation_frame_opt,
                         },
                     )
                     .publish_to_tauri(&app_handle());

@@ -109,7 +109,7 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
         code_doc_origin: &LogicalPosition,
     ) {
         for job in self.jobs.values_mut() {
-            if let Ok(result) = job.attempt_compute_bounds(
+            if let Ok(result) = job.compute_bounds_if_missing(
                 visible_text_range,
                 code_doc_origin,
                 self.editor_window_uid,

@@ -23,8 +23,6 @@ mod platform;
 mod utils;
 mod window_controls;
 
-// listen_for_updates is used in release builds
-#[allow(unused_imports)]
 use crate::{
     utils::tracing::TracingSubscriber,
     window_controls::{cmd_rebind_main_widget, cmd_resize_window},

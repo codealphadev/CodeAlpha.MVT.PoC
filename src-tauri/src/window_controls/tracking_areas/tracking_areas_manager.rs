@@ -36,8 +36,8 @@ struct TrackingEvent {
     tracking_area: TrackingArea,
     event_type: TrackingEventType,
     mouse_position_local: LogicalPosition,
-    button: MouseButton,
-    click_type: ClickType,
+    button: Option<MouseButton>,
+    click_type: Option<ClickType>,
     duration_in_area_ms: Option<u64>,
 }
 
@@ -117,8 +117,8 @@ impl TrackingAreasManager {
                                 y: mouse_y,
                             }
                             .to_local(&tracking_area.0.global_origin()),
-                            button: MouseButton::None,
-                            click_type: ClickType::None,
+                            button: None,
+                            click_type: None,
                         });
                         tracking_area.1 = None;
                         continue;
@@ -132,8 +132,8 @@ impl TrackingAreasManager {
                                 y: mouse_y,
                             }
                             .to_local(&tracking_area.0.global_origin()),
-                            button: MouseButton::None,
-                            click_type: ClickType::None,
+                            button: None,
+                            click_type: None,
                         });
                     }
                 } else {
@@ -152,8 +152,8 @@ impl TrackingAreasManager {
                                 y: mouse_y,
                             }
                             .to_local(&tracking_area.0.global_origin()),
-                            button: MouseButton::None,
-                            click_type: ClickType::None,
+                            button: None,
+                            click_type: None,
                         });
                     }
                 }
@@ -172,8 +172,8 @@ impl TrackingAreasManager {
                             y: mouse_y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
-                        button: MouseButton::None,
-                        click_type: ClickType::None,
+                        button: None,
+                        click_type: None,
                     });
                 }
             }
@@ -219,8 +219,8 @@ impl TrackingAreasManager {
                             y: click_msg.cursor_position.y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
-                        button: click_msg.button.clone(),
-                        click_type: click_msg.click_type.clone(),
+                        button: Some(click_msg.button.clone()),
+                        click_type: Some(click_msg.click_type.clone()),
                     });
                 } else {
                     tracking_results.push(TrackingEvent {
@@ -232,8 +232,8 @@ impl TrackingAreasManager {
                             y: click_msg.cursor_position.y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
-                        button: click_msg.button.clone(),
-                        click_type: click_msg.click_type.clone(),
+                        button: Some(click_msg.button.clone()),
+                        click_type: Some(click_msg.click_type.clone()),
                     });
                 }
             } else {
@@ -251,8 +251,8 @@ impl TrackingAreasManager {
                             y: click_msg.cursor_position.y,
                         }
                         .to_local(&tracking_area.0.global_origin()),
-                        button: click_msg.button.clone(),
-                        click_type: click_msg.click_type.clone(),
+                        button: Some(click_msg.button.clone()),
+                        click_type: Some(click_msg.click_type.clone()),
                     });
                 }
             }
@@ -311,8 +311,12 @@ impl TrackingAreasManager {
                             duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
                             app_window: tracking_area.app_window,
                             mouse_position: *mouse_position,
-                            button: button.clone(),
-                            click_type: click_type.clone(),
+                            button: button.clone().expect(
+                                "TrackingEvent wrongly populated, button is None but cannot be.",
+                            ),
+                            click_type: click_type.clone().expect(
+                                "TrackingEvent wrongly populated, button is None but cannot be.",
+                            ),
                         })
                         .publish_tracking_area(&tracking_area.subscriber);
                     }
@@ -323,8 +327,8 @@ impl TrackingAreasManager {
                                 window_uid: tracking_area.window_uid,
                                 app_window: tracking_area.app_window,
                                 mouse_position: *mouse_position,
-                                button: button.clone(),
-                                click_type: click_type.clone(),
+                                button: button.clone().expect("TrackingEvent wrongly populated, button is None but cannot be."),
+                                click_type: click_type.clone().expect("TrackingEvent wrongly populated, button is None but cannot be."),
                             },
                         )
                         .publish_tracking_area(&tracking_area.subscriber);
