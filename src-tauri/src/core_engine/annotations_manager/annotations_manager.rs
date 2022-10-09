@@ -8,8 +8,7 @@ use crate::{
     core_engine::{features::FeatureKind, EditorWindowUid, TextRange},
     platform::macos::{
         get_bounds_for_TextRange, get_code_document_frame_properties, get_visible_text_range,
-        scroll_dist_viewport_to_local_position, scroll_with_set_speed, send_event_mouse_wheel,
-        GetVia,
+        scroll_dist_viewport_to_local_position, scroll_with_deceleration, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
@@ -201,7 +200,7 @@ impl AnnotationsManagerTrait for AnnotationsManager {
                 let scroll_distance = scroll_dist_viewport_to_local_position(&annotation_top_left)
                     .map_err(|e| AnnotationError::GenericError(e.into()))?;
 
-                scroll_with_set_speed(scroll_distance, 30, std::time::Duration::from_millis(10));
+                scroll_with_deceleration(scroll_distance, std::time::Duration::from_millis(300));
             }
             ViewportPositioning::InvisibleAbove => {}
             ViewportPositioning::InvisibleBelow => {}
