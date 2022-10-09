@@ -93,10 +93,7 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
             {
                 self.results.insert(result.id, result);
             } else {
-                debug!(
-                    "Failed to `compute_bounds` for job: {:?} for feature: {:?}",
-                    job, self.feature
-                );
+                debug!(?job, feature = ?self.feature, "Failed to `compute_bounds`");
             }
         }
 
@@ -116,10 +113,7 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
             ) {
                 self.results.insert(result.id, result);
             } else {
-                debug!(
-                    "Failed `attempt_compute_bounds` for job: {:?} for feature: {:?}",
-                    job, self.feature
-                );
+                debug!(?job, feature = ?self.feature, "Failed to `compute_bounds_if_missing`");
             }
         }
 
