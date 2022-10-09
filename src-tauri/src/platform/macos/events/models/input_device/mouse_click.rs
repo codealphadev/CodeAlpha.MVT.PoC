@@ -9,7 +9,6 @@ pub enum MouseButton {
     Left,
     Right,
     Other,
-    None,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
@@ -18,7 +17,6 @@ pub enum ClickType {
     Down,
     Up,
     Drag,
-    None,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]

@@ -104,7 +104,7 @@ pub trait AnnotationJobTrait {
 
     // Attempts to compute the bounds for the given text range only if no result is present yet, indicating that a previous
     // `compute_bounds` or subsequent `attempt_compute_bounds` didn't yield a result.
-    fn attempt_compute_bounds(
+    fn compute_bounds_if_missing(
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
@@ -142,16 +142,18 @@ impl AnnotationJobTrait for AnnotationJob {
         }
     }
 
-    fn attempt_compute_bounds(
+    fn compute_bounds_if_missing(
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
         match self {
-            Self::SingleChar(job) => {
-                job.attempt_compute_bounds(visible_text_range, code_doc_origin, editor_window_uid)
-            }
+            Self::SingleChar(job) => job.compute_bounds_if_missing(
+                visible_text_range,
+                code_doc_origin,
+                editor_window_uid,
+            ),
         }
     }
 

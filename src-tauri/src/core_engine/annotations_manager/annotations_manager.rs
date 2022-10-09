@@ -4,8 +4,11 @@ use std::{collections::HashMap, sync::Arc};
 use ts_rs::TS;
 
 use crate::{
-    core_engine::{features::FeatureKind, EditorWindowUid},
-    platform::macos::{get_code_document_frame_properties, get_visible_text_range, GetVia},
+    core_engine::{features::FeatureKind, EditorWindowUid, TextRange},
+    platform::macos::{
+        get_bounds_for_TextRange, get_code_document_frame_properties, get_visible_text_range,
+        GetVia,
+    },
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
 
@@ -170,5 +173,21 @@ impl AnnotationsManager {
     pub fn start_event_listeners(annotations_manager: &Arc<Mutex<Self>>) {
         annotation_events_listener(annotations_manager);
         xcode_listener(annotations_manager);
+    }
+
+    pub fn get_annotation_rect_for_TextRange(
+        text_range: &TextRange,
+        editor_window_uid: Option<EditorWindowUid>,
+    ) -> Option<LogicalFrame> {
+        let get_via = match editor_window_uid {
+            Some(editor_window_uid) => GetVia::Hash(editor_window_uid),
+            None => GetVia::Current,
+        };
+
+        if let Ok(annotation_rect) = get_bounds_for_TextRange(&text_range, &get_via) {
+            Some(annotation_rect)
+        } else {
+            None
+        }
     }
 }

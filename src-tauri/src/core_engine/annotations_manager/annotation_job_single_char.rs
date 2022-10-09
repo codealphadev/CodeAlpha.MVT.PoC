@@ -76,7 +76,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         Ok(result)
     }
 
-    fn attempt_compute_bounds(
+    fn compute_bounds_if_missing(
         &mut self,
         visible_text_range: &TextRange,
         code_doc_origin: &LogicalPosition,
