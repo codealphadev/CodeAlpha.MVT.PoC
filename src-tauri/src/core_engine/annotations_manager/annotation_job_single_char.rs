@@ -26,9 +26,12 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         range: &TextRange,
         kind: AnnotationKind,
         instructions: AnnotationJobInstructions,
+        custom_id: Option<uuid::Uuid>,
     ) -> Self {
+        let id = custom_id.unwrap_or_else(|| uuid::Uuid::new_v4());
+
         Self {
-            id: uuid::Uuid::new_v4(),
+            id,
             char_index: range.index,
             kind,
             instructions,
@@ -209,6 +212,7 @@ mod tests {
             },
             AnnotationKind::CodeblockFirstChar,
             AnnotationJobInstructions::default(),
+            None,
         );
 
         let annotation_job2 = AnnotationJobSingleChar::new(
@@ -218,6 +222,7 @@ mod tests {
             },
             AnnotationKind::CodeblockFirstChar,
             instructions_prop_as_top_left_point,
+            None,
         );
 
         let result = AnnotationResult {

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use parking_lot::Mutex;
 use tracing::debug;
@@ -8,7 +8,7 @@ use crate::{
     core_engine::{
         annotations_manager::{
             AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
-            AnnotationKind, AnnotationsManager,
+            AnnotationKind, AnnotationsManager, AnnotationsManagerTrait,
         },
         events::{
             models::{NodeExplanationFetchedMessage, UpdateNodeExplanationMessage},
@@ -50,7 +50,8 @@ pub struct AnnotationCodeBlock {
 
 #[derive(Debug, Clone)]
 pub struct NodeAnnotation {
-    group_id: uuid::Uuid,
+    annotation_group_id: uuid::Uuid,
+    annotation_jobs: HashMap<AnnotationKind, uuid::Uuid>,
     window_uid: EditorWindowUid,
     node_code_block: AnnotationCodeBlock,
     state: Arc<Mutex<NodeAnnotationState>>,
@@ -72,11 +73,12 @@ impl NodeAnnotation {
         let group_id = uuid::Uuid::new_v4();
 
         // Register annotation jobs
+        let mut annotation_jobs = HashMap::new();
         if let (Some(first_char_text_pos), Some(last_char_text_pos)) = (
             node_code_block.first_char_pos.as_TextIndex(&text_content),
             node_code_block.last_char_pos.as_TextIndex(&text_content),
         ) {
-            // test annotation manager
+            let first_char_job_id = uuid::Uuid::new_v4();
             let first_char = AnnotationJobSingleChar::new(
                 &TextRange {
                     index: first_char_text_pos,
@@ -84,8 +86,10 @@ impl NodeAnnotation {
                 },
                 AnnotationKind::CodeblockFirstChar,
                 AnnotationJobInstructions::default(),
+                Some(first_char_job_id),
             );
 
+            let last_char_job_id = uuid::Uuid::new_v4();
             let last_char = AnnotationJobSingleChar::new(
                 &TextRange {
                     index: last_char_text_pos,
@@ -93,7 +97,11 @@ impl NodeAnnotation {
                 },
                 AnnotationKind::CodeblockLastChar,
                 AnnotationJobInstructions::default(),
+                Some(last_char_job_id),
             );
+
+            annotation_jobs.insert(AnnotationKind::CodeblockFirstChar, first_char_job_id);
+            annotation_jobs.insert(AnnotationKind::CodeblockLastChar, last_char_job_id);
 
             AnnotationManagerEvent::Add((
                 group_id,
@@ -108,11 +116,12 @@ impl NodeAnnotation {
         }
 
         Ok(Self {
-            group_id,
+            annotation_group_id: group_id,
             window_uid,
             node_code_block,
             state: Arc::new(Mutex::new(NodeAnnotationState::New)),
             explanation: Arc::new(Mutex::new(None)),
+            annotation_jobs,
         })
     }
 
@@ -121,7 +130,7 @@ impl NodeAnnotation {
     }
 
     pub fn id(&self) -> uuid::Uuid {
-        self.group_id
+        self.annotation_group_id
     }
 
     pub fn codeblock(&self) -> &AnnotationCodeBlock {
@@ -155,6 +164,9 @@ impl NodeAnnotation {
 
             let codeblock = self.node_code_block.clone();
             let complexity = codeblock.func_complexity_todo;
+
+            let group_id = self.annotation_group_id;
+            let first_char_job_id = self.annotation_jobs[&AnnotationKind::CodeblockFirstChar];
             async move {
                 let response = fetch_node_explanation(codeblock).await;
 
@@ -206,6 +218,13 @@ impl NodeAnnotation {
                     debug!("NodeExplanationFailed");
                     (*explanation.lock()) = None;
                 }
+
+                AnnotationManagerEvent::ScrollToAnnotationInGroup((
+                    group_id,
+                    Some(first_char_job_id),
+                ))
+                .publish_to_tauri();
+
                 (*state.lock()) = NodeAnnotationState::Finished;
             }
         });
@@ -216,6 +235,6 @@ impl NodeAnnotation {
 
 impl Drop for NodeAnnotation {
     fn drop(&mut self) {
-        AnnotationManagerEvent::Remove(self.group_id).publish_to_tauri();
+        AnnotationManagerEvent::Remove(self.annotation_group_id).publish_to_tauri();
     }
 }

@@ -11,7 +11,7 @@ use super::{
     AnnotationJobSingleChar,
 };
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, TS)]
 #[ts(export, export_to = "bindings/features/code_annotations/")]
 pub enum AnnotationKind {
     OpeningBracket,
@@ -90,6 +90,7 @@ pub trait AnnotationJobTrait {
         range: &TextRange,
         kind: AnnotationKind,
         instructions: AnnotationJobInstructions,
+        custom_id: Option<uuid::Uuid>,
     ) -> Self;
 
     fn id(&self) -> uuid::Uuid;
@@ -119,8 +120,14 @@ impl AnnotationJobTrait for AnnotationJob {
         range: &TextRange,
         kind: AnnotationKind,
         instructions: AnnotationJobInstructions,
+        custom_id: Option<uuid::Uuid>,
     ) -> Self {
-        Self::SingleChar(AnnotationJobSingleChar::new(range, kind, instructions))
+        Self::SingleChar(AnnotationJobSingleChar::new(
+            range,
+            kind,
+            instructions,
+            custom_id,
+        ))
     }
 
     fn id(&self) -> uuid::Uuid {

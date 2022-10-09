@@ -35,12 +35,23 @@ impl AnnotationEvent {
     }
 }
 
+type AnnotationGroupID = uuid::Uuid;
+type AnnotationJobID = uuid::Uuid;
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "event", content = "payload")]
 pub enum AnnotationManagerEvent {
-    Add((uuid::Uuid, FeatureKind, Vec<AnnotationJob>, EditorWindowUid)), // Creates a new annotation group for the given jobs; we don't let the caller submit a "JobsGroup" because of the JobsGroup's Drop implementation
-    Update((uuid::Uuid, Vec<AnnotationJob>)), // Updates existing AnnotationJobGroup with a new set of jobs.
-    Remove(uuid::Uuid), // Removes the AnnotationJobGroup with the given IDs from the list.
+    Add(
+        (
+            AnnotationGroupID,
+            FeatureKind,
+            Vec<AnnotationJob>,
+            EditorWindowUid,
+        ),
+    ), // Creates a new annotation group for the given jobs; we don't let the caller submit a "JobsGroup" because of the JobsGroup's Drop implementation
+    Update((AnnotationGroupID, Vec<AnnotationJob>)), // Updates existing AnnotationJobGroup with a new set of jobs.
+    Remove(AnnotationGroupID), // Removes the AnnotationJobGroup with the given IDs from the list.
+    ScrollToAnnotationInGroup((AnnotationGroupID, Option<AnnotationJobID>)),
 }
 
 impl AnnotationManagerEvent {
