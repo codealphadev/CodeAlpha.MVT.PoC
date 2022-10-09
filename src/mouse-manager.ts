@@ -25,7 +25,10 @@ export class MouseManager {
 					this.mouse_over(tracking_event.payload);
 					break;
 				case 'TrackingAreaClicked':
-					this.clicked(tracking_event.payload);
+					let msg = tracking_event.payload as TrackingAreaClickedMessage;
+					if (msg.app_window === 'CodeOverlay') {
+						this.clicked(tracking_event.payload);
+					}
 					break;
 				case 'TrackingAreaClickedOutside':
 					console.log('TrackingAreaClickedOutside', tracking_event);
