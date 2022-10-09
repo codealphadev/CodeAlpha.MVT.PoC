@@ -148,45 +148,6 @@ pub fn send_event_mouse_wheel(delta: LogicalSize) -> Result<bool, XcodeError> {
     Ok(false)
 }
 
-pub fn scroll_with_set_speed(
-    delta: LogicalSize,
-    interval_px: usize,
-    delay: std::time::Duration,
-) -> Result<(), XcodeError> {
-    if is_focused_uielement_xcode_editor_textarea()? {
-        let height_signum = f64::signum(delta.height);
-        let width_signum = f64::signum(delta.width);
-
-        let mut i = f64::ceil(delta.height.abs() / interval_px as f64) as i32;
-
-        if height_signum < 0. {
-            i = f64::floor(delta.height.abs() / interval_px as f64) as i32;
-        }
-
-        tauri::async_runtime::spawn(async move {
-            for _ in 0..i {
-                tauri::async_runtime::spawn(async move {
-                    let event_type = EventType::Wheel {
-                        delta_x: (width_signum * interval_px as f64) as i64,
-                        delta_y: (height_signum * interval_px as f64) as i64,
-                    };
-
-                    match simulate(&event_type) {
-                        Ok(()) => {}
-                        Err(_) => {
-                            println!("We could not send {:?}", event_type);
-                        }
-                    }
-                });
-
-                tokio::time::sleep(delay).await;
-            }
-        });
-    }
-
-    Ok(())
-}
-
 pub fn pressed_mouse_buttons() -> Option<MouseClickMessage> {
     let ns_event = Class::get("NSEvent").unwrap();
 
