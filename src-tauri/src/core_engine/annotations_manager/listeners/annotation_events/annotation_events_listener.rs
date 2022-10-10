@@ -32,7 +32,7 @@ pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<Annotation
                     annotations_manager.lock().remove_annotation_job_group(id);
                 }
                 AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, job_id)) => {
-                    annotations_manager
+                    _ = annotations_manager
                         .lock()
                         .scroll_to_annotation(group_id, job_id);
                 }

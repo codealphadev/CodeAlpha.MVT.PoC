@@ -8,7 +8,7 @@ use crate::{
     core_engine::{
         annotations_manager::{
             AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
-            AnnotationKind, AnnotationsManager, AnnotationsManagerTrait,
+            AnnotationKind, AnnotationsManager,
         },
         events::{
             models::{NodeExplanationFetchedMessage, UpdateNodeExplanationMessage},

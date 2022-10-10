@@ -6,6 +6,7 @@ import type { ViewportPositioning } from "./ViewportPositioning";
 export interface Annotation {
   id: string;
   kind: AnnotationKind;
+  char_index: number;
   position_relative_to_viewport: ViewportPositioning;
   shapes: Array<AnnotationShape>;
 }

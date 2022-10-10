@@ -7,7 +7,9 @@ use crate::{
 };
 
 use super::{
-    annotations_manager::{Annotation, AnnotationError, AnnotationResult, AnnotationShape},
+    annotations_manager::{
+        Annotation, AnnotationError, AnnotationResult, AnnotationShape, AnnotationsManager,
+    },
     AnnotationJobInstructions, AnnotationJobTrait, AnnotationKind,
     InstructionBoundsPropertyOfInterest, ViewportPositioning,
 };
@@ -49,8 +51,10 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
-        let viewport_positioning =
-            Self::get_position_relative_to_viewport(self.char_index, visible_text_range);
+        let viewport_positioning = AnnotationsManager::get_position_relative_to_viewport(
+            self.char_index,
+            visible_text_range,
+        );
 
         let mut result = AnnotationResult {
             id: self.id,
@@ -85,8 +89,10 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
-        let viewport_positioning =
-            Self::get_position_relative_to_viewport(self.char_index, visible_text_range);
+        let viewport_positioning = AnnotationsManager::get_position_relative_to_viewport(
+            self.char_index,
+            visible_text_range,
+        );
 
         if let Some(previous_result) = self.result.as_ref() {
             if let Some(bounds) = previous_result.bounds.as_ref() {
@@ -116,23 +122,11 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
 }
 
 impl AnnotationJobSingleChar {
-    fn get_position_relative_to_viewport(
-        char_index: usize,
-        visible_text_range: &TextRange,
-    ) -> ViewportPositioning {
-        if char_index < visible_text_range.index {
-            ViewportPositioning::InvisibleAbove
-        } else if char_index > visible_text_range.index + visible_text_range.length {
-            ViewportPositioning::InvisibleBelow
-        } else {
-            ViewportPositioning::Visible
-        }
-    }
-
     fn get_annotation_(annotation_job: &Self, result: &AnnotationResult) -> Annotation {
         let mut annotation = Annotation {
             id: result.id,
             kind: annotation_job.kind.clone(),
+            char_index: annotation_job.char_index,
             position_relative_to_viewport: result.position_relative_to_viewport.clone(),
             shapes: vec![],
         };
@@ -248,6 +242,7 @@ mod tests {
                     height: 10.0,
                 },
             })],
+            char_index: 0,
         };
 
         assert_eq!(
@@ -260,6 +255,7 @@ mod tests {
             kind: annotation_job1.clone().kind,
             position_relative_to_viewport: ViewportPositioning::Visible,
             shapes: vec![AnnotationShape::Point(LogicalPosition { x: 0.0, y: 0.0 })],
+            char_index: 0,
         };
 
         assert_eq!(
