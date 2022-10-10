@@ -46,7 +46,7 @@ impl FeatureBase for BracketHighlight {
         }
 
         let group_id_before_compute = self.group_id;
-        if dbg!(self.compute_procedure(code_document).is_err()) {
+        if self.compute_procedure(code_document).is_err() {
             if let Some(group_id) = group_id_before_compute {
                 AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
                 self.group_id = None;
