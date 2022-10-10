@@ -6,7 +6,6 @@ use objc::{msg_send, sel, sel_impl};
 
 use parking_lot::Mutex;
 use tauri::Manager;
-use window_shadows::set_shadow;
 
 use crate::{
     app_handle,
@@ -92,8 +91,6 @@ impl MainWindow {
 
         let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
         main_tauri_window.show().ok()?;
-
-        set_shadow(&main_tauri_window, true).expect("Unsupported platform!");
 
         self.update_tracking_area(true);
 

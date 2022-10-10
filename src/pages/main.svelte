@@ -19,7 +19,7 @@
 <div class="flex flex-col shrink-0 justify-end transform overflow-hidden h-full">
 	<div
 		id={dom_id}
-		class="flex flex-col shrink-0 rounded-xl max-h-[800px] overflow-y-auto overscroll-none"
+		class="flex bg-white flex-col shrink-0 rounded-xl max-h-[800px] overflow-y-auto overscroll-none"
 	>
 		<Suggestions window_dom_id={dom_id} />
 	</div>
