@@ -565,13 +565,13 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
         let path = app_dir.join(DISMISSED_SUGGESTIONS_FILE_NAME);
         if let Ok(file) = fs::read_to_string(&path) {
             if let Ok(suggestions) = serde_json::from_str::<Vec<SuggestionHash>>(&file) {
-                debug!(?suggestions, "Read {}", DISMISSED_SUGGESTIONS_FILE_NAME);
+                debug!(?suggestions, ?path, "Read dismissed suggestions file");
                 return suggestions;
             } else {
                 error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error parsing file");
             }
         } else {
-            error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error reading file");
+            debug!(?path, "No dismissed suggestions file found");
         }
     } else {
         error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error getting app dir");
