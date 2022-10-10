@@ -29,10 +29,9 @@ use super::utils::{
 };
 
 pub struct BracketHighlight {
-    registered_jobs: Vec<AnnotationJob>,
-
     is_activated: bool,
 
+    registered_jobs: Vec<AnnotationJob>,
     group_id: Option<uuid::Uuid>,
 }
 
@@ -46,10 +45,19 @@ impl FeatureBase for BracketHighlight {
             return Ok(());
         }
 
-        let current_group_id = self.group_id;
-        if let Ok(()) = self.compute_procedure(code_document) {
-            if let Some(group_id) = current_group_id {
+        let group_id_before_compute = self.group_id;
+        if dbg!(self.compute_procedure(code_document).is_err()) {
+            if let Some(group_id) = group_id_before_compute {
                 AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
+                self.group_id = None;
+                self.registered_jobs = vec![];
+            }
+        } else {
+            // Annotation group was updated, remove the old one
+            if group_id_before_compute == self.group_id {
+                if let Some(group_id) = group_id_before_compute {
+                    AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
+                }
             }
         }
 
@@ -118,28 +126,32 @@ impl BracketHighlight {
                 selected_text_range,
             )?;
 
-        let (first_line_is_wrapped, _) =
+        let first_line_is_wrapped = if let Ok((is_wrapped, _)) =
             is_text_of_line_wrapped(line_opening_character.position.row, &GetVia::Current)
-                .map_err(|err| BracketHighlightError::GenericError(err.into()))?;
+        {
+            let code_block_spans_multiple_lines = is_wrapped
+                || (line_opening_character.position.row != line_closing_character.position.row);
 
-        let code_block_spans_multiple_lines = first_line_is_wrapped
-            || (line_opening_character.position.row != line_closing_character.position.row);
+            // Case: opening and closing bracket are on the same line -> no elbow is computed.
+            if !code_block_spans_multiple_lines {
+                self.register_annotation_jobs(
+                    InstructionBoundsPropertyOfInterest::PosBotRight,
+                    InstructionBoundsPropertyOfInterest::PosBotLeft,
+                    line_closing_character,
+                    opening_bracket,
+                    closing_bracket,
+                    line_opening_character,
+                    None,
+                    code_document.editor_window_props().window_uid,
+                );
 
-        // Case: opening and closing bracket are on the same line -> no elbow is computed.
-        if !code_block_spans_multiple_lines {
-            self.register_annotation_jobs(
-                InstructionBoundsPropertyOfInterest::PosBotRight,
-                InstructionBoundsPropertyOfInterest::PosBotLeft,
-                line_closing_character,
-                opening_bracket,
-                closing_bracket,
-                line_opening_character,
-                None,
-                code_document.editor_window_props().window_uid,
-            );
+                return Ok(());
+            }
 
-            return Ok(());
-        }
+            Some(is_wrapped)
+        } else {
+            None
+        };
 
         let elbow_bottom_line_top = only_whitespace_on_line_until_position(
             TextPosition {
@@ -170,7 +182,7 @@ impl BracketHighlight {
         ) {
             Err(_) => {
                 let mut elbow = None;
-                if first_line_is_wrapped {
+                if first_line_is_wrapped == Some(true) {
                     elbow = Some(PositionAndIndex {
                         position: line_opening_character.position,
                         index: line_opening_character.index
@@ -191,6 +203,7 @@ impl BracketHighlight {
                         }
                     }
                 }
+
                 self.register_annotation_jobs(
                     InstructionBoundsPropertyOfInterest::PosBotLeft,
                     line_end_corner.clone(),
@@ -210,7 +223,7 @@ impl BracketHighlight {
             },
         };
 
-        let elbow = if first_line_is_wrapped {
+        let elbow = if first_line_is_wrapped == Some(true) {
             debug!("Bracket Highlight: rendered wrapped line");
             left_most_char.index -= left_most_char.position.column;
             Some(left_most_char)
