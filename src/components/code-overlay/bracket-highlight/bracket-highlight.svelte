@@ -122,7 +122,7 @@
 	};
 </script>
 
-{#if annotation_group_editor_window_uid == active_window_uid}
+{#if annotation_group_editor_window_uid === active_window_uid}
 	{#if opening_bracket_box}
 		<div
 			style="position: absolute; 
@@ -133,7 +133,7 @@
 			border-style: solid; border-width: {BORDER_WIDTH}px; border-color: {colors.inactive};"
 		/>
 	{/if}
-	{#if closing_bracket_box !== null && code_document_rect !== null}
+	{#if closing_bracket_box && code_document_rect}
 		<div
 			style="position: absolute; 
 			top: {round_value(closing_bracket_box.origin.y, 2)}px; 
@@ -145,7 +145,7 @@
 			border-color: {colors.inactive};"
 		/>
 	{/if}
-	{#if top_rectangle !== null}
+	{#if top_rectangle}
 		<div
 			style="position: absolute; 
 			top: {round_value(top_rectangle.origin.y, 2)}px; 
@@ -160,7 +160,7 @@
 			border-bottom-width: 0;"
 		/>
 	{/if}
-	{#if bottom_rectangle !== null}
+	{#if bottom_rectangle}
 		<div
 			style="position: absolute; 
 			top: {round_value(bottom_rectangle.origin.y, 2)}px; 
