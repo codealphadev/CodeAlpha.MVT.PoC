@@ -1,14 +1,17 @@
 use anyhow::anyhow;
+use log::error;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 use ts_rs::TS;
 
 use crate::{
-    core_engine::{features::FeatureKind, EditorWindowUid, TextRange},
+    core_engine::{
+        events::AnnotationManagerEvent, features::FeatureKind, EditorWindowUid, TextRange,
+    },
     platform::macos::{
-        get_bounds_for_TextRange, get_code_document_frame_properties, get_visible_text_range,
-        scroll_dist_viewport_to_local_position, scroll_with_deceleration, GetVia,
+        get_bounds_for_TextRange, get_code_document_frame_properties,
+        get_minimal_viewport_properties, get_visible_text_range, scroll_by_one_page, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
@@ -19,14 +22,14 @@ use super::{
     ViewportPositioning,
 };
 
+static APROX_SCROLL_DURATION_PAGE_UP_DOWN_MS: u64 = 125;
+
 #[derive(thiserror::Error, Debug)]
 pub enum AnnotationError {
     #[error("Annotation of the given job uid does not exist.")]
     AnnotationNotFound,
     #[error("AnnotationGroup of the given uid does not exist.")]
     AnnotationJobGroupNotFound,
-    #[error("AnnotationJob of the given uid does not exist.")]
-    AnnotationJobNotFound,
     #[error("Something went wrong when executing the AnnotationManager.")]
     GenericError(#[source] anyhow::Error),
 }
@@ -43,6 +46,7 @@ pub enum AnnotationShape {
 pub struct Annotation {
     pub id: uuid::Uuid,
     pub kind: AnnotationKind,
+    pub char_index: usize,
     pub position_relative_to_viewport: ViewportPositioning,
     pub shapes: Vec<AnnotationShape>,
 }
@@ -180,43 +184,44 @@ impl AnnotationsManagerTrait for AnnotationsManager {
         group_id: uuid::Uuid,
         job_id: Option<uuid::Uuid>,
     ) -> Result<(), AnnotationError> {
-        // 1. Get the annotation
         let annotation = self.get_annotation(group_id, job_id)?;
 
-        match annotation.position_relative_to_viewport {
-            ViewportPositioning::Visible => {
-                // 1.2 get the annotation's top-left-most position
-                let annotation_top_left =
-                    match annotation
-                        .shapes
-                        .first()
-                        .ok_or(AnnotationError::GenericError(
-                            anyhow!("Annotation has no shapes").into(),
-                        ))? {
-                        AnnotationShape::Rectangle(frame) => frame.top_left(),
-                        AnnotationShape::Point(position) => *position,
-                    };
+        tauri::async_runtime::spawn(async move {
+            let visible_text_range = if let Ok(range) = get_visible_text_range(GetVia::Current) {
+                range
+            } else {
+                return;
+            };
 
-                let scroll_distance = scroll_dist_viewport_to_local_position(&annotation_top_left)
-                    .map_err(|e| AnnotationError::GenericError(e.into()))?;
+            let viewport_positioning =
+                Self::get_position_relative_to_viewport(annotation.char_index, &visible_text_range);
 
-                scroll_with_deceleration(scroll_distance, std::time::Duration::from_millis(300));
+            match viewport_positioning {
+                ViewportPositioning::Visible => {
+                    _ = Self::scroll_procedure_if_annotation_within_visible_text_range(
+                        &annotation,
+                        group_id,
+                    )
+                    .await;
+                }
+                ViewportPositioning::InvisibleAbove => {
+                    _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
+                        ViewportPositioning::InvisibleAbove,
+                        &annotation,
+                        group_id,
+                    )
+                    .await;
+                }
+                ViewportPositioning::InvisibleBelow => {
+                    _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
+                        ViewportPositioning::InvisibleBelow,
+                        &annotation,
+                        group_id,
+                    )
+                    .await;
+                }
             }
-            ViewportPositioning::InvisibleAbove => {}
-            ViewportPositioning::InvisibleBelow => {}
-        }
-
-        // 2. loop
-
-        // 2.1 get the visible text range
-        let visible_text_range = get_visible_text_range(GetVia::Current)
-            .map_err(|e| AnnotationError::GenericError(e.into()))?;
-
-        // 2.2 get position relative to viewport
-
-        // 2.2.1 If position is in visible text range, scroll to it
-
-        // 2.2.2 If position is not in visible text range, scroll to the end of the visible text range
+        });
 
         Ok(())
     }
@@ -226,6 +231,19 @@ impl AnnotationsManager {
     pub fn start_event_listeners(annotations_manager: &Arc<Mutex<Self>>) {
         annotation_events_listener(annotations_manager);
         xcode_listener(annotations_manager);
+    }
+
+    pub fn get_position_relative_to_viewport(
+        char_index: usize,
+        visible_text_range: &TextRange,
+    ) -> ViewportPositioning {
+        if char_index < visible_text_range.index {
+            ViewportPositioning::InvisibleAbove
+        } else if char_index > visible_text_range.index + visible_text_range.length {
+            ViewportPositioning::InvisibleBelow
+        } else {
+            ViewportPositioning::Visible
+        }
     }
 
     fn get_annotation(
@@ -273,6 +291,88 @@ impl AnnotationsManager {
             Some(annotation_rect)
         } else {
             None
+        }
+    }
+
+    async fn scroll_procedure_if_annotation_outside_visible_text_range(
+        positioning_relative_viewport: ViewportPositioning,
+        annotation: &Annotation,
+        group_id: uuid::Uuid,
+    ) -> Result<(), AnnotationError> {
+        match positioning_relative_viewport {
+            ViewportPositioning::Visible => panic!("Should not happen"),
+            ViewportPositioning::InvisibleAbove => {
+                _ = scroll_by_one_page(true).await;
+            }
+            ViewportPositioning::InvisibleBelow => {
+                _ = scroll_by_one_page(false).await;
+            }
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            APROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
+        ))
+        .await;
+
+        AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, Some(annotation.id)))
+            .publish_to_tauri();
+
+        Ok(())
+    }
+
+    async fn scroll_procedure_if_annotation_within_visible_text_range(
+        annotation: &Annotation,
+        group_id: uuid::Uuid,
+    ) -> Result<(), AnnotationError> {
+        let annotation_top_left =
+            match annotation
+                .shapes
+                .first()
+                .ok_or(AnnotationError::GenericError(
+                    anyhow!("Annotation has no shapes").into(),
+                ))? {
+                AnnotationShape::Rectangle(frame) => frame.top_left(),
+                AnnotationShape::Point(position) => *position,
+            };
+
+        match Self::annotation_visible_on_viewport(annotation_top_left)? {
+            ViewportPositioning::Visible => {
+                return Ok(());
+            }
+            ViewportPositioning::InvisibleAbove => {
+                _ = scroll_by_one_page(true).await;
+            }
+            ViewportPositioning::InvisibleBelow => {
+                _ = scroll_by_one_page(false).await;
+            }
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            APROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
+        ))
+        .await;
+
+        AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, Some(annotation.id)))
+            .publish_to_tauri();
+
+        Ok(())
+    }
+
+    fn annotation_visible_on_viewport(
+        position_on_code_doc: LogicalPosition,
+    ) -> Result<ViewportPositioning, AnnotationError> {
+        let (viewport_props, code_doc_props) = get_minimal_viewport_properties(&GetVia::Current)
+            .map_err(|e| AnnotationError::GenericError(e.into()))?;
+        let global_position = position_on_code_doc.to_global(&code_doc_props.dimensions.origin);
+
+        if global_position.y < viewport_props.dimensions.origin.y {
+            Ok(ViewportPositioning::InvisibleAbove)
+        } else if global_position.y
+            > viewport_props.dimensions.origin.y + viewport_props.dimensions.size.height
+        {
+            Ok(ViewportPositioning::InvisibleBelow)
+        } else {
+            Ok(ViewportPositioning::Visible)
         }
     }
 }

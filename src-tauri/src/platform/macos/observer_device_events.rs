@@ -3,7 +3,7 @@ use std::time::Duration;
 use crate::{
     app_handle,
     platform::macos::{models::input_device::MouseMovedMessage, EventInputDevice},
-    utils::geometry::{LogicalPosition, LogicalSize},
+    utils::geometry::LogicalPosition,
 };
 use core_foundation::runloop::{kCFRunLoopDefaultMode, CFRunLoop};
 use core_graphics::event::{
@@ -13,14 +13,13 @@ use core_graphics::event::{
 use lazy_static::lazy_static;
 use objc::{msg_send, runtime::Class, sel, sel_impl};
 use parking_lot::Mutex;
-use rdev::{simulate, EventType};
 use throttle::Throttle;
 use tracing::debug;
 
 use super::{
     is_focused_uielement_xcode_editor_textarea,
     models::input_device::{ClickType, MouseButton, MouseClickMessage},
-    EventViewport, GetVia, XcodeError,
+    EventViewport, GetVia,
 };
 lazy_static! {
     static ref SCROLL_THROTTLE: Mutex<Throttle> =
@@ -127,25 +126,6 @@ fn notification_mouse_click_event(event_type: CGEventType, event: &CGEvent) {
         })
         .publish_to_tauri(&app_handle());
     }
-}
-
-pub fn send_event_mouse_wheel(delta: LogicalSize) -> Result<bool, XcodeError> {
-    if is_focused_uielement_xcode_editor_textarea()? {
-        let event_type = EventType::Wheel {
-            delta_x: delta.width as i64,
-            delta_y: delta.height as i64,
-        };
-
-        match simulate(&event_type) {
-            Ok(()) => {
-                return Ok(true);
-            }
-            Err(_) => {
-                println!("We could not send {:?}", event_type);
-            }
-        }
-    }
-    Ok(false)
 }
 
 pub fn pressed_mouse_buttons() -> Option<MouseClickMessage> {
