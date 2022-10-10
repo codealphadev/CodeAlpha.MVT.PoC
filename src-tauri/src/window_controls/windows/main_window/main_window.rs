@@ -91,10 +91,9 @@ impl MainWindow {
         self.update(&self.size.clone(), monitor, true)?;
 
         let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
-        main_tauri_window.show().ok()?;
-
         set_shadow(&main_tauri_window, true).expect("Unsupported platform!");
 
+        main_tauri_window.show().ok()?;
         self.update_tracking_area(true);
 
         Some(())

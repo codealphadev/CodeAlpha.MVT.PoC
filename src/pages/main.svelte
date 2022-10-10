@@ -16,11 +16,8 @@
 	listenToGlobalEvents();
 </script>
 
-<div class="flex flex-col shrink-0 justify-end transform overflow-hidden h-full">
-	<div
-		id={dom_id}
-		class="flex flex-col shrink-0 rounded-xl max-h-[800px] overflow-y-auto overscroll-none"
-	>
+<div class="flex flex-col shrink-0 overflow-hidden">
+	<div id={dom_id} class="flex flex-col shrink-0 rounded-xl max-h-[800px] overflow-y-auto">
 		<Suggestions window_dom_id={dom_id} />
 	</div>
 	<div class="h-6 mr-4 ml-4 {`${bubbleOrientationRight ? 'ml-auto' : 'ml-4'}`}">
