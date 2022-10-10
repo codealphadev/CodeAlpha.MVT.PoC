@@ -84,6 +84,7 @@ impl FeatureBase for BracketHighlight {
         if let Some(group_id) = self.group_id {
             AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
         }
+        self.group_id = None;
         self.registered_jobs = vec![];
 
         Ok(())
@@ -93,6 +94,7 @@ impl FeatureBase for BracketHighlight {
         if let Some(group_id) = self.group_id {
             AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
         }
+        self.group_id = None;
         self.registered_jobs = vec![];
         Ok(())
     }
