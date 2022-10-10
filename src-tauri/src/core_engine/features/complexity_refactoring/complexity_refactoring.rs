@@ -571,7 +571,10 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
                 error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error parsing file");
             }
         } else {
-            error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error reading file");
+            debug!(
+                DISMISSED_SUGGESTIONS_FILE_NAME,
+                "No stored suggestions file"
+            );
         }
     } else {
         error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error getting app dir");
