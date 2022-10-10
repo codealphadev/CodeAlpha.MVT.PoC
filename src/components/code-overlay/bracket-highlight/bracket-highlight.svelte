@@ -1,22 +1,25 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
-	import type { LogicalPosition } from '@tauri-apps/api/window';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { AnnotationGroup } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationGroup';
 	import type { AnnotationShape } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationShape';
 	import type { AnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
+	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
+
 	import { colors } from '../../../themes';
+	import { is_point, try_get_kind_as_rectangle } from '../annotation_utils';
 	import { BORDER_WIDTH, compute_bracket_highlight_lines } from './bracket_highlight';
 
 	export let code_document_rect: LogicalFrame;
 	export let annotation_section: LogicalFrame;
 	export let active_window_uid: number;
 
-	let annotation_group: AnnotationGroup | undefined;
-
 	let top_rectangle: LogicalFrame | null = null;
 	let bottom_rectangle: LogicalFrame | null = null;
+
+	let annotation_group_id: string | null = null;
+	let annotation_group_editor_window_uid: number | null = null;
 
 	let opening_bracket_box: LogicalFrame | null = null;
 	let closing_bracket_box: LogicalFrame | null = null;
@@ -27,34 +30,32 @@
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
 			switch (event_type) {
 				case 'AddAnnotationGroup':
-					let added_group = payload as AnnotationGroup;
-
-					if (added_group.feature === 'BracketHighlight') {
-						annotation_group = added_group;
-
-						update_closing_bracket();
-						update_opening_bracket();
-						update_rectangles();
-					}
-
-					break;
 				case 'UpdateAnnotationGroup':
-					let updated_group = payload as AnnotationGroup;
+					if (payload.feature === 'BracketHighlight') {
+						let group = payload;
+						annotation_group_editor_window_uid = group.editor_window_uid;
 
-					if (updated_group.feature === 'BracketHighlight') {
-						annotation_group = updated_group;
+						let closing_bracket = try_get_kind_as_rectangle(group, 'ClosingBracket');
+						if (closing_bracket) {
+							closing_bracket_box = closing_bracket;
+						}
 
-						update_closing_bracket();
-						update_opening_bracket();
-						update_rectangles();
+						let opening_bracket = try_get_kind_as_rectangle(group, 'OpeningBracket');
+						if (opening_bracket) {
+							opening_bracket_box = opening_bracket;
+						}
+						const rectangles = get_elbow_rectangles_from_annotation_group(group);
+						top_rectangle = rectangles.top_rectangle;
+						bottom_rectangle = rectangles.bottom_rectangle;
 					}
-
 					break;
 				case 'RemoveAnnotationGroup':
 					let group_id = payload as string;
 
-					if (annotation_group?.id === group_id) {
-						annotation_group = undefined;
+					if (annotation_group_id === group_id) {
+						annotation_group_editor_window_uid = null;
+						annotation_group_id = null;
+
 						opening_bracket_box = null;
 						closing_bracket_box = null;
 						top_rectangle = null;
@@ -69,107 +70,35 @@
 	};
 	listen_to_node_annotation_events();
 
-	const update_opening_bracket = () => {
-		opening_bracket_box = null;
+	interface BracketHighlightRectangles {
+		top_rectangle: LogicalFrame | null;
+		bottom_rectangle: LogicalFrame | null;
+	}
 
-		if (annotation_group == null) {
-			return;
-		}
+	function get_elbow_pos(elbow_shape: AnnotationShape | undefined): LogicalPosition {
+		const default_elbow_pos = {
+			x: annotation_section.origin.x - code_document_rect.origin.x + annotation_section.size.width,
+			y: 0
+		};
+		return is_point(elbow_shape) ? elbow_shape.Point : default_elbow_pos;
+	}
 
-		let bracket_open = annotation_group.annotations.find(
-			(annotation) => annotation.kind === 'OpeningBracket'
-		);
+	const get_elbow_rectangles_from_annotation_group = (
+		group: AnnotationGroup
+	): BracketHighlightRectangles => {
+		const lines_start = group.annotations.find((annotation) => annotation.kind === 'LineStart');
 
-		if (!bracket_open) {
-			return;
-		}
+		const lines_end = group.annotations.find((annotation) => annotation.kind === 'LineEnd');
 
-		if (bracket_open.shapes[0] === undefined) {
-			return;
-		}
+		const elbow = group.annotations.find((annotation) => annotation.kind === 'Elbow');
 
-		if (!is_rectangle(bracket_open.shapes[0])) {
-			return;
-		}
+		const lines_start_pos =
+			lines_start && is_point(lines_start.shapes[0]) ? lines_start.shapes[0].Point : null;
 
-		opening_bracket_box = bracket_open.shapes[0].Rectangle;
-	};
+		const lines_end_pos =
+			lines_end && is_point(lines_end.shapes[0]) ? lines_end.shapes[0].Point : null;
 
-	const update_closing_bracket = () => {
-		closing_bracket_box = null;
-
-		if (annotation_group == null) {
-			return;
-		}
-
-		let bracket_close = annotation_group.annotations.find(
-			(annotation) => annotation.kind === 'ClosingBracket'
-		);
-
-		if (!bracket_close) {
-			return;
-		}
-
-		if (bracket_close.shapes[0] === undefined) {
-			return;
-		}
-
-		if (!is_rectangle(bracket_close.shapes[0])) {
-			return;
-		}
-
-		closing_bracket_box = bracket_close.shapes[0].Rectangle;
-	};
-
-	const update_rectangles = async () => {
-		top_rectangle = null;
-		bottom_rectangle = null;
-
-		let lines_start_pos = null;
-		let lines_end_pos = null;
-		let elbow_pos = null;
-
-		if (annotation_group == null) {
-			return;
-		}
-
-		let lines_start = annotation_group.annotations.find(
-			(annotation) => annotation.kind === 'LineStart'
-		);
-
-		let lines_end = annotation_group.annotations.find(
-			(annotation) => annotation.kind === 'LineEnd'
-		);
-
-		let elbow = annotation_group.annotations.find((annotation) => annotation.kind === 'Elbow');
-
-		if (lines_start && lines_start.shapes[0] !== undefined) {
-			if (is_point(lines_start.shapes[0])) {
-				lines_start_pos = lines_start.shapes[0].Point;
-			}
-		}
-
-		if (lines_end && lines_end.shapes[0] !== undefined) {
-			if (is_point(lines_end.shapes[0])) {
-				lines_end_pos = lines_end.shapes[0].Point;
-			}
-		}
-
-		if (elbow) {
-			if (elbow.shapes[0] !== undefined) {
-				if (is_point(elbow.shapes[0])) {
-					elbow_pos = elbow.shapes[0].Point;
-				}
-			} else {
-				elbow_pos = {
-					x:
-						annotation_section.origin.x -
-						code_document_rect.origin.x +
-						annotation_section.size.width,
-					y: 0
-				};
-			}
-		}
+		const elbow_pos = elbow ? get_elbow_pos(elbow.shapes[0]) : null;
 
 		const rectangles = compute_bracket_highlight_lines(
 			lines_start_pos,
@@ -180,15 +109,12 @@
 
 		top_rectangle = rectangles.top_rect;
 		bottom_rectangle = rectangles.bottom_rect;
+
+		return {
+			top_rectangle,
+			bottom_rectangle
+		};
 	};
-
-	function is_rectangle(shape: AnnotationShape): shape is { Rectangle: LogicalFrame } {
-		return shape.hasOwnProperty('Rectangle');
-	}
-
-	function is_point(shape: AnnotationShape): shape is { Point: LogicalPosition } {
-		return shape.hasOwnProperty('Point');
-	}
 
 	const round_value = (value: number, precision: number): number => {
 		const factor = Math.pow(10, precision || 0);
@@ -196,7 +122,7 @@
 	};
 </script>
 
-{#if annotation_group && annotation_group.editor_window_uid == active_window_uid}
+{#if annotation_group_editor_window_uid == active_window_uid}
 	{#if opening_bracket_box}
 		<div
 			style="position: absolute; 
