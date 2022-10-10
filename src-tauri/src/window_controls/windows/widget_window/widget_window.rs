@@ -6,7 +6,6 @@ use objc::{msg_send, sel, sel_impl};
 
 use parking_lot::Mutex;
 use tauri::Manager;
-use window_shadows::set_shadow;
 
 use crate::{
     app_handle,
@@ -121,9 +120,6 @@ impl WidgetWindow {
         if let Some(offscreen_dist_y) = offscreen_dist_y {
             widget_position.y += offscreen_dist_y;
         }
-
-        // Needs to be reset on each show.
-        set_shadow(&widget_tauri_window, true).expect("Unsupported platform!");
 
         widget_tauri_window
             .set_position(widget_position.as_tauri_LogicalPosition())

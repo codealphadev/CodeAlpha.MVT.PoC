@@ -5,7 +5,6 @@ use objc::{msg_send, sel, sel_impl};
 
 use parking_lot::Mutex;
 use tauri::Manager;
-use window_shadows::set_shadow;
 
 use crate::{
     app_handle,
@@ -149,8 +148,6 @@ impl ExplainWindow {
         tauri_window
             .set_position(corrected_window_origin_global.as_tauri_LogicalPosition())
             .ok()?;
-
-        set_shadow(&tauri_window, true).expect("Unsupported platform!");
 
         tauri_window.show().ok()?;
 
