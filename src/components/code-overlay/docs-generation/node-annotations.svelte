@@ -8,11 +8,14 @@
 	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
-	import type { AnnotationShape } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationShape';
+	import type { AnnotationKind } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationKind';
+	import { is_rectangle } from '../annotation_utils';
 
-	let annotation_group: AnnotationGroup | undefined;
 	let annotation_icon: LogicalFrame | null;
 	let annotation_codeblock: LogicalFrame | null;
+
+	let annotation_group_id: string | null = null;
+	let annotation_group_editor_window_uid: number | null = null;
 
 	export let active_window_uid: number;
 	export let annotation_section: LogicalFrame;
@@ -29,32 +32,29 @@
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
 			switch (event_type) {
 				case 'AddAnnotationGroup':
-					let added_group = payload as AnnotationGroup;
-
-					if (added_group.feature === 'DocsGeneration') {
-						annotation_group = added_group;
-
-						derive_annotation_icon();
-						derive_annotation_codeblock();
-					}
-
-					break;
 				case 'UpdateAnnotationGroup':
-					let updated_group = payload as AnnotationGroup;
+					let group = payload;
 
-					if (updated_group.feature === 'DocsGeneration') {
-						annotation_group = updated_group;
+					if (group.feature === 'DocsGeneration') {
+						annotation_group_editor_window_uid = group.editor_window_uid;
 
-						derive_annotation_icon();
-						derive_annotation_codeblock();
+						let icon = get_icon_frame_from_group(group);
+						if (icon) {
+							annotation_icon = icon;
+						}
+						let codeblock = get_codeblock_frame_from_group(group);
+						if (codeblock) {
+							annotation_codeblock = codeblock;
+						}
 					}
-
 					break;
 				case 'RemoveAnnotationGroup':
 					let group_id = payload as string;
 
-					if (annotation_group?.id === group_id) {
-						annotation_group = undefined;
+					if (annotation_group_id === group_id) {
+						annotation_group_editor_window_uid = null;
+						annotation_group_id = null;
+
 						annotation_icon = null;
 						annotation_codeblock = null;
 					}
@@ -66,34 +66,27 @@
 		});
 	};
 
-	function is_rectangle(shape: AnnotationShape): shape is { Rectangle: LogicalFrame } {
-		return shape.hasOwnProperty('Rectangle');
-	}
-
-	const derive_annotation_codeblock = () => {
-		annotation_codeblock = null;
-
-		if (!annotation_group) {
+	const try_get_kind_as_rectangle = (
+		group: AnnotationGroup,
+		kind: AnnotationKind
+	): LogicalFrame | undefined => {
+		let result = group.annotations.find((annotation) => annotation.kind === kind);
+		if (!result || !result.shapes[0] || !is_rectangle(result.shapes[0])) {
 			return;
 		}
+		return result.shapes[0].Rectangle;
+	};
 
-		let annotation_start = annotation_group.annotations.find(
+	const get_codeblock_frame_from_group = (group: AnnotationGroup): LogicalFrame | undefined => {
+		let annotation_start = group.annotations.find(
 			(annotation) => annotation.kind === 'CodeblockFirstChar'
 		);
 
-		let annotation_end = annotation_group.annotations.find(
+		let annotation_end = group.annotations.find(
 			(annotation) => annotation.kind === 'CodeblockLastChar'
 		);
 
-		if (!annotation_start || !annotation_end) {
-			return;
-		}
-
-		if (annotation_start.shapes[0] === undefined) {
-			return;
-		}
-
-		if (!is_rectangle(annotation_start.shapes[0])) {
+		if (!annotation_start || !is_rectangle(annotation_start.shapes[0]) || !annotation_end) {
 			return;
 		}
 
@@ -114,7 +107,7 @@
 			}
 		}
 
-		annotation_codeblock = {
+		return {
 			origin: {
 				x: annotation_section.origin.x,
 				y: codeblock_start_y
@@ -126,37 +119,20 @@
 		};
 	};
 
-	const derive_annotation_icon = () => {
-		annotation_icon = null;
-
-		if (!annotation_group) {
-			return;
+	const get_icon_frame_from_group = (group: AnnotationGroup): LogicalFrame | null => {
+		let annotation_icon = try_get_kind_as_rectangle(group, 'CodeblockFirstChar');
+		if (!annotation_icon) {
+			return null;
 		}
 
-		let annotation = annotation_group.annotations.find(
-			(annotation) => annotation.kind === 'CodeblockFirstChar'
-		);
-
-		if (!annotation) {
-			return;
-		}
-
-		if (annotation.shapes[0] === undefined) {
-			return;
-		}
-
-		if (!is_rectangle(annotation.shapes[0])) {
-			return;
-		}
-
-		annotation_icon = {
+		return {
 			origin: {
 				x: annotation_section.origin.x,
-				y: annotation.shapes[0].Rectangle.origin.y
+				y: annotation_icon.origin.y
 			},
 			size: {
 				width: annotation_section.size.width,
-				height: annotation.shapes[0].Rectangle.size.height
+				height: annotation_icon.size.height
 			}
 		};
 	};
@@ -192,12 +168,12 @@
 		is_hovered = false;
 
 		// invoke click on annotation
-		if (annotation_group) {
+		if (annotation_group_id && annotation_group_editor_window_uid) {
 			const event: EventUserInteraction = {
 				event: 'NodeAnnotationClicked',
 				payload: {
-					annotation_id: annotation_group.id,
-					editor_window_uid: annotation_group.editor_window_uid
+					annotation_id: annotation_group_id,
+					editor_window_uid: annotation_group_editor_window_uid
 				}
 			};
 			const channel: ChannelList = 'EventUserInteractions';
@@ -211,7 +187,7 @@
 	};
 </script>
 
-{#if annotation_group && annotation_group.editor_window_uid == active_window_uid}
+{#if annotation_group_editor_window_uid == active_window_uid}
 	{#if annotation_icon !== null}
 		<div
 			style="position: absolute; 
