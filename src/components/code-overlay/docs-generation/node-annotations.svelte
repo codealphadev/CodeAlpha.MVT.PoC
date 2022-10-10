@@ -187,8 +187,8 @@
 	};
 </script>
 
-{#if annotation_group_editor_window_uid == active_window_uid}
-	{#if annotation_icon !== null}
+{#if annotation_group_editor_window_uid === active_window_uid}
+	{#if annotation_icon}
 		<div
 			style="position: absolute; 
 			top: {round_value(annotation_icon.origin.y, 2)}px; 
@@ -203,7 +203,7 @@
 		</div>
 	{/if}
 
-	{#if annotation_codeblock !== null}
+	{#if annotation_codeblock}
 		<div
 			style="position: absolute; 
 			top: {round_value(annotation_codeblock.origin.y, 2)}px; 
