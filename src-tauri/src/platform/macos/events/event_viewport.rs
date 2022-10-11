@@ -48,6 +48,20 @@ impl EventViewport {
             event_name.as_str(),
             Some(serde_json::to_string(self).unwrap()),
         );
+
+        // Emit to Main window
+        _ = app_handle.emit_to(
+            &AppWindow::Main.to_string(),
+            event_name.as_str(),
+            Some(serde_json::to_string(self).unwrap()),
+        );
+
+        // Emit to Widget window
+        _ = app_handle.emit_to(
+            &AppWindow::Widget.to_string(),
+            event_name.as_str(),
+            Some(serde_json::to_string(self).unwrap()),
+        );
     }
 
     pub fn new_xcode_viewport_update_minimal(get_via: &GetVia) -> Result<Self, XcodeError> {
