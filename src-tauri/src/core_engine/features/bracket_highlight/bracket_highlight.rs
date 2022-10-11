@@ -54,7 +54,7 @@ impl FeatureBase for BracketHighlight {
             }
         } else {
             // Annotation group was updated, remove the old one
-            if group_id_before_compute == self.group_id {
+            if group_id_before_compute != self.group_id {
                 if let Some(group_id) = group_id_before_compute {
                     AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
                 }
@@ -413,10 +413,7 @@ impl BracketHighlight {
             jobs.push(AnnotationJob::SingleChar(elbow_job));
         }
 
-        if self.registered_jobs == jobs && self.group_id.is_some() {
-            AnnotationManagerEvent::Update((self.group_id.unwrap(), jobs.clone()))
-                .publish_to_tauri();
-        } else {
+        if self.registered_jobs != jobs || self.group_id.is_none() {
             let new_group_id = uuid::Uuid::new_v4();
             AnnotationManagerEvent::Add((
                 new_group_id,
@@ -427,9 +424,8 @@ impl BracketHighlight {
             .publish_to_tauri();
 
             self.group_id = Some(new_group_id);
+            self.registered_jobs = jobs;
         }
-
-        self.registered_jobs = jobs;
     }
 }
 

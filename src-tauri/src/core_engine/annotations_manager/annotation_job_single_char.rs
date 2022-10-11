@@ -14,13 +14,22 @@ use super::{
     InstructionBoundsPropertyOfInterest, VisibleTextRangePositioning,
 };
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnnotationJobSingleChar {
     id: uuid::Uuid,
     char_index: usize,
     kind: AnnotationKind,
     instructions: AnnotationJobInstructions,
     result: Option<AnnotationResult>,
+}
+
+impl PartialEq for AnnotationJobSingleChar {
+    fn eq(&self, other: &Self) -> bool {
+        // Compare all properties except the id
+        self.char_index == other.char_index
+            && self.kind == other.kind
+            && self.instructions == other.instructions
+    }
 }
 
 impl AnnotationJobTrait for AnnotationJobSingleChar {
