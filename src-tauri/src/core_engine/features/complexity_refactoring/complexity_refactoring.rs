@@ -27,6 +27,12 @@ use tracing::warn;
 use ts_rs::TS;
 use uuid::Uuid;
 
+type SuggestionHash = u64;
+pub type SuggestionId = uuid::Uuid;
+type SuggestionsMap = HashMap<SuggestionId, RefactoringSuggestion>;
+type SuggestionsPerWindow = HashMap<EditorWindowUid, SuggestionsMap>;
+type SuggestionsArcMutex = Arc<Mutex<SuggestionsPerWindow>>;
+
 #[derive(Debug, Clone)]
 pub struct Edit {
     pub text: XcodeText,
@@ -36,15 +42,13 @@ pub struct Edit {
 
 enum ComplexityRefactoringProcedure {
     ComputeSuggestions,
-    PerformOperation(uuid::Uuid),
-    DismissSuggestion(uuid::Uuid),
+    PerformOperation(SuggestionId),
+    DismissSuggestion(SuggestionId),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub struct FERefactoringSuggestion {
-    pub window_uid: usize,
-    pub id: uuid::Uuid,
     pub new_text_content_string: Option<String>,
     pub old_text_content_string: Option<String>,
     pub new_complexity: isize,
@@ -64,25 +68,19 @@ pub struct RefactoringSuggestion {
 
 pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
     suggestion: RefactoringSuggestion,
-    id: Uuid,
-    window_uid: usize,
 ) -> FERefactoringSuggestion {
     FERefactoringSuggestion {
-        id,
         new_text_content_string: suggestion.new_text_content_string,
         old_text_content_string: suggestion.old_text_content_string,
         new_complexity: suggestion.new_complexity,
         prev_complexity: suggestion.prev_complexity,
         main_function_name: suggestion.main_function_name,
-        window_uid,
     }
 }
 
-type SuggestionHash = u64;
-
 pub struct ComplexityRefactoring {
     is_activated: bool,
-    suggestions: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+    suggestions_arc: SuggestionsArcMutex,
     dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
 }
 
@@ -102,7 +100,7 @@ impl FeatureBase for ComplexityRefactoring {
             match procedure {
                 ComplexityRefactoringProcedure::ComputeSuggestions => {
                     self.compute_suggestions(code_document).map_err(|e| {
-                        self.suggestions.lock().clear();
+                        self.suggestions_arc.lock().clear();
                         e
                     })
                 }
@@ -144,8 +142,20 @@ impl FeatureBase for ComplexityRefactoring {
 }
 
 impl ComplexityRefactoring {
+    pub fn new() -> Self {
+        Self {
+            suggestions_arc: Arc::new(Mutex::new(HashMap::new())),
+            is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            dismissed_suggestions: Arc::new(Mutex::new(read_dismissed_suggestions())),
+        }
+    }
+
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         debug!("Computing suggestions for complexity refactoring");
+        let window_uid = code_document.editor_window_props().window_uid;
+        let suggestions_arc = self.suggestions_arc.clone();
+        let old_suggestions = Self::get_suggestions_for_window(suggestions_arc.clone(), window_uid);
+
         let text_content = code_document
             .text_content()
             .as_ref()
@@ -153,17 +163,12 @@ impl ComplexityRefactoring {
                 ComplexityRefactoringError::InsufficientContext.into(),
             ))?
             .clone();
-
         let top_level_functions =
             SwiftFunction::get_top_level_functions(code_document.syntax_tree(), &text_content)
                 .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
-
         let file_path = code_document.file_path().clone();
-
         let mut s_exps = vec![];
-
-        let mut suggestions: HashMap<Uuid, RefactoringSuggestion> = HashMap::new();
-
+        let mut suggestions: SuggestionsMap = HashMap::new();
         for function in top_level_functions {
             s_exps.push(function.props.node.to_sexp());
             suggestions.extend(Self::generate_suggestions_for_function(
@@ -171,54 +176,51 @@ impl ComplexityRefactoring {
                 &text_content,
                 &file_path,
                 code_document.syntax_tree(),
-                self.suggestions.clone(),
+                suggestions_arc.clone(),
                 self.dismissed_suggestions.clone(),
                 code_document.editor_window_props().window_uid,
             )?);
         }
-        let removed_suggestions_count: usize;
-        let added_suggestions_count: usize;
-        let window_uid = code_document.editor_window_props().window_uid;
-        {
-            let mut suggestions_cache = self.suggestions.lock();
-            let old_suggestions = suggestions_cache.clone();
-            (*suggestions_cache) = suggestions.clone();
+        self.suggestions_arc
+            .lock()
+            .insert(window_uid, suggestions.clone());
 
-            added_suggestions_count = suggestions
-                .clone()
-                .iter()
-                .filter(|(id, _)| !old_suggestions.contains_key(&id))
-                .count();
+        let added_suggestions_count = suggestions
+            .clone()
+            .iter()
+            .filter(|(id, _)| !old_suggestions.contains_key(&id))
+            .count();
 
-            removed_suggestions_count = old_suggestions
-                .clone()
-                .into_keys()
-                .filter(|id| !suggestions.contains_key(id))
-                .count();
-        }
+        let removed_suggestions_count = old_suggestions
+            .clone()
+            .into_keys()
+            .filter(|id| !suggestions.contains_key(id))
+            .count();
 
         if removed_suggestions_count > 0 || added_suggestions_count > 0 {
-            Self::publish_to_frontend(suggestions, window_uid);
+            Self::publish_to_frontend(self.suggestions_arc.lock().clone());
         }
 
         Ok(())
     }
 
-    fn publish_to_frontend(suggestions: HashMap<Uuid, RefactoringSuggestion>, window_uid: usize) {
-        let fe_suggestions = suggestions
-            .into_iter()
-            .map(|(id, suggestion)| {
-                (
-                    id,
-                    map_refactoring_suggestion_to_fe_refactoring_suggestion(
-                        suggestion, id, window_uid,
-                    ),
-                )
-            })
-            .collect::<HashMap<Uuid, FERefactoringSuggestion>>();
+    fn publish_to_frontend(suggestions_per_window: SuggestionsPerWindow) {
+        let mut fe_suggestions_per_window = HashMap::new();
+        for (window_uid, suggestions) in suggestions_per_window {
+            let fe_suggestions = suggestions
+                .into_iter()
+                .map(|(id, suggestion)| {
+                    (
+                        id,
+                        map_refactoring_suggestion_to_fe_refactoring_suggestion(suggestion),
+                    )
+                })
+                .collect::<HashMap<Uuid, FERefactoringSuggestion>>();
+            fe_suggestions_per_window.insert(window_uid, fe_suggestions);
+        }
 
         SuggestionEvent::ReplaceSuggestions(ReplaceSuggestionsMessage {
-            suggestions: fe_suggestions,
+            suggestions: fe_suggestions_per_window,
         })
         .publish_to_tauri(&app_handle());
     }
@@ -228,18 +230,17 @@ impl ComplexityRefactoring {
         text_content: &XcodeText,
         file_path: &Option<String>,
         syntax_tree: &SwiftSyntaxTree,
-        suggestions_arc: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+        suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
-    ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
-        let old_suggestions = suggestions_arc.lock().clone();
-
+    ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
         let suggestions = Self::compute_suggestions_for_function(
             &function,
-            &old_suggestions,
+            suggestions_arc.clone(),
             &text_content,
             &syntax_tree,
             dismissed_suggestions_arc,
+            window_uid,
         )?;
 
         for (id, suggestion) in suggestions.iter() {
@@ -255,7 +256,7 @@ impl ComplexityRefactoring {
             let binded_file_path = file_path.clone();
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
-            let binded_suggestions_cache_arc = suggestions_arc.clone();
+            let binded_old_suggestions = suggestions_arc.clone();
 
             // For error reporting
             let serialized_slice = suggestion.serialized_slice.clone();
@@ -277,7 +278,7 @@ impl ComplexityRefactoring {
                                 binded_suggestion,
                                 edits,
                                 binded_text_content,
-                                binded_suggestions_cache_arc,
+                                binded_old_suggestions,
                                 binded_file_path,
                                 window_uid,
                             )
@@ -304,11 +305,12 @@ impl ComplexityRefactoring {
 
     fn compute_suggestions_for_function(
         function: &SwiftFunction,
-        old_suggestions: &HashMap<Uuid, RefactoringSuggestion>,
+        suggestions_arc: SuggestionsArcMutex,
         text_content: &XcodeText,
         syntax_tree: &SwiftSyntaxTree,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
-    ) -> Result<HashMap<Uuid, RefactoringSuggestion>, ComplexityRefactoringError> {
+        window_uid: EditorWindowUid,
+    ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
         let prev_complexity = function.get_complexity();
         if prev_complexity <= MAX_ALLOWED_COMPLEXITY {
             return Ok(HashMap::new());
@@ -328,6 +330,7 @@ impl ComplexityRefactoring {
 
         let mut new_suggestions = HashMap::new();
 
+        let old_suggestions = Self::get_suggestions_for_window(suggestions_arc, window_uid);
         let old_suggestions_with_same_serialization: Vec<(&Uuid, &RefactoringSuggestion)> =
             old_suggestions
                 .iter()
@@ -359,16 +362,15 @@ impl ComplexityRefactoring {
     fn update_suggestion(
         id: Uuid,
         updated_suggestion: &RefactoringSuggestion,
-        suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+        suggestions_arc: SuggestionsArcMutex,
         window_uid: EditorWindowUid,
     ) {
-        let mut suggestions = suggestions_cache.lock();
-        let suggestion = suggestions.get_mut(&id);
-
-        if let Some(suggestion) = suggestion {
-            suggestion.clone_from(updated_suggestion);
-
-            Self::publish_to_frontend(suggestions.clone(), window_uid);
+        let mut suggestions_per_window = suggestions_arc.lock();
+        if let Some(suggestions_map) = suggestions_per_window.get_mut(&window_uid) {
+            if let Some(suggestion) = suggestions_map.get_mut(&id) {
+                suggestion.clone_from(updated_suggestion);
+                Self::publish_to_frontend(suggestions_per_window.clone());
+            }
         }
     }
 
@@ -377,7 +379,7 @@ impl ComplexityRefactoring {
         mut suggestion: RefactoringSuggestion,
         edits: Vec<Edit>,
         text_content: XcodeText,
-        suggestions_cache: Arc<Mutex<HashMap<Uuid, RefactoringSuggestion>>>,
+        suggestions_arc: SuggestionsArcMutex,
         file_path: Option<String>,
         window_uid: EditorWindowUid,
     ) {
@@ -387,7 +389,7 @@ impl ComplexityRefactoring {
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
-            Self::update_suggestion(id, &suggestion, suggestions_cache, window_uid)
+            Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid)
         });
     }
 
@@ -428,11 +430,14 @@ impl ComplexityRefactoring {
     fn perform_operation(
         &mut self,
         code_document: &CodeDocument,
-        suggestion_id: uuid::Uuid,
+        suggestion_id: SuggestionId,
     ) -> Result<(), ComplexityRefactoringError> {
-        let suggestions_cache = self.suggestions.lock().clone();
+        let suggestions = Self::get_suggestions_for_window(
+            self.suggestions_arc.clone(),
+            code_document.editor_window_props().window_uid,
+        );
 
-        let suggestion_to_apply = suggestions_cache
+        let suggestion_to_apply = suggestions
             .get(&suggestion_id)
             .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
             .clone();
@@ -449,7 +454,7 @@ impl ComplexityRefactoring {
         tauri::async_runtime::spawn({
             let selected_text_range = code_document.selected_text_range().clone();
             let text_content = text_content.clone();
-            let suggestions_arc = self.suggestions.clone();
+            let suggestions_arc = self.suggestions_arc.clone();
             let editor_window_uid = code_document.editor_window_props().window_uid;
 
             async move {
@@ -466,10 +471,11 @@ impl ComplexityRefactoring {
                         return;
                     }
                 }
-                let mut suggestions = suggestions_arc.lock();
-                suggestions.remove(&suggestion_id);
-
-                Self::publish_to_frontend(suggestions.clone(), editor_window_uid);
+                let mut suggestions_per_window = suggestions_arc.lock();
+                if let Some(suggestions) = suggestions_per_window.get_mut(&editor_window_uid) {
+                    suggestions.remove(&suggestion_id);
+                    Self::publish_to_frontend(suggestions_per_window.clone());
+                }
             }
         });
 
@@ -479,35 +485,21 @@ impl ComplexityRefactoring {
     fn dismiss_suggestion(
         &mut self,
         code_document: &CodeDocument,
-        suggestion_id: uuid::Uuid,
+        suggestion_id: SuggestionId,
     ) -> Result<(), ComplexityRefactoringError> {
-        let suggestions;
-        let suggestion_to_dismiss;
-        {
-            let mut suggestions_guard = self.suggestions.lock();
-            suggestion_to_dismiss = suggestions_guard
-                .get(&suggestion_id)
-                .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
-                .serialized_slice
-                .clone();
-            suggestions_guard.remove(&suggestion_id);
-            suggestions = suggestions_guard.clone();
-        }
-        let hash = write_dismissed_suggestion(&suggestion_to_dismiss)?;
-        self.dismissed_suggestions.lock().push(hash);
+        let window_uid = code_document.editor_window_props().window_uid;
+        let mut suggestions_per_window = self.suggestions_arc.lock();
+        if let Some(suggestions) = suggestions_per_window.get_mut(&window_uid) {
+            if let Some(suggestion_to_dismiss) = suggestions.get(&suggestion_id) {
+                let hash = write_dismissed_suggestion(&suggestion_to_dismiss.serialized_slice)?;
+                self.dismissed_suggestions.lock().push(hash);
+            }
+            suggestions.remove(&suggestion_id);
 
-        Self::publish_to_frontend(suggestions, code_document.editor_window_props().window_uid);
+            Self::publish_to_frontend(suggestions_per_window.clone());
+        }
+
         Ok(())
-    }
-}
-
-impl ComplexityRefactoring {
-    pub fn new() -> Self {
-        Self {
-            suggestions: Arc::new(Mutex::new(HashMap::new())),
-            is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
-            dismissed_suggestions: Arc::new(Mutex::new(read_dismissed_suggestions())),
-        }
     }
 
     fn should_compute(
@@ -525,6 +517,17 @@ impl ComplexityRefactoring {
                 Some(ComplexityRefactoringProcedure::DismissSuggestion(msg.id))
             }
             _ => None,
+        }
+    }
+
+    fn get_suggestions_for_window(
+        suggestions_arc: SuggestionsArcMutex,
+        window_uid: EditorWindowUid,
+    ) -> SuggestionsMap {
+        if let Some(suggestions) = suggestions_arc.lock().get_mut(&window_uid) {
+            suggestions.clone()
+        } else {
+            HashMap::new()
         }
     }
 }
