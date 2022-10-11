@@ -20,6 +20,7 @@ dependencies = [
  "differ",
  "enigo",
  "gcp_auth",
+ "glob",
  "lazy_static",
  "log",
  "machine-uid",
