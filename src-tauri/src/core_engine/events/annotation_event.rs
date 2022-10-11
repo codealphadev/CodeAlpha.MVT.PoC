@@ -51,7 +51,7 @@ pub enum AnnotationManagerEvent {
     ), // Creates a new annotation group for the given jobs; we don't let the caller submit a "JobsGroup" because of the JobsGroup's Drop implementation
     Update((AnnotationGroupID, Vec<AnnotationJob>)), // Updates existing AnnotationJobGroup with a new set of jobs.
     Remove(AnnotationGroupID), // Removes the AnnotationJobGroup with the given IDs from the list.
-    ScrollToAnnotationInGroup((AnnotationGroupID, Option<AnnotationJobID>)),
+    ScrollToAnnotationInGroup((AnnotationGroupID, AnnotationJobID)),
 }
 
 impl AnnotationManagerEvent {
