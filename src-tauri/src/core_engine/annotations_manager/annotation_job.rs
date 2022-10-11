@@ -87,10 +87,10 @@ pub enum AnnotationJob {
 
 pub trait AnnotationJobTrait {
     fn new(
+        id: uuid::Uuid,
         range: &TextRange,
         kind: AnnotationKind,
         instructions: AnnotationJobInstructions,
-        custom_id: Option<uuid::Uuid>,
     ) -> Self;
 
     fn id(&self) -> uuid::Uuid;
@@ -117,17 +117,12 @@ pub trait AnnotationJobTrait {
 
 impl AnnotationJobTrait for AnnotationJob {
     fn new(
+        id: uuid::Uuid,
         range: &TextRange,
         kind: AnnotationKind,
         instructions: AnnotationJobInstructions,
-        custom_id: Option<uuid::Uuid>,
     ) -> Self {
-        Self::SingleChar(AnnotationJobSingleChar::new(
-            range,
-            kind,
-            instructions,
-            custom_id,
-        ))
+        Self::SingleChar(AnnotationJobSingleChar::new(id, range, kind, instructions))
     }
 
     fn id(&self) -> uuid::Uuid {

@@ -25,13 +25,11 @@ pub struct AnnotationJobSingleChar {
 
 impl AnnotationJobTrait for AnnotationJobSingleChar {
     fn new(
+        id: uuid::Uuid,
         range: &TextRange,
         kind: AnnotationKind,
         instructions: AnnotationJobInstructions,
-        custom_id: Option<uuid::Uuid>,
     ) -> Self {
-        let id = custom_id.unwrap_or_else(|| uuid::Uuid::new_v4());
-
         Self {
             id,
             char_index: range.index,
@@ -200,23 +198,23 @@ mod tests {
         };
 
         let annotation_job1 = AnnotationJobSingleChar::new(
+            uuid::Uuid::new_v4(),
             &TextRange {
                 index: 0,
                 length: 1,
             },
             AnnotationKind::CodeblockFirstChar,
             AnnotationJobInstructions::default(),
-            None,
         );
 
         let annotation_job2 = AnnotationJobSingleChar::new(
+            uuid::Uuid::new_v4(),
             &TextRange {
                 index: 0,
                 length: 1,
             },
             AnnotationKind::CodeblockFirstChar,
             instructions_prop_as_top_left_point,
-            None,
         );
 
         let result = AnnotationResult {
