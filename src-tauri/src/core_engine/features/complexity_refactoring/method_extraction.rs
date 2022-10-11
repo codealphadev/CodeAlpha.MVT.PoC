@@ -13,7 +13,6 @@ use crate::core_engine::{
     features::complexity_refactoring::{
         refactor_function, NodeAddress, NodeSlice, ParsingMetadata, SerializedNodeSlice,
     },
-    rules::TemporaryFileOnDisk,
     syntax_tree::{
         calculate_cognitive_complexities, is_expression, is_l_expression, Complexities,
         SwiftFunction, SwiftSyntaxTree,
@@ -21,10 +20,8 @@ use crate::core_engine::{
     TextPosition, XcodeText,
 };
 use cached::SizedCache;
-use rand::distributions::Alphanumeric;
-use rand::Rng;
 use tracing::debug;
-use tracing::error;
+
 #[cached(
     type = "SizedCache<String, Option<(SerializedNodeSlice, isize)>>",
     create = "{ SizedCache::with_size(100) }",
@@ -74,15 +71,8 @@ pub async fn do_method_extraction(
     range_length: usize,
     set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
     text_content: &XcodeText,
-    file_path: Option<String>, // TODO
+    file_path: Option<String>,
 ) -> Result<(), ComplexityRefactoringError> {
-    // Create temporary file
-    /*  let tmp_file_key = rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(20)
-        .map(char::from)
-        .collect();
-    let temp_file = create_temp_file(&text_content, tmp_file_key)?;*/
     let suggestion = refactor_function(
         &file_path.unwrap(),
         start_position,
@@ -90,44 +80,14 @@ pub async fn do_method_extraction(
         &text_content,
     )
     .await
-    .map_err(|e| {
-        //   delete_temp_file(&temp_file);
-        match e {
-            SwiftLspError::RefactoringNotPossible => {
-                ComplexityRefactoringError::LspRejectedRefactoring
-            }
-            _ => ComplexityRefactoringError::GenericError(e.into()),
-        }
+    .map_err(|e| match e {
+        SwiftLspError::RefactoringNotPossible => ComplexityRefactoringError::LspRejectedRefactoring,
+        _ => ComplexityRefactoringError::GenericError(e.into()),
     })?;
-
-    //delete_temp_file(&temp_file);
 
     set_result_callback(suggestion);
 
     Ok(())
-}
-
-fn delete_temp_file(temp_file: &TemporaryFileOnDisk) {
-    match TemporaryFileOnDisk::delete(&temp_file) {
-        Err(e) => {
-            error!(?e, "Could not clean up temp file")
-        }
-        Ok(_) => (),
-    }
-}
-
-fn create_temp_file(
-    text_content: &XcodeText,
-    key: String,
-) -> Result<TemporaryFileOnDisk, ComplexityRefactoringError> {
-    let file_name = format!("codealpha_{}_method_extraction.swift", key);
-    let path_buf = std::env::temp_dir().join(file_name);
-
-    let file = TemporaryFileOnDisk::new(path_buf, text_content.as_string());
-    file.write()
-        .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
-
-    Ok(file)
 }
 
 fn get_best_extraction<'a>(
