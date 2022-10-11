@@ -78,9 +78,8 @@
 
 {#key JSON.stringify(explanation)}
 	{#if explanation !== null}
-		<div data-tauri-drag-region class="absolute w-full h-20" />
-
 		<Card id={dom_id}>
+			<div data-tauri-drag-region class=" absolute w-full h-20" />
 			<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
 
 			{#if explanation.parameters}
