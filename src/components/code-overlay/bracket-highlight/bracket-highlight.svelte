@@ -86,11 +86,17 @@
 	const get_elbow_rectangles_from_annotation_group = (
 		group: AnnotationGroup
 	): BracketHighlightRectangles => {
-		const lines_start = group.annotations.find((annotation) => annotation.kind === 'LineStart');
+		const lines_start = Object.values(group.annotations).find(
+			(annotation) => annotation.kind === 'LineStart'
+		);
 
-		const lines_end = group.annotations.find((annotation) => annotation.kind === 'LineEnd');
+		const lines_end = Object.values(group.annotations).find(
+			(annotation) => annotation.kind === 'LineEnd'
+		);
 
-		const elbow = group.annotations.find((annotation) => annotation.kind === 'Elbow');
+		const elbow = Object.values(group.annotations).find(
+			(annotation) => annotation.kind === 'Elbow'
+		);
 
 		const lines_start_pos =
 			lines_start && is_point(lines_start.shapes[0]) ? lines_start.shapes[0].Point : null;

@@ -11,7 +11,7 @@ use super::{
         Annotation, AnnotationError, AnnotationResult, AnnotationShape, AnnotationsManager,
     },
     AnnotationJobInstructions, AnnotationJobTrait, AnnotationKind,
-    InstructionBoundsPropertyOfInterest, ViewportPositioning,
+    InstructionBoundsPropertyOfInterest, VisibleTextRangePositioning,
 };
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -61,7 +61,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         };
 
         // If the character is not within the VisibleTextRange, we can't compute the bounds
-        if viewport_positioning != ViewportPositioning::Visible {
+        if viewport_positioning != VisibleTextRangePositioning::Visible {
             self.result = Some(result.clone());
             return Ok(result);
         }
@@ -186,7 +186,7 @@ mod tests {
 
     use super::{
         AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait, AnnotationKind,
-        ViewportPositioning,
+        VisibleTextRangePositioning,
     };
 
     #[test]
@@ -219,7 +219,7 @@ mod tests {
 
         let result = AnnotationResult {
             id: annotation_job1.clone().id,
-            position_relative_to_viewport: ViewportPositioning::Visible,
+            position_relative_to_viewport: VisibleTextRangePositioning::Visible,
             bounds: Some(vec![LogicalFrame {
                 origin: LogicalPosition { x: 0.0, y: 0.0 },
                 size: LogicalSize {
@@ -232,7 +232,7 @@ mod tests {
         let expected_annotation = Annotation {
             id: annotation_job1.clone().id,
             kind: annotation_job1.clone().kind,
-            position_relative_to_viewport: ViewportPositioning::Visible,
+            position_relative_to_viewport: VisibleTextRangePositioning::Visible,
             shapes: vec![AnnotationShape::Rectangle(LogicalFrame {
                 origin: LogicalPosition { x: 0.0, y: 0.0 },
                 size: LogicalSize {
@@ -251,7 +251,7 @@ mod tests {
         let expected_annotation = Annotation {
             id: annotation_job1.clone().id,
             kind: annotation_job1.clone().kind,
-            position_relative_to_viewport: ViewportPositioning::Visible,
+            position_relative_to_viewport: VisibleTextRangePositioning::Visible,
             shapes: vec![AnnotationShape::Point(LogicalPosition { x: 0.0, y: 0.0 })],
             char_index: 0,
         };

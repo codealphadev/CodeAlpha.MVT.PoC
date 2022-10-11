@@ -70,7 +70,7 @@
 		group: AnnotationGroup,
 		kind: AnnotationKind
 	): LogicalFrame | undefined => {
-		let result = group.annotations.find((annotation) => annotation.kind === kind);
+		let result = Object.values(group.annotations).find((annotation) => annotation.kind === kind);
 		if (!result || !result.shapes[0] || !is_rectangle(result.shapes[0])) {
 			return;
 		}
@@ -78,11 +78,11 @@
 	};
 
 	const get_codeblock_frame_from_group = (group: AnnotationGroup): LogicalFrame | undefined => {
-		let annotation_start = group.annotations.find(
+		let annotation_start = Object.values(group.annotations).find(
 			(annotation) => annotation.kind === 'CodeblockFirstChar'
 		);
 
-		let annotation_end = group.annotations.find(
+		let annotation_end = Object.values(group.annotations).find(
 			(annotation) => annotation.kind === 'CodeblockLastChar'
 		);
 

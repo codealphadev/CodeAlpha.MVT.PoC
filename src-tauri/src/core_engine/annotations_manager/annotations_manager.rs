@@ -19,7 +19,7 @@ use crate::{
 use super::{
     listeners::{annotation_events::annotation_events_listener, xcode::xcode_listener},
     AnnotationJob, AnnotationJobGroup, AnnotationJobGroupTrait, AnnotationKind,
-    ViewportPositioning,
+    VisibleTextRangePositioning,
 };
 
 static APROX_SCROLL_DURATION_PAGE_UP_DOWN_MS: u64 = 125;
@@ -47,7 +47,7 @@ pub struct Annotation {
     pub id: uuid::Uuid,
     pub kind: AnnotationKind,
     pub char_index: usize,
-    pub position_relative_to_viewport: ViewportPositioning,
+    pub position_relative_to_viewport: VisibleTextRangePositioning,
     pub shapes: Vec<AnnotationShape>,
 }
 
@@ -57,14 +57,20 @@ pub struct AnnotationGroup {
     pub id: uuid::Uuid,
     pub editor_window_uid: EditorWindowUid,
     pub feature: FeatureKind,
-    pub annotations: Vec<Annotation>,
+    pub annotations: HashMap<uuid::Uuid, Annotation>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AnnotationResult {
     pub id: uuid::Uuid,
-    pub position_relative_to_viewport: ViewportPositioning,
+    pub position_relative_to_viewport: VisibleTextRangePositioning,
     pub bounds: Option<Vec<LogicalFrame>>,
+}
+
+pub enum ViewportPositioning {
+    Visible,
+    InvisibleAbove,
+    InvisibleBelow,
 }
 
 pub trait AnnotationsManagerTrait {
@@ -197,24 +203,24 @@ impl AnnotationsManagerTrait for AnnotationsManager {
                 Self::get_position_relative_to_viewport(annotation.char_index, &visible_text_range);
 
             match viewport_positioning {
-                ViewportPositioning::Visible => {
+                VisibleTextRangePositioning::Visible => {
                     _ = Self::scroll_procedure_if_annotation_within_visible_text_range(
                         &annotation,
                         group_id,
                     )
                     .await;
                 }
-                ViewportPositioning::InvisibleAbove => {
+                VisibleTextRangePositioning::InvisibleAbove => {
                     _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
-                        ViewportPositioning::InvisibleAbove,
+                        VisibleTextRangePositioning::InvisibleAbove,
                         &annotation,
                         group_id,
                     )
                     .await;
                 }
-                ViewportPositioning::InvisibleBelow => {
+                VisibleTextRangePositioning::InvisibleBelow => {
                     _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
-                        ViewportPositioning::InvisibleBelow,
+                        VisibleTextRangePositioning::InvisibleBelow,
                         &annotation,
                         group_id,
                     )
@@ -236,13 +242,13 @@ impl AnnotationsManager {
     pub fn get_position_relative_to_viewport(
         char_index: usize,
         visible_text_range: &TextRange,
-    ) -> ViewportPositioning {
+    ) -> VisibleTextRangePositioning {
         if char_index < visible_text_range.index {
-            ViewportPositioning::InvisibleAbove
+            VisibleTextRangePositioning::InvisibleAbove
         } else if char_index > visible_text_range.index + visible_text_range.length {
-            ViewportPositioning::InvisibleBelow
+            VisibleTextRangePositioning::InvisibleBelow
         } else {
-            ViewportPositioning::Visible
+            VisibleTextRangePositioning::Visible
         }
     }
 
@@ -265,14 +271,15 @@ impl AnnotationsManager {
         let annotation = if let Some(job_id) = job_id {
             annotation_group
                 .annotations
-                .iter()
-                .find(|a| a.id == job_id)
+                .get(&job_id)
                 .ok_or(AnnotationError::AnnotationNotFound)?
         } else {
             annotation_group
                 .annotations
-                .first()
+                .iter()
+                .nth(0)
                 .ok_or(AnnotationError::AnnotationNotFound)?
+                .1
         };
 
         Ok(annotation.clone())
@@ -295,16 +302,16 @@ impl AnnotationsManager {
     }
 
     async fn scroll_procedure_if_annotation_outside_visible_text_range(
-        positioning_relative_viewport: ViewportPositioning,
+        positioning_relative_viewport: VisibleTextRangePositioning,
         annotation: &Annotation,
         group_id: uuid::Uuid,
     ) -> Result<(), AnnotationError> {
         match positioning_relative_viewport {
-            ViewportPositioning::Visible => panic!("Should not happen"),
-            ViewportPositioning::InvisibleAbove => {
+            VisibleTextRangePositioning::Visible => panic!("Should not happen"),
+            VisibleTextRangePositioning::InvisibleAbove => {
                 _ = scroll_by_one_page(true).await;
             }
-            ViewportPositioning::InvisibleBelow => {
+            VisibleTextRangePositioning::InvisibleBelow => {
                 _ = scroll_by_one_page(false).await;
             }
         }

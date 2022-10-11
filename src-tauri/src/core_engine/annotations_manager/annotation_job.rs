@@ -57,7 +57,7 @@ pub enum InstructionBounds {
 // information to know if the missing property is above or below the viewport.
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS)]
 #[ts(export, export_to = "bindings/features/code_annotations/")]
-pub enum ViewportPositioning {
+pub enum VisibleTextRangePositioning {
     Visible,
     InvisibleAbove,
     InvisibleBelow,
