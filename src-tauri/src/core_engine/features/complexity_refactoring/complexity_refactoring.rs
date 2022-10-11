@@ -554,14 +554,10 @@ fn write_dismissed_suggestion(
     }
 
     suggestions.push(hash);
-    let suggestions_string = serde_json::to_string(&suggestions).map_err(|e| {
-        dbg!(e);
-        ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed
-    })?;
-    fs::write(&path, suggestions_string).map_err(|e| {
-        dbg!(e);
-        ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed
-    })?;
+    let suggestions_string = serde_json::to_string(&suggestions)
+        .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
+    fs::write(&path, suggestions_string)
+        .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
 
     Ok(hash)
 }
