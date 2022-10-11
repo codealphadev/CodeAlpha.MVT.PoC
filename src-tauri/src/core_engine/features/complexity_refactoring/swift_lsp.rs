@@ -3,9 +3,10 @@ use anyhow::anyhow;
 use cached::proc_macro::cached;
 use glob::glob;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
+use tracing::error;
 
 use super::complexity_refactoring::Edit;
 
@@ -17,10 +18,25 @@ pub enum SwiftLspError {
     RefactoringNotPossible,
     #[error("Command failed")]
     CommandFailed(),
-    #[error("Something went wrong when querying Swift LSP.")]
-    GenericError(#[source] anyhow::Error),
     #[error("Unable to find MacOSX SDK path")]
     CouldNotFindSdk(),
+    #[error("Could not extract compiler args from xcodebuild: File key not found")]
+    CouldNotExtractCompilerArgsForFile(String, Value),
+    #[error(
+        "Could not extract compiler args from xcodebuild: No swiftASTCommandArguments key found"
+    )]
+    CouldNotFindSwiftAstCommandArgsKey(String, Value),
+    #[error(
+        "Could not extract compiler args from xcodebuild: Invalid glob pattern for finding .xcodeproj config file"
+    )]
+    InvalidGlobPattern(String),
+    #[error("Could not find .xcodeproj config file")]
+    CouldNotFindXcodeprojConfig(String),
+    #[error("Getting build settings from xcodebuild failed")]
+    CouldNotGetBuildSettingsFromXcodebuild(String),
+
+    #[error("Something went wrong when querying Swift LSP.")]
+    GenericError(#[source] anyhow::Error),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -86,7 +102,7 @@ pub async fn refactor_function(
     length: usize,
     text_content: &XcodeText,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    let compiler_args = get_compiler_args(file_path).await.expect("//TODO:DOTODO");
+    let compiler_args = get_compiler_args(file_path).await?;
 
     let payload = format!(
         "key.request: source.request.semantic.refactoring
@@ -151,12 +167,52 @@ async fn make_lsp_request(file_path: &String, payload: String) -> Result<String,
     }
 }
 
+async fn get_compiler_args(source_file_path: &str) -> Result<Vec<String>, SwiftLspError> {
+    // Try to get compiler arguments from xcodebuild
+    match get_compiler_args_from_xcodebuild(source_file_path).await {
+        Ok(result) => return Ok(result),
+        Err(e) => {
+            error!(
+                ?e,
+                ?source_file_path,
+                "Failed to get compiler arguments from Xcodebuild, will fall-back to single-file mode"
+            );
+        }
+    }
+
+    // Fallback in case we cannot use xcodebuild; flawed because we don't know if macOS or iOS SDK needed
+    let sdk_path = get_macos_sdk_path().await?;
+    Ok(vec![
+        "-j4".to_string(),
+        format!("\"{}\"", source_file_path),
+        "-sdk".to_string(),
+        format!("\"{}\"", sdk_path),
+    ])
+}
+
+#[cached(result = true, time = 600)]
+async fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
+    let sdk_path_output = std::process::Command::new("xcrun")
+        .arg("--show-sdk-path")
+        .arg("-sdk")
+        .arg("macosx")
+        .output()
+        .map_err(|e| SwiftLspError::GenericError(e.into()))?
+        .stdout;
+
+    if sdk_path_output.is_empty() {
+        return Err(SwiftLspError::CouldNotFindSdk());
+    }
+    let sdk_path_string = String::from_utf8_lossy(&sdk_path_output);
+    Ok(sdk_path_string.trim().to_string())
+}
+
 // TODO: Cache? invalidate if future command doesn't work?
-async fn get_compiler_args(source_file_path: &str) -> Option<Vec<String>> {
-    // TODO: TOEODOTODOTODOTDOTODOTDOOTDODO ERROR HANDLING
-    let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())
-        .unwrap()
-        .unwrap();
+async fn get_compiler_args_from_xcodebuild(
+    source_file_path: &str,
+) -> Result<Vec<String>, SwiftLspError> {
+    let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())?;
+
     let output = std::process::Command::new("xcodebuild")
         .arg("-project")
         .arg(path_to_xcodeproj)
@@ -164,45 +220,69 @@ async fn get_compiler_args(source_file_path: &str) -> Option<Vec<String>> {
         .arg("-alltargets")
         .arg("-json")
         .output()
-        .unwrap() // TODO: TODOTODOTODOTODO
-        .stdout;
+        .map_err(|e| SwiftLspError::GenericError(e.into()))?;
 
-    if output.is_empty() {
-        panic!("OH no!!!!!!!!!"); // TODO: TDOODOTODTODTODODTODTODTDTO
+    if output.stdout.is_empty() {
+        return Err(SwiftLspError::CouldNotGetBuildSettingsFromXcodebuild(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ));
     }
-    let output_str = String::from_utf8_lossy(&output);
-    let output_obj: Value = serde_json::from_str(&output_str).unwrap();
-    // TODO: TOTOTOTODODOODODO
-    return extract_compiler_args(&output_obj, source_file_path);
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let xcodebuild_output_obj: Value =
+        serde_json::from_str(&stdout).map_err(|e| SwiftLspError::GenericError(e.into()))?;
+
+    extract_compiler_args_from_xcodebuild_output(&xcodebuild_output_obj, source_file_path)
 }
 
-fn extract_compiler_args(object: &Value, source_file_path: &str) -> Option<Vec<String>> {
+fn extract_compiler_args_from_xcodebuild_output(
+    xcodebuild_output: &Value,
+    source_file_path: &str,
+) -> Result<Vec<String>, SwiftLspError> {
+    extract_compiler_args_from_xcodebuild_output_recursive(xcodebuild_output, source_file_path)?
+        .ok_or(SwiftLspError::CouldNotExtractCompilerArgsForFile(
+            source_file_path.to_string(),
+            xcodebuild_output.clone(),
+        ))
+}
+
+fn extract_compiler_args_from_xcodebuild_output_recursive(
+    object: &Value,
+    source_file_path: &str,
+) -> Result<Option<Vec<String>>, SwiftLspError> {
     if let Value::Object(object) = object {
         for (key, value) in object.iter() {
             if key == source_file_path {
                 if let Some(Value::Array(swift_ast_command_args)) =
                     value.get("swiftASTCommandArguments")
                 {
-                    return Some(
+                    return Ok(Some(
                         swift_ast_command_args
                             .into_iter()
-                            .map(|arg| arg.as_str().expect("// TODO").to_string())
+                            .map(|arg| arg.to_string())
                             .collect::<Vec<String>>(),
-                    );
+                    ));
+                } else {
+                    return Err(SwiftLspError::CouldNotFindSwiftAstCommandArgsKey(
+                        source_file_path.to_string(),
+                        value.clone(),
+                    ));
                 }
-                panic!("oh no! the key was there but we couldmn't parse it! // TODO:");
             }
-            if let Some(result) = extract_compiler_args(value, source_file_path) {
-                return Some(result);
+            if let Some(result) =
+                extract_compiler_args_from_xcodebuild_output_recursive(value, source_file_path)?
+            {
+                return Ok(Some(result));
             }
         }
     }
-    None
+    Ok(None)
 }
 
 // TODO: Cache this according to whether we are still inside the folder? Or is it okay to recompute every time?
 #[cached(result = true)]
-fn get_path_to_xcodeproj(file_path_str: String) -> Result<Option<String>, SwiftLspError> {
+fn get_path_to_xcodeproj(file_path_str: String) -> Result<String, SwiftLspError> {
     let file_path = Path::new(&file_path_str);
     if !Path::new(file_path).exists() {
         return Err(SwiftLspError::FileNotExisting(file_path_str.to_string()));
@@ -210,13 +290,17 @@ fn get_path_to_xcodeproj(file_path_str: String) -> Result<Option<String>, SwiftL
     for ancestor in file_path.ancestors() {
         let folder_str = ancestor.to_string_lossy();
         let pattern = format!("{}{}", folder_str, "/*.xcodeproj");
-        if let Some(xcodeproj_path) = glob(&pattern)
-            .expect("Very bad! // TODO")
+        if let Some(glob_result) = glob(&pattern)
+            .map_err(|_| SwiftLspError::InvalidGlobPattern(pattern))?
             .next()
-            .map(|res| res.expect("// TODO: oh no!!").to_string_lossy().to_string())
         {
-            return Ok(Some(xcodeproj_path.to_string()));
+            let xcodeproj_path = glob_result
+                .map_err(|e| SwiftLspError::GenericError(e.into()))?
+                .to_string_lossy()
+                .to_string();
+
+            return Ok(xcodeproj_path.to_string());
         }
     }
-    return Ok(None);
+    return Err(SwiftLspError::CouldNotFindXcodeprojConfig(file_path_str));
 }
