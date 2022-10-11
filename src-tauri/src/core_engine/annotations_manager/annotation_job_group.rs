@@ -121,10 +121,10 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
     }
 
     fn get_annotation_group(&self) -> Option<AnnotationGroup> {
-        let mut annotations = vec![];
+        let mut annotations = HashMap::new();
         for job in self.jobs.values() {
             if let Some(annotation) = job.get_annotation() {
-                annotations.push(annotation);
+                annotations.insert(annotation.id, annotation);
             } else {
                 return None;
             }

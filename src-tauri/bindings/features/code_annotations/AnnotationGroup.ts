@@ -6,5 +6,5 @@ export interface AnnotationGroup {
   id: string;
   editor_window_uid: number;
   feature: FeatureKind;
-  annotations: Array<Annotation>;
+  annotations: Record<string, Annotation>;
 }

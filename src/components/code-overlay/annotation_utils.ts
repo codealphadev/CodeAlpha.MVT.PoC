@@ -18,7 +18,7 @@ export function try_get_kind_as_rectangle(
 	group: AnnotationGroup,
 	kind: AnnotationKind
 ): LogicalFrame | undefined {
-	let result = group.annotations.find((annotation) => annotation.kind === kind);
+	let result = Object.values(group.annotations).find((annotation) => annotation.kind === kind);
 	if (!result || !result.shapes[0] || !is_rectangle(result.shapes[0])) {
 		return;
 	}
