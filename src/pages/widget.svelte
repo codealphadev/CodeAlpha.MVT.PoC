@@ -46,7 +46,13 @@
 	};
 
 	const handle_release_drag = async () => {
-		// invoke('cmd_toggle_app_activation', { appActive: app_active });
+		const event: EventUserInteraction = {
+			event: 'ToggleMainWindow',
+			payload: main_window_active
+		};
+		const channel: ChannelList = 'EventUserInteractions';
+
+		await emit(channel, event);
 
 		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
 		// delay between setting a new position and recreating the parent/child relationship.
