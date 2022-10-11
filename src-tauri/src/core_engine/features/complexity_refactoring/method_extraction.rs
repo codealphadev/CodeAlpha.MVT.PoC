@@ -81,7 +81,9 @@ pub async fn do_method_extraction(
     )
     .await
     .map_err(|e| match e {
-        SwiftLspError::RefactoringNotPossible => ComplexityRefactoringError::LspRejectedRefactoring,
+        SwiftLspError::RefactoringNotPossible(payload) => {
+            ComplexityRefactoringError::LspRejectedRefactoring(payload)
+        }
         _ => ComplexityRefactoringError::GenericError(e.into()),
     })?;
 
