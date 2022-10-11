@@ -7,6 +7,7 @@ use objc::{msg_send, sel, sel_impl};
 use parking_lot::Mutex;
 use tauri::Manager;
 
+// This is the offset between the outside corners of the widget and the main window, measured inwards from the main window towards the widget
 pub static WIDGET_MAIN_WINDOW_OFFSET_X: f64 = 12.;
 pub static WIDGET_MAIN_WINDOW_OFFSET_Y: f64 = 4.;
 

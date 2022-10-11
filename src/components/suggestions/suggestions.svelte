@@ -12,6 +12,8 @@
 	let window_height: number | null = null;
 	export let window_dom_id: string;
 
+	let tail_height_px = 12;
+
 	afterUpdate(() => {
 		updateDimensions();
 
@@ -19,7 +21,7 @@
 			let appWindow: AppWindow = 'Main';
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
-				sizeY: window_height + 12,
+				sizeY: window_height + tail_height_px,
 
 				sizeX: window_width
 			});
