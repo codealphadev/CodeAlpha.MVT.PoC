@@ -7,6 +7,9 @@ use objc::{msg_send, sel, sel_impl};
 use parking_lot::Mutex;
 use tauri::Manager;
 
+pub static WIDGET_MAIN_WINDOW_OFFSET_X: f64 = 12.;
+pub static WIDGET_MAIN_WINDOW_OFFSET_Y: f64 = 4.;
+
 use crate::{
     app_handle,
     platform::macos::{get_menu_bar_height, models::app::AppWindowMovedMessage, AXEventApp},
@@ -16,7 +19,6 @@ use crate::{
         utils::create_default_window_builder,
         windows::{
             utils::{app_window_dimensions, register_tracking_area, update_tracking_area},
-            widget_window::WIDGET_MAIN_WINDOW_OFFSET,
             WidgetWindow,
         },
         EventTrackingArea, TrackingArea,
@@ -113,8 +115,10 @@ impl MainWindow {
                 x: widget_frame.origin.x
                     - (updated_main_window_size.width
                         - widget_frame.size.width
-                        - WIDGET_MAIN_WINDOW_OFFSET),
-                y: widget_frame.origin.y - updated_main_window_size.height,
+                        - WIDGET_MAIN_WINDOW_OFFSET_X),
+                y: widget_frame.origin.y
+                    - WIDGET_MAIN_WINDOW_OFFSET_Y
+                    - updated_main_window_size.height,
             };
 
             // If the `main_window_origin` would be within the menu bar area, we need to account for that.
@@ -127,7 +131,10 @@ impl MainWindow {
             let is_flipped =
                 Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
             if is_flipped {
-                corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET;
+                corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET_X;
+                _ = main_tauri_window.emit("tail-orientation-flipped", true);
+            } else {
+                _ = main_tauri_window.emit("tail-orientation-flipped", false);
             }
 
             let (offscreen_dist_x, offscreen_dist_y) = Self::calc_off_screen_distance(
@@ -269,12 +276,15 @@ impl MainWindow {
         let mut updated_widget_window_origin = LogicalPosition {
             x: main_window_frame.origin.x + main_window_frame.size.width
                 - widget_tauri_window_frame.size.width
-                - WIDGET_MAIN_WINDOW_OFFSET,
-            y: main_window_frame.origin.y + main_window_frame.size.height,
+                - WIDGET_MAIN_WINDOW_OFFSET_X,
+            y: main_window_frame.origin.y
+                + main_window_frame.size.height
+                + WIDGET_MAIN_WINDOW_OFFSET_Y,
         };
 
         if is_main_window_flipped {
-            updated_widget_window_origin.x = main_window_frame.origin.x + WIDGET_MAIN_WINDOW_OFFSET;
+            updated_widget_window_origin.x =
+                main_window_frame.origin.x + WIDGET_MAIN_WINDOW_OFFSET_X;
         }
 
         updated_widget_window_origin
@@ -331,7 +341,7 @@ mod tests {
 
     use crate::{
         utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
-        window_controls::windows::widget_window::WIDGET_MAIN_WINDOW_OFFSET,
+        window_controls::windows::main_window::main_window::WIDGET_MAIN_WINDOW_OFFSET_X,
     };
 
     use super::MainWindow;
@@ -396,12 +406,12 @@ mod tests {
         let updated_widget_window_origin =
             MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, false);
 
-        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
+        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET_X.
         assert_eq!(
             updated_widget_window_origin.x,
             0. /*main_window_frame.origin.x*/ + 100. /*main_window_frame.size.width*/
                     - 48. /*widget_tauri_window_frame.size.width*/
-                    - WIDGET_MAIN_WINDOW_OFFSET
+                    - WIDGET_MAIN_WINDOW_OFFSET_X
         );
         assert_eq!(
             updated_widget_window_origin.y,
@@ -411,12 +421,12 @@ mod tests {
         let updated_widget_window_origin =
             MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, false);
 
-        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
+        // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET_X.
         assert_eq!(
             updated_widget_window_origin.x,
             0. /*main_window_frame.origin.x*/ + 100. /*main_window_frame.size.width*/
                     - 48. /*widget_tauri_window_frame.size.width*/
-                    - WIDGET_MAIN_WINDOW_OFFSET
+                    - WIDGET_MAIN_WINDOW_OFFSET_X
         );
         assert_eq!(
             updated_widget_window_origin.y,
@@ -426,10 +436,10 @@ mod tests {
         let updated_widget_window_origin =
             MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, true);
 
-        // Placement should be bottom LEFT cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET.
+        // Placement should be bottom LEFT cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET_X.
         assert_eq!(
             updated_widget_window_origin.x,
-            0. /*main_window_frame.origin.x*/ + WIDGET_MAIN_WINDOW_OFFSET
+            0. /*main_window_frame.origin.x*/ + WIDGET_MAIN_WINDOW_OFFSET_X
         );
     }
 

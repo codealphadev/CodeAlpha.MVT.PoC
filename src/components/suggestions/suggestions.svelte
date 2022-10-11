@@ -19,7 +19,7 @@
 			let appWindow: AppWindow = 'Main';
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
-				sizeY: window_height + 24,
+				sizeY: window_height + 12,
 
 				sizeX: window_width
 			});

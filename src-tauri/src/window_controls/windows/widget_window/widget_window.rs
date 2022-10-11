@@ -21,7 +21,6 @@ use crate::{
 use super::listeners::window_control_events_listener;
 
 static WIDGET_OFFSET: f64 = 75.;
-pub static WIDGET_MAIN_WINDOW_OFFSET: f64 = 24.;
 
 #[derive(Clone, Debug)]
 pub struct WidgetWindow {
