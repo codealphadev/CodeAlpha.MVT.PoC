@@ -39,6 +39,8 @@ pub struct MainWindow {
     size: LogicalSize,
     // The window's tracking area
     tracking_area: TrackingArea,
+    // Describes if the MainWindow is currently displayed 'horizontally flipped'
+    is_flipped: bool,
 }
 
 impl MainWindow {
@@ -60,6 +62,7 @@ impl MainWindow {
             app_handle,
             size: LogicalSize { width, height },
             tracking_area: Self::register_tracking_area(),
+            is_flipped: false,
         })
     }
 
@@ -90,9 +93,10 @@ impl MainWindow {
     }
 
     pub fn show(&mut self, monitor: &LogicalFrame) -> Option<()> {
+        let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
+
         self.update(&self.size.clone(), monitor, true)?;
 
-        let main_tauri_window = self.app_handle.get_window(&AppWindow::Main.to_string())?;
         main_tauri_window.show().ok()?;
 
         self.update_tracking_area(true);
@@ -129,13 +133,19 @@ impl MainWindow {
                 get_menu_bar_height(&monitor),
             );
 
-            let is_flipped =
+            let is_flipped_before_update = self.is_flipped;
+
+            self.is_flipped =
                 Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
-            if is_flipped {
+            if self.is_flipped {
                 corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET_X;
-                _ = main_tauri_window.emit("tail-orientation-flipped", true);
-            } else {
-                _ = main_tauri_window.emit("tail-orientation-flipped", false);
+            }
+
+            _ = main_tauri_window.emit("tail-orientation-flipped", self.is_flipped);
+
+            // If the window is flipped as part of the update, we briefly hide it to prevent outdated window shadows from staying on-screen
+            if is_flipped_before_update != self.is_flipped {
+                self.hide();
             }
 
             let (offscreen_dist_x, offscreen_dist_y) = Self::calc_off_screen_distance(
@@ -157,7 +167,7 @@ impl MainWindow {
                     origin: corrected_position,
                     size: *updated_main_window_size,
                 },
-                is_flipped,
+                self.is_flipped,
             );
 
             main_tauri_window
@@ -342,7 +352,9 @@ mod tests {
 
     use crate::{
         utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
-        window_controls::windows::main_window::main_window::WIDGET_MAIN_WINDOW_OFFSET_X,
+        window_controls::windows::main_window::main_window::{
+            WIDGET_MAIN_WINDOW_OFFSET_X, WIDGET_MAIN_WINDOW_OFFSET_Y,
+        },
     };
 
     use super::MainWindow;
@@ -416,7 +428,7 @@ mod tests {
         );
         assert_eq!(
             updated_widget_window_origin.y,
-            100. /*main_window_frame.size.height*/
+            100. + WIDGET_MAIN_WINDOW_OFFSET_Y /*main_window_frame.size.height*/
         );
 
         let updated_widget_window_origin =
@@ -431,7 +443,7 @@ mod tests {
         );
         assert_eq!(
             updated_widget_window_origin.y,
-            100. /*main_window_frame.size.height*/
+            100. + WIDGET_MAIN_WINDOW_OFFSET_Y /*main_window_frame.size.height*/
         );
 
         let updated_widget_window_origin =

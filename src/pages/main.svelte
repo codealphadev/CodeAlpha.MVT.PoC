@@ -27,7 +27,7 @@
 	listenToGlobalEvents();
 </script>
 
-<div class="flex flex-col shrink-0 justify-end transform overflow-hidden h-full">
+<div class="flex flex-col bg-transparent shrink-0 justify-end transform overflow-hidden h-full">
 	<div
 		id={dom_id}
 		class="flex bg-background flex-col shrink-0 rounded-xl max-h-[800px] overflow-y-auto overscroll-none"
@@ -35,7 +35,7 @@
 		<Suggestions window_dom_id={dom_id} />
 	</div>
 	<div
-		class="h-3 {`${
+		class="h-3  {`${
 			tail_orientation == TailOrientation.Left ? 'mr-auto ml-[18px]' : 'ml-auto mr-[18px]'
 		}`}"
 	>
