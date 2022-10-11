@@ -349,43 +349,43 @@ impl BracketHighlight {
         };
 
         let bracket_open = AnnotationJobSingleChar::new(
+            uuid::Uuid::new_v4(),
             &TextRange {
                 index: opening_bracket.index,
                 length: 1,
             },
             AnnotationKind::OpeningBracket,
             instructions_default.clone(),
-            None,
         );
 
         let bracket_close = AnnotationJobSingleChar::new(
+            uuid::Uuid::new_v4(),
             &TextRange {
                 index: closing_bracket.index,
                 length: 1,
             },
             AnnotationKind::ClosingBracket,
             instructions_default.clone(),
-            None,
         );
 
         let line_start = AnnotationJobSingleChar::new(
+            uuid::Uuid::new_v4(),
             &TextRange {
                 index: line_opening_character.index,
                 length: 1,
             },
             AnnotationKind::LineStart,
             instructions_line_start,
-            None,
         );
 
         let line_end = AnnotationJobSingleChar::new(
+            uuid::Uuid::new_v4(),
             &TextRange {
                 index: line_closing_character.index,
                 length: 1,
             },
             AnnotationKind::LineEnd,
             instructions_line_end,
-            None,
         );
 
         let mut jobs = vec![
@@ -402,13 +402,13 @@ impl BracketHighlight {
             };
 
             let elbow_job = AnnotationJobSingleChar::new(
+                uuid::Uuid::new_v4(),
                 &TextRange {
                     index: elbow.index,
                     length: 1,
                 },
                 AnnotationKind::Elbow,
                 instructions_elbow,
-                None,
             );
             jobs.push(AnnotationJob::SingleChar(elbow_job));
         }

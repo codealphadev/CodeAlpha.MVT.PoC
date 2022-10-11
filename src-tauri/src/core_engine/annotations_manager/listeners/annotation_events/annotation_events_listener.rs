@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+use parking_lot::Mutex;
+use tauri::Manager;
+use tracing::error;
+
 use crate::{
     app_handle,
     core_engine::{
@@ -8,8 +12,6 @@ use crate::{
     },
     utils::messaging::ChannelList,
 };
-use parking_lot::Mutex;
-use tauri::Manager;
 
 pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<AnnotationsManager>>) {
     app_handle().listen_global(ChannelList::NodeAnnotationEvent.to_string(), {
@@ -32,9 +34,12 @@ pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<Annotation
                     annotations_manager.lock().remove_annotation_job_group(id);
                 }
                 AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, job_id)) => {
-                    _ = annotations_manager
+                    if let Err(e) = annotations_manager
                         .lock()
-                        .scroll_to_annotation(group_id, job_id);
+                        .scroll_to_annotation(group_id, job_id)
+                    {
+                        error!(?e, "Error scrolling to annotation");
+                    }
                 }
             }
         }

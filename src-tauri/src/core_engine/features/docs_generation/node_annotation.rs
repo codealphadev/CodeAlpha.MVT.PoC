@@ -80,24 +80,24 @@ impl NodeAnnotation {
         ) {
             let first_char_job_id = uuid::Uuid::new_v4();
             let first_char = AnnotationJobSingleChar::new(
+                first_char_job_id,
                 &TextRange {
                     index: first_char_text_pos,
                     length: 1,
                 },
                 AnnotationKind::CodeblockFirstChar,
                 AnnotationJobInstructions::default(),
-                Some(first_char_job_id),
             );
 
             let last_char_job_id = uuid::Uuid::new_v4();
             let last_char = AnnotationJobSingleChar::new(
+                last_char_job_id,
                 &TextRange {
                     index: last_char_text_pos,
                     length: 1,
                 },
                 AnnotationKind::CodeblockLastChar,
                 AnnotationJobInstructions::default(),
-                Some(last_char_job_id),
             );
 
             annotation_jobs.insert(AnnotationKind::CodeblockFirstChar, first_char_job_id);
