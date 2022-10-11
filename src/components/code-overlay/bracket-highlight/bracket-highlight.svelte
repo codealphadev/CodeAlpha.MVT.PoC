@@ -34,6 +34,7 @@
 					if (payload.feature === 'BracketHighlight') {
 						let group = payload;
 						annotation_group_editor_window_uid = group.editor_window_uid;
+						annotation_group_id = group.id;
 
 						let closing_bracket = try_get_kind_as_rectangle(group, 'ClosingBracket');
 						if (closing_bracket) {

@@ -37,6 +37,7 @@
 
 					if (group.feature === 'DocsGeneration') {
 						annotation_group_editor_window_uid = group.editor_window_uid;
+						annotation_group_id = group.id;
 
 						let icon = get_icon_frame_from_group(group);
 						if (icon) {
