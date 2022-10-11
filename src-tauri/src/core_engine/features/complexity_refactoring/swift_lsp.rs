@@ -14,24 +14,32 @@ use super::complexity_refactoring::Edit;
 pub enum SwiftLspError {
     #[error("File does not exist: '{0}'")]
     FileNotExisting(String),
+
     #[error("Refactoring could not be carried out")]
-    RefactoringNotPossible,
-    #[error("Command failed")]
-    CommandFailed(),
+    RefactoringNotPossible(String),
+
+    #[error("SourceKitten command failed")]
+    SourceKittenCommandFailed(String, String),
+
     #[error("Unable to find MacOSX SDK path")]
-    CouldNotFindSdk(),
+    CouldNotFindSdk,
+
     #[error("Could not extract compiler args from xcodebuild: File key not found")]
     CouldNotExtractCompilerArgsForFile(String, Value),
+
     #[error(
         "Could not extract compiler args from xcodebuild: No swiftASTCommandArguments key found"
     )]
     CouldNotFindSwiftAstCommandArgsKey(String, Value),
+
     #[error(
         "Could not extract compiler args from xcodebuild: Invalid glob pattern for finding .xcodeproj config file"
     )]
     InvalidGlobPattern(String),
+
     #[error("Could not find .xcodeproj config file")]
     CouldNotFindXcodeprojConfig(String),
+
     #[error("Getting build settings from xcodebuild failed")]
     CouldNotGetBuildSettingsFromXcodebuild(String),
 
@@ -92,7 +100,7 @@ fn map_edit_dto_to_edit(
 fn format_array_as_yaml(compiler_args: Vec<String>) -> String {
     compiler_args
         .into_iter()
-        .map(|arg| format!("\n  - \"{}\"", arg))
+        .map(|arg| format!("\n  - {}", arg))
         .collect()
 }
 
@@ -120,13 +128,13 @@ key.compilerargs:{}",
     )
     .to_string();
 
-    let result_str = make_lsp_request(&file_path, payload).await?;
+    let result_str = make_lsp_request(&file_path, payload.clone()).await?;
 
     let result: RefactoringResponse =
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
 
     if result.categorized_edits.len() == 0 {
-        return Err(SwiftLspError::RefactoringNotPossible);
+        return Err(SwiftLspError::RefactoringNotPossible(payload));
     }
 
     let edits: Vec<Edit> = result
@@ -149,7 +157,7 @@ async fn make_lsp_request(file_path: &String, payload: String) -> Result<String,
 
     let (mut rx, _) = Command::new_sidecar("sourcekitten")
         .map_err(|err| SwiftLspError::GenericError(err.into()))?
-        .args(["request".to_string(), "--yaml".to_string(), payload])
+        .args(["request".to_string(), "--yaml".to_string(), payload.clone()])
         .spawn()
         .map_err(|err| SwiftLspError::GenericError(err.into()))?;
 
@@ -163,7 +171,10 @@ async fn make_lsp_request(file_path: &String, payload: String) -> Result<String,
     if !text_content.is_empty() {
         Ok(text_content)
     } else {
-        Err(SwiftLspError::CommandFailed())
+        Err(SwiftLspError::SourceKittenCommandFailed(
+            file_path.clone(),
+            payload,
+        ))
     }
 }
 
@@ -183,9 +194,9 @@ async fn get_compiler_args(source_file_path: &str) -> Result<Vec<String>, SwiftL
     // Fallback in case we cannot use xcodebuild; flawed because we don't know if macOS or iOS SDK needed
     let sdk_path = get_macos_sdk_path().await?;
     Ok(vec![
-        "-j4".to_string(),
+        "\"-j4\"".to_string(),
         format!("\"{}\"", source_file_path),
-        "-sdk".to_string(),
+        "\"-sdk\"".to_string(),
         format!("\"{}\"", sdk_path),
     ])
 }
@@ -201,7 +212,7 @@ async fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
         .stdout;
 
     if sdk_path_output.is_empty() {
-        return Err(SwiftLspError::CouldNotFindSdk());
+        return Err(SwiftLspError::CouldNotFindSdk);
     }
     let sdk_path_string = String::from_utf8_lossy(&sdk_path_output);
     Ok(sdk_path_string.trim().to_string())
