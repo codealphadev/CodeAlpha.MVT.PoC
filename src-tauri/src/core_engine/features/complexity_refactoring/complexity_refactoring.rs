@@ -253,6 +253,7 @@ impl ComplexityRefactoring {
             let binded_text_content = text_content.clone();
             let binded_text_content_2 = text_content.clone();
             let binded_file_path = file_path.clone();
+            let binded_file_path_2 = file_path.clone();
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
             let binded_suggestions_cache_arc = suggestions_arc.clone();
@@ -283,6 +284,7 @@ impl ComplexityRefactoring {
                             )
                         },
                         &binded_text_content_2,
+                        binded_file_path_2,
                     )
                     .await
                     .map_err(|e| match e {
@@ -552,10 +554,14 @@ fn write_dismissed_suggestion(
     }
 
     suggestions.push(hash);
-    let suggestions_string = serde_json::to_string(&suggestions)
-        .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
-    fs::write(&path, suggestions_string)
-        .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
+    let suggestions_string = serde_json::to_string(&suggestions).map_err(|e| {
+        dbg!(e);
+        ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed
+    })?;
+    fs::write(&path, suggestions_string).map_err(|e| {
+        dbg!(e);
+        ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed
+    })?;
 
     Ok(hash)
 }

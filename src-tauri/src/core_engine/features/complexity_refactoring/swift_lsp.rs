@@ -1,7 +1,9 @@
 use crate::core_engine::{TextPosition, XcodeText};
 use anyhow::anyhow;
 use cached::proc_macro::cached;
+use glob::glob;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::path::Path;
 use tauri::api::process::{Command, CommandEvent};
 
@@ -19,23 +21,6 @@ pub enum SwiftLspError {
     GenericError(#[source] anyhow::Error),
     #[error("Unable to find MacOSX SDK path")]
     CouldNotFindSdk(),
-}
-
-#[cached(result = true, time = 600)]
-async fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
-    let sdk_path_output = std::process::Command::new("xcrun")
-        .arg("--show-sdk-path")
-        .arg("-sdk")
-        .arg("macosx")
-        .output()
-        .map_err(|e| SwiftLspError::GenericError(e.into()))?
-        .stdout;
-
-    if sdk_path_output.is_empty() {
-        return Err(SwiftLspError::CouldNotFindSdk());
-    }
-    let sdk_path_string = String::from_utf8_lossy(&sdk_path_output);
-    Ok(sdk_path_string.trim().to_string())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -88,6 +73,12 @@ fn map_edit_dto_to_edit(
         text: XcodeText::from_str(&edit_dto.text),
     })
 }
+fn format_array_as_yaml(compiler_args: Vec<String>) -> String {
+    compiler_args
+        .into_iter()
+        .map(|arg| format!("\n  - \"{}\"", arg))
+        .collect()
+}
 
 pub async fn refactor_function(
     file_path: &String,
@@ -95,7 +86,7 @@ pub async fn refactor_function(
     length: usize,
     text_content: &XcodeText,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    let sdk_path = get_macos_sdk_path().await?;
+    let compiler_args = get_compiler_args(file_path).await.expect("//TODO:DOTODO");
 
     let payload = format!(
         "key.request: source.request.semantic.refactoring
@@ -104,17 +95,12 @@ key.sourcefile: \"{}\"
 key.line: {}
 key.column: {}
 key.length: {}
-key.compilerargs:
-  - \"-j4\"
-  - \"{}\"
-  - \"-sdk\"
-  - \"{}\"",
+key.compilerargs:{}",
         file_path,
         start_position.row + 1,
         start_position.column + 1,
         length,
-        file_path,
-        sdk_path,
+        format_array_as_yaml(compiler_args)
     )
     .to_string();
 
@@ -163,4 +149,74 @@ async fn make_lsp_request(file_path: &String, payload: String) -> Result<String,
     } else {
         Err(SwiftLspError::CommandFailed())
     }
+}
+
+// TODO: Cache? invalidate if future command doesn't work?
+async fn get_compiler_args(source_file_path: &str) -> Option<Vec<String>> {
+    // TODO: TOEODOTODOTODOTDOTODOTDOOTDODO ERROR HANDLING
+    let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())
+        .unwrap()
+        .unwrap();
+    let output = std::process::Command::new("xcodebuild")
+        .arg("-project")
+        .arg(path_to_xcodeproj)
+        .arg("-showBuildSettingsForIndex")
+        .arg("-alltargets")
+        .arg("-json")
+        .output()
+        .unwrap() // TODO: TODOTODOTODOTODO
+        .stdout;
+
+    if output.is_empty() {
+        panic!("OH no!!!!!!!!!"); // TODO: TDOODOTODTODTODODTODTODTDTO
+    }
+    let output_str = String::from_utf8_lossy(&output);
+    let output_obj: Value = serde_json::from_str(&output_str).unwrap();
+    // TODO: TOTOTOTODODOODODO
+    return extract_compiler_args(&output_obj, source_file_path);
+}
+
+fn extract_compiler_args(object: &Value, source_file_path: &str) -> Option<Vec<String>> {
+    if let Value::Object(object) = object {
+        for (key, value) in object.iter() {
+            if key == source_file_path {
+                if let Some(Value::Array(swift_ast_command_args)) =
+                    value.get("swiftASTCommandArguments")
+                {
+                    return Some(
+                        swift_ast_command_args
+                            .into_iter()
+                            .map(|arg| arg.as_str().expect("// TODO").to_string())
+                            .collect::<Vec<String>>(),
+                    );
+                }
+                panic!("oh no! the key was there but we couldmn't parse it! // TODO:");
+            }
+            if let Some(result) = extract_compiler_args(value, source_file_path) {
+                return Some(result);
+            }
+        }
+    }
+    None
+}
+
+// TODO: Cache this according to whether we are still inside the folder? Or is it okay to recompute every time?
+#[cached(result = true)]
+fn get_path_to_xcodeproj(file_path_str: String) -> Result<Option<String>, SwiftLspError> {
+    let file_path = Path::new(&file_path_str);
+    if !Path::new(file_path).exists() {
+        return Err(SwiftLspError::FileNotExisting(file_path_str.to_string()));
+    }
+    for ancestor in file_path.ancestors() {
+        let folder_str = ancestor.to_string_lossy();
+        let pattern = format!("{}{}", folder_str, "/*.xcodeproj");
+        if let Some(xcodeproj_path) = glob(&pattern)
+            .expect("Very bad! // TODO")
+            .next()
+            .map(|res| res.expect("// TODO: oh no!!").to_string_lossy().to_string())
+        {
+            return Ok(Some(xcodeproj_path.to_string()));
+        }
+    }
+    return Ok(None);
 }
