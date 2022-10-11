@@ -219,11 +219,8 @@ impl NodeAnnotation {
                     (*explanation.lock()) = None;
                 }
 
-                AnnotationManagerEvent::ScrollToAnnotationInGroup((
-                    group_id,
-                    Some(first_char_job_id),
-                ))
-                .publish_to_tauri();
+                AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, first_char_job_id))
+                    .publish_to_tauri();
 
                 (*state.lock()) = NodeAnnotationState::Finished;
             }

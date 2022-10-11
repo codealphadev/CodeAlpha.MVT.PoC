@@ -93,18 +93,22 @@ pub trait AnnotationsManagerTrait {
     fn scroll_to_annotation(
         &mut self,
         group_id: uuid::Uuid,
-        job_id: Option<uuid::Uuid>,
+        job_id: uuid::Uuid,
     ) -> Result<(), AnnotationError>;
 }
 
 pub struct AnnotationsManager {
     groups: HashMap<uuid::Uuid, AnnotationJobGroup>,
+
+    // Because scrolling _takes time_ we want to allow to interrupt the scrolling process if the user wants to scroll to another annotation.
+    scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
 }
 
 impl AnnotationsManagerTrait for AnnotationsManager {
     fn new() -> Self {
         Self {
             groups: HashMap::new(),
+            scroll_to_annotation_job_id: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -188,43 +192,63 @@ impl AnnotationsManagerTrait for AnnotationsManager {
     fn scroll_to_annotation(
         &mut self,
         group_id: uuid::Uuid,
-        job_id: Option<uuid::Uuid>,
+        job_id: uuid::Uuid,
     ) -> Result<(), AnnotationError> {
+        {
+            // If there is a another scroll to annotation job running, we want to interrupt it.
+            let mut scroll_to_annotation_job_id = self.scroll_to_annotation_job_id.lock();
+            if scroll_to_annotation_job_id.is_some() && *scroll_to_annotation_job_id != Some(job_id)
+            {
+                return Ok(());
+            } else {
+                *scroll_to_annotation_job_id = Some(job_id);
+            }
+        }
+
         let annotation = self.get_annotation(group_id, job_id)?;
 
-        tauri::async_runtime::spawn(async move {
-            let visible_text_range = if let Ok(range) = get_visible_text_range(GetVia::Current) {
-                range
-            } else {
-                return;
-            };
+        tauri::async_runtime::spawn({
+            let scroll_to_annotation_job_id = self.scroll_to_annotation_job_id.clone();
+            async move {
+                let visible_text_range = if let Ok(range) = get_visible_text_range(GetVia::Current)
+                {
+                    range
+                } else {
+                    return;
+                };
 
-            let viewport_positioning =
-                Self::get_position_relative_to_viewport(annotation.char_index, &visible_text_range);
+                let viewport_positioning = Self::get_position_relative_to_viewport(
+                    annotation.char_index,
+                    &visible_text_range,
+                );
 
-            match viewport_positioning {
-                VisibleTextRangePositioning::Visible => {
-                    _ = Self::scroll_procedure_if_annotation_within_visible_text_range(
-                        &annotation,
-                        group_id,
-                    )
-                    .await;
-                }
-                VisibleTextRangePositioning::InvisibleAbove => {
-                    _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
-                        VisibleTextRangePositioning::InvisibleAbove,
-                        &annotation,
-                        group_id,
-                    )
-                    .await;
-                }
-                VisibleTextRangePositioning::InvisibleBelow => {
-                    _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
-                        VisibleTextRangePositioning::InvisibleBelow,
-                        &annotation,
-                        group_id,
-                    )
-                    .await;
+                match viewport_positioning {
+                    VisibleTextRangePositioning::Visible => {
+                        _ = Self::scroll_procedure_if_annotation_within_visible_text_range(
+                            &annotation,
+                            group_id,
+                            scroll_to_annotation_job_id,
+                        )
+                        .await;
+                    }
+                    VisibleTextRangePositioning::InvisibleAbove => {
+                        _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
+                            VisibleTextRangePositioning::InvisibleAbove,
+                            &annotation,
+                            group_id,
+                            scroll_to_annotation_job_id,
+                        )
+                        .await;
+                    }
+                    VisibleTextRangePositioning::InvisibleBelow => {
+                        _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
+                            VisibleTextRangePositioning::InvisibleBelow,
+                            &annotation,
+                            group_id,
+                            scroll_to_annotation_job_id,
+                        )
+                        .await;
+                    }
                 }
             }
         });
@@ -255,7 +279,7 @@ impl AnnotationsManager {
     fn get_annotation(
         &mut self,
         group_id: uuid::Uuid,
-        job_id: Option<uuid::Uuid>,
+        job_id: uuid::Uuid,
     ) -> Result<Annotation, AnnotationError> {
         let annotation_job_group = self
             .groups
@@ -268,21 +292,11 @@ impl AnnotationsManager {
                     anyhow!("No AnnotationGroup computed yet").into(),
                 ))?;
 
-        let annotation = if let Some(job_id) = job_id {
-            annotation_group
-                .annotations
-                .get(&job_id)
-                .ok_or(AnnotationError::AnnotationNotFound)?
-        } else {
-            annotation_group
-                .annotations
-                .iter()
-                .nth(0)
-                .ok_or(AnnotationError::AnnotationNotFound)?
-                .1
-        };
-
-        Ok(annotation.clone())
+        Ok(annotation_group
+            .annotations
+            .get(&job_id)
+            .ok_or(AnnotationError::AnnotationNotFound)?
+            .to_owned())
     }
 
     pub fn get_annotation_rect_for_TextRange(
@@ -305,6 +319,7 @@ impl AnnotationsManager {
         positioning_relative_viewport: VisibleTextRangePositioning,
         annotation: &Annotation,
         group_id: uuid::Uuid,
+        scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
     ) -> Result<(), AnnotationError> {
         match positioning_relative_viewport {
             VisibleTextRangePositioning::Visible => panic!("Should not happen"),
@@ -321,8 +336,10 @@ impl AnnotationsManager {
         ))
         .await;
 
-        AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, Some(annotation.id)))
-            .publish_to_tauri();
+        if *scroll_to_annotation_job_id.lock() == Some(annotation.id) {
+            AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, annotation.id))
+                .publish_to_tauri();
+        }
 
         Ok(())
     }
@@ -330,6 +347,7 @@ impl AnnotationsManager {
     async fn scroll_procedure_if_annotation_within_visible_text_range(
         annotation: &Annotation,
         group_id: uuid::Uuid,
+        scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
     ) -> Result<(), AnnotationError> {
         let annotation_top_left =
             match annotation
@@ -344,6 +362,7 @@ impl AnnotationsManager {
 
         match Self::annotation_visible_on_viewport(annotation_top_left)? {
             ViewportPositioning::Visible => {
+                *scroll_to_annotation_job_id.lock() = None;
                 return Ok(());
             }
             ViewportPositioning::InvisibleAbove => {
@@ -359,8 +378,10 @@ impl AnnotationsManager {
         ))
         .await;
 
-        AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, Some(annotation.id)))
-            .publish_to_tauri();
+        if *scroll_to_annotation_job_id.lock() == Some(annotation.id) {
+            AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, annotation.id))
+                .publish_to_tauri();
+        }
 
         Ok(())
     }
