@@ -254,6 +254,7 @@ impl ComplexityRefactoring {
             let binded_text_content = text_content.clone();
             let binded_text_content_2 = text_content.clone();
             let binded_file_path = file_path.clone();
+            let binded_file_path_2 = file_path.clone();
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
             let binded_old_suggestions = suggestions_arc.clone();
@@ -284,6 +285,7 @@ impl ComplexityRefactoring {
                             )
                         },
                         &binded_text_content_2,
+                        binded_file_path_2,
                     )
                     .await
                     .map_err(|e| match e {

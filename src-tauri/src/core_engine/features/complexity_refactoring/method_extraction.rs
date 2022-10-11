@@ -74,23 +74,24 @@ pub async fn do_method_extraction(
     range_length: usize,
     set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
     text_content: &XcodeText,
+    file_path: Option<String>, // TODO
 ) -> Result<(), ComplexityRefactoringError> {
     // Create temporary file
-    let tmp_file_key = rand::thread_rng()
+    /*  let tmp_file_key = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(20)
         .map(char::from)
         .collect();
-    let temp_file = create_temp_file(&text_content, tmp_file_key)?;
+    let temp_file = create_temp_file(&text_content, tmp_file_key)?;*/
     let suggestion = refactor_function(
-        &temp_file.path.to_string_lossy().to_string(),
+        &file_path.unwrap(),
         start_position,
         range_length,
         &text_content,
     )
     .await
     .map_err(|e| {
-        delete_temp_file(&temp_file);
+        //   delete_temp_file(&temp_file);
         match e {
             SwiftLspError::RefactoringNotPossible => {
                 ComplexityRefactoringError::LspRejectedRefactoring
@@ -99,7 +100,7 @@ pub async fn do_method_extraction(
         }
     })?;
 
-    delete_temp_file(&temp_file);
+    //delete_temp_file(&temp_file);
 
     set_result_callback(suggestion);
 
