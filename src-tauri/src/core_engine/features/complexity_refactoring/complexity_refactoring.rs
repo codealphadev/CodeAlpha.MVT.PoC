@@ -288,15 +288,18 @@ impl ComplexityRefactoring {
                     )
                     .await
                     .map_err(|e| match e {
-                        ComplexityRefactoringError::LspRejectedRefactoring => {
+                        ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
                             warn!(
+                                ?payload,
                                 ?serialized_slice,
                                 ?node_kinds,
                                 ?parent_node_kind,
                                 "LSP rejected refactoring"
                             );
                         }
-                        _ => error!(?e, "Failed to perform refactoring"),
+                        _ => {
+                            error!(?e, "Failed to perform refactoring");
+                        }
                     });
                 }
             });
@@ -436,12 +439,14 @@ impl ComplexityRefactoring {
 
         let suggestion_to_apply = suggestions_cache
             .get(&suggestion_id)
-            .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
+            .ok_or(ComplexityRefactoringError::SuggestionNotFound(
+                suggestion_id.to_string(),
+            ))?
             .clone();
 
-        let new_content = suggestion_to_apply
-            .new_text_content_string
-            .ok_or(ComplexityRefactoringError::SuggestionIncomplete)?;
+        let new_content = suggestion_to_apply.clone().new_text_content_string.ok_or(
+            ComplexityRefactoringError::SuggestionIncomplete(suggestion_to_apply),
+        )?;
 
         let text_content = code_document
             .text_content()
@@ -489,7 +494,9 @@ impl ComplexityRefactoring {
             let mut suggestions_guard = self.suggestions.lock();
             suggestion_to_dismiss = suggestions_guard
                 .get(&suggestion_id)
-                .ok_or(ComplexityRefactoringError::SuggestionNotFound)?
+                .ok_or(ComplexityRefactoringError::SuggestionNotFound(
+                    suggestion_id.to_string(),
+                ))?
                 .serialized_slice
                 .clone();
             suggestions_guard.remove(&suggestion_id);
@@ -586,11 +593,11 @@ pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
     #[error("No suggestion found to apply")]
-    SuggestionNotFound,
+    SuggestionNotFound(String),
     #[error("Suggestion has incomplete state")]
-    SuggestionIncomplete,
+    SuggestionIncomplete(RefactoringSuggestion),
     #[error("LSP rejected refactoring operation")]
-    LspRejectedRefactoring,
+    LspRejectedRefactoring(String),
     #[error("Failed to read or write dismissed suggestions file")]
     ReadWriteDismissedSuggestionsFailed,
     #[error("Something went wrong when executing this ComplexityRefactoring feature.")]
