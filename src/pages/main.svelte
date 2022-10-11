@@ -1,15 +1,26 @@
 <script lang="ts">
 	import { Event, listen } from '@tauri-apps/api/event';
-	import BubbleIcon from '../components/main/bubble-icon.svelte';
+	import Tail from '../components/main/tail.svelte';
 	import Suggestions from '../components/suggestions/suggestions.svelte';
 
 	let dom_id = 'main-window-container';
 
-	let bubbleOrientationRight = true;
+	// Enum for the orientation of the tail
+	enum TailOrientation {
+		Left = 'left',
+		Right = 'right'
+	}
+
+	let tail_orientation = TailOrientation.Right;
 	const listenToGlobalEvents = async () => {
-		await listen('evt-content-window-orientation', (event) => {
+		await listen('tail-orientation-flipped', (event) => {
 			const tauriEvent = event as Event<any>;
-			bubbleOrientationRight = tauriEvent.payload.orientation_right;
+
+			if (tauriEvent.payload) {
+				tail_orientation = TailOrientation.Left;
+			} else {
+				tail_orientation = TailOrientation.Right;
+			}
 		});
 	};
 
@@ -23,7 +34,11 @@
 	>
 		<Suggestions window_dom_id={dom_id} />
 	</div>
-	<div class="h-6 mr-4 ml-4 {`${bubbleOrientationRight ? 'ml-auto' : 'ml-4'}`}">
-		<BubbleIcon />
+	<div
+		class="h-3 {`${
+			tail_orientation == TailOrientation.Left ? 'mr-auto ml-[18px]' : 'ml-auto mr-[18px]'
+		}`}"
+	>
+		<Tail />
 	</div>
 </div>
