@@ -109,8 +109,9 @@ pub async fn refactor_function(
     start_position: TextPosition,
     length: usize,
     text_content: &XcodeText,
+    tmp_file_path: &String,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    let compiler_args = get_compiler_args(file_path).await?;
+    let compiler_args = get_compiler_args(file_path, tmp_file_path).await?;
 
     let payload = format!(
         "key.request: source.request.semantic.refactoring
@@ -120,11 +121,11 @@ key.line: {}
 key.column: {}
 key.length: {}
 key.compilerargs:{}",
-        file_path,
+        tmp_file_path,
         start_position.row + 1,
         start_position.column + 1,
         length,
-        format_array_as_yaml(compiler_args)
+        format_array_as_yaml(compiler_args) //.replace(file_path, tmp_file_path)
     )
     .to_string();
 
@@ -178,10 +179,21 @@ async fn make_lsp_request(file_path: &String, payload: String) -> Result<String,
     }
 }
 
-async fn get_compiler_args(source_file_path: &str) -> Result<Vec<String>, SwiftLspError> {
+async fn get_compiler_args(
+    source_file_path: &str,
+    tmp_file_path: &str,
+) -> Result<Vec<String>, SwiftLspError> {
     // Try to get compiler arguments from xcodebuild
     match get_compiler_args_from_xcodebuild(source_file_path).await {
-        Ok(result) => return Ok(result),
+        Ok(mut compiler_args) => {
+            if let Some(insertion_index) = compiler_args
+                .iter()
+                .position(|a| a.contains(source_file_path))
+            {
+                compiler_args.insert(insertion_index, format!("\"{}\"", tmp_file_path));
+            }
+            return Ok(compiler_args);
+        }
         Err(e) => {
             error!(
                 ?e,
@@ -195,7 +207,7 @@ async fn get_compiler_args(source_file_path: &str) -> Result<Vec<String>, SwiftL
     let sdk_path = get_macos_sdk_path().await?;
     Ok(vec![
         "\"-j4\"".to_string(),
-        format!("\"{}\"", source_file_path),
+        format!("\"{}\"", tmp_file_path),
         "\"-sdk\"".to_string(),
         format!("\"{}\"", sdk_path),
     ])
