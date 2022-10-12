@@ -43,7 +43,7 @@
 		window_height = positionInfo.height;
 	};
 	let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
-	$: filtered = Object.entries(suggestions[active_window_uid] ?? {}).sort((a, b) =>
+	$: filtered_suggestions = Object.entries(suggestions[active_window_uid] ?? {}).sort((a, b) =>
 		a[0].localeCompare(b[0])
 	);
 
@@ -66,10 +66,10 @@
 </script>
 
 <div class="flex flex-col gap-5">
-	{#if filtered.length > 0}
-		{#each filtered as [id, suggestion]}
+	{#if filtered_suggestions.length > 0}
+		{#each filtered_suggestions as [id, suggestion]}
 			{#key id}
-				<Suggestion {suggestion} suggestion_id={id} {active_window_uid} />
+				<Suggestion {suggestion} suggestion_id={id} window_uid={active_window_uid} />
 			{/key}
 		{/each}
 	{:else}

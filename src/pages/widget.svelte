@@ -194,7 +194,6 @@
 			switch (event) {
 				case 'XcodeViewportUpdate':
 					active_window_uid = payload.viewport_properties.window_uid;
-					console.log('active_window_uid', active_window_uid);
 					break;
 				default:
 					break;
