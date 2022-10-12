@@ -5,7 +5,9 @@ use cocoa::{appkit::NSWindowOrderingMode, base::id, foundation::NSInteger};
 use objc::{msg_send, sel, sel_impl};
 
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use ts_rs::TS;
 
 // This is the offset between the outside corners of the widget and the main window, measured inwards from the main window towards the widget
 pub static WIDGET_MAIN_WINDOW_OFFSET_X: f64 = 12.;
@@ -28,6 +30,13 @@ use crate::{
 
 use super::listeners::window_control_events_listener;
 
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, TS)]
+#[ts(export, export_to = "bindings/window_controls/")]
+enum TailOrientation {
+    Left,
+    Right,
+}
+
 #[derive(Clone, Debug)]
 pub struct MainWindow {
     app_handle: tauri::AppHandle,
@@ -39,8 +48,9 @@ pub struct MainWindow {
     size: LogicalSize,
     // The window's tracking area
     tracking_area: TrackingArea,
-    // Describes if the MainWindow is currently displayed 'horizontally flipped'
-    is_flipped: bool,
+    // The "tail" of the main window is the small part of the window that sticks out from it pointing towards the Widget.
+    // This parameter describes if the MainWindow is currently displayed 'horizontally flipped (TailOrientation::Left)'.
+    tail_orientation: TailOrientation,
 }
 
 impl MainWindow {
@@ -62,7 +72,7 @@ impl MainWindow {
             app_handle,
             size: LogicalSize { width, height },
             tracking_area: Self::register_tracking_area(),
-            is_flipped: false,
+            tail_orientation: TailOrientation::Right,
         })
     }
 
@@ -133,18 +143,18 @@ impl MainWindow {
                 get_menu_bar_height(&monitor),
             );
 
-            let is_flipped_before_update = self.is_flipped;
+            let is_flipped_before_update = self.tail_orientation;
 
-            self.is_flipped =
+            self.tail_orientation =
                 Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
-            if self.is_flipped {
+            if self.tail_orientation == TailOrientation::Left {
                 corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET_X;
             }
 
-            _ = main_tauri_window.emit("tail-orientation-flipped", self.is_flipped);
+            _ = main_tauri_window.emit("tail-orientation-flipped", self.tail_orientation);
 
             // If the window is flipped as part of the update, we briefly hide it to prevent outdated window shadows from staying on-screen
-            if is_flipped_before_update != self.is_flipped {
+            if is_flipped_before_update != self.tail_orientation {
                 self.hide();
             }
 
@@ -167,7 +177,7 @@ impl MainWindow {
                     origin: corrected_position,
                     size: *updated_main_window_size,
                 },
-                self.is_flipped,
+                self.tail_orientation,
             );
 
             main_tauri_window
@@ -210,14 +220,14 @@ impl MainWindow {
 
     fn update_widget_position(
         main_window_frame: LogicalFrame,
-        is_main_window_flipped: bool,
+        tail_orientation: TailOrientation,
     ) -> Option<()> {
         let widget_tauri_window_frame = WidgetWindow::dimensions();
 
         let updated_widget_window_origin = Self::compute_widget_origin(
             main_window_frame,
             widget_tauri_window_frame,
-            is_main_window_flipped,
+            tail_orientation,
         );
 
         let msg = AppWindowMovedMessage {
@@ -271,18 +281,18 @@ impl MainWindow {
     fn is_main_window_flipped_horizontally(
         main_window_origin: &LogicalPosition,
         monitor: &LogicalFrame,
-    ) -> bool {
+    ) -> TailOrientation {
         if main_window_origin.x < monitor.origin.x {
-            true
+            TailOrientation::Left
         } else {
-            false
+            TailOrientation::Right
         }
     }
 
     fn compute_widget_origin(
         main_window_frame: LogicalFrame,
         widget_tauri_window_frame: LogicalFrame,
-        is_main_window_flipped: bool,
+        tail_orientation: TailOrientation,
     ) -> LogicalPosition {
         let mut updated_widget_window_origin = LogicalPosition {
             x: main_window_frame.origin.x + main_window_frame.size.width
@@ -293,7 +303,7 @@ impl MainWindow {
                 + WIDGET_MAIN_WINDOW_OFFSET_Y,
         };
 
-        if is_main_window_flipped {
+        if tail_orientation == TailOrientation::Left {
             updated_widget_window_origin.x =
                 main_window_frame.origin.x + WIDGET_MAIN_WINDOW_OFFSET_X;
         }
@@ -353,7 +363,7 @@ mod tests {
     use crate::{
         utils::geometry::{LogicalFrame, LogicalPosition, LogicalSize},
         window_controls::windows::main_window::main_window::{
-            WIDGET_MAIN_WINDOW_OFFSET_X, WIDGET_MAIN_WINDOW_OFFSET_Y,
+            TailOrientation, WIDGET_MAIN_WINDOW_OFFSET_X, WIDGET_MAIN_WINDOW_OFFSET_Y,
         },
     };
 
@@ -416,8 +426,11 @@ mod tests {
             },
         };
 
-        let updated_widget_window_origin =
-            MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, false);
+        let updated_widget_window_origin = MainWindow::compute_widget_origin(
+            main_window_frame,
+            widget_tauri_window_frame,
+            TailOrientation::Right,
+        );
 
         // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET_X.
         assert_eq!(
@@ -431,8 +444,11 @@ mod tests {
             100. + WIDGET_MAIN_WINDOW_OFFSET_Y /*main_window_frame.size.height*/
         );
 
-        let updated_widget_window_origin =
-            MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, false);
+        let updated_widget_window_origin = MainWindow::compute_widget_origin(
+            main_window_frame,
+            widget_tauri_window_frame,
+            TailOrientation::Right,
+        );
 
         // Placement should be bottom right cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET_X.
         assert_eq!(
@@ -446,8 +462,11 @@ mod tests {
             100. + WIDGET_MAIN_WINDOW_OFFSET_Y /*main_window_frame.size.height*/
         );
 
-        let updated_widget_window_origin =
-            MainWindow::compute_widget_origin(main_window_frame, widget_tauri_window_frame, true);
+        let updated_widget_window_origin = MainWindow::compute_widget_origin(
+            main_window_frame,
+            widget_tauri_window_frame,
+            TailOrientation::Left,
+        );
 
         // Placement should be bottom LEFT cornor of main window with an offset of WIDGET_MAIN_WINDOW_OFFSET_X.
         assert_eq!(
@@ -482,19 +501,19 @@ mod tests {
             },
         };
 
-        let is_flipped = MainWindow::is_main_window_flipped_horizontally(
+        let tail_orientation = MainWindow::is_main_window_flipped_horizontally(
             &main_window_frame.origin,
             &primary_monitor,
         );
 
-        assert_eq!(is_flipped, false);
+        assert_eq!(tail_orientation, TailOrientation::Right);
 
-        let is_flipped = MainWindow::is_main_window_flipped_horizontally(
+        let tail_orientation = MainWindow::is_main_window_flipped_horizontally(
             &main_window_frame.origin,
             &secondary_monitor,
         );
 
-        assert_eq!(is_flipped, true);
+        assert_eq!(tail_orientation, TailOrientation::Left);
     }
 
     #[test]
