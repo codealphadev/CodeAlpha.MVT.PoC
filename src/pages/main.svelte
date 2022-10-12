@@ -11,13 +11,8 @@
 
 	let tail_orientation: TailOrientation = 'Right';
 	const listenToGlobalEvents = async () => {
-		await listen('tail-orientation-flipped', (event) => {
-			const tauriEvent = event as Event<any>;
-			if ((tauriEvent.payload as TailOrientation) == 'Left') {
-				tail_orientation = 'Left';
-			} else {
-				tail_orientation = 'Right';
-			}
+		await listen('tail-orientation-changed', (event) => {
+			tail_orientation = (event as Event<any>).payload as TailOrientation;
 		});
 	};
 
