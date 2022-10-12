@@ -71,18 +71,18 @@ pub async fn refactor_function(
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
 
     let payload = format!(
-        "key.request: source.request.semantic.refactoring
+        r#"key.request: source.request.semantic.refactoring
 key.actionuid: source.refactoring.kind.extract.function
-key.sourcefile: \"{}\"
+key.sourcefile: \""{}"\"
 key.line: {}
 key.column: {}
 key.length: {}
-key.compilerargs:{}",
+key.compilerargs:{}"#,
         tmp_file_path,
         start_position.row + 1,
         start_position.column + 1,
         length,
-        format_array_as_yaml(compiler_args) //.replace(file_path, tmp_file_path)
+        format_array_as_yaml(compiler_args)
     )
     .to_string();
 
