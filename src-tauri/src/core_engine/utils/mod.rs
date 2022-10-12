@@ -1,6 +1,6 @@
 pub use env::*;
 pub use formatting::*;
-pub use swift_lsp::*;
+pub use swift_lsp::{Lsp, SwiftLsp, SwiftLspError};
 pub use text_position::*;
 pub use text_range::*;
 pub use xcode_text::*;

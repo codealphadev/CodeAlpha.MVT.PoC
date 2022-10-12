@@ -44,7 +44,7 @@ impl Lsp for SwiftLsp {
         }
 
         if !text_content.is_empty() {
-            Ok(dbg!(text_content))
+            Ok(text_content)
         } else {
             Err(SwiftLspError::SourceKittenCommandFailed(
                 file_path.clone(),
