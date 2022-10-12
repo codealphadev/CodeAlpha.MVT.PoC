@@ -2,5 +2,5 @@
 import type { FERefactoringSuggestion } from "./FERefactoringSuggestion";
 
 export interface ReplaceSuggestionsMessage {
-  suggestions: Record<string, FERefactoringSuggestion>;
+  suggestions: Record<number, Record<string, FERefactoringSuggestion>>;
 }

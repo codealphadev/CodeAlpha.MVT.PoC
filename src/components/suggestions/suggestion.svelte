@@ -15,26 +15,25 @@
 	import ComplexityBadge from './complexity-badge.svelte';
 
 	export let suggestion: FERefactoringSuggestion;
+	export let suggestion_id: string;
+	export let window_uid: number;
 
 	const apply_suggestion = async () => {
 		const event: EventUserInteraction = {
 			event: 'PerformRefactoringOperation',
-			payload: { id: suggestion.id, editor_window_uid: suggestion.window_uid }
+			payload: { id: suggestion_id, editor_window_uid: window_uid }
 		};
 		const channel: ChannelList = 'EventUserInteractions';
 
 		await emit(channel, event);
-		//<div class="flex flex-col items-start p-3 gap-2 w-full rounded-xl border-backgroundsecondary">
-		//    <Diff old_code={suggestion.old_text_content_string} new_code={suggestion.new_text_content_string}  />
 	};
 
 	const dismiss_suggestion = async () => {
 		const event: EventUserInteraction = {
 			event: 'DismissRefactoringSuggestion',
-			payload: { id: suggestion.id, editor_window_uid: suggestion.window_uid }
+			payload: { id: suggestion_id, editor_window_uid: window_uid }
 		};
 		const channel: ChannelList = 'EventUserInteractions';
-		console.log('DISMISSING SUGGESTION');
 		await emit(channel, event);
 	};
 </script>

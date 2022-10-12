@@ -1,6 +1,7 @@
 pub use complexity_refactoring::ComplexityRefactoring;
 pub use complexity_refactoring::ComplexityRefactoringError;
 pub use complexity_refactoring::FERefactoringSuggestion;
+pub use complexity_refactoring::SuggestionId;
 pub use generate_function_name::*;
 pub use method_extraction::check_for_method_extraction;
 pub use node_address::*;

@@ -11,10 +11,11 @@
 	import { fade } from 'svelte/transition';
 	import SwiftFormat from '../components/widget/swift-format.svelte';
 	import DocsGeneration from '../components/widget/docs-generation.svelte';
-	import type { FERefactoringSuggestion } from '../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
 	import type { SuggestionEvent } from '../../src-tauri/bindings/features/refactoring/SuggestionEvent';
 	import SuggestionsNumber from '../components/widget/suggestions-number.svelte';
 	import type { EventUserInteraction } from '../../src-tauri/bindings/user_interaction/EventUserInteraction';
+	import type { EventViewport } from '../../src-tauri/bindings/macOS_specific/EventViewport';
+	import type { ReplaceSuggestionsMessage } from '../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
 
 	let main_window_active = false;
 	let ruleExecutionState: EventRuleExecutionState | null = null;
@@ -66,7 +67,7 @@
 		}
 	};
 
-	let suggestions: { [id: string]: FERefactoringSuggestion } = {};
+	let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
 
 	const listenToSuggestionEvents = async () => {
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
@@ -162,7 +163,8 @@
 
 	function get_widget_mode(
 		rule_execution_state: EventRuleExecutionState | null,
-		suggestions: { [id: string]: FERefactoringSuggestion }
+		suggestions: ReplaceSuggestionsMessage['suggestions'],
+		window_uid: number | null
 	): WidgetMode {
 		switch (rule_execution_state?.event) {
 			case 'NodeExplanationFailed':
@@ -173,13 +175,33 @@
 			case 'NodeExplanationStarted':
 				return 'processing';
 		}
-		let suggestions_count = Object.keys(suggestions).length;
-		if (suggestions_count > 0) {
-			return suggestions_count;
+		if (window_uid) {
+			let suggestions_count = Object.values(suggestions[window_uid] ?? []).length;
+			if (suggestions_count > 0) {
+				return suggestions_count;
+			}
 		}
 		return 'idle';
 	}
-	$: widget_mode = get_widget_mode(ruleExecutionState, suggestions);
+	$: widget_mode = get_widget_mode(ruleExecutionState, suggestions, active_window_uid);
+
+	let active_window_uid: number | null = null;
+	const listenToViewportEvents = async () => {
+		let ViewportChannel: ChannelList = 'EventViewport';
+		await listen(ViewportChannel, (e) => {
+			const { event, payload } = JSON.parse(e.payload as string) as EventViewport;
+
+			switch (event) {
+				case 'XcodeViewportUpdate':
+					active_window_uid = payload.viewport_properties.window_uid;
+					break;
+				default:
+					break;
+			}
+		});
+	};
+
+	listenToViewportEvents();
 </script>
 
 <div class="relative overflow-hidden w-full h-full">
