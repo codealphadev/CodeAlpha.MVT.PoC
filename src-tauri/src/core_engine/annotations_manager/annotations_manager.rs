@@ -336,10 +336,7 @@ impl AnnotationsManager {
         ))
         .await;
 
-        if *scroll_to_annotation_job_id.lock() == Some(annotation.id) {
-            AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, annotation.id))
-                .publish_to_tauri();
-        }
+        Self::reschedule_scroll_event(scroll_to_annotation_job_id, annotation, group_id);
 
         Ok(())
     }
@@ -378,10 +375,7 @@ impl AnnotationsManager {
         ))
         .await;
 
-        if *scroll_to_annotation_job_id.lock() == Some(annotation.id) {
-            AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, annotation.id))
-                .publish_to_tauri();
-        }
+        Self::reschedule_scroll_event(scroll_to_annotation_job_id, annotation, group_id);
 
         Ok(())
     }
@@ -401,6 +395,17 @@ impl AnnotationsManager {
             Ok(ViewportPositioning::InvisibleBelow)
         } else {
             Ok(ViewportPositioning::Visible)
+        }
+    }
+
+    fn reschedule_scroll_event(
+        scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
+        annotation: &Annotation,
+        group_id: uuid::Uuid,
+    ) {
+        if *scroll_to_annotation_job_id.lock() == Some(annotation.id) {
+            AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, annotation.id))
+                .publish_to_tauri();
         }
     }
 }
