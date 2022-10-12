@@ -33,7 +33,7 @@ type SuggestionsMap = HashMap<SuggestionId, RefactoringSuggestion>;
 type SuggestionsPerWindow = HashMap<EditorWindowUid, SuggestionsMap>;
 type SuggestionsArcMutex = Arc<Mutex<SuggestionsPerWindow>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Edit {
     pub text: XcodeText,
     pub start_index: usize,
@@ -298,9 +298,7 @@ impl ComplexityRefactoring {
                                 "LSP rejected refactoring"
                             );
                         }
-                        _ => {
-                            error!(?e, "Failed to perform refactoring");
-                        }
+                        _ => error!(?e, "Failed to perform refactoring"),
                     });
                 }
             });
