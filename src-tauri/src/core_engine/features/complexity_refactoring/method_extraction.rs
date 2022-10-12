@@ -7,7 +7,7 @@ use tree_sitter::Node;
 use super::{
     complexity_refactoring::Edit, get_node_address, get_slice_inputs_and_outputs,
     get_sub_slice_inputs_and_outputs, is_child_of, update_parsing_metadata_for_node,
-    ComplexityRefactoringError, NodeSubSlice, SliceInputsAndOutputs, SwiftLspError,
+    ComplexityRefactoringError, NodeSubSlice, SliceInputsAndOutputs,
 };
 use crate::core_engine::{
     features::complexity_refactoring::{
@@ -18,7 +18,7 @@ use crate::core_engine::{
         calculate_cognitive_complexities, is_expression, is_l_expression, Complexities,
         SwiftFunction, SwiftSyntaxTree,
     },
-    TextPosition, XcodeText,
+    SwiftLspError, TextPosition, XcodeText,
 };
 use cached::SizedCache;
 use rand::distributions::Alphanumeric;

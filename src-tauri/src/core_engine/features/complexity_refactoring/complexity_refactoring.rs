@@ -27,7 +27,7 @@ use tracing::warn;
 use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Edit {
     pub text: XcodeText,
     pub start_index: usize,
@@ -297,9 +297,7 @@ impl ComplexityRefactoring {
                                 "LSP rejected refactoring"
                             );
                         }
-                        _ => {
-                            error!(?e, "Failed to perform refactoring");
-                        }
+                        _ => error!(?e, "Failed to perform refactoring"),
                     });
                 }
             });
