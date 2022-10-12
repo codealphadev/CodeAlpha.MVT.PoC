@@ -16,12 +16,12 @@
 
 	export let suggestion: FERefactoringSuggestion;
 	export let suggestion_id: string;
-	export let active_window_uid: number;
+	export let window_uid: number;
 
 	const apply_suggestion = async () => {
 		const event: EventUserInteraction = {
 			event: 'PerformRefactoringOperation',
-			payload: { id: suggestion_id, editor_window_uid: active_window_uid }
+			payload: { id: suggestion_id, editor_window_uid: window_uid }
 		};
 		const channel: ChannelList = 'EventUserInteractions';
 
@@ -31,7 +31,7 @@
 	const dismiss_suggestion = async () => {
 		const event: EventUserInteraction = {
 			event: 'DismissRefactoringSuggestion',
-			payload: { id: suggestion_id, editor_window_uid: active_window_uid }
+			payload: { id: suggestion_id, editor_window_uid: window_uid }
 		};
 		const channel: ChannelList = 'EventUserInteractions';
 		await emit(channel, event);

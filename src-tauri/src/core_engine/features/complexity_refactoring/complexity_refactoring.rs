@@ -489,16 +489,19 @@ impl ComplexityRefactoring {
     ) -> Result<(), ComplexityRefactoringError> {
         let window_uid = code_document.editor_window_props().window_uid;
         let mut suggestions_per_window = self.suggestions_arc.lock();
-        if let Some(suggestions) = suggestions_per_window.get_mut(&window_uid) {
-            if let Some(suggestion_to_dismiss) = suggestions.get(&suggestion_id) {
-                let hash = write_dismissed_suggestion(&suggestion_to_dismiss.serialized_slice)?;
-                self.dismissed_suggestions.lock().push(hash);
-            }
-            suggestions.remove(&suggestion_id);
+        let suggestions = suggestions_per_window
+            .get_mut(&window_uid)
+            .ok_or(ComplexityRefactoringError::SuggestionsForWindowNotFound)?;
+        let suggestion_to_dismiss = suggestions
+            .get(&suggestion_id)
+            .ok_or(ComplexityRefactoringError::SuggestionNotFound)?;
 
-            Self::publish_to_frontend(suggestions_per_window.clone());
-        }
+        let hash = write_dismissed_suggestion(&suggestion_to_dismiss.serialized_slice)?;
+        self.dismissed_suggestions.lock().push(hash);
 
+        suggestions.remove(&suggestion_id);
+
+        Self::publish_to_frontend(suggestions_per_window.clone());
         Ok(())
     }
 
@@ -586,6 +589,8 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
+    #[error("No suggestionS found for window")]
+    SuggestionsForWindowNotFound,
     #[error("No suggestion found to apply")]
     SuggestionNotFound,
     #[error("Suggestion has incomplete state")]
