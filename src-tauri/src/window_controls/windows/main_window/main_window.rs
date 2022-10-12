@@ -143,18 +143,17 @@ impl MainWindow {
                 get_menu_bar_height(&monitor),
             );
 
-            let is_flipped_before_update = self.tail_orientation;
+            let old_tail_orientation = self.tail_orientation;
 
-            self.tail_orientation =
-                Self::is_main_window_flipped_horizontally(&corrected_position, &monitor);
+            self.tail_orientation = Self::get_tail_orientation(&corrected_position, &monitor);
             if self.tail_orientation == TailOrientation::Left {
                 corrected_position.x = widget_frame.origin.x - WIDGET_MAIN_WINDOW_OFFSET_X;
             }
 
-            _ = main_tauri_window.emit("tail-orientation-flipped", self.tail_orientation);
+            _ = main_tauri_window.emit("tail-orientation-changed", self.tail_orientation);
 
             // If the window is flipped as part of the update, we briefly hide it to prevent outdated window shadows from staying on-screen
-            if is_flipped_before_update != self.tail_orientation {
+            if old_tail_orientation != self.tail_orientation {
                 self.hide();
             }
 
@@ -278,7 +277,7 @@ impl MainWindow {
         (dist_x, dist_y)
     }
 
-    fn is_main_window_flipped_horizontally(
+    fn get_tail_orientation(
         main_window_origin: &LogicalPosition,
         monitor: &LogicalFrame,
     ) -> TailOrientation {
@@ -476,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn is_main_window_flipped_horizontally() {
+    fn get_tail_orientation() {
         let main_window_frame = LogicalFrame {
             origin: LogicalPosition { x: 0., y: 0. },
             size: LogicalSize {
@@ -501,17 +500,13 @@ mod tests {
             },
         };
 
-        let tail_orientation = MainWindow::is_main_window_flipped_horizontally(
-            &main_window_frame.origin,
-            &primary_monitor,
-        );
+        let tail_orientation =
+            MainWindow::get_tail_orientation(&main_window_frame.origin, &primary_monitor);
 
         assert_eq!(tail_orientation, TailOrientation::Right);
 
-        let tail_orientation = MainWindow::is_main_window_flipped_horizontally(
-            &main_window_frame.origin,
-            &secondary_monitor,
-        );
+        let tail_orientation =
+            MainWindow::get_tail_orientation(&main_window_frame.origin, &secondary_monitor);
 
         assert_eq!(tail_orientation, TailOrientation::Left);
     }
