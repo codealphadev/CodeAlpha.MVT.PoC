@@ -1,6 +1,6 @@
 [package]
 name = "CodeAlpha"
-version = "0.0.48"
+version = "0.0.49"
 description = "CodeAlpha"
 authors = [ "Adrian Hupka, Daniel Owens, Adam Nyberg",]
 license = ""
