@@ -69,7 +69,7 @@ pub fn check_for_method_extraction(
     .map(|(slice, remaining_complexity)| (slice.serialize(node), remaining_complexity)))
 }
 
-pub async fn do_method_extraction(
+pub async fn get_edits_for_method_extraction(
     start_position: TextPosition,
     range_length: usize,
     set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
