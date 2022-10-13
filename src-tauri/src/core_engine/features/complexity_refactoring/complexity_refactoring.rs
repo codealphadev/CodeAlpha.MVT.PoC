@@ -2,17 +2,21 @@ use super::{NodeSlice, SerializedNodeSlice};
 use crate::{
     app_handle,
     core_engine::{
-        events::{models::ReplaceSuggestionsMessage, SuggestionEvent},
+        annotations_manager::{
+            AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
+            AnnotationKind,
+        },
+        events::{models::ReplaceSuggestionsMessage, AnnotationManagerEvent, SuggestionEvent},
         features::{
             complexity_refactoring::{
-                check_for_method_extraction, method_extraction::do_method_extraction,
+                check_for_method_extraction, method_extraction::get_edits_for_method_extraction,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            UserCommand,
+            FeatureKind, UserCommand,
         },
         format_code,
         syntax_tree::{SwiftFunction, SwiftSyntaxTree},
-        CodeDocument, EditorWindowUid, TextPosition, XcodeText,
+        CodeDocument, EditorWindowUid, TextPosition, TextRange, XcodeText,
     },
     platform::macos::replace_text_content,
     utils::calculate_hash,
@@ -191,17 +195,25 @@ impl ComplexityRefactoring {
             .filter(|(id, _)| !old_suggestions.contains_key(&id))
             .count();
 
-        let removed_suggestions_count = old_suggestions
+        let removed_suggestion_ids: Vec<Uuid> = old_suggestions
             .clone()
             .into_keys()
             .filter(|id| !suggestions.contains_key(id))
-            .count();
+            .collect();
 
-        if removed_suggestions_count > 0 || added_suggestions_count > 0 {
+        Self::remove_annotations_for_suggestions(removed_suggestion_ids.clone());
+
+        if removed_suggestion_ids.len() > 0 || added_suggestions_count > 0 {
             Self::publish_to_frontend(self.suggestions_arc.lock().clone());
         }
 
         Ok(())
+    }
+
+    fn remove_annotations_for_suggestions(suggestion_ids: Vec<uuid::Uuid>) {
+        for suggestion_id in suggestion_ids {
+            AnnotationManagerEvent::Remove(suggestion_id).publish_to_tauri();
+        }
     }
 
     fn publish_to_frontend(suggestions_per_window: SuggestionsPerWindow) {
@@ -270,7 +282,7 @@ impl ComplexityRefactoring {
                 .map(|n| n.kind());
             tauri::async_runtime::spawn({
                 async move {
-                    _ = do_method_extraction(
+                    _ = get_edits_for_method_extraction(
                         start_position,
                         range_length,
                         move |edits: Vec<Edit>| {
@@ -387,12 +399,14 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
+            register_annotations(&edits, id, window_uid);
+
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
-            Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid)
+            Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
         });
     }
 
@@ -479,6 +493,9 @@ impl ComplexityRefactoring {
                 let mut suggestions_per_window = suggestions_arc.lock();
                 if let Some(suggestions) = suggestions_per_window.get_mut(&editor_window_uid) {
                     suggestions.remove(&suggestion_id);
+
+                    // Remove annotations
+                    Self::remove_annotations_for_suggestions(vec![suggestion_id]);
                     Self::publish_to_frontend(suggestions_per_window.clone());
                 }
             }
@@ -505,6 +522,7 @@ impl ComplexityRefactoring {
         self.dismissed_suggestions.lock().push(hash);
 
         suggestions.remove(&suggestion_id);
+        Self::remove_annotations_for_suggestions(vec![suggestion_id]);
 
         Self::publish_to_frontend(suggestions_per_window.clone());
         Ok(())
@@ -537,6 +555,78 @@ impl ComplexityRefactoring {
         } else {
             HashMap::new()
         }
+    }
+}
+
+fn register_annotations(edits: &Vec<Edit>, suggestion_id: Uuid, window_uid: usize) {
+    // Register Code Annotations for the edits
+    if let (Some(first_edit), Some(second_edit)) = (edits.first(), edits.iter().nth(1)) {
+        let insert_edit;
+        let extract_edit;
+        if first_edit.start_index == first_edit.end_index {
+            insert_edit = first_edit;
+            extract_edit = second_edit;
+        } else {
+            insert_edit = second_edit;
+            extract_edit = first_edit;
+        }
+
+        let insert_start_char_job_id = uuid::Uuid::new_v4();
+        let insert_start_char_job = AnnotationJobSingleChar::new(
+            insert_start_char_job_id,
+            &TextRange {
+                index: insert_edit.start_index,
+                length: 1,
+            },
+            AnnotationKind::InsertionStartChar,
+            AnnotationJobInstructions::default(),
+        );
+
+        let insert_end_char_job_id = uuid::Uuid::new_v4();
+        let insert_end_char_job = AnnotationJobSingleChar::new(
+            insert_end_char_job_id,
+            &TextRange {
+                index: insert_edit.end_index,
+                length: 1,
+            },
+            AnnotationKind::InsertionEndChar,
+            AnnotationJobInstructions::default(),
+        );
+
+        let extract_start_char_job_id = uuid::Uuid::new_v4();
+        let extract_start_char_job = AnnotationJobSingleChar::new(
+            extract_start_char_job_id,
+            &TextRange {
+                index: extract_edit.start_index,
+                length: 1,
+            },
+            AnnotationKind::ExtractionStartChar,
+            AnnotationJobInstructions::default(),
+        );
+
+        let extract_end_char_job_id = uuid::Uuid::new_v4();
+        let extract_end_char_job = AnnotationJobSingleChar::new(
+            extract_end_char_job_id,
+            &TextRange {
+                index: extract_edit.end_index,
+                length: 1,
+            },
+            AnnotationKind::ExtractionEndChar,
+            AnnotationJobInstructions::default(),
+        );
+
+        AnnotationManagerEvent::Add((
+            suggestion_id,
+            FeatureKind::ComplexityRefactoring,
+            vec![
+                AnnotationJob::SingleChar(insert_start_char_job),
+                AnnotationJob::SingleChar(insert_end_char_job),
+                AnnotationJob::SingleChar(extract_start_char_job),
+                AnnotationJob::SingleChar(extract_end_char_job),
+            ],
+            window_uid,
+        ))
+        .publish_to_tauri();
     }
 }
 
