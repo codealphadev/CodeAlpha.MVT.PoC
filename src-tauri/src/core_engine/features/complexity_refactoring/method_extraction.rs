@@ -75,6 +75,8 @@ pub async fn do_method_extraction(
     set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
     text_content: &XcodeText,
     file_path: Option<String>,
+    currently_running_executions_arc: Arc<Mutex<HashMap<usize, Uuid>>>,
+    execution_id: Uuid,
 ) -> Result<(), ComplexityRefactoringError> {
     // Create temporary file
     let tmp_file_key = rand::thread_rng()
@@ -104,6 +106,7 @@ pub async fn do_method_extraction(
 
     delete_temp_file(&temp_file);
     set_result_callback(suggestion);
+    dbg!("Finished querying LSP");
 
     Ok(())
 }

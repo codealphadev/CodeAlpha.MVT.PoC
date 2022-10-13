@@ -58,7 +58,7 @@ impl Lsp for SwiftLsp {
         tmp_file_path: &str,
     ) -> Result<Vec<String>, SwiftLspError> {
         // Try to get compiler arguments from xcodebuild
-        match get_compiler_args_from_xcodebuild(source_file_path).await {
+        match get_compiler_args_from_xcodebuild(source_file_path.to_string()).await {
             Ok(mut compiler_args) => {
                 if let Some(insertion_index) = compiler_args
                     .iter()
@@ -89,9 +89,11 @@ impl Lsp for SwiftLsp {
 }
 
 // TODO: Cache? invalidate if future command doesn't work?
+#[cached(result = true)]
 async fn get_compiler_args_from_xcodebuild(
-    source_file_path: &str,
+    source_file_path: String,
 ) -> Result<Vec<String>, SwiftLspError> {
+    dbg!("computing function");
     let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())?;
 
     let output = std::process::Command::new("xcodebuild")
@@ -114,7 +116,7 @@ async fn get_compiler_args_from_xcodebuild(
     let xcodebuild_output_obj: Value =
         serde_json::from_str(&stdout).map_err(|e| SwiftLspError::GenericError(e.into()))?;
 
-    extract_compiler_args_from_xcodebuild_output(&xcodebuild_output_obj, source_file_path)
+    extract_compiler_args_from_xcodebuild_output(&xcodebuild_output_obj, &source_file_path)
 }
 
 fn extract_compiler_args_from_xcodebuild_output(

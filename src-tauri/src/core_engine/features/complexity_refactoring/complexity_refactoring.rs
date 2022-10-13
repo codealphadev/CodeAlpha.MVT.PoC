@@ -82,6 +82,7 @@ pub struct ComplexityRefactoring {
     is_activated: bool,
     suggestions_arc: SuggestionsArcMutex,
     dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
+    currently_running_executions: Arc<Mutex<HashMap<usize, Uuid>>>,
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 9;
@@ -147,12 +148,21 @@ impl ComplexityRefactoring {
             suggestions_arc: Arc::new(Mutex::new(HashMap::new())),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
             dismissed_suggestions: Arc::new(Mutex::new(read_dismissed_suggestions())),
+            currently_running_executions: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
-        debug!("Computing suggestions for complexity refactoring");
         let window_uid = code_document.editor_window_props().window_uid;
+        let execution_id = Uuid::new_v4();
+        self.currently_running_executions
+            .lock()
+            .insert(window_uid, execution_id);
+
+        debug!(
+            ?execution_id,
+            "Computing suggestions for complexity refactoring"
+        );
         let suggestions_arc = self.suggestions_arc.clone();
         let old_suggestions = Self::get_suggestions_for_window(suggestions_arc.clone(), window_uid);
 
@@ -179,6 +189,8 @@ impl ComplexityRefactoring {
                 suggestions_arc.clone(),
                 self.dismissed_suggestions.clone(),
                 code_document.editor_window_props().window_uid,
+                self.currently_running_executions.clone(),
+                execution_id,
             )?);
         }
         self.suggestions_arc
@@ -233,7 +245,15 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
+        currently_running_executions_arc: Arc<Mutex<HashMap<usize, Uuid>>>,
+        execution_id: Uuid,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
+        if currently_running_executions_arc.lock().get(&window_uid) != Some(&execution_id) {
+            dbg!("Cancelling execution 2");
+            /*return Err(ComplexityRefactoringError::GenericError(
+                "// TODO".to_string(),
+            ));*/
+        }
         let suggestions = Self::compute_suggestions_for_function(
             &function,
             suggestions_arc.clone(),
@@ -268,8 +288,13 @@ impl ComplexityRefactoring {
                 .first()
                 .and_then(|n| n.parent())
                 .map(|n| n.kind());
+            let currently_running_executions = currently_running_executions_arc.clone();
             tauri::async_runtime::spawn({
                 async move {
+                    if currently_running_executions.lock().get(&window_uid) != Some(&execution_id) {
+                        dbg!("Cancelling execution 1");
+                        return;
+                    }
                     _ = do_method_extraction(
                         start_position,
                         range_length,
@@ -286,6 +311,8 @@ impl ComplexityRefactoring {
                         },
                         &binded_text_content_2,
                         binded_file_path_2,
+                        currently_running_executions_arc,
+                        execution_id,
                     )
                     .await
                     .map_err(|e| match e {

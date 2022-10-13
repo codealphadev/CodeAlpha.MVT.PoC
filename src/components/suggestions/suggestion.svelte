@@ -62,6 +62,8 @@
 				<IconRubbishBin />
 			</div>
 		</IconButton>
-		<Button on:click={apply_suggestion}>Extract function</Button>
+		<Button disabled={suggestion.new_text_content_string} on:click={apply_suggestion}
+			>Extract function</Button
+		>
 	</div>
 </Card>
