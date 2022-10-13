@@ -1,4 +1,9 @@
-use std::path::Path;
+use std::{
+    collections::hash_map::DefaultHasher,
+    fs,
+    hash::{Hash, Hasher},
+    path::Path,
+};
 
 use async_trait::async_trait;
 use cached::proc_macro::cached;
@@ -6,8 +11,11 @@ use glob::glob;
 use mockall::automock;
 use serde_json::Value;
 use tauri::api::process::{Command, CommandEvent};
-use tracing::error;
+use tracing::{error, warn};
 pub struct SwiftLsp;
+use rand::Rng;
+
+use crate::utils::calculate_hash;
 
 #[automock]
 #[async_trait]
@@ -58,7 +66,21 @@ impl Lsp for SwiftLsp {
         tmp_file_path: &str,
     ) -> Result<Vec<String>, SwiftLspError> {
         // Try to get compiler arguments from xcodebuild
-        match get_compiler_args_from_xcodebuild(source_file_path).await {
+        let recompute_args_hash = match get_hashed_pbxproj_modification_date(source_file_path) {
+            Err(e) => {
+                warn!(
+                    ?e,
+                    "Unable to get hash for project.pbxproj modification date"
+                );
+                let mut rng = rand::thread_rng();
+                rng.gen::<u64>()
+            }
+            Ok(res) => res,
+        };
+
+        match get_compiler_args_from_xcodebuild(source_file_path.to_string(), recompute_args_hash)
+            .await
+        {
             Ok(mut compiler_args) => {
                 if let Some(insertion_index) = compiler_args
                     .iter()
@@ -88,9 +110,10 @@ impl Lsp for SwiftLsp {
     }
 }
 
-// TODO: Cache? invalidate if future command doesn't work?
+#[cached(result = true, size = 100)]
 async fn get_compiler_args_from_xcodebuild(
-    source_file_path: &str,
+    source_file_path: String,
+    _hash: u64,
 ) -> Result<Vec<String>, SwiftLspError> {
     let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())?;
 
@@ -114,7 +137,7 @@ async fn get_compiler_args_from_xcodebuild(
     let xcodebuild_output_obj: Value =
         serde_json::from_str(&stdout).map_err(|e| SwiftLspError::GenericError(e.into()))?;
 
-    extract_compiler_args_from_xcodebuild_output(&xcodebuild_output_obj, source_file_path)
+    extract_compiler_args_from_xcodebuild_output(&xcodebuild_output_obj, &source_file_path)
 }
 
 fn extract_compiler_args_from_xcodebuild_output(
@@ -204,6 +227,24 @@ async fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
     Ok(sdk_path_string.trim().to_string())
 }
 
+// The project.pbxproj file contains the files in the project. It is one option for caching the compiler args.
+fn get_hashed_pbxproj_modification_date(source_file_path: &str) -> Result<u64, SwiftLspError> {
+    let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())?;
+
+    let path_to_pbxproj = Path::new(&path_to_xcodeproj).join("project.pbxproj");
+
+    if !path_to_pbxproj.exists() {
+        error!("No project.pbxproj found in .xcodeproj!");
+        return Err(SwiftLspError::CouldNotFindPbxProj);
+    }
+
+    let metadata =
+        fs::metadata(path_to_pbxproj).map_err(|e| SwiftLspError::GenericError(e.into()))?;
+    let modified_time = metadata
+        .modified()
+        .map_err(|e| SwiftLspError::GenericError(e.into()))?;
+    Ok(calculate_hash(&modified_time))
+}
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
     #[error("File does not exist: '{0}'")]
@@ -236,6 +277,9 @@ pub enum SwiftLspError {
 
     #[error("Getting build settings from xcodebuild failed")]
     CouldNotGetBuildSettingsFromXcodebuild(String),
+
+    #[error("Could not find project.pbxproj")]
+    CouldNotFindPbxProj,
 
     #[error("Something went wrong when querying Swift LSP.")]
     GenericError(#[source] anyhow::Error),
