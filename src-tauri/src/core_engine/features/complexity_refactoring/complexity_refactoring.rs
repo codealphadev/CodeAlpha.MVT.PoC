@@ -4,7 +4,7 @@ use crate::{
     core_engine::{
         annotations_manager::{
             AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
-            AnnotationKind,
+            AnnotationKind, GetAnnotationInGroupVia,
         },
         events::{models::ReplaceSuggestionsMessage, AnnotationManagerEvent, SuggestionEvent},
         features::{
@@ -117,9 +117,9 @@ impl FeatureBase for ComplexityRefactoring {
                 ComplexityRefactoringProcedure::DismissSuggestion(id) => self
                     .dismiss_suggestion(code_document, id)
                     .map_err(|e| e.into()),
-                ComplexityRefactoringProcedure::SelectSuggestion(id) => self
-                    .select_suggestion(code_document, id)
-                    .map_err(|e| e.into()),
+                ComplexityRefactoringProcedure::SelectSuggestion(id) => {
+                    self.select_suggestion(id).map_err(|e| e.into())
+                }
             }
         } else {
             Ok(())
@@ -522,17 +522,14 @@ impl ComplexityRefactoring {
 
     fn select_suggestion(
         &mut self,
-        code_document: &CodeDocument,
         suggestion_id: SuggestionId,
     ) -> Result<(), ComplexityRefactoringError> {
-        let window_uid = code_document.editor_window_props().window_uid;
-        let mut suggestions_per_window = self.suggestions_arc.lock();
-        let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
-            ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
-        )?;
+        AnnotationManagerEvent::ScrollToAnnotationInGroup((
+            suggestion_id,
+            GetAnnotationInGroupVia::Kind(AnnotationKind::ExtractionStartChar),
+        ))
+        .publish_to_tauri();
 
-        //AnnotationManagerEvent::ScrollToAnnotationInGroup((suggestion_id,GetAnnotationInGroupVia::Kind(AnnotationKind::)));
-        // TODO:
         Ok(())
     }
 
