@@ -8,7 +8,7 @@ use crate::{
     core_engine::{
         annotations_manager::{
             AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
-            AnnotationKind, AnnotationsManager,
+            AnnotationKind, AnnotationsManager, GetAnnotationInGroupVia,
         },
         events::{
             models::{NodeExplanationFetchedMessage, UpdateNodeExplanationMessage},
@@ -219,8 +219,11 @@ impl NodeAnnotation {
                     (*explanation.lock()) = None;
                 }
 
-                AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, first_char_job_id))
-                    .publish_to_tauri();
+                AnnotationManagerEvent::ScrollToAnnotationInGroup((
+                    group_id,
+                    GetAnnotationInGroupVia::Id(first_char_job_id),
+                ))
+                .publish_to_tauri();
 
                 (*state.lock()) = NodeAnnotationState::Finished;
             }
