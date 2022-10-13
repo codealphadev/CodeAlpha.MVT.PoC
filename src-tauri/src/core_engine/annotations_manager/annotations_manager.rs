@@ -119,6 +119,11 @@ impl AnnotationsManagerTrait for AnnotationsManager {
         jobs: Vec<AnnotationJob>,
         editor_window_uid: EditorWindowUid,
     ) {
+        // only add if it is not already there
+        if self.groups.contains_key(&group_id) {
+            return;
+        }
+
         self.groups.insert(
             group_id,
             AnnotationJobGroup::new(group_id, feature, jobs, editor_window_uid),
