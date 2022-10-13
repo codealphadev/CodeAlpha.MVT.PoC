@@ -233,7 +233,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_swift_linter() {
-        let file_path_as_str = "/Users/adam/codealpha/code/adam-test/Shared/ContentView.swift";
+        let file_path_as_str = "/Users/adam/pretzl/code/adam-test/Shared/ContentView.swift";
         let mut rule = _SwiftLinterRule::_new(12345);
         rule._update_properties(_SwiftLinterProps {
             file_path_as_str: Some(file_path_as_str.to_string()),

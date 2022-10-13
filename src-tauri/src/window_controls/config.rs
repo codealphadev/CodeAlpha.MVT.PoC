@@ -147,12 +147,12 @@ pub mod default_properties {
         // src-tauri/src/ax_interaction/app/callbacks I am using hard coded title strings because I
         // I could not get it to work to match with the strings here.
         match window {
-            AppWindow::Settings => "CodeAlpha - Settings".to_string(),
-            AppWindow::Analytics => "CodeAlpha - Analytics".to_string(),
-            AppWindow::Widget => "CodeAlpha - Widget".to_string(),
-            AppWindow::Explain => "CodeAlpha - Explanation".to_string(),
-            AppWindow::CodeOverlay => "CodeAlpha - CodeOverlay".to_string(),
-            AppWindow::Main => "CodeAlpha - Main".to_string(),
+            AppWindow::Settings => "Pretzl - Settings".to_string(),
+            AppWindow::Analytics => "Pretzl - Analytics".to_string(),
+            AppWindow::Widget => "Pretzl - Widget".to_string(),
+            AppWindow::Explain => "Pretzl - Explanation".to_string(),
+            AppWindow::CodeOverlay => "Pretzl - CodeOverlay".to_string(),
+            AppWindow::Main => "Pretzl - Main".to_string(),
         }
     }
 
