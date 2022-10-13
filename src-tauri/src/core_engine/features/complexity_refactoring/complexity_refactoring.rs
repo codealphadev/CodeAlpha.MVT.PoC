@@ -15,13 +15,14 @@ use crate::{
             FeatureKind, UserCommand,
         },
         format_code,
-        syntax_tree::{SwiftFunction, SwiftSyntaxTree},
+        syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
         CodeDocument, EditorWindowUid, TextPosition, TextRange, XcodeText,
     },
     platform::macos::replace_text_content,
     utils::calculate_hash,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
+use anyhow::anyhow;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc};
@@ -68,6 +69,7 @@ pub struct RefactoringSuggestion {
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
     pub serialized_slice: SerializedNodeSlice,
+    pub context_range: TextRange,
 }
 
 pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
@@ -359,9 +361,19 @@ impl ComplexityRefactoring {
             uuid::Uuid::new_v4()
         };
 
+        // derive context_range representing the surrounding function
+        let context_start = function.get_first_char_position();
+        let context_end = function.get_last_char_position();
+        let context_range =
+            TextRange::from_StartEndTextPosition(&text_content, &context_start, &context_end)
+                .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
+                    "Failed to derive context range"
+                )))?;
+
         new_suggestions.insert(
             id,
             RefactoringSuggestion {
+                context_range,
                 serialized_slice: serialized_node_slice,
                 main_function_name: function.get_name(),
                 new_complexity,
@@ -399,7 +411,7 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
-            register_annotations(&edits, id, window_uid);
+            register_annotations(&edits, id, suggestion.context_range, window_uid);
 
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
@@ -558,7 +570,12 @@ impl ComplexityRefactoring {
     }
 }
 
-fn register_annotations(edits: &Vec<Edit>, suggestion_id: Uuid, window_uid: usize) {
+fn register_annotations(
+    edits: &Vec<Edit>,
+    suggestion_id: Uuid,
+    context_range: TextRange,
+    window_uid: usize,
+) {
     // Register Code Annotations for the edits
     if let (Some(first_edit), Some(second_edit)) = (edits.first(), edits.iter().nth(1)) {
         let insert_edit;
@@ -615,10 +632,34 @@ fn register_annotations(edits: &Vec<Edit>, suggestion_id: Uuid, window_uid: usiz
             AnnotationJobInstructions::default(),
         );
 
+        let context_range_start_char_job_id = uuid::Uuid::new_v4();
+        let context_range_start_char_job = AnnotationJobSingleChar::new(
+            context_range_start_char_job_id,
+            &TextRange {
+                index: context_range.index,
+                length: 1,
+            },
+            AnnotationKind::CodeblockFirstChar,
+            AnnotationJobInstructions::default(),
+        );
+
+        let context_range_end_char_job_id = uuid::Uuid::new_v4();
+        let context_range_end_char_job = AnnotationJobSingleChar::new(
+            context_range_end_char_job_id,
+            &TextRange {
+                index: context_range.index + context_range.length,
+                length: 1,
+            },
+            AnnotationKind::CodeblockLastChar,
+            AnnotationJobInstructions::default(),
+        );
+
         AnnotationManagerEvent::Add((
             suggestion_id,
             FeatureKind::ComplexityRefactoring,
             vec![
+                AnnotationJob::SingleChar(context_range_start_char_job),
+                AnnotationJob::SingleChar(context_range_end_char_job),
                 AnnotationJob::SingleChar(insert_start_char_job),
                 AnnotationJob::SingleChar(insert_end_char_job),
                 AnnotationJob::SingleChar(extract_start_char_job),

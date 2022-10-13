@@ -7,4 +7,8 @@ export type AnnotationKind =
   | "LineEnd"
   | "Elbow"
   | "CodeblockFirstChar"
-  | "CodeblockLastChar";
+  | "CodeblockLastChar"
+  | "ExtractionStartChar"
+  | "ExtractionEndChar"
+  | "InsertionStartChar"
+  | "InsertionEndChar";
