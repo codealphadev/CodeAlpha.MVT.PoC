@@ -19,7 +19,6 @@ export class MouseManager {
 	private async listen_mouse_events() {
 		await listen('EventWindowControls' as ChannelList, (event) => {
 			let tracking_event = JSON.parse(event.payload as string) as EventWindowControls;
-
 			switch (tracking_event.event) {
 				case 'TrackingAreaMouseOver':
 					this.mouse_over(tracking_event.payload);
@@ -39,6 +38,7 @@ export class MouseManager {
 
 	private mouse_over(msg: TrackingAreaMouseOverMessage) {
 		const new_elements = this.elements_from_point(msg.mouse_position);
+		console.log(new_elements);
 
 		const removed_elements = this.elements.filter((element) => !new_elements.includes(element));
 		removed_elements.forEach((element) => {

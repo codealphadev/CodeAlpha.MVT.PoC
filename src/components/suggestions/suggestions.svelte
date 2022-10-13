@@ -1,78 +1,111 @@
 <script lang="ts">
-  import { listen } from '@tauri-apps/api/event';
-  import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
-  import type { SuggestionEvent } from '../../../src-tauri/bindings/features/refactoring/SuggestionEvent';
-  import Suggestion from './suggestion.svelte';
-  import { invoke } from '@tauri-apps/api/tauri';
-  import { afterUpdate } from 'svelte';
-  import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
-  import NoSuggestions from '../suggestions/no-suggestions.svelte';
-  import type { ReplaceSuggestionsMessage } from '../../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
-  import { filter_and_sort_suggestions } from './suggestions';
+	import { emit, listen } from '@tauri-apps/api/event';
+	import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
+	import type { SuggestionEvent } from '../../../src-tauri/bindings/features/refactoring/SuggestionEvent';
+	import Suggestion from './suggestion.svelte';
+	import { invoke } from '@tauri-apps/api/tauri';
+	import { afterUpdate } from 'svelte';
+	import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
+	import NoSuggestions from '../suggestions/no-suggestions.svelte';
+	import type { ReplaceSuggestionsMessage } from '../../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
+	import type { EventUserInteraction } from '../../../src-tauri/bindings/user_interaction/EventUserInteraction';
+	import { filter_and_sort_suggestions } from './suggestions';
 
-  export let active_window_uid: number;
-  export let CONTAINER_DOM_ID: string;
+	export let active_window_uid: number;
+	export let CONTAINER_DOM_ID: string;
 
-  let window_width: number | null = null;
-  let window_height: number | null = null;
+	let selected_suggestion_id: string | null = null;
+	let window_width: number | null = null;
+	let window_height: number | null = null;
 
-  let tail_height_px = 12;
+	let tail_height_px = 12;
 
-  afterUpdate(() => {
-    updateDimensions();
+	const select_suggestion = async (suggestion_id: string, editor_window_uid: number) => {
+		selected_suggestion_id = suggestion_id;
+		const event: EventUserInteraction = {
+			event: 'SelectSuggestion',
+			payload: { id: suggestion_id, editor_window_uid }
+		};
+		const channel: ChannelList = 'EventUserInteractions';
+		await emit(channel, event);
+	};
 
-    if (window_width && window_height) {
-      let appWindow: AppWindow = 'Main';
-      invoke('cmd_resize_window', {
-        appWindow: appWindow,
-        sizeY: window_height + tail_height_px,
+	afterUpdate(() => {
+		updateDimensions();
 
-        sizeX: window_width,
-      });
-    }
-  });
+		if (window_width && window_height) {
+			let appWindow: AppWindow = 'Main';
+			invoke('cmd_resize_window', {
+				appWindow: appWindow,
+				sizeY: window_height + tail_height_px,
 
-  const updateDimensions = () => {
-    let element = document.getElementById(CONTAINER_DOM_ID);
+				sizeX: window_width
+			});
+		}
+	});
 
-    if (element === null) {
-      return;
-    }
+	const updateDimensions = () => {
+		let element = document.getElementById(CONTAINER_DOM_ID);
 
-    let positionInfo = element.getBoundingClientRect();
+		if (element === null) {
+			return;
+		}
 
-    window_width = positionInfo.width;
-    window_height = positionInfo.height;
-  };
-  let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
-  $: filtered_suggestions = filter_and_sort_suggestions(suggestions, active_window_uid);
-  const listenToSuggestionEvents = async () => {
-    let suggestion_channel: ChannelList = 'SuggestionEvent';
-    await listen(suggestion_channel, (event) => {
-      const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
+		let positionInfo = element.getBoundingClientRect();
 
-      switch (event_type) {
-        case 'ReplaceSuggestions':
-          suggestions = payload.suggestions;
-          break;
-        default:
-          break;
-      }
-    });
-  };
-  listenToSuggestionEvents();
+		window_width = positionInfo.width;
+		window_height = positionInfo.height;
+	};
+	let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
+	$: filtered_suggestions = Object.entries(suggestions[active_window_uid] ?? {}).sort((a, b) =>
+		a[0].localeCompare(b[0])
+	);
+
+	const listenToSuggestionEvents = async () => {
+		let suggestion_channel: ChannelList = 'SuggestionEvent';
+		await listen(suggestion_channel, (event) => {
+			const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
+
+			switch (event_type) {
+				case 'ReplaceSuggestions':
+					suggestions = payload.suggestions;
+					if (
+						selected_suggestion_id &&
+						!Object.keys(suggestions[active_window_uid] ?? []).includes(selected_suggestion_id)
+					) {
+						selected_suggestion_id = null;
+					}
+					break;
+				default:
+					break;
+			}
+		});
+	};
+	listenToSuggestionEvents();
 </script>
 
 {#if filtered_suggestions.length > 0}
-  <div
-    class="flex bg-background flex-col gap-5 shrink-0 rounded-b-xl max-h-[700px] overflow-y-auto overscroll-none mt-9 px-4 pt-3 pb-4"
-  >
-    {#each filtered_suggestions as [id, suggestion]}
-      {#key id}
-        <Suggestion {suggestion} suggestion_id={id} window_uid={active_window_uid} />
-      {/key}
-    {/each}
-  </div>
+	<div
+		class="flex bg-background flex-col gap-5 shrink-0 rounded-b-xl max-h-[700px] overflow-y-auto overscroll-none mt-9 px-4 pt-3 pb-4"
+	>
+		{#each filtered_suggestions as [id, suggestion]}
+			{#key id}
+				<Suggestion
+					on:click={() => {
+						if (selected_suggestion_id === id) {
+							selected_suggestion_id = null;
+						} else {
+							select_suggestion(id, active_window_uid);
+						}
+					}}
+					expanded={id == selected_suggestion_id}
+					{suggestion}
+					suggestion_id={id}
+					window_uid={active_window_uid}
+				/>
+			{/key}
+		{/each}
+	</div>
 {:else}
-  <NoSuggestions />
+	<NoSuggestions />
 {/if}
