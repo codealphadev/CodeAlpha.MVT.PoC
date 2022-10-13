@@ -3,18 +3,43 @@ import type { Writable } from 'svelte/store';
 export type ThemeName = 'light' | 'dark';
 
 export const colorNames = [
-	'primary_gradient',
-	'secondary',
-	'inactive',
-	'contrast',
-	'contrastsecondary',
 	'background',
 	'backgroundsecondary',
+	'contrast',
+	'contrastsecondary',
+	'divider',
+	'inactive',
+	'primary',
+	'secondary',
+	'signalbad',
 	'signalgood',
 	'signalmedium',
-	'signalbad',
 	'signalverybad'
 ] as const;
+
+const wild_sand = '#F7F7F7';
+const fiord = '#414B69';
+const palette = {
+	base: {
+		'50': wild_sand,
+		'100': '#E2E3E7',
+		'200': '#CED1D8',
+		'300': '#BBBEC8',
+		'400': '#A5AAB8',
+		'600': '#7E8499',
+    '800': '#555F79',
+		'900': fiord
+	},
+	dodger_blue: {
+		'300': '#80B2FE',
+		'500': '#3A88FD',
+		'800': '#155CC5'
+	},
+	outrageous_orange: {
+		'300': '#FEA081',
+		'500': '#FD583A'
+	}
+};
 
 export type ColorName = typeof colorNames[number];
 export interface Theme {
@@ -31,40 +56,35 @@ export interface ThemeContextType {
 export const themes: { [name in ThemeName]: Theme } = {
 	light: {
 		colors: {
-			primary_gradient: 'linear-gradient(225deg, #0b9cda 0%, #054b8b 100%)',
-
 			background: '#ffffff',
-			backgroundsecondary: '#e5e5e5',
-
-			secondary: '#a3a3a3',
-
-			contrast: '#404040',
-			contrastsecondary: '#737373',
-
+			backgroundsecondary: palette.base[50],
+			contrast: '#000000',
+			contrastsecondary: palette.base[400],
+			divider: palette.base[200],
 			inactive: '#bbbbbb80',
-			signalgood: '#047857',
-			signalmedium: '#3a88fd',
-			signalbad: '#9D3D05',
-			signalverybad: '#881337'
+			primary: fiord,
+			secondary: palette.base[600],
+			signalbad: '#F97316',
+			signalgood: '#16A34A',
+			signalmedium: palette.dodger_blue[800],
+			signalverybad: '#E11D48'
 		},
 		name: 'light'
 	},
 	dark: {
 		colors: {
-			primary_gradient: 'linear-gradient(225deg, #ff9c64 1.87%, #f84545 68.89%)',
-			background: '#262626',
-			backgroundsecondary: '#404040',
-
-			secondary: '#a3a3a3',
-
-			contrast: '#F5F5F5',
-			contrastsecondary: '#e5e5e5',
-
+			background: '#ffffff',
+			backgroundsecondary: palette.base[100],
+			contrast: '#000000',
+			contrastsecondary: palette.base[600],
+			divider: palette.base[300],
 			inactive: '#80808080',
-			signalgood: '#09F6B3',
-			signalmedium: '#7CB0FE',
-			signalbad: '#FCA05F',
-			signalverybad: '#E2366A'
+			primary: fiord,
+			secondary: palette.base[600],
+			signalbad: '#F97316',
+			signalgood: '#16A34A',
+			signalmedium: palette.dodger_blue[800],
+			signalverybad: '#E11D48'
 		},
 		name: 'dark'
 	}

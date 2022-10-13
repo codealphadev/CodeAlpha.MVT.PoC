@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/tauri';
-	import Button from '../common/button.svelte';
-	import IconButton from '../common/icon-button.svelte';
+	import Button from '../common/buttons/button.svelte';
 	import IconThumbsDown from './icons/icon-thumbs-down.svelte';
 	import IconThumbsUp from './icons/icon-thumbs-up.svelte';
 	import { appWindow } from '@tauri-apps/api/window';
+	import ThumbButton from '../common/buttons/thumb-button.svelte';
 
 	let vote: 'good' | 'bad' | null = null;
 	const paste_docs = async () => {
@@ -38,12 +38,12 @@
 
 <div class="flex justify-between w-full items-center">
 	<div class="flex gap-3 px-1 items-center">
-		<IconButton on:click={handle_click_thumbs_up}>
+		<ThumbButton on:click={handle_click_thumbs_up}>
 			<IconThumbsUp activated={vote === 'good'} />
-		</IconButton>
-		<IconButton on:click={handle_click_thumbs_down}>
+		</ThumbButton>
+		<ThumbButton on:click={handle_click_thumbs_down}>
 			<IconThumbsDown activated={vote === 'bad'} />
-		</IconButton>
+		</ThumbButton>
 		<div class="text-secondary text-xs">
 			{#if vote}
 				Thanks for the feedback!

@@ -1,1 +1,1 @@
-<h4 class="text-sm gradient-text font-medium"><slot /></h4>
+<h4 class="text-sm text-primary font-medium"><slot /></h4>
