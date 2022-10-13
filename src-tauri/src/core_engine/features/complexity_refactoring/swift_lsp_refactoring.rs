@@ -69,7 +69,6 @@ pub async fn refactor_function(
     tmp_file_path: &String,
 ) -> Result<Vec<Edit>, SwiftLspError> {
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
-
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
 key.actionuid: source.refactoring.kind.extract.function
