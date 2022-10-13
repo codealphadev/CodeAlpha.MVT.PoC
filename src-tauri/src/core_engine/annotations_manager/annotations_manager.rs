@@ -67,6 +67,11 @@ pub struct AnnotationResult {
     pub bounds: Option<Vec<LogicalFrame>>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum GetAnnotationInGroupVia {
+    Id(uuid::Uuid),
+    Kind(AnnotationKind),
+}
 pub enum ViewportPositioning {
     Visible,
     InvisibleAbove,
@@ -93,7 +98,7 @@ pub trait AnnotationsManagerTrait {
     fn scroll_to_annotation(
         &mut self,
         group_id: uuid::Uuid,
-        job_id: uuid::Uuid,
+        get_job_via: GetAnnotationInGroupVia,
     ) -> Result<(), AnnotationError>;
 }
 
@@ -197,20 +202,20 @@ impl AnnotationsManagerTrait for AnnotationsManager {
     fn scroll_to_annotation(
         &mut self,
         group_id: uuid::Uuid,
-        job_id: uuid::Uuid,
+        get_via: GetAnnotationInGroupVia,
     ) -> Result<(), AnnotationError> {
+        let annotation = self.get_annotation(group_id, get_via)?;
         {
             // If there is a another scroll to annotation job running, we want to interrupt it.
             let mut scroll_to_annotation_job_id = self.scroll_to_annotation_job_id.lock();
-            if scroll_to_annotation_job_id.is_some() && *scroll_to_annotation_job_id != Some(job_id)
+            if scroll_to_annotation_job_id.is_some()
+                && *scroll_to_annotation_job_id != Some(annotation.id)
             {
                 return Ok(());
             } else {
-                *scroll_to_annotation_job_id = Some(job_id);
+                *scroll_to_annotation_job_id = Some(annotation.id);
             }
         }
-
-        let annotation = self.get_annotation(group_id, job_id)?;
 
         tauri::async_runtime::spawn({
             let scroll_to_annotation_job_id = self.scroll_to_annotation_job_id.clone();
@@ -284,7 +289,7 @@ impl AnnotationsManager {
     fn get_annotation(
         &mut self,
         group_id: uuid::Uuid,
-        job_id: uuid::Uuid,
+        get_via: GetAnnotationInGroupVia,
     ) -> Result<Annotation, AnnotationError> {
         let annotation_job_group = self
             .groups
@@ -297,11 +302,17 @@ impl AnnotationsManager {
                     anyhow!("No AnnotationGroup computed yet").into(),
                 ))?;
 
-        Ok(annotation_group
-            .annotations
-            .get(&job_id)
-            .ok_or(AnnotationError::AnnotationNotFound)?
-            .to_owned())
+        let job = match get_via {
+            GetAnnotationInGroupVia::Id(uuid) => annotation_group.annotations.get(&uuid),
+            GetAnnotationInGroupVia::Kind(kind) => annotation_group
+                .annotations
+                .values()
+                .find(|&j| j.kind == kind),
+        }
+        .ok_or(AnnotationError::AnnotationNotFound)?
+        .to_owned();
+
+        Ok(job)
     }
 
     pub fn get_annotation_rect_for_TextRange(
@@ -409,8 +420,11 @@ impl AnnotationsManager {
         group_id: uuid::Uuid,
     ) {
         if *scroll_to_annotation_job_id.lock() == Some(annotation.id) {
-            AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, annotation.id))
-                .publish_to_tauri();
+            AnnotationManagerEvent::ScrollToAnnotationInGroup((
+                group_id,
+                GetAnnotationInGroupVia::Id(annotation.id),
+            ))
+            .publish_to_tauri();
         }
     }
 }
