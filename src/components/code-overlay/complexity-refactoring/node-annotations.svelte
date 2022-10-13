@@ -7,9 +7,6 @@
 	import { is_rectangle } from '../annotation_utils';
 	import type { Annotation } from '../../../../src-tauri/bindings/features/code_annotations/Annotation';
 
-	let annotation_extraction: LogicalFrame | null;
-	let annotation_context: LogicalFrame | null;
-
 	let annotation_group_id: string | null = null;
 	let annotation_group_editor_window_uid: number | null = null;
 
@@ -17,6 +14,10 @@
 	export let annotation_section: LogicalFrame;
 	export let code_document_rect: LogicalFrame;
 	export let viewport_rect: LogicalFrame;
+
+	let annotation_extraction: LogicalFrame | null;
+	let annotation_context_pt1: LogicalFrame | null;
+	let annotation_context_pt2: LogicalFrame | null;
 
 	const listen_to_node_annotation_events = async () => {
 		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
@@ -28,20 +29,26 @@
 					let group = payload;
 
 					if (group.feature === 'ComplexityRefactoring') {
-						console.log('ComplexityRefactoring', group);
-
 						annotation_group_editor_window_uid = group.editor_window_uid;
 						annotation_group_id = group.id;
 
-						let extraction_codeblock = get_extract_block_frame_from_group(group);
+						console.log('annotation_group_id', group);
+
+						let extraction_codeblock = derive_extract_block_frame(group);
 						if (extraction_codeblock) {
 							annotation_extraction = extraction_codeblock;
 							console.log('extraction', annotation_extraction);
 						}
-						let context_codeblock = get_context_block_frame_from_group(group);
-						if (context_codeblock) {
-							annotation_context = context_codeblock;
-							console.log('context', annotation_context);
+
+						let context_codeblock_pt1 = derive_context_block_frame_pt1(group);
+						let context_codeblock_pt2 = derive_context_block_frame_pt2(group);
+						if (context_codeblock_pt1) {
+							annotation_context_pt1 = context_codeblock_pt1;
+							console.log('context 1/2', annotation_context_pt1);
+						}
+						if (context_codeblock_pt2) {
+							annotation_context_pt2 = context_codeblock_pt2;
+							console.log('context 2/2', annotation_context_pt2);
 						}
 					}
 					break;
@@ -53,7 +60,7 @@
 						annotation_group_id = null;
 
 						annotation_extraction = null;
-						annotation_context = null;
+						annotation_context_pt1 = null;
 					}
 
 					break;
@@ -63,9 +70,25 @@
 		});
 	};
 
-	const get_context_block_frame_from_group = (group: AnnotationGroup): LogicalFrame | undefined => {
+	const derive_context_block_frame_pt1 = (group: AnnotationGroup): LogicalFrame | undefined => {
 		let annotation_start = Object.values(group.annotations).find(
 			(annotation) => annotation.kind === 'CodeblockFirstChar'
+		);
+
+		let annotation_end = Object.values(group.annotations).find(
+			(annotation) => annotation.kind === 'ExtractionStartChar'
+		);
+
+		if (!annotation_start || !annotation_end) {
+			return;
+		}
+
+		return get_frame_from_annotation_pair(annotation_start, annotation_end);
+	};
+
+	const derive_context_block_frame_pt2 = (group: AnnotationGroup): LogicalFrame | undefined => {
+		let annotation_start = Object.values(group.annotations).find(
+			(annotation) => annotation.kind === 'ExtractionEndChar'
 		);
 
 		let annotation_end = Object.values(group.annotations).find(
@@ -79,7 +102,7 @@
 		return get_frame_from_annotation_pair(annotation_start, annotation_end);
 	};
 
-	const get_extract_block_frame_from_group = (group: AnnotationGroup): LogicalFrame | undefined => {
+	const derive_extract_block_frame = (group: AnnotationGroup): LogicalFrame | undefined => {
 		let annotation_start = Object.values(group.annotations).find(
 			(annotation) => annotation.kind === 'ExtractionStartChar'
 		);
@@ -111,13 +134,19 @@
 		let codeblock_end_y = null;
 
 		if (is_rectangle(start.shapes[0])) {
-			codeblock_start_y = start.shapes[0].Rectangle.origin.y;
+			codeblock_start_y =
+				start.kind === 'ExtractionStartChar' || start.kind === 'CodeblockFirstChar'
+					? start.shapes[0].Rectangle.origin.y
+					: start.shapes[0].Rectangle.origin.y + start.shapes[0].Rectangle.size.height;
 		} else {
 			codeblock_start_y = 0;
 		}
 
 		if (is_rectangle(end.shapes[0])) {
-			codeblock_end_y = end.shapes[0].Rectangle.origin.y + end.shapes[0].Rectangle.size.height;
+			codeblock_end_y =
+				end.kind === 'ExtractionEndChar'
+					? end.shapes[0].Rectangle.origin.y + end.shapes[0].Rectangle.size.height
+					: end.shapes[0].Rectangle.origin.y;
 		} else {
 			codeblock_end_y = code_document_rect.size.height;
 		}
@@ -155,28 +184,27 @@
 		/>
 	{/if}
 
-	{#if annotation_context}
+	{#if annotation_context_pt1}
 		<div
 			style="position: absolute; 
-			left: {round_value(annotation_context.origin.x, 2)}px; 
-			top: {round_value(annotation_context.origin.y, 2)}px; 
-			width: {round_value(annotation_context.size.width, 2)}px; 
-			height: {round_value(annotation_context.size.height, 2)}px;
-			clip-path: circle(50%);
-
+			left: {round_value(annotation_context_pt1.origin.x, 2)}px; 
+			top: {round_value(annotation_context_pt1.origin.y, 2)}px; 
+			width: {round_value(annotation_context_pt1.size.width, 2)}px; 
+			height: {round_value(annotation_context_pt1.size.height, 2)}px;
 			background-image: linear-gradient(to right,rgba(58, 136, 253, 1), rgba(58, 136, 253, 0);
 			opacity: 0.1;"
 		/>
-		{#if annotation_extraction}
-			<div
-				style="position: absolute; 
-			left: {round_value(annotation_extraction.origin.x, 2)}px; 
-			top: {round_value(annotation_extraction.origin.y, 2)}px; 
-			width: {round_value(annotation_extraction.size.width, 2)}px; 
-			height: {round_value(annotation_extraction.size.height, 2)}px;
-			background-image: linear-gradient(to right,rgba(253, 88, 58, 1), rgba(253, 88, 58, 0));
-			opacity: 0.2;"
-			/>
-		{/if}
+	{/if}
+
+	{#if annotation_context_pt2}
+		<div
+			style="position: absolute; 
+			left: {round_value(annotation_context_pt2.origin.x, 2)}px; 
+			top: {round_value(annotation_context_pt2.origin.y, 2)}px; 
+			width: {round_value(annotation_context_pt2.size.width, 2)}px; 
+			height: {round_value(annotation_context_pt2.size.height, 2)}px;
+			background-image: linear-gradient(to right,rgba(58, 136, 253, 1), rgba(58, 136, 253, 0);
+			opacity: 0.1;"
+		/>
 	{/if}
 {/if}
