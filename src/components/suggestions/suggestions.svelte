@@ -8,6 +8,7 @@
   import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
   import NoSuggestions from '../suggestions/no-suggestions.svelte';
   import type { ReplaceSuggestionsMessage } from '../../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
+  import { filter_and_sort_suggestions } from './suggestions';
 
   export let active_window_uid: number;
   export let CONTAINER_DOM_ID: string;
@@ -44,10 +45,7 @@
     window_height = positionInfo.height;
   };
   let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
-  $: filtered_suggestions = Object.entries(suggestions[active_window_uid] ?? {}).sort((a, b) =>
-    a[0].localeCompare(b[0])
-  );
-
+  $: filtered_suggestions = filter_and_sort_suggestions(suggestions, active_window_uid);
   const listenToSuggestionEvents = async () => {
     let suggestion_channel: ChannelList = 'SuggestionEvent';
     await listen(suggestion_channel, (event) => {
@@ -62,7 +60,6 @@
       }
     });
   };
-
   listenToSuggestionEvents();
 </script>
 
