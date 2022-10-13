@@ -7,6 +7,7 @@
 	import type { EventViewport } from '../../src-tauri/bindings/macOS_specific/EventViewport';
 
 	import { convert_global_frame_to_local } from '../utils';
+	import type { AnnotationEvent } from '../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
 
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
 	let annotation_section: LogicalFrame | null = null; // Relative to viewport
@@ -64,6 +65,37 @@
 	};
 
 	listenToViewportEvents();
+
+	let annotation_group_id: string | null = null;
+
+	const listen_to_node_annotation_events = async () => {
+		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
+		await listen(node_annotation_channel, (event) => {
+			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
+			switch (event_type) {
+				case 'AddAnnotationGroup':
+				case 'UpdateAnnotationGroup':
+					let group = payload;
+
+					if (group.feature === 'ComplexityRefactoring') {
+						console.log('ComplexityRefactoring', event_type, group);
+						annotation_group_id = group.id;
+					}
+					break;
+				case 'RemoveAnnotationGroup':
+					let group_id = payload as string;
+
+					if (annotation_group_id === group_id) {
+						console.log('ComplexityRefactoring', event_type, group_id);
+					}
+
+					break;
+				default:
+					break;
+			}
+		});
+	};
+	listen_to_node_annotation_events();
 </script>
 
 {#if code_document_rect && annotation_section && active_window_uid}
