@@ -170,7 +170,7 @@ impl SwiftFormatter {
     }
 
     fn create_temp_file(text_content: &XcodeText) -> Result<TemporaryFileOnDisk, SwiftFormatError> {
-        let file_name = "codealpha_swiftformat.swift";
+        let file_name = "pretzl_swiftformat.swift";
         let path_buf = std::env::temp_dir().join(file_name);
 
         let file = TemporaryFileOnDisk::new(path_buf, text_content.as_string());

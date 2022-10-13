@@ -119,7 +119,7 @@ fn create_temp_file(
     text_content: &XcodeText,
     key: String,
 ) -> Result<TemporaryFileOnDisk, ComplexityRefactoringError> {
-    let file_name = format!("codealpha_{}_method_extraction.swift", key);
+    let file_name = format!("pretzl_{}_method_extraction.swift", key);
     let path_buf = std::env::temp_dir().join(file_name);
 
     let file = TemporaryFileOnDisk::new(path_buf, text_content.as_string());
