@@ -4,12 +4,13 @@
 	import type { LogicalFrame } from '../../src-tauri/bindings/geometry/LogicalFrame';
 	import BracketHighlight from '../components/code-overlay/bracket-highlight/bracket-highlight.svelte';
 	import DocsAnnotations from '../components/code-overlay/docs-generation/node-annotations.svelte';
+	import ComplexityRefactoringAnnotations from '../components/code-overlay/complexity-refactoring/node-annotations.svelte';
 	import type { EventViewport } from '../../src-tauri/bindings/macOS_specific/EventViewport';
 
 	import { convert_global_frame_to_local } from '../utils';
-	import type { AnnotationEvent } from '../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
 
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
+	let viewport_rect: LogicalFrame | null = null; // Relative to viewport
 	let annotation_section: LogicalFrame | null = null; // Relative to viewport
 	let active_window_uid: number | null = null;
 
@@ -49,6 +50,8 @@
 						code_document_rect_global,
 						viewport_properties.dimensions.origin
 					);
+
+					viewport_rect = viewport_properties.dimensions;
 					if (viewport_properties.annotation_section !== null) {
 						annotation_section = convert_global_frame_to_local(
 							viewport_properties.annotation_section,
@@ -65,40 +68,9 @@
 	};
 
 	listenToViewportEvents();
-
-	let annotation_group_id: string | null = null;
-
-	const listen_to_node_annotation_events = async () => {
-		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
-		await listen(node_annotation_channel, (event) => {
-			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
-			switch (event_type) {
-				case 'AddAnnotationGroup':
-				case 'UpdateAnnotationGroup':
-					let group = payload;
-
-					if (group.feature === 'ComplexityRefactoring') {
-						console.log('ComplexityRefactoring', event_type, group);
-						annotation_group_id = group.id;
-					}
-					break;
-				case 'RemoveAnnotationGroup':
-					let group_id = payload as string;
-
-					if (annotation_group_id === group_id) {
-						console.log('ComplexityRefactoring', event_type, group_id);
-					}
-
-					break;
-				default:
-					break;
-			}
-		});
-	};
-	listen_to_node_annotation_events();
 </script>
 
-{#if code_document_rect && annotation_section && active_window_uid}
+{#if code_document_rect && annotation_section && active_window_uid && viewport_rect}
 	<div
 		style="height: 100%; width: 100%;
 			border-style: solid; border-width: 0px; border-color: rgba(255,20,255);"
@@ -124,6 +96,21 @@
 			class="h-full w-full overflow-hidden absolute"
 		>
 			<DocsAnnotations {code_document_rect} {annotation_section} {active_window_uid} />
+		</div>
+		<div
+			style="
+			height: {code_document_rect.size.height}px;
+			width: {code_document_rect.size.width}px;
+			top: {code_document_rect.origin.y}px; 
+			left:0px; position: absolute"
+			class="h-full w-full overflow-hidden absolute"
+		>
+			<ComplexityRefactoringAnnotations
+				{code_document_rect}
+				{viewport_rect}
+				{annotation_section}
+				{active_window_uid}
+			/>
 		</div>
 	</div>
 {/if}
