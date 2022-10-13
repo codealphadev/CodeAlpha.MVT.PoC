@@ -1,9 +1,4 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    fs,
-    hash::{Hash, Hasher},
-    path::Path,
-};
+use std::{fs, path::Path};
 
 use async_trait::async_trait;
 use cached::proc_macro::cached;
