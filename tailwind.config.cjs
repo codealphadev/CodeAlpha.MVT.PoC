@@ -1,14 +1,16 @@
 const colorNames = [
-	'secondary',
-	'inactive',
-	'contrast',
-	'contrastsecondary',
 	'background',
 	'backgroundsecondary',
+	'contrast',
+	'contrastsecondary',
+	'inactive',
+	'primary',
+	'secondary',
+	'signalbad',
 	'signalgood',
 	'signalmedium',
-	'signalbad',
-	'signalverybad'
+	'signalverybad',
+  'divider'
 ];
 
 function mapColorNameToCssVarString(colorName) {

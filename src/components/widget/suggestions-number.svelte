@@ -6,7 +6,7 @@
 
 <div
 	class="text-background w-full h-full flex justify-center items-center font-medium text-xl"
-	style="background: {colors.primary_gradient}"
+	style="background: {colors.primary}"
 >
 	{count}
 </div>

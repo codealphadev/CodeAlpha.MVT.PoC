@@ -42,7 +42,7 @@ impl EventWindowControls {
             EventWindowControls::TrackingAreaExited(_) => true,
             EventWindowControls::TrackingAreaMouseOver(_) => true,
             EventWindowControls::TrackingAreaClickedOutside(_) => true,
-            EventWindowControls::AppWindowHide(_) => false,
+            EventWindowControls::AppWindowHide(_) => true,
             EventWindowControls::AppWindowShow(_) => false,
             EventWindowControls::AppWindowUpdate(_) => false,
             EventWindowControls::DarkModeUpdate(_) => true,

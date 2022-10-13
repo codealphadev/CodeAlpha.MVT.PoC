@@ -1,78 +1,81 @@
 <script lang="ts">
-	import { listen } from '@tauri-apps/api/event';
-	import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
-	import type { SuggestionEvent } from '../../../src-tauri/bindings/features/refactoring/SuggestionEvent';
-	import Suggestion from './suggestion.svelte';
-	import { invoke } from '@tauri-apps/api/tauri';
-	import { afterUpdate } from 'svelte';
-	import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
-	import NoSuggestions from '../suggestions/no-suggestions.svelte';
-	import type { ReplaceSuggestionsMessage } from '../../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
+  import { listen } from '@tauri-apps/api/event';
+  import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
+  import type { SuggestionEvent } from '../../../src-tauri/bindings/features/refactoring/SuggestionEvent';
+  import Suggestion from './suggestion.svelte';
+  import { invoke } from '@tauri-apps/api/tauri';
+  import { afterUpdate } from 'svelte';
+  import type { AppWindow } from '../../../src-tauri/bindings/AppWindow';
+  import NoSuggestions from '../suggestions/no-suggestions.svelte';
+  import type { ReplaceSuggestionsMessage } from '../../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
 
-	let window_width: number | null = null;
-	let window_height: number | null = null;
-	export let window_dom_id: string;
-	export let active_window_uid: number;
+  export let active_window_uid: number;
+  export let CONTAINER_DOM_ID: string;
 
-	let tail_height_px = 12;
+  let window_width: number | null = null;
+  let window_height: number | null = null;
 
-	afterUpdate(() => {
-		updateDimensions();
+  let tail_height_px = 12;
 
-		if (window_width && window_height) {
-			let appWindow: AppWindow = 'Main';
-			invoke('cmd_resize_window', {
-				appWindow: appWindow,
-				sizeY: window_height + tail_height_px,
+  afterUpdate(() => {
+    updateDimensions();
 
-				sizeX: window_width
-			});
-		}
-	});
+    if (window_width && window_height) {
+      let appWindow: AppWindow = 'Main';
+      invoke('cmd_resize_window', {
+        appWindow: appWindow,
+        sizeY: window_height + tail_height_px,
 
-	const updateDimensions = () => {
-		let element = document.getElementById(window_dom_id);
+        sizeX: window_width,
+      });
+    }
+  });
 
-		if (element === null) {
-			return;
-		}
+  const updateDimensions = () => {
+    let element = document.getElementById(CONTAINER_DOM_ID);
 
-		let positionInfo = element.getBoundingClientRect();
+    if (element === null) {
+      return;
+    }
 
-		window_width = positionInfo.width;
-		window_height = positionInfo.height;
-	};
-	let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
-	$: filtered_suggestions = Object.entries(suggestions[active_window_uid] ?? {}).sort((a, b) =>
-		a[0].localeCompare(b[0])
-	);
+    let positionInfo = element.getBoundingClientRect();
 
-	const listenToSuggestionEvents = async () => {
-		let suggestion_channel: ChannelList = 'SuggestionEvent';
-		await listen(suggestion_channel, (event) => {
-			const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
+    window_width = positionInfo.width;
+    window_height = positionInfo.height;
+  };
+  let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
+  $: filtered_suggestions = Object.entries(suggestions[active_window_uid] ?? {}).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  );
 
-			switch (event_type) {
-				case 'ReplaceSuggestions':
-					suggestions = payload.suggestions;
-					break;
-				default:
-					break;
-			}
-		});
-	};
+  const listenToSuggestionEvents = async () => {
+    let suggestion_channel: ChannelList = 'SuggestionEvent';
+    await listen(suggestion_channel, (event) => {
+      const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
 
-	listenToSuggestionEvents();
+      switch (event_type) {
+        case 'ReplaceSuggestions':
+          suggestions = payload.suggestions;
+          break;
+        default:
+          break;
+      }
+    });
+  };
+
+  listenToSuggestionEvents();
 </script>
 
-<div class="flex flex-col gap-5">
-	{#if filtered_suggestions.length > 0}
-		{#each filtered_suggestions as [id, suggestion]}
-			{#key id}
-				<Suggestion {suggestion} suggestion_id={id} window_uid={active_window_uid} />
-			{/key}
-		{/each}
-	{:else}
-		<NoSuggestions />
-	{/if}
-</div>
+{#if filtered_suggestions.length > 0}
+  <div
+    class="flex bg-background flex-col gap-5 shrink-0 rounded-b-xl max-h-[700px] overflow-y-auto overscroll-none mt-9 px-4 pt-3 pb-4"
+  >
+    {#each filtered_suggestions as [id, suggestion]}
+      {#key id}
+        <Suggestion {suggestion} suggestion_id={id} window_uid={active_window_uid} />
+      {/key}
+    {/each}
+  </div>
+{:else}
+  <NoSuggestions />
+{/if}

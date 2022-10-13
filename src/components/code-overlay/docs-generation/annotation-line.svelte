@@ -5,7 +5,7 @@
 	export let highlighted = false;
 	const ANNOTATION_LINE_WIDTH_PCT = 10;
 
-	$: background = highlighted ? colors.primary_gradient : colors.inactive;
+	$: background = highlighted ? colors.primary : colors.inactive;
 </script>
 
 {#if visible}

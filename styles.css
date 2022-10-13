@@ -1,17 +1,9 @@
-.gradient-text {
-	background-clip: text;
-	color: transparent;
-	background-image: var(--theme-primary_gradient);
-}
-
-.bg-primary-gradient.bg-primary-gradient {
-	background-image: var(--theme-primary_gradient);
-}
-
 code {
 	font-weight: 600;
 }
-
+button.icon-button.hover.hover {
+  filter: brightness(70%);
+}
 button.hover.hover {
 	filter: brightness(125%);
 }

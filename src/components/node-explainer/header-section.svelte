@@ -17,7 +17,9 @@
 
 <div class="gap-2 flex flex-col w-full">
 	<div class="flex justify-between items-start">
-		<h3 class="text-base leading-6 text-contrast font-medium overflow-hidden text-ellipsis">
+		<h3
+			class="text-base leading-6 text-contrastsecondary font-medium overflow-hidden text-ellipsis"
+		>
 			<span class="font-light">{map_code_block_kind_to_text(kind)}</span>
 			{#if name}
 				<span class="font-mono font-bold">{name}</span>
@@ -25,7 +27,7 @@
 		</h3>
 		<IconNodeExplainer />
 	</div>
-	<div class="max-w-xl text-sm font-normal gradient-text">
+	<div class="max-w-xl text-sm font-normal text-contrast">
 		<p>{@html summary}</p>
 	</div>
 </div>
