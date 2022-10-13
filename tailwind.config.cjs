@@ -6,11 +6,13 @@ const colorNames = [
 	'inactive',
 	'primary',
 	'secondary',
+	'accent_primary',
+	'accent_secondary',
 	'signalbad',
 	'signalgood',
 	'signalmedium',
 	'signalverybad',
-  'divider'
+	'divider'
 ];
 
 function mapColorNameToCssVarString(colorName) {

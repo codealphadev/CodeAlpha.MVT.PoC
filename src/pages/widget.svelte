@@ -1,29 +1,15 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/tauri';
   import WidgetBackground from '../components/widget/widget-background.svelte';
-  import IconLogo from '../components/widget/icons/icon-logo.svelte';
-  import IconLogoGreyscale from '../components/widget/icons/icon-logo-greyscale.svelte';
   import { emit, listen } from '@tauri-apps/api/event';
   import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
-  import type { EventRuleExecutionState } from '../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
-  import WidgetProcessing from '../components/widget/widget-processing.svelte';
-  import WidgetBackgroundGreyscale from '../components/widget/widget-background-greyscale.svelte';
-  import { fade } from 'svelte/transition';
-  import SwiftFormat from '../components/widget/swift-format.svelte';
-  import DocsGeneration from '../components/widget/docs-generation.svelte';
-  import type { SuggestionEvent } from '../../src-tauri/bindings/features/refactoring/SuggestionEvent';
-  import SuggestionsNumber from '../components/widget/suggestions-number.svelte';
   import type { EventUserInteraction } from '../../src-tauri/bindings/user_interaction/EventUserInteraction';
-  import type { EventViewport } from '../../src-tauri/bindings/macOS_specific/EventViewport';
-  import type { ReplaceSuggestionsMessage } from '../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
   import { toggle_main_window } from '../utils';
   import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
   import type { HideAppWindowMessage } from '../../src-tauri/bindings/window_controls/HideAppWindowMessage';
+  import WidgetContent from '../components/widget/widget-content.svelte';
 
   let main_window_active = false;
-  let ruleExecutionState: EventRuleExecutionState | null = null;
-  let processing_timeout = 15000; // ms
-  let show_alternate_icon_duration = 2000; // ms
 
   const clickAction = async () => {
     main_window_active = !main_window_active;
@@ -70,68 +56,9 @@
     }
   };
 
-  let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
-
-  const listenToSuggestionEvents = async () => {
-    let suggestion_channel: ChannelList = 'SuggestionEvent';
-    await listen(suggestion_channel, (event) => {
-      const { payload, event: event_type } = JSON.parse(event.payload as string) as SuggestionEvent;
-
-      switch (event_type) {
-        case 'ReplaceSuggestions':
-          suggestions = payload.suggestions;
-          break;
-
-        default:
-          break;
-      }
-    });
-  };
-
-  listenToSuggestionEvents();
-
-  const listenTauriEvents = async () => {
-    await listen('EventRuleExecutionState' as ChannelList, (event) => {
-      ruleExecutionState = JSON.parse(event.payload as string) as EventRuleExecutionState;
-
-      // In case we receive a "finished" event, register a timeout to reset the
-      // widget icon to the logo after some delay
-      switch (ruleExecutionState.event) {
-        case 'SwiftFormatFinished':
-          setTimeout(async () => {
-            ruleExecutionState = null;
-          }, show_alternate_icon_duration);
-          break;
-        case 'SwiftFormatFailed':
-          setTimeout(async () => {
-            ruleExecutionState = null;
-          }, show_alternate_icon_duration);
-          break;
-        case 'NodeExplanationStarted':
-          setTimeout(async () => {
-            ruleExecutionState = null;
-          }, processing_timeout);
-          break;
-        case 'NodeExplanationFailed':
-          setTimeout(async () => {
-            ruleExecutionState = null;
-          }, show_alternate_icon_duration);
-          break;
-        case 'NodeExplanationFetched':
-          setTimeout(async () => {
-            ruleExecutionState = null;
-          }, show_alternate_icon_duration);
-          break;
-        default:
-          break;
-      }
-    });
-  };
-
   let startX: number | undefined = undefined;
   let startY: number | undefined = undefined;
   const minimum_move_distance_to_fire_click = 10;
-  listenTauriEvents();
 
   function handleMouseDown(event: MouseEvent) {
     startX = event.screenX;
@@ -154,92 +81,11 @@
       handle_release_drag();
     }
   }
-  type WidgetMode =
-    | 'idle'
-    | 'processing'
-    | number
-    | 'inactive'
-    | 'SwiftFormatFailed'
-    | 'SwiftFormatFinished'
-    | 'NodeExplanationFailed'
-    | 'NodeExplanationFetched';
-
-  function get_widget_mode(
-    rule_execution_state: EventRuleExecutionState | null,
-    suggestions: ReplaceSuggestionsMessage['suggestions'],
-    window_uid: number | null
-  ): WidgetMode {
-    switch (rule_execution_state?.event) {
-      case 'NodeExplanationFailed':
-      case 'NodeExplanationFetched':
-      case 'SwiftFormatFailed':
-      case 'SwiftFormatFinished':
-        return rule_execution_state.event;
-      case 'NodeExplanationStarted':
-        return 'processing';
-    }
-    if (window_uid) {
-      let suggestions_count = Object.values(suggestions[window_uid] ?? []).length;
-      if (suggestions_count > 0) {
-        return suggestions_count;
-      }
-    }
-    return 'idle';
-  }
-  $: widget_mode = get_widget_mode(ruleExecutionState, suggestions, active_window_uid);
-
-  let active_window_uid: number | null = null;
-  const listenToViewportEvents = async () => {
-    let ViewportChannel: ChannelList = 'EventViewport';
-    await listen(ViewportChannel, (e) => {
-      const { event, payload } = JSON.parse(e.payload as string) as EventViewport;
-
-      switch (event) {
-        case 'XcodeViewportUpdate':
-          active_window_uid = payload.viewport_properties.window_uid;
-          break;
-        default:
-          break;
-      }
-    });
-  };
-
-  listenToViewportEvents();
 </script>
 
 <div class="relative overflow-hidden w-full h-full">
-  {#if main_window_active === false}
-    <WidgetBackgroundGreyscale />
-  {:else}
-    <WidgetBackground />
-  {/if}
-
-  <div class="absolute bottom-0 right-0 w-12 h-12">
-    <div data-tauri-drag-region class="flex items-center justify-center h-screen">
-      {#key widget_mode}
-        <div
-          class="w-[38px] h-[38px] rounded-full overflow-hidden"
-          in:fade={{
-            duration: 200,
-          }}
-        >
-          {#if widget_mode === 'inactive'}
-            <IconLogoGreyscale />
-          {:else if widget_mode === 'SwiftFormatFinished' || widget_mode === 'SwiftFormatFailed'}
-            <SwiftFormat state={widget_mode} />
-          {:else if widget_mode === 'NodeExplanationFetched' || widget_mode === 'NodeExplanationFailed'}
-            <DocsGeneration state={widget_mode} />
-          {:else if widget_mode === 'processing'}
-            <WidgetProcessing />
-          {:else if typeof widget_mode === 'number'}
-            <SuggestionsNumber count={widget_mode} />
-          {:else}
-            <IconLogo />
-          {/if}
-        </div>
-      {/key}
-    </div>
-  </div>
+  <WidgetBackground />
+  <WidgetContent />
   <div
     data-tauri-drag-region
     class="absolute bottom-0 right-0 w-12 h-12"
