@@ -530,14 +530,9 @@ impl ComplexityRefactoring {
         let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
             ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
         )?;
-        let suggestion_to_dismiss = suggestions.get(&suggestion_id).ok_or(
-            ComplexityRefactoringError::SuggestionNotFound(suggestion_id.to_string()),
-        )?;
 
-        println!(
-            "Suggestion selected: function {:?} //TODO: :D",
-            suggestion_to_dismiss.main_function_name
-        );
+        //AnnotationManagerEvent::ScrollToAnnotationInGroup((suggestion_id,GetAnnotationInGroupVia::Kind(AnnotationKind::)));
+        // TODO:
         Ok(())
     }
 
