@@ -49,6 +49,7 @@ enum ComplexityRefactoringProcedure {
     ComputeSuggestions,
     PerformOperation(SuggestionId),
     DismissSuggestion(SuggestionId),
+    SelectSuggestion(SuggestionId),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -115,6 +116,9 @@ impl FeatureBase for ComplexityRefactoring {
                     .map_err(|e| e.into()),
                 ComplexityRefactoringProcedure::DismissSuggestion(id) => self
                     .dismiss_suggestion(code_document, id)
+                    .map_err(|e| e.into()),
+                ComplexityRefactoringProcedure::SelectSuggestion(id) => self
+                    .select_suggestion(code_document, id)
                     .map_err(|e| e.into()),
             }
         } else {
@@ -516,6 +520,27 @@ impl ComplexityRefactoring {
         Ok(())
     }
 
+    fn select_suggestion(
+        &mut self,
+        code_document: &CodeDocument,
+        suggestion_id: SuggestionId,
+    ) -> Result<(), ComplexityRefactoringError> {
+        let window_uid = code_document.editor_window_props().window_uid;
+        let mut suggestions_per_window = self.suggestions_arc.lock();
+        let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
+            ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
+        )?;
+        let suggestion_to_dismiss = suggestions.get(&suggestion_id).ok_or(
+            ComplexityRefactoringError::SuggestionNotFound(suggestion_id.to_string()),
+        )?;
+
+        println!(
+            "Suggestion selected: function {:?} //TODO: :D",
+            suggestion_to_dismiss.main_function_name
+        );
+        Ok(())
+    }
+
     fn dismiss_suggestion(
         &mut self,
         code_document: &CodeDocument,
@@ -551,8 +576,11 @@ impl ComplexityRefactoring {
             CoreEngineTrigger::OnUserCommand(UserCommand::PerformRefactoringOperation(msg)) => {
                 Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
             }
-            CoreEngineTrigger::OnUserCommand(UserCommand::DismissRefactoringSuggestion(msg)) => {
+            CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)) => {
                 Some(ComplexityRefactoringProcedure::DismissSuggestion(msg.id))
+            }
+            CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)) => {
+                Some(ComplexityRefactoringProcedure::SelectSuggestion(msg.id))
             }
             _ => None,
         }
