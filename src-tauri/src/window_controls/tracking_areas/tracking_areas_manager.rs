@@ -307,16 +307,6 @@ impl TrackingAreasManager {
                         .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseOver => {
-                        println!(
-                            "MouseOver {:?}",
-                            TrackingAreaMouseOverMessage {
-                                id: tracking_area.id,
-                                window_uid: tracking_area.window_uid,
-                                duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
-                                app_window: tracking_area.app_window,
-                                mouse_position: *mouse_position,
-                            }
-                        );
                         EventWindowControls::TrackingAreaMouseOver(TrackingAreaMouseOverMessage {
                             id: tracking_area.id,
                             window_uid: tracking_area.window_uid,
