@@ -7,6 +7,7 @@
 	import { is_point } from '../annotation_utils';
 	import type { Annotation } from '../../../../src-tauri/bindings/features/code_annotations/Annotation';
 	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
+	import type { AnnotationKind } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationKind';
 
 	let annotation_groups: AnnotationGroup[] = [];
 	let selected_suggestion_id: string | null = null;
@@ -16,31 +17,31 @@
 	export let code_document_rect: LogicalFrame;
 	export let viewport_rect: LogicalFrame;
 
-	// TODO
 	let annotation_extraction: LogicalFrame | null;
-	let annotation_context_pt1: LogicalFrame | null;
-	let annotation_context_pt2: LogicalFrame | null;
+	let annotation_context_before: LogicalFrame | null;
+	let annotation_context_after: LogicalFrame | null;
 
 	function derive_annotations(group: AnnotationGroup | undefined) {
 		if (group === undefined) {
 			annotation_extraction = null;
-			annotation_context_pt1 = null;
-			annotation_context_pt2 = null;
+			annotation_context_before = null;
+			annotation_context_after = null;
 			return;
 		}
 
-		let extraction_codeblock = derive_extract_block_frame(group);
+		let extraction_codeblock = derive_block(group, 'ExtractionStartChar', 'ExtractionEndChar');
 		if (extraction_codeblock) {
 			annotation_extraction = extraction_codeblock;
 		}
 
-		let context_codeblock_pt1 = derive_context_block_frame_pt1(group);
-		let context_codeblock_pt2 = derive_context_block_frame_pt2(group);
-		if (context_codeblock_pt1) {
-			annotation_context_pt1 = context_codeblock_pt1;
+		let context_codeblock_before = derive_block(group, 'CodeblockFirstChar', 'ExtractionStartChar');
+		if (context_codeblock_before) {
+			annotation_context_before = context_codeblock_before;
 		}
-		if (context_codeblock_pt2) {
-			annotation_context_pt2 = context_codeblock_pt2;
+
+		let context_codeblock_after = derive_block(group, 'ExtractionEndChar', 'CodeblockLastChar');
+		if (context_codeblock_after) {
+			annotation_context_after = context_codeblock_after;
 		}
 	}
 
@@ -54,10 +55,10 @@
 			const { payload, event: event_type } = JSON.parse(
 				event.payload as string
 			) as EventUserInteraction;
-			console.log(payload, event_type);
 
 			switch (event_type) {
 				case 'UpdateSelectedSuggestion':
+					console.log(payload, event_type);
 					const { id } = payload;
 					selected_suggestion_id = id;
 			}
@@ -70,13 +71,13 @@
 		let annotation_channel: ChannelList = 'AnnotationEvent';
 		await listen(annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
-			console.log(payload, event_type);
 			switch (event_type) {
 				case 'AddAnnotationGroup':
 				case 'UpdateAnnotationGroup':
 					let group = payload;
 
 					if (group.feature === 'ComplexityRefactoring') {
+						console.log(payload, event_type);
 						const group_index = annotation_groups.findIndex((grp) => grp.id === group.id);
 
 						if (group_index === -1) {
@@ -88,6 +89,7 @@
 					}
 					break;
 				case 'RemoveAnnotationGroup':
+					console.log(payload, event_type);
 					let group_id = payload as string;
 					annotation_groups = annotation_groups.filter((group) => group.id !== group_id);
 
@@ -98,46 +100,13 @@
 		});
 	};
 
-	const derive_context_block_frame_pt1 = (group: AnnotationGroup): LogicalFrame | undefined => {
-		let annotation_start = Object.values(group.annotations).find(
-			(annotation) => annotation.kind === 'CodeblockFirstChar'
-		);
-
-		let annotation_end = Object.values(group.annotations).find(
-			(annotation) => annotation.kind === 'ExtractionStartChar'
-		);
-
-		if (!annotation_start || !annotation_end) {
-			return;
-		}
-
-		return get_frame_from_annotation_pair(annotation_start, annotation_end);
-	};
-
-	const derive_context_block_frame_pt2 = (group: AnnotationGroup): LogicalFrame | undefined => {
-		let annotation_start = Object.values(group.annotations).find(
-			(annotation) => annotation.kind === 'ExtractionEndChar'
-		);
-
-		let annotation_end = Object.values(group.annotations).find(
-			(annotation) => annotation.kind === 'CodeblockLastChar'
-		);
-
-		if (!annotation_start || !annotation_end) {
-			return;
-		}
-
-		return get_frame_from_annotation_pair(annotation_start, annotation_end);
-	};
-
-	const derive_extract_block_frame = (group: AnnotationGroup): LogicalFrame | undefined => {
-		let annotation_start = Object.values(group.annotations).find(
-			(annotation) => annotation.kind === 'ExtractionStartChar'
-		);
-
-		let annotation_end = Object.values(group.annotations).find(
-			(annotation) => annotation.kind === 'ExtractionEndChar'
-		);
+	const derive_block = (
+		group: AnnotationGroup,
+		start_kind: AnnotationKind,
+		end_kind: AnnotationKind
+	): LogicalFrame | undefined => {
+		let annotation_start = Object.values(group.annotations).find((a) => a.kind === start_kind);
+		let annotation_end = Object.values(group.annotations).find((a) => a.kind === end_kind);
 
 		if (!annotation_start || !annotation_end) {
 			return;
@@ -192,32 +161,29 @@
 			top: {round_value(annotation_extraction.origin.y, 2)}px; 
 			width: {round_value(annotation_extraction.size.width, 2)}px; 
 			height: {round_value(annotation_extraction.size.height, 2)}px;
-			background-image: linear-gradient(to right,  rgba(253, 88, 58, 1), rgba(253, 88, 58, 0));
-			opacity: 0.2;"
+			background-image: linear-gradient(to right,  rgba(253, 88, 58, 0.2), rgba(253, 88, 58, 0));"
 		/>
 	{/if}
 
-	{#if annotation_context_pt1}
+	{#if annotation_context_before}
 		<div
 			style="position: absolute; 
-			left: {round_value(annotation_context_pt1.origin.x, 2)}px; 
-			top: {round_value(annotation_context_pt1.origin.y, 2)}px; 
-			width: {round_value(annotation_context_pt1.size.width, 2)}px; 
-			height: {round_value(annotation_context_pt1.size.height, 2)}px;
-			background-image: linear-gradient(to right,rgba(58, 136, 253, 1), rgba(58, 136, 253, 0);
-			opacity: 0.1;"
+			left: {round_value(annotation_context_before.origin.x, 2)}px; 
+			top: {round_value(annotation_context_before.origin.y, 2)}px; 
+			width: {round_value(annotation_context_before.size.width, 2)}px; 
+			height: {round_value(annotation_context_before.size.height, 2)}px;
+			background-image: linear-gradient(to right,rgba(58, 136, 253, 0.1), rgba(58, 136, 253, 0);"
 		/>
 	{/if}
 
-	{#if annotation_context_pt2}
+	{#if annotation_context_after}
 		<div
 			style="position: absolute; 
-			left: {round_value(annotation_context_pt2.origin.x, 2)}px; 
-			top: {round_value(annotation_context_pt2.origin.y, 2)}px; 
-			width: {round_value(annotation_context_pt2.size.width, 2)}px; 
-			height: {round_value(annotation_context_pt2.size.height, 2)}px;
-			background-image: linear-gradient(to right,rgba(58, 136, 253, 1), rgba(58, 136, 253, 0);
-			opacity: 0.1;"
+			left: {round_value(annotation_context_after.origin.x, 2)}px; 
+			top: {round_value(annotation_context_after.origin.y, 2)}px; 
+			width: {round_value(annotation_context_after.size.width, 2)}px; 
+			height: {round_value(annotation_context_after.size.height, 2)}px;
+			background-image: linear-gradient(to right,rgba(58, 136, 253, 0.1), rgba(58, 136, 253, 0);"
 		/>
 	{/if}
 {/if}
