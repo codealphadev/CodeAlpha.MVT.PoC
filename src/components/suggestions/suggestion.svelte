@@ -18,7 +18,7 @@
 
 	const apply_suggestion = async () => {
 		const event: EventUserInteraction = {
-			event: 'PerformRefactoringOperation',
+			event: 'PerformSuggestion',
 			payload: { id: suggestion_id, editor_window_uid: window_uid }
 		};
 		const channel: ChannelList = 'EventUserInteractions';

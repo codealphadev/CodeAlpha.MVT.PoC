@@ -4,7 +4,7 @@
 	import type { AnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
 	import type { AnnotationGroup } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationGroup';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
-	import { is_rectangle } from '../annotation_utils';
+	import { is_point } from '../annotation_utils';
 	import type { Annotation } from '../../../../src-tauri/bindings/features/code_annotations/Annotation';
 	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 
@@ -158,26 +158,11 @@
 			return;
 		}
 
-		let codeblock_start_y = null;
-		let codeblock_end_y = null;
+		const codeblock_start_y = is_point(start.shapes[0]) ? start.shapes[0].Point.y : 0;
 
-		if (is_rectangle(start.shapes[0])) {
-			codeblock_start_y =
-				start.kind === 'ExtractionStartChar' || start.kind === 'CodeblockFirstChar'
-					? start.shapes[0].Rectangle.origin.y
-					: start.shapes[0].Rectangle.origin.y + start.shapes[0].Rectangle.size.height;
-		} else {
-			codeblock_start_y = 0;
-		}
-
-		if (is_rectangle(end.shapes[0])) {
-			codeblock_end_y =
-				end.kind === 'ExtractionEndChar' || end.kind === 'CodeblockLastChar'
-					? end.shapes[0].Rectangle.origin.y + end.shapes[0].Rectangle.size.height
-					: end.shapes[0].Rectangle.origin.y;
-		} else {
-			codeblock_end_y = code_document_rect.size.height;
-		}
+		const codeblock_end_y = is_point(end.shapes[0])
+			? end.shapes[0].Point.y
+			: code_document_rect.size.height;
 
 		return {
 			origin: {
