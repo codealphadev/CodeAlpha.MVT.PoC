@@ -5,7 +5,10 @@ pub use simulated_scrolling::*;
 pub use utils::*;
 
 pub mod app;
+pub mod menu;
+pub mod permissions_check;
 pub mod setup;
+pub mod system_tray;
 pub mod utils;
 pub mod xcode;
 

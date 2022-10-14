@@ -3,48 +3,34 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-use std::sync::Arc;
-use tracing::error;
-
-use core_engine::{CoreEngine, TextRange};
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use platform::macos::{setup_observers, xcode::actions::replace_range_with_clipboard_text, GetVia};
-use tauri::{
-    utils::assets::EmbeddedAssets, Context, Menu, MenuEntry, MenuItem, Submenu, SystemTrayEvent,
-    SystemTrayMenuItem,
-};
-use tracing::{debug, info};
-use window_controls::WindowManager;
+use std::sync::Arc;
+use tracing::{debug, error, info};
 
-use tauri::{CustomMenuItem, SystemTray, SystemTrayMenu};
+use tauri::Menu;
 
 mod core_engine;
 mod platform;
 mod utils;
 mod window_controls;
 
-use crate::{
-    utils::tracing::TracingSubscriber,
-    window_controls::{cmd_rebind_main_widget, cmd_resize_window},
+use core_engine::CoreEngine;
+use platform::macos::{
+    menu::mac_os_task_bar_menu,
+    permissions_check::ax_permissions_check,
+    setup_observers,
+    system_tray::{construct_system_tray_menu, evaluate_system_tray_event},
 };
-use lazy_static::lazy_static;
+use utils::{feedback::cmd_send_feedback, tracing::TracingSubscriber};
+use window_controls::{cmd_rebind_main_widget, cmd_resize_window, WindowManager};
 
+use crate::core_engine::cmd_paste_docs;
 #[cfg(not(debug_assertions))]
 use crate::utils::updater::listen_for_updates;
 
-use utils::feedback::cmd_send_feedback;
 lazy_static! {
     static ref APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
-}
-
-lazy_static! {
-    static ref NODE_EXPLANATION_CURRENT_DOCSTRING: Arc<Mutex<String>> =
-        Arc::new(Mutex::new("".to_string()));
-}
-
-lazy_static! {
-    static ref NODE_EXPLANATION_CURRENT_INSERTION_POINT: Arc<Mutex<usize>> =
-        Arc::new(Mutex::new(0));
 }
 
 pub static CORE_ENGINE_ACTIVE_AT_STARTUP: bool = true;
@@ -59,41 +45,11 @@ pub fn app_handle() -> tauri::AppHandle {
     app_handle.as_ref().unwrap().clone()
 }
 
-fn construct_tray_menu(context: &Context<EmbeddedAssets>) -> SystemTrayMenu {
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let check_ax_api = CustomMenuItem::new("check_ax_api".to_string(), "Settings...");
-
-    let version = context.package_info().version.clone();
-
-    let version_label = CustomMenuItem::new(
-        "version".to_string(),
-        format!(
-            "Version: {}.{}.{}",
-            version.major, version.minor, version.patch
-        )
-        .as_str(),
-    )
-    .disabled();
-
-    if !platform::macos::is_application_trusted() {
-        SystemTrayMenu::new()
-            .add_item(check_ax_api)
-            .add_item(version_label)
-            .add_native_item(SystemTrayMenuItem::Separator)
-            .add_item(quit)
-    } else {
-        SystemTrayMenu::new()
-            .add_item(version_label)
-            .add_native_item(SystemTrayMenuItem::Separator)
-            .add_item(quit)
-    }
-}
-
 fn main() {
     // Configure tracing
     TracingSubscriber::new();
 
-    let context = tauri::generate_context!("tauri.conf.json");
+    let tauri_context = tauri::generate_context!("tauri.conf.json");
 
     let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -121,71 +77,17 @@ fn main() {
             let window_manager = Arc::new(parking_lot::Mutex::new(WindowManager::new()?));
             WindowManager::start_event_listeners(&window_manager);
 
-            // Continuously check if the accessibility APIs are enabled, show popup if not
-            let ax_apis_enabled_at_start = platform::macos::is_application_trusted();
-            tauri::async_runtime::spawn(async move {
-                let mut popup_was_shown = false;
-                loop {
-                    let api_enabled;
-                    if popup_was_shown {
-                        api_enabled = platform::macos::is_application_trusted();
-                    } else {
-                        api_enabled = platform::macos::is_application_trusted_with_prompt();
-                        popup_was_shown = true;
-                    }
-
-                    if api_enabled {
-                        // In case AX apis were not enabled at program start, restart the app to
-                        // ensure the AX observers are properly registered.
-                        if !ax_apis_enabled_at_start {
-                            app_handle().restart();
-                        }
-                    }
-
-                    if !api_enabled && ax_apis_enabled_at_start {
-                        // in this case the permissions were withdrawn at runtime, restart the app
-                        std::process::exit(0);
-                    }
-
-                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                }
-            });
+            ax_permissions_check();
 
             // Spin up a thread to detect potential Mutex deadlocks.
             deadlock_detection();
 
             Ok(())
         })
-        .system_tray(SystemTray::new().with_menu(construct_tray_menu(&context)))
-        .on_system_tray_event(|_app, event| match event {
-            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-                "quit" => {
-                    debug!("System tray: quit");
-                    std::process::exit(0);
-                }
-                "check_ax_api" => {
-                    debug!("System tray: check_ax_api");
-                    platform::macos::is_application_trusted_with_prompt();
-                }
-                _ => {}
-            },
-            _ => {}
-        })
-        .menu(Menu::with_items([
-            #[cfg(target_os = "macos")]
-            MenuEntry::Submenu(Submenu::new(
-                "dummy-menu-for-shortcuts-to-work-on-input-fields-see-github-issue-#-1055",
-                Menu::with_items([
-                    MenuItem::Undo.into(),
-                    MenuItem::Redo.into(),
-                    MenuItem::Cut.into(),
-                    MenuItem::Copy.into(),
-                    MenuItem::Paste.into(),
-                    MenuItem::SelectAll.into(),
-                ]),
-            )),
-        ]))
-        .build(context)
+        .system_tray(construct_system_tray_menu(&tauri_context))
+        .on_system_tray_event(|_, event| evaluate_system_tray_event(event))
+        .menu(Menu::with_items([mac_os_task_bar_menu()]))
+        .build(tauri_context)
         .expect("error while running tauri application");
 
     app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -246,26 +148,5 @@ fn deadlock_detection() {
                 println!("{:#?}", t.backtrace());
             }
         }
-    });
-}
-
-#[tauri::command]
-fn cmd_paste_docs() {
-    tauri::async_runtime::spawn(async move {
-        // Paste it at the docs insertion point
-        let insertion_point = NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock().clone();
-        let docstring = NODE_EXPLANATION_CURRENT_DOCSTRING.lock().clone();
-        replace_range_with_clipboard_text(
-            &app_handle(),
-            &GetVia::Current,
-            &TextRange {
-                index: insertion_point,
-                length: 0,
-            },
-            Some(&docstring),
-            true,
-        )
-        .await;
-        debug!(insertion_point, docstring, "Docstring inserted");
     });
 }
