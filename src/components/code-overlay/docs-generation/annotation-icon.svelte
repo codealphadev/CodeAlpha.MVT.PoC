@@ -1,20 +1,20 @@
 <script lang="ts">
-  import IconProcessing from '../../widget/icons/icon-processing.svelte';
-  import { colors } from '../../../themes';
-  import Icon from '../../common/logo/icon.svelte';
+	import IconProcessing from '../../widget/icons/icon-processing.svelte';
+	import { colors } from '../../../themes';
+	import PretzlIcon from '../../common/logo/pretzl-icon.svelte';
 
-  export let is_hovering = false;
-  export let is_processing = false;
+	export let is_hovering = false;
+	export let is_processing = false;
 </script>
 
 <div style="display: flex; align-items: center; height: 100%; width: 100%">
-  {#if !is_processing}
-    {#if is_hovering}
-      <Icon color={colors.accent_primary_emphasis} />
-    {:else}
-      <Icon color={colors.accent_primary} />
-    {/if}
-  {:else}
-    <IconProcessing />
-  {/if}
+	{#if !is_processing}
+		{#if is_hovering}
+			<PretzlIcon color={colors.accent_primary_emphasis} />
+		{:else}
+			<PretzlIcon color={colors.accent_primary} />
+		{/if}
+	{:else}
+		<IconProcessing />
+	{/if}
 </div>

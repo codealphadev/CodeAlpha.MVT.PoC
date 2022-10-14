@@ -1,14 +1,13 @@
 <script lang="ts">
-  import Close from '../common/close.svelte';
-  import { toggle_main_window } from '../../utils';
-  import Button from '../common/button/button.svelte';
-  import { ButtonType } from '../common/button/button';
+	import Close from '../common/close.svelte';
+	import { toggle_main_window } from '../../utils';
+	import IconButton from '../common/button/icon-button.svelte';
 
-  const close_main_window = async () => {
-    toggle_main_window(false);
-  };
+	const close_main_window = async () => {
+		toggle_main_window(false);
+	};
 </script>
 
-<Button type={ButtonType.Icon} on:click={close_main_window}>
-  <Close />
-</Button>
+<IconButton on:click={close_main_window}>
+	<Close />
+</IconButton>
