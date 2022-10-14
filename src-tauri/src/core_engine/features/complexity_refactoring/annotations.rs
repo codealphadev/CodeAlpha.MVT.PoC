@@ -3,7 +3,8 @@ use uuid::Uuid;
 use crate::core_engine::{
     annotations_manager::{
         AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
-        AnnotationKind,
+        AnnotationKind, InstructionBounds, InstructionBoundsPropertyOfInterest,
+        InstructionWrappedLines,
     },
     events::AnnotationManagerEvent,
     features::FeatureKind,
@@ -30,7 +31,11 @@ pub fn set_annotation_group_for_extraction_and_context(
             length: 1,
         },
         AnnotationKind::ExtractionStartChar,
-        AnnotationJobInstructions::default(),
+        AnnotationJobInstructions {
+            bounds: InstructionBounds::SingleRect,
+            bounds_property_of_interest: InstructionBoundsPropertyOfInterest::PosTopLeft,
+            wrapped_lines: InstructionWrappedLines::None,
+        },
     );
 
     let extract_end_char_job_id = uuid::Uuid::new_v4();
@@ -41,7 +46,11 @@ pub fn set_annotation_group_for_extraction_and_context(
             length: 1,
         },
         AnnotationKind::ExtractionEndChar,
-        AnnotationJobInstructions::default(),
+        AnnotationJobInstructions {
+            bounds: InstructionBounds::SingleRect,
+            bounds_property_of_interest: InstructionBoundsPropertyOfInterest::PosBotRight,
+            wrapped_lines: InstructionWrappedLines::None,
+        },
     );
 
     let context_range_start_char_job_id = uuid::Uuid::new_v4();
@@ -52,7 +61,11 @@ pub fn set_annotation_group_for_extraction_and_context(
             length: 1,
         },
         AnnotationKind::CodeblockFirstChar,
-        AnnotationJobInstructions::default(),
+        AnnotationJobInstructions {
+            bounds: InstructionBounds::SingleRect,
+            bounds_property_of_interest: InstructionBoundsPropertyOfInterest::PosTopLeft,
+            wrapped_lines: InstructionWrappedLines::None,
+        },
     );
 
     let context_range_end_char_job_id = uuid::Uuid::new_v4();
@@ -63,7 +76,11 @@ pub fn set_annotation_group_for_extraction_and_context(
             length: 1,
         },
         AnnotationKind::CodeblockLastChar,
-        AnnotationJobInstructions::default(),
+        AnnotationJobInstructions {
+            bounds: InstructionBounds::SingleRect,
+            bounds_property_of_interest: InstructionBoundsPropertyOfInterest::PosBotRight,
+            wrapped_lines: InstructionWrappedLines::None,
+        },
     );
 
     AnnotationManagerEvent::Upsert((
