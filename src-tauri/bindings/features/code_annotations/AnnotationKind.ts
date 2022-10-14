@@ -11,4 +11,8 @@ export type AnnotationKind =
   | "ExtractionStartChar"
   | "ExtractionEndChar"
   | "InsertionStartChar"
-  | "InsertionEndChar";
+  | "InsertionEndChar"
+  | "ExtractedFunctionStart"
+  | "ExtractedFunctionEnd"
+  | "CallOfExtractedFunctionStart"
+  | "CallOfExtractedFunctionEnd";

@@ -67,6 +67,7 @@ pub struct RefactoringSuggestion {
     pub new_text_content_string: Option<String>, // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
     pub old_text_content_string: Option<String>,
     pub edits: Vec<Edit>,
+    pub file_path: Option<String>,
     pub new_complexity: isize,
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
@@ -256,6 +257,7 @@ impl ComplexityRefactoring {
             &syntax_tree,
             dismissed_suggestions_arc,
             window_uid,
+            file_path,
         )?;
 
         for (id, suggestion) in suggestions.iter() {
@@ -352,6 +354,7 @@ impl ComplexityRefactoring {
         syntax_tree: &SwiftSyntaxTree,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
+        file_path: &Option<String>,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
         let prev_complexity = function.get_complexity();
         if prev_complexity <= MAX_ALLOWED_COMPLEXITY {
@@ -396,6 +399,7 @@ impl ComplexityRefactoring {
                 old_text_content_string: None,
                 new_text_content_string: None,
                 edits: Vec::new(),
+                file_path: file_path.clone(),
             },
         );
 
@@ -427,8 +431,19 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
+            let mut formatted_edits = vec![];
+            for edit in edits {
+                if let Ok(formatted_text) =
+                    format_code(&edit.text.as_string(), &suggestion.file_path).await
+                {
+                    let mut edited_edit = edit;
+                    edited_edit.text = XcodeText::from_str(&formatted_text);
+                    formatted_edits.push(edited_edit);
+                }
+            }
+
             let (old_content, new_content) = Self::format_and_apply_edits_to_text_content(
-                edits.clone(),
+                formatted_edits.clone(),
                 text_content,
                 file_path,
             )
@@ -436,7 +451,7 @@ impl ComplexityRefactoring {
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
-            suggestion.edits = edits;
+            suggestion.edits = formatted_edits;
             Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
         });
     }
@@ -480,8 +495,6 @@ impl ComplexityRefactoring {
         code_document: &CodeDocument,
         suggestion_id: SuggestionId,
     ) -> Result<(), ComplexityRefactoringError> {
-        println!("perform_operation");
-
         let suggestions = Self::get_suggestions_for_window(
             self.suggestions_arc.clone(),
             code_document.editor_window_props().window_uid,
@@ -502,8 +515,6 @@ impl ComplexityRefactoring {
             .text_content()
             .as_ref()
             .ok_or(ComplexityRefactoringError::InsufficientContext)?;
-
-        println!("COME HERE!");
 
         tauri::async_runtime::spawn({
             let selected_text_range = code_document.selected_text_range().clone();
