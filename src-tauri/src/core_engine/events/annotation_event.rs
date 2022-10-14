@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[serde(tag = "event", content = "payload")]
-#[ts(export, export_to = "bindings/features/node_annotation/")]
+#[ts(export, export_to = "bindings/annotations")]
 pub enum AnnotationEvent {
     AddAnnotationGroup(AnnotationGroup),
     UpdateAnnotationGroup(AnnotationGroup),
@@ -24,7 +24,7 @@ pub enum AnnotationEvent {
 
 impl AnnotationEvent {
     pub fn publish_to_tauri(&self) {
-        let event_name = ChannelList::NodeAnnotationEvent.to_string();
+        let event_name = ChannelList::AnnotationEvent.to_string();
 
         // Emit to frontend
         _ = app_handle().emit_to(
@@ -55,7 +55,7 @@ pub enum AnnotationManagerEvent {
 
 impl AnnotationManagerEvent {
     pub fn publish_to_tauri(&self) {
-        let event_name = ChannelList::NodeAnnotationEvent.to_string();
+        let event_name = ChannelList::AnnotationEvent.to_string();
 
         // Emit to rust listeners
         app_handle().trigger_global(

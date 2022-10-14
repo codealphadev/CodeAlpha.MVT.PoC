@@ -24,9 +24,9 @@
 	let opening_bracket_box: LogicalFrame | null = null;
 	let closing_bracket_box: LogicalFrame | null = null;
 
-	const listen_to_node_annotation_events = async () => {
-		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
-		await listen(node_annotation_channel, (event) => {
+	const listen_to_annotation_events = async () => {
+		let annotation_channel: ChannelList = 'AnnotationEvent';
+		await listen(annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
 			switch (event_type) {
 				case 'AddAnnotationGroup':
@@ -69,7 +69,7 @@
 			}
 		});
 	};
-	listen_to_node_annotation_events();
+	listen_to_annotation_events();
 
 	interface BracketHighlightRectangles {
 		top_rectangle: LogicalFrame | null;

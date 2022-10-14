@@ -9,7 +9,7 @@ export type ChannelList =
   | "EventTrackingAreas"
   | "EventUserInteractions"
   | "EventWindowControls"
-  | "NodeAnnotationEvent"
+  | "AnnotationEvent"
   | "RuleResults"
   | "EventViewport"
   | "NodeExplanationEvent"
