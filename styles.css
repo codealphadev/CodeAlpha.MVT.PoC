@@ -1,14 +1,18 @@
 code {
 	font-weight: 600;
 }
-button.icon-button.hover.hover {
+
+button.button-icon.hover {
   filter: brightness(70%);
 }
-button.hover.hover {
-	filter: brightness(125%);
+
+button.button-muted.hover {
+  background-color: var(--theme-backgroundsecondary);
 }
-button > div.hover.hover {
-	filter: brightness(125%);
+
+button.button-primary.hover {
+  background-color: var(--theme-accent_primary_muted);
+  box-shadow: 1px 1px 0px var(--theme-accent_secondary);
 }
 
 /* inter-100 - latin */

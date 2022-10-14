@@ -12,6 +12,7 @@ export const colorNames = [
 	'primary',
 	'secondary',
   'accent_primary',
+  'accent_primary_muted',
   'accent_secondary',
 	'signalbad',
 	'signalgood',
@@ -35,6 +36,7 @@ const palette = {
 	dodger_blue: {
 		'300': '#80B2FE',
 		'500': '#3A88FD',
+    '700': '#0F63E0',
 		'800': '#155CC5'
 	},
 	outrageous_orange: {
@@ -67,6 +69,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 			primary: fiord,
 			secondary: palette.base[600],
       accent_primary: palette.dodger_blue[500],
+      accent_primary_muted: palette.dodger_blue[700],
       accent_secondary: palette.outrageous_orange[500],
 			signalbad: '#F97316',
 			signalgood: '#16A34A',
@@ -86,6 +89,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 			primary: fiord,
 			secondary: palette.base[600],
       accent_primary: palette.dodger_blue[500],
+      accent_primary_muted: palette.dodger_blue[700],
       accent_secondary: palette.outrageous_orange[500],
 			signalbad: '#F97316',
 			signalgood: '#16A34A',
