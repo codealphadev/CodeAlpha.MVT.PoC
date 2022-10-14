@@ -1,3 +1,4 @@
+pub use annotations::*;
 pub use complexity_refactoring::ComplexityRefactoring;
 pub use complexity_refactoring::ComplexityRefactoringError;
 pub use complexity_refactoring::FERefactoringSuggestion;
@@ -8,6 +9,7 @@ pub use node_address::*;
 pub use node_slice::*;
 pub use slice_inputs_and_outputs::*;
 pub use swift_lsp_refactoring::*;
+mod annotations;
 mod complexity_refactoring;
 mod generate_function_name;
 mod method_extraction;
