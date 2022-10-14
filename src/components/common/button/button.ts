@@ -1,6 +1,14 @@
 export enum ButtonType {
 	Primary,
-	Secondary,
-	Thumb,
-	Icon
+	Secondary
+}
+
+export enum ThumbButtonType {
+	Up,
+	Down
+}
+
+export enum ThumbVote {
+	Good = 'good',
+	Bad = 'bad'
 }

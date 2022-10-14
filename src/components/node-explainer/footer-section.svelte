@@ -1,56 +1,45 @@
 <script lang="ts">
-  import { invoke } from '@tauri-apps/api/tauri';
-  import IconThumbsDown from './icons/icon-thumbs-down.svelte';
-  import IconThumbsUp from './icons/icon-thumbs-up.svelte';
-  import { appWindow } from '@tauri-apps/api/window';
-  import Button from '../common/button/button.svelte';
-  import { ButtonType } from '../common/button/button';
+	import { invoke } from '@tauri-apps/api/tauri';
+	import { appWindow } from '@tauri-apps/api/window';
+	import Button from '../common/button/button.svelte';
+	import { ButtonType, ThumbButtonType, ThumbVote } from '../common/button/button';
+	import ThumbButton from '../common/button/thumb-button.svelte';
 
-  let vote: 'good' | 'bad' | null = null;
-  const paste_docs = async () => {
-    await invoke('cmd_paste_docs');
-    await appWindow.hide();
-  };
+	let thumb_vote: ThumbVote | null = null;
 
-  const handle_click_thumbs_up = async () => {
-    if (vote) {
-      return;
-    }
-    await invoke('cmd_send_feedback', {
-      feature: 'NodeExplainer',
-      feedback: 'good',
-    });
-    vote = 'good';
-  };
+	const paste_docs = async () => {
+		await invoke('cmd_paste_docs');
+		await appWindow.hide();
+	};
 
-  const handle_click_thumbs_down = async () => {
-    if (vote) {
-      return;
-    }
-    await invoke('cmd_send_feedback', {
-      feature: 'NodeExplainer',
-      feedback: 'bad',
-    });
-    await appWindow.hide();
-    vote = 'bad';
-  };
+	const handle_click_thumbs_up = async () => {
+		if (thumb_vote) {
+			return;
+		}
+		await invoke('cmd_send_feedback', {
+			feature: 'NodeExplainer',
+			feedback: ThumbVote.Good
+		});
+		thumb_vote = ThumbVote.Good;
+	};
+
+	const handle_click_thumbs_down = async () => {
+		if (thumb_vote) {
+			return;
+		}
+		await invoke('cmd_send_feedback', {
+			feature: 'NodeExplainer',
+			feedback: ThumbVote.Bad
+		});
+		await appWindow.hide();
+		thumb_vote = ThumbVote.Bad;
+	};
 </script>
 
 <div class="flex justify-between w-full items-center">
-  <div class="flex gap-3 px-1 items-center">
-    <Button type={ButtonType.Thumb} on:click={handle_click_thumbs_up}>
-      <IconThumbsUp activated={vote === 'good'} />
-    </Button>
-    <Button type={ButtonType.Thumb} on:click={handle_click_thumbs_down}>
-      <IconThumbsDown activated={vote === 'bad'} />
-    </Button>
-    <div class="text-secondary text-xs">
-      {#if vote}
-        Thanks for the feedback!
-      {:else}
-        Honestly, was this helpful?
-      {/if}
-    </div>
-  </div>
-  <Button type={ButtonType.Primary} on:click={paste_docs}>Insert as Docstring</Button>
+	<div class="flex gap-3 px-1 items-center">
+		<ThumbButton type={ThumbButtonType.Up} {thumb_vote} on:click={handle_click_thumbs_up} />
+		<ThumbButton type={ThumbButtonType.Down} {thumb_vote} on:click={handle_click_thumbs_down} />
+	</div>
+	<Button type={ButtonType.Primary} on:click={paste_docs}>Insert as Docstring</Button>
 </div>

@@ -6,7 +6,7 @@ button.button-icon.hover {
   filter: brightness(70%);
 }
 
-button.button-muted.hover {
+button.button-secondary.hover {
   background-color: var(--theme-background_secondary);
 }
 
