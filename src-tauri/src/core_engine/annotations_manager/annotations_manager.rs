@@ -178,6 +178,8 @@ impl AnnotationsManagerTrait for AnnotationsManager {
                 group_id,
                 AnnotationJobGroup::new(group_id, feature, jobs, editor_window_uid),
             );
+        } else {
+            self.groups.get_mut(&group_id).unwrap().replace(jobs);
         }
 
         if let (Ok(visible_text_range), Ok(code_doc_props)) = (
