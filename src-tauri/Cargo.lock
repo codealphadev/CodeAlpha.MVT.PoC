@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "CodeAlpha"
-version = "0.0.55"
+version = "0.0.56"
 dependencies = [
  "accessibility",
  "accessibility-sys",
