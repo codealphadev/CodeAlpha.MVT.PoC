@@ -1,18 +1,16 @@
-use super::{NodeSlice, SerializedNodeSlice};
+use super::{create_annotation_group_for_extraction_and_context, NodeSlice, SerializedNodeSlice};
 use crate::{
     app_handle,
     core_engine::{
-        annotations_manager::{
-            AnnotationJob, AnnotationJobInstructions, AnnotationJobSingleChar, AnnotationJobTrait,
-            AnnotationKind, GetAnnotationInGroupVia,
-        },
+        annotations_manager::{AnnotationKind, GetAnnotationInGroupVia},
         events::{models::ReplaceSuggestionsMessage, AnnotationManagerEvent, SuggestionEvent},
         features::{
             complexity_refactoring::{
                 check_for_method_extraction, method_extraction::get_edits_for_method_extraction,
+                remove_annotations_for_suggestions,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            FeatureKind, UserCommand,
+            UserCommand,
         },
         format_code,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
@@ -70,7 +68,6 @@ pub struct RefactoringSuggestion {
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
     pub serialized_slice: SerializedNodeSlice,
-    pub context_range: TextRange,
 }
 
 pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
@@ -173,12 +170,15 @@ impl ComplexityRefactoring {
                 ComplexityRefactoringError::InsufficientContext.into(),
             ))?
             .clone();
+
         let top_level_functions =
             SwiftFunction::get_top_level_functions(code_document.syntax_tree(), &text_content)
                 .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
+
         let file_path = code_document.file_path().clone();
         let mut s_exps = vec![];
         let mut suggestions: SuggestionsMap = HashMap::new();
+
         for function in top_level_functions {
             s_exps.push(function.props.node.to_sexp());
             suggestions.extend(Self::generate_suggestions_for_function(
@@ -207,19 +207,13 @@ impl ComplexityRefactoring {
             .filter(|id| !suggestions.contains_key(id))
             .collect();
 
-        Self::remove_annotations_for_suggestions(removed_suggestion_ids.clone());
+        remove_annotations_for_suggestions(removed_suggestion_ids.clone());
 
         if removed_suggestion_ids.len() > 0 || added_suggestions_count > 0 {
             Self::publish_to_frontend(self.suggestions_arc.lock().clone());
         }
 
         Ok(())
-    }
-
-    fn remove_annotations_for_suggestions(suggestion_ids: Vec<uuid::Uuid>) {
-        for suggestion_id in suggestion_ids {
-            AnnotationManagerEvent::Remove(suggestion_id).publish_to_tauri();
-        }
     }
 
     fn publish_to_frontend(suggestions_per_window: SuggestionsPerWindow) {
@@ -264,10 +258,34 @@ impl ComplexityRefactoring {
         for (id, suggestion) in suggestions.iter() {
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
 
-            let range_length = (slice.nodes.last().unwrap().end_byte()
-                - slice.nodes.first().unwrap().start_byte())
-                / 2; // UTF-16;
-            let start_position = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
+            let suggestion_start_pos = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
+            let suggestion_end_pos =
+                TextPosition::from_TSPoint(&slice.nodes.last().unwrap().end_position());
+
+            let suggestion_range = TextRange::from_StartEndTextPosition(
+                text_content,
+                &suggestion_start_pos,
+                &suggestion_end_pos,
+            )
+            .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
+                "Failed to derive suggestion range"
+            )))?;
+
+            let context_range = TextRange::from_StartEndTextPosition(
+                &text_content,
+                &function.get_first_char_position(),
+                &function.get_last_char_position(),
+            )
+            .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
+                "Failed to derive context range"
+            )))?;
+
+            create_annotation_group_for_extraction_and_context(
+                *id,
+                context_range,
+                suggestion_range,
+                window_uid,
+            );
 
             let binded_text_content = text_content.clone();
             let binded_text_content_2 = text_content.clone();
@@ -289,8 +307,8 @@ impl ComplexityRefactoring {
             tauri::async_runtime::spawn({
                 async move {
                     _ = get_edits_for_method_extraction(
-                        start_position,
-                        range_length,
+                        suggestion_start_pos,
+                        suggestion_range.length,
                         move |edits: Vec<Edit>| {
                             Self::update_suggestion_with_formatted_text_diff(
                                 binded_id,
@@ -365,19 +383,9 @@ impl ComplexityRefactoring {
             uuid::Uuid::new_v4()
         };
 
-        // derive context_range representing the surrounding function
-        let context_start = function.get_first_char_position();
-        let context_end = function.get_last_char_position();
-        let context_range =
-            TextRange::from_StartEndTextPosition(&text_content, &context_start, &context_end)
-                .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
-                    "Failed to derive context range"
-                )))?;
-
         new_suggestions.insert(
             id,
             RefactoringSuggestion {
-                context_range,
                 serialized_slice: serialized_node_slice,
                 main_function_name: function.get_name(),
                 new_complexity,
@@ -415,8 +423,6 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
-            register_annotations(&edits, id, suggestion.context_range, window_uid);
-
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
@@ -510,8 +516,7 @@ impl ComplexityRefactoring {
                 if let Some(suggestions) = suggestions_per_window.get_mut(&editor_window_uid) {
                     suggestions.remove(&suggestion_id);
 
-                    // Remove annotations
-                    Self::remove_annotations_for_suggestions(vec![suggestion_id]);
+                    remove_annotations_for_suggestions(vec![suggestion_id]);
                     Self::publish_to_frontend(suggestions_per_window.clone());
                 }
             }
@@ -551,7 +556,7 @@ impl ComplexityRefactoring {
         self.dismissed_suggestions.lock().push(hash);
 
         suggestions.remove(&suggestion_id);
-        Self::remove_annotations_for_suggestions(vec![suggestion_id]);
+        remove_annotations_for_suggestions(vec![suggestion_id]);
 
         Self::publish_to_frontend(suggestions_per_window.clone());
         Ok(())
@@ -587,107 +592,6 @@ impl ComplexityRefactoring {
         } else {
             HashMap::new()
         }
-    }
-}
-
-fn register_annotations(
-    edits: &Vec<Edit>,
-    suggestion_id: Uuid,
-    context_range: TextRange,
-    window_uid: usize,
-) {
-    // Register Code Annotations for the edits
-    if let (Some(first_edit), Some(second_edit)) = (edits.first(), edits.iter().nth(1)) {
-        let insert_edit;
-        let extract_edit;
-        if first_edit.start_index == first_edit.end_index {
-            insert_edit = first_edit;
-            extract_edit = second_edit;
-        } else {
-            insert_edit = second_edit;
-            extract_edit = first_edit;
-        }
-
-        let insert_start_char_job_id = uuid::Uuid::new_v4();
-        let insert_start_char_job = AnnotationJobSingleChar::new(
-            insert_start_char_job_id,
-            &TextRange {
-                index: insert_edit.start_index,
-                length: 1,
-            },
-            AnnotationKind::InsertionStartChar,
-            AnnotationJobInstructions::default(),
-        );
-
-        let insert_end_char_job_id = uuid::Uuid::new_v4();
-        let insert_end_char_job = AnnotationJobSingleChar::new(
-            insert_end_char_job_id,
-            &TextRange {
-                index: insert_edit.end_index,
-                length: 1,
-            },
-            AnnotationKind::InsertionEndChar,
-            AnnotationJobInstructions::default(),
-        );
-
-        let extract_start_char_job_id = uuid::Uuid::new_v4();
-        let extract_start_char_job = AnnotationJobSingleChar::new(
-            extract_start_char_job_id,
-            &TextRange {
-                index: extract_edit.start_index,
-                length: 1,
-            },
-            AnnotationKind::ExtractionStartChar,
-            AnnotationJobInstructions::default(),
-        );
-
-        let extract_end_char_job_id = uuid::Uuid::new_v4();
-        let extract_end_char_job = AnnotationJobSingleChar::new(
-            extract_end_char_job_id,
-            &TextRange {
-                index: extract_edit.end_index,
-                length: 1,
-            },
-            AnnotationKind::ExtractionEndChar,
-            AnnotationJobInstructions::default(),
-        );
-
-        let context_range_start_char_job_id = uuid::Uuid::new_v4();
-        let context_range_start_char_job = AnnotationJobSingleChar::new(
-            context_range_start_char_job_id,
-            &TextRange {
-                index: context_range.index,
-                length: 1,
-            },
-            AnnotationKind::CodeblockFirstChar,
-            AnnotationJobInstructions::default(),
-        );
-
-        let context_range_end_char_job_id = uuid::Uuid::new_v4();
-        let context_range_end_char_job = AnnotationJobSingleChar::new(
-            context_range_end_char_job_id,
-            &TextRange {
-                index: context_range.index + context_range.length,
-                length: 1,
-            },
-            AnnotationKind::CodeblockLastChar,
-            AnnotationJobInstructions::default(),
-        );
-
-        AnnotationManagerEvent::Add((
-            suggestion_id,
-            FeatureKind::ComplexityRefactoring,
-            vec![
-                AnnotationJob::SingleChar(context_range_start_char_job),
-                AnnotationJob::SingleChar(context_range_end_char_job),
-                AnnotationJob::SingleChar(insert_start_char_job),
-                AnnotationJob::SingleChar(insert_end_char_job),
-                AnnotationJob::SingleChar(extract_start_char_job),
-                AnnotationJob::SingleChar(extract_end_char_job),
-            ],
-            window_uid,
-        ))
-        .publish_to_tauri();
     }
 }
 
