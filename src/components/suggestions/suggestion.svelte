@@ -3,15 +3,14 @@
   import { emit } from '@tauri-apps/api/event';
   import type { ChannelList } from '../../../src-tauri/bindings/ChannelList';
   import type { EventUserInteraction } from '../../../src-tauri/bindings/user_interaction/EventUserInteraction';
-  import Button from '../common/buttons/button.svelte';
   import Card from '../common/card.svelte';
   import P from '../common/typography/p.svelte';
   import H4 from '../common/typography/h4.svelte';
   import Arrow from './icons/arrow.svelte';
   import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
-  import IconButton from '../common/buttons/icon-button.svelte';
-  import IconRubbishBin from './icons/icon-rubbish-bin.svelte';
   import ComplexityBadge from './complexity-badge.svelte';
+  import ButtonPrimary from '../common/buttons/button-primary.svelte';
+  import ButtonMuted from '../common/buttons/button-muted.svelte';
 
   export let suggestion: FERefactoringSuggestion;
   export let suggestion_id: string;
@@ -53,14 +52,7 @@
   </div>
 
   <div class="flex justify-between w-full items-center">
-    <IconButton on:click={dismiss_suggestion}>
-      <div
-        class="p-2 border-secondary rounded bg-backgroundsecondary"
-        style=".hover.hover: brighten(25%)"
-      >
-        <IconRubbishBin />
-      </div>
-    </IconButton>
-    <Button on:click={apply_suggestion}>Extract function</Button>
+    <ButtonPrimary on:click={apply_suggestion}>Extract function</ButtonPrimary>
+    <ButtonMuted on:click={dismiss_suggestion}>Dismiss</ButtonMuted>
   </div>
 </Card>

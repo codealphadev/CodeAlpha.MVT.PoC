@@ -7,6 +7,7 @@ const colorNames = [
 	'primary',
 	'secondary',
 	'accent_primary',
+	'accent_primary_muted',
 	'accent_secondary',
 	'signalbad',
 	'signalgood',
