@@ -80,6 +80,7 @@ pub enum ViewportPositioning {
 
 pub trait AnnotationsManagerTrait {
     fn new() -> Self;
+
     fn add_annotation_jobs_group(
         &mut self,
         group_id: uuid::Uuid,
@@ -87,6 +88,15 @@ pub trait AnnotationsManagerTrait {
         jobs: Vec<AnnotationJob>,
         editor_window_uid: EditorWindowUid,
     );
+
+    fn upsert_annotation_job_group(
+        &mut self,
+        group_id: uuid::Uuid,
+        feature: FeatureKind,
+        jobs: Vec<AnnotationJob>,
+        editor_window_uid: EditorWindowUid,
+    );
+
     fn replace_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>);
     fn recompute_annotations(&mut self, editor_window_uid: EditorWindowUid);
     fn update_annotations(&mut self, editor_window_uid: EditorWindowUid);
@@ -153,6 +163,31 @@ impl AnnotationsManagerTrait for AnnotationsManager {
                 group.replace(jobs);
                 group.compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
             }
+        }
+    }
+
+    fn upsert_annotation_job_group(
+        &mut self,
+        group_id: uuid::Uuid,
+        feature: FeatureKind,
+        jobs: Vec<AnnotationJob>,
+        editor_window_uid: EditorWindowUid,
+    ) {
+        if !self.groups.contains_key(&group_id) {
+            self.groups.insert(
+                group_id,
+                AnnotationJobGroup::new(group_id, feature, jobs, editor_window_uid),
+            );
+        }
+
+        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
+            get_visible_text_range(GetVia::Hash(editor_window_uid)),
+            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
+        ) {
+            self.groups
+                .get_mut(&group_id)
+                .unwrap() // Unwrap safe here because we just inserted the group
+                .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
         }
     }
 

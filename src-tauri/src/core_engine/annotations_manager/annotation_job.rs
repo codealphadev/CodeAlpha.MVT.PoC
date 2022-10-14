@@ -23,8 +23,6 @@ pub enum AnnotationKind {
     CodeblockLastChar,
     ExtractionStartChar,
     ExtractionEndChar,
-    InsertionStartChar,
-    InsertionEndChar,
 }
 
 // Wrapped lines are tricky to handle using the macOS AX API. Lines wrapping always yield a rectangle that stretches

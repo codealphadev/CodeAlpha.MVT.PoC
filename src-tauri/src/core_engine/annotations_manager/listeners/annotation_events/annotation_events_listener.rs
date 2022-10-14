@@ -30,6 +30,11 @@ pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<Annotation
                         .lock()
                         .replace_annotation_job_group(group_id, jobs);
                 }
+                AnnotationManagerEvent::Upsert((group_id, feature, jobs, window_uid)) => {
+                    annotations_manager
+                        .lock()
+                        .upsert_annotation_job_group(group_id, feature, jobs, window_uid);
+                }
                 AnnotationManagerEvent::Remove(id) => {
                     annotations_manager.lock().remove_annotation_job_group(id);
                 }

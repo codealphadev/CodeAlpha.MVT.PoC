@@ -6,62 +6,90 @@
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 	import { is_rectangle } from '../annotation_utils';
 	import type { Annotation } from '../../../../src-tauri/bindings/features/code_annotations/Annotation';
+	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 
-	let annotation_group_id: string | null = null;
-	let annotation_group_editor_window_uid: number | null = null;
+	let annotation_groups: AnnotationGroup[] = [];
+	let selected_suggestion_id: string | null = null;
 
 	export let active_window_uid: number;
-	export let annotation_section: LogicalFrame;
+	export let annotation_section_rect: LogicalFrame;
 	export let code_document_rect: LogicalFrame;
 	export let viewport_rect: LogicalFrame;
 
+	// TODO
 	let annotation_extraction: LogicalFrame | null;
 	let annotation_context_pt1: LogicalFrame | null;
 	let annotation_context_pt2: LogicalFrame | null;
+
+	function derive_annotations(group: AnnotationGroup | undefined) {
+		if (group === undefined) {
+			annotation_extraction = null;
+			annotation_context_pt1 = null;
+			annotation_context_pt2 = null;
+			return;
+		}
+
+		let extraction_codeblock = derive_extract_block_frame(group);
+		if (extraction_codeblock) {
+			annotation_extraction = extraction_codeblock;
+		}
+
+		let context_codeblock_pt1 = derive_context_block_frame_pt1(group);
+		let context_codeblock_pt2 = derive_context_block_frame_pt2(group);
+		if (context_codeblock_pt1) {
+			annotation_context_pt1 = context_codeblock_pt1;
+		}
+		if (context_codeblock_pt2) {
+			annotation_context_pt2 = context_codeblock_pt2;
+		}
+	}
+
+	$: current_annotation_group = annotation_groups.find((grp) => grp.id === selected_suggestion_id);
+
+	$: derive_annotations(current_annotation_group);
+
+	const listen_to_suggestion_selection_events = async () => {
+		let user_interaction_channel: ChannelList = 'EventUserInteractions';
+		await listen(user_interaction_channel, (event) => {
+			const { payload, event: event_type } = JSON.parse(
+				event.payload as string
+			) as EventUserInteraction;
+			console.log(payload, event_type);
+
+			switch (event_type) {
+				case 'UpdateSelectedSuggestion':
+					const { id } = payload;
+					selected_suggestion_id = id;
+			}
+		});
+	};
+
+	listen_to_suggestion_selection_events();
 
 	const listen_to_annotation_events = async () => {
 		let annotation_channel: ChannelList = 'AnnotationEvent';
 		await listen(annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
+			console.log(payload, event_type);
 			switch (event_type) {
 				case 'AddAnnotationGroup':
 				case 'UpdateAnnotationGroup':
 					let group = payload;
 
 					if (group.feature === 'ComplexityRefactoring') {
-						annotation_group_editor_window_uid = group.editor_window_uid;
-						annotation_group_id = group.id;
+						const group_index = annotation_groups.findIndex((grp) => grp.id === group.id);
 
-						console.log('annotation_group_id', group);
-
-						let extraction_codeblock = derive_extract_block_frame(group);
-						if (extraction_codeblock) {
-							annotation_extraction = extraction_codeblock;
-							console.log('extraction', annotation_extraction);
+						if (group_index === -1) {
+							annotation_groups.push(group);
+						} else {
+							annotation_groups[group_index] = group;
 						}
-
-						let context_codeblock_pt1 = derive_context_block_frame_pt1(group);
-						let context_codeblock_pt2 = derive_context_block_frame_pt2(group);
-						if (context_codeblock_pt1) {
-							annotation_context_pt1 = context_codeblock_pt1;
-							console.log('context 1/2', annotation_context_pt1);
-						}
-						if (context_codeblock_pt2) {
-							annotation_context_pt2 = context_codeblock_pt2;
-							console.log('context 2/2', annotation_context_pt2);
-						}
+						annotation_groups = annotation_groups;
 					}
 					break;
 				case 'RemoveAnnotationGroup':
 					let group_id = payload as string;
-
-					if (annotation_group_id === group_id) {
-						annotation_group_editor_window_uid = null;
-						annotation_group_id = null;
-
-						annotation_extraction = null;
-						annotation_context_pt1 = null;
-					}
+					annotation_groups = annotation_groups.filter((group) => group.id !== group_id);
 
 					break;
 				default:
@@ -144,7 +172,7 @@
 
 		if (is_rectangle(end.shapes[0])) {
 			codeblock_end_y =
-				end.kind === 'ExtractionEndChar'
+				end.kind === 'ExtractionEndChar' || end.kind === 'CodeblockLastChar'
 					? end.shapes[0].Rectangle.origin.y + end.shapes[0].Rectangle.size.height
 					: end.shapes[0].Rectangle.origin.y;
 		} else {
@@ -153,7 +181,7 @@
 
 		return {
 			origin: {
-				x: annotation_section.size.width,
+				x: annotation_section_rect.size.width,
 				y: codeblock_start_y
 			},
 			size: {
@@ -171,7 +199,7 @@
 	};
 </script>
 
-{#if annotation_group_editor_window_uid === active_window_uid}
+{#if current_annotation_group?.editor_window_uid === active_window_uid}
 	{#if annotation_extraction}
 		<div
 			style="position: absolute; 

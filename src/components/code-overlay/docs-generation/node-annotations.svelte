@@ -27,8 +27,8 @@
 	let processing_timeout = 15000; // ms
 
 	const listen_to_node_annotation_events = async () => {
-		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
-		await listen(node_annotation_channel, (event) => {
+		let annotation_channel: ChannelList = 'AnnotationEvent';
+		await listen(annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
 			switch (event_type) {
 				case 'AddAnnotationGroup':

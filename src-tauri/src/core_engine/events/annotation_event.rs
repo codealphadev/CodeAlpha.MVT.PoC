@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
 #[serde(tag = "event", content = "payload")]
-#[ts(export, export_to = "bindings/annotations")]
+#[ts(export, export_to = "bindings/annotations/")]
 pub enum AnnotationEvent {
     AddAnnotationGroup(AnnotationGroup),
     UpdateAnnotationGroup(AnnotationGroup),
@@ -48,6 +48,14 @@ pub enum AnnotationManagerEvent {
             EditorWindowUid,
         ),
     ), // Creates a new annotation group for the given jobs; we don't let the caller submit a "JobsGroup" because of the JobsGroup's Drop implementation
+    Upsert(
+        (
+            AnnotationGroupID,
+            FeatureKind,
+            Vec<AnnotationJob>,
+            EditorWindowUid,
+        ),
+    ),
     Update((AnnotationGroupID, Vec<AnnotationJob>)), // Updates existing AnnotationJobGroup with a new set of jobs.
     Remove(AnnotationGroupID), // Removes the AnnotationJobGroup with the given IDs from the list.
     ScrollToAnnotationInGroup((AnnotationGroupID, GetAnnotationInGroupVia)),

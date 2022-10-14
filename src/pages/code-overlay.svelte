@@ -11,7 +11,7 @@
 
 	let code_document_rect: LogicalFrame | null = null; // Relative to viewport
 	let viewport_rect: LogicalFrame | null = null; // Relative to viewport
-	let annotation_section: LogicalFrame | null = null; // Relative to viewport
+	let annotation_section_rect: LogicalFrame | null = null; // Relative to viewport
 	let active_window_uid: number | null = null;
 
 	let text_offset: number | null;
@@ -21,11 +21,11 @@
 		code_document_rect: LogicalFrame | null,
 		text_offset: number | null
 	): number {
-		if (code_document_rect === null || text_offset === null || annotation_section === null) {
+		if (code_document_rect === null || text_offset === null || annotation_section_rect === null) {
 			return 1.0;
 		} else {
 			return code_document_rect.origin.x + text_offset <
-				annotation_section.origin.x - 1 + annotation_section.size.width
+				annotation_section_rect.origin.x - 1 + annotation_section_rect.size.width
 				? 0.5
 				: 1.0;
 		}
@@ -53,7 +53,7 @@
 
 					viewport_rect = viewport_properties.dimensions;
 					if (viewport_properties.annotation_section !== null) {
-						annotation_section = convert_global_frame_to_local(
+						annotation_section_rect = convert_global_frame_to_local(
 							viewport_properties.annotation_section,
 							viewport_properties.dimensions.origin
 						);
@@ -70,7 +70,7 @@
 	listenToViewportEvents();
 </script>
 
-{#if code_document_rect && annotation_section && active_window_uid && viewport_rect}
+{#if code_document_rect && annotation_section_rect && active_window_uid && viewport_rect}
 	<div
 		style="height: 100%; width: 100%;
 			border-style: solid; border-width: 0px; border-color: rgba(255,20,255);"
@@ -84,7 +84,11 @@
 			left:{code_document_rect.origin.x}px; position: relative"
 			class="h-full w-full overflow-hidden relative"
 		>
-			<BracketHighlight {code_document_rect} {annotation_section} {active_window_uid} />
+			<BracketHighlight
+				{code_document_rect}
+				annotation_section={annotation_section_rect}
+				{active_window_uid}
+			/>
 		</div>
 		<div
 			style="
@@ -95,7 +99,11 @@
 			left:0px; position: absolute"
 			class="h-full w-full overflow-hidden absolute"
 		>
-			<DocsAnnotations {code_document_rect} {annotation_section} {active_window_uid} />
+			<DocsAnnotations
+				{code_document_rect}
+				annotation_section={annotation_section_rect}
+				{active_window_uid}
+			/>
 		</div>
 		<div
 			style="
@@ -108,7 +116,7 @@
 			<ComplexityRefactoringAnnotations
 				{code_document_rect}
 				{viewport_rect}
-				{annotation_section}
+				{annotation_section_rect}
 				{active_window_uid}
 			/>
 		</div>
