@@ -82,7 +82,7 @@
 	listenToSuggestionEvents();
 </script>
 
-{#if filtered_suggestions.length > 0}
+{#if filtered_suggestions?.length > 0}
 	<div
 		class="flex bg-background flex-col gap-5 shrink-0 rounded-b-xl max-h-[700px] overflow-y-auto overscroll-none mt-9 px-4 pt-3 pb-4"
 	>
