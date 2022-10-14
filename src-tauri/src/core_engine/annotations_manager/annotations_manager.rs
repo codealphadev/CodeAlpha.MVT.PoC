@@ -97,7 +97,6 @@ pub trait AnnotationsManagerTrait {
         editor_window_uid: EditorWindowUid,
     );
 
-    fn replace_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>);
     fn recompute_annotations(&mut self, editor_window_uid: EditorWindowUid);
     fn update_annotations(&mut self, editor_window_uid: EditorWindowUid);
 
@@ -151,18 +150,6 @@ impl AnnotationsManagerTrait for AnnotationsManager {
                 .get_mut(&group_id)
                 .unwrap() // Unwrap safe here because we just inserted the group
                 .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
-        }
-    }
-
-    fn replace_annotation_job_group(&mut self, group_id: uuid::Uuid, jobs: Vec<AnnotationJob>) {
-        if let Some(group) = self.groups.get_mut(&group_id) {
-            if let (Ok(visible_text_range), Ok(code_doc_props)) = (
-                get_visible_text_range(GetVia::Hash(group.editor_window_uid())),
-                get_code_document_frame_properties(&GetVia::Hash(group.editor_window_uid())),
-            ) {
-                group.replace(jobs);
-                group.compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
-            }
         }
     }
 
