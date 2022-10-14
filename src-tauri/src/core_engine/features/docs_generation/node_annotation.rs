@@ -71,7 +71,6 @@ impl NodeAnnotation {
         window_uid: EditorWindowUid,
     ) -> Result<Self, DocsGenerationError> {
         let group_id = uuid::Uuid::new_v4();
-
         // Register annotation jobs
         let mut annotation_jobs = HashMap::new();
         if let (Some(first_char_text_pos), Some(last_char_text_pos)) = (

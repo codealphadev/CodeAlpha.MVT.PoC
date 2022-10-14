@@ -56,7 +56,6 @@ pub enum AnnotationManagerEvent {
             EditorWindowUid,
         ),
     ),
-    Update((AnnotationGroupID, Vec<AnnotationJob>)), // Updates existing AnnotationJobGroup with a new set of jobs.
     Remove(AnnotationGroupID), // Removes the AnnotationJobGroup with the given IDs from the list.
     ScrollToAnnotationInGroup((AnnotationGroupID, GetAnnotationInGroupVia)),
 }
