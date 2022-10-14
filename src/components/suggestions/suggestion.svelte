@@ -43,7 +43,7 @@
 <Card on:click additional_class="relative">
 	{#if expanded && recalculating}
 		<div
-			class="absolute left-0 top-0 z-10 bg-[#ffffffcc] w-full h-full flex flex-col items-center justify-center px-32 saturate(50%)"
+			class="absolute left-0 top-0 z-10 bg-[#ffffffaa] w-full h-full flex flex-col items-center justify-center px-32 saturate(50%)"
 			transition:fade={{ duration: 200 }}
 		>
 			<IconProcessing />
@@ -68,6 +68,8 @@
 				<Arrow />
 				<ComplexityBadge complexity={suggestion.new_complexity} />
 			</div>
+		</div>
+	{/if}
 
 			<div class="flex justify-between w-full items-center">
 				<Button type={ButtonType.Primary} on:click={apply_suggestion}>Extract function</Button>
