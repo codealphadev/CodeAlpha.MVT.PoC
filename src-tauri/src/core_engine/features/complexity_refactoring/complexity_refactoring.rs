@@ -312,7 +312,8 @@ impl ComplexityRefactoring {
             let binded_file_path_2 = file_path.clone();
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
-            let binded_old_suggestions = suggestions_arc.clone();
+            let binded_suggestions_arc = suggestions_arc.clone();
+            let binded_suggestions_arc2 = suggestions_arc.clone();
 
             // For error reporting
             let serialized_slice = suggestion.serialized_slice.clone();
@@ -334,7 +335,7 @@ impl ComplexityRefactoring {
                                 binded_suggestion,
                                 edits,
                                 binded_text_content,
-                                binded_old_suggestions,
+                                binded_suggestions_arc,
                                 binded_file_path,
                                 window_uid,
                             )
@@ -345,6 +346,9 @@ impl ComplexityRefactoring {
                     .await
                     .map_err(|e| match e {
                         ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
+                            remove_annotations_for_suggestions(vec![binded_id]);
+                            Self::publish_to_frontend(binded_suggestions_arc2.lock().clone());
+
                             warn!(
                                 ?payload,
                                 ?serialized_slice,
@@ -405,9 +409,10 @@ impl ComplexityRefactoring {
                 SuggestionState::Ready | SuggestionState::Recalculating => {
                     SuggestionState::Recalculating
                 }
-            }
+            };
         } else {
-            uuid::Uuid::new_v4()
+            id = uuid::Uuid::new_v4();
+            state = SuggestionState::New;
         };
 
         new_suggestions.insert(
