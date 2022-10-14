@@ -16,12 +16,13 @@ use crate::{
         },
         models::{TrackingAreaClickedOutsideMessage, TrackingAreaMouseOverMessage},
         utils::{get_position, get_size, get_window_level, is_visible},
+        windows::app_window_dimensions,
     },
 };
 
 use super::{
-    listeners::{input_devices_listener, tracking_area_listener},
-    TrackingArea, TrackingEventType, TrackingEvents,
+    listeners::{appwindow_ax_listener, input_devices_listener, tracking_area_listener},
+    TrackingArea, TrackingAreaType, TrackingEventType, TrackingEvents,
 };
 
 #[derive(Clone, Debug)]
@@ -84,6 +85,17 @@ impl TrackingAreasManager {
         }
 
         self.tracking_areas = new_tracking_areas;
+    }
+
+    pub fn update_app_window_tracking_areas(&mut self, app_window: AppWindow) {
+        let app_window_frame = app_window_dimensions(app_window);
+
+        for tracking_area in self.tracking_areas.iter_mut() {
+            if tracking_area.0.area_type == TrackingAreaType::AppWindow(app_window) {
+                tracking_area.0.rectangle.origin = LogicalPosition::default();
+                tracking_area.0.rectangle.size = app_window_frame.size;
+            }
+        }
     }
 
     pub fn track_mouse_position(&mut self, mouse_x: f64, mouse_y: f64) -> Option<()> {
@@ -295,6 +307,16 @@ impl TrackingAreasManager {
                         .publish_tracking_area(&tracking_area.subscriber);
                     }
                     TrackingEventType::MouseOver => {
+                        println!(
+                            "MouseOver {:?}",
+                            TrackingAreaMouseOverMessage {
+                                id: tracking_area.id,
+                                window_uid: tracking_area.window_uid,
+                                duration_ms: duration_in_area_ms.map_or(0, |dur| dur),
+                                app_window: tracking_area.app_window,
+                                mouse_position: *mouse_position,
+                            }
+                        );
                         EventWindowControls::TrackingAreaMouseOver(TrackingAreaMouseOverMessage {
                             id: tracking_area.id,
                             window_uid: tracking_area.window_uid,
@@ -353,6 +375,7 @@ impl TrackingAreasManager {
 
     pub fn start_event_listeners(tracking_area_manager: &Arc<Mutex<Self>>) {
         tracking_area_listener(tracking_area_manager);
+        appwindow_ax_listener(tracking_area_manager);
         input_devices_listener(tracking_area_manager);
     }
 }

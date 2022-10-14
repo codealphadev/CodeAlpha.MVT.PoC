@@ -30,10 +30,17 @@ pub enum TrackingEventSubscriber {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum TrackingAreaType {
+    Generic,              // A generic tracking area that can be used for any purpose.
+    AppWindow(AppWindow), // A tracking area that is used to track the AppWindows (CodeOverlay, Explain, Main, Widget, etc.).
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TrackingArea {
     pub id: uuid::Uuid,
     pub window_uid: EditorWindowUid, // Set to '0' if not associated with an editor window.
-    pub app_window: AppWindow,
+    pub area_type: TrackingAreaType,
+    pub app_window: AppWindow, // The associated AppWindow - it's the window which receives notifications.
     pub rectangle: LogicalFrame, // In coordinates relative to the containing app window.
     pub events: TrackingEvents,
     pub subscriber: Vec<TrackingEventSubscriber>,
