@@ -9,8 +9,8 @@
   import Arrow from './icons/arrow.svelte';
   import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
   import ComplexityBadge from './complexity-badge.svelte';
-  import ButtonPrimary from '../common/buttons/button-primary.svelte';
-  import ButtonMuted from '../common/buttons/button-muted.svelte';
+  import Button from '../common/button/button.svelte';
+  import { ButtonType } from '../common/button/button';
 
   export let suggestion: FERefactoringSuggestion;
   export let suggestion_id: string;
@@ -52,7 +52,7 @@
   </div>
 
   <div class="flex justify-between w-full items-center">
-    <ButtonPrimary on:click={apply_suggestion}>Extract function</ButtonPrimary>
-    <ButtonMuted on:click={dismiss_suggestion}>Dismiss</ButtonMuted>
+    <Button type={ButtonType.Primary} on:click={apply_suggestion}>Extract function</Button>
+    <Button type={ButtonType.Secondary} on:click={dismiss_suggestion}>Dismiss</Button>
   </div>
 </Card>

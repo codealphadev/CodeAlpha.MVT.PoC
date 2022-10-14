@@ -7,12 +7,11 @@ button.button-icon.hover {
 }
 
 button.button-muted.hover {
-  background-color: var(--theme-backgroundsecondary);
+  background-color: var(--theme-background_secondary);
 }
 
 button.button-primary.hover {
-  background-color: var(--theme-accent_primary_muted);
-  box-shadow: 1px 1px 0px var(--theme-accent_secondary);
+  background-color: var(--theme-accent_primary_emphasis);
 }
 
 /* inter-100 - latin */
