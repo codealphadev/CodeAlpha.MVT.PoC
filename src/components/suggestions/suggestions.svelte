@@ -20,10 +20,10 @@
 
 	let tail_height_px = 12;
 
-	const select_suggestion = async (suggestion_id: string, editor_window_uid: number) => {
+	const select_suggestion = async (suggestion_id: string | null, editor_window_uid: number) => {
 		selected_suggestion_id = suggestion_id;
 		const event: EventUserInteraction = {
-			event: 'SelectSuggestion',
+			event: 'UpdateSelectedSuggestion',
 			payload: { id: suggestion_id, editor_window_uid }
 		};
 		const channel: ChannelList = 'EventUserInteractions';
@@ -57,9 +57,7 @@
 		window_height = positionInfo.height;
 	};
 	let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
-	$: filtered_suggestions = Object.entries(suggestions[active_window_uid] ?? {}).sort((a, b) =>
-		a[0].localeCompare(b[0])
-	);
+	$: filtered_suggestions = filter_and_sort_suggestions(suggestions, active_window_uid);
 
 	const listenToSuggestionEvents = async () => {
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
@@ -93,7 +91,7 @@
 				<Suggestion
 					on:click={() => {
 						if (selected_suggestion_id === id) {
-							selected_suggestion_id = null;
+							select_suggestion(null, active_window_uid);
 						} else {
 							select_suggestion(id, active_window_uid);
 						}

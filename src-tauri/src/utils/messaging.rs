@@ -32,7 +32,7 @@ impl fmt::Display for ChannelList {
             ChannelList::EventTrackingAreas => write!(f, "EventTrackingAreas"),
             ChannelList::EventUserInteractions => write!(f, "EventUserInteractions"),
             ChannelList::EventWindowControls => write!(f, "EventWindowControls"),
-            ChannelList::AnnotationEvent => write!(f, "NodeAnnotationEvent"),
+            ChannelList::AnnotationEvent => write!(f, "AnnotationEvent"),
             ChannelList::RuleResults => write!(f, "RuleResults"),
             ChannelList::EventViewport => write!(f, "EventViewport"),
             ChannelList::NodeExplanationEvent => write!(f, "NodeExplanationEvent"),

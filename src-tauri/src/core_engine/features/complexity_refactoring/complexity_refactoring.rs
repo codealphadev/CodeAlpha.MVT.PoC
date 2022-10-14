@@ -1,4 +1,4 @@
-use super::{create_annotation_group_for_extraction_and_context, NodeSlice, SerializedNodeSlice};
+use super::{set_annotation_group_for_extraction_and_context, NodeSlice, SerializedNodeSlice};
 use crate::{
     app_handle,
     core_engine::{
@@ -280,7 +280,7 @@ impl ComplexityRefactoring {
                 "Failed to derive context range"
             )))?;
 
-            create_annotation_group_for_extraction_and_context(
+            set_annotation_group_for_extraction_and_context(
                 *id,
                 context_range,
                 suggestion_range,
@@ -570,15 +570,15 @@ impl ComplexityRefactoring {
             CoreEngineTrigger::OnTextContentChange => {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
             }
-            CoreEngineTrigger::OnUserCommand(UserCommand::PerformRefactoringOperation(msg)) => {
+            CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)) => {
                 Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
             }
             CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)) => {
                 Some(ComplexityRefactoringProcedure::DismissSuggestion(msg.id))
             }
-            CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)) => {
-                Some(ComplexityRefactoringProcedure::SelectSuggestion(msg.id))
-            }
+            CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)) => msg
+                .id
+                .map(|id| ComplexityRefactoringProcedure::SelectSuggestion(id)),
             _ => None,
         }
     }

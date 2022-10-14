@@ -31,13 +31,11 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         &CoreEngineTrigger::OnUserCommand(UserCommand::NodeAnnotationClicked(msg)),
                     );
                 }
-                EventUserInteraction::PerformRefactoringOperation(msg) => {
+                EventUserInteraction::PerformSuggestion(msg) => {
                     debug!(?msg, "PerformRefactoringOperation request");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
-                        &CoreEngineTrigger::OnUserCommand(
-                            UserCommand::PerformRefactoringOperation(msg),
-                        ),
+                        &CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)),
                     );
                 }
                 EventUserInteraction::DismissSuggestion(msg) => {
@@ -47,7 +45,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         &CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)),
                     );
                 }
-                EventUserInteraction::SelectSuggestion(msg) => {
+                EventUserInteraction::UpdateSelectedSuggestion(msg) => {
                     debug!(?msg, "SelectRefactoringSuggestion request");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,

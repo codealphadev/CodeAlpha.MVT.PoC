@@ -30,7 +30,6 @@ export class MouseManager {
 					}
 					break;
 				case 'TrackingAreaClickedOutside':
-					console.log('TrackingAreaClickedOutside', tracking_event);
 					break;
 			}
 		});
@@ -38,7 +37,6 @@ export class MouseManager {
 
 	private mouse_over(msg: TrackingAreaMouseOverMessage) {
 		const new_elements = this.elements_from_point(msg.mouse_position);
-		console.log(new_elements);
 
 		const removed_elements = this.elements.filter((element) => !new_elements.includes(element));
 		removed_elements.forEach((element) => {

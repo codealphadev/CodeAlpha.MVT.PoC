@@ -4,7 +4,10 @@ use ts_rs::TS;
 
 use crate::{
     core_engine::{
-        events::models::{NodeAnnotationClickedMessage, SuggestionMessage},
+        events::models::{
+            DismissSuggestionMessage, NodeAnnotationClickedMessage, PerformSuggestionMessage,
+            UpdateSelectedSuggestionMessage,
+        },
         CodeDocument,
     },
     platform::macos::models::editor::EditorShortcutPressedMessage,
@@ -19,9 +22,9 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub enum UserCommand {
-    PerformRefactoringOperation(SuggestionMessage),
-    DismissSuggestion(SuggestionMessage),
-    SelectSuggestion(SuggestionMessage),
+    PerformSuggestion(PerformSuggestionMessage),
+    DismissSuggestion(DismissSuggestionMessage),
+    SelectSuggestion(UpdateSelectedSuggestionMessage),
     NodeAnnotationClicked(NodeAnnotationClickedMessage),
 }
 

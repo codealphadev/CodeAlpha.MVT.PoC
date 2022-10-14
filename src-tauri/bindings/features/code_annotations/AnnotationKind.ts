@@ -9,6 +9,4 @@ export type AnnotationKind =
   | "CodeblockFirstChar"
   | "CodeblockLastChar"
   | "ExtractionStartChar"
-  | "ExtractionEndChar"
-  | "InsertionStartChar"
-  | "InsertionEndChar";
+  | "ExtractionEndChar";

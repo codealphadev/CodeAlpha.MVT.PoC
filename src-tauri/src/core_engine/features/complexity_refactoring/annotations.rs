@@ -16,7 +16,7 @@ pub fn remove_annotations_for_suggestions(suggestion_ids: Vec<uuid::Uuid>) {
     }
 }
 
-pub fn create_annotation_group_for_extraction_and_context(
+pub fn set_annotation_group_for_extraction_and_context(
     suggestion_id: Uuid,
     context_range: TextRange,
     extraction_range: TextRange,
@@ -66,7 +66,7 @@ pub fn create_annotation_group_for_extraction_and_context(
         AnnotationJobInstructions::default(),
     );
 
-    AnnotationManagerEvent::Add((
+    AnnotationManagerEvent::Upsert((
         suggestion_id,
         FeatureKind::ComplexityRefactoring,
         vec![
