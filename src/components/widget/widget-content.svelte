@@ -7,10 +7,10 @@
   import type { SuggestionEvent } from '../../../src-tauri/bindings/features/refactoring/SuggestionEvent';
   import type { EventViewport } from '../../../src-tauri/bindings/macOS_specific/EventViewport';
   import type { EventRuleExecutionState } from '../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
+  import Icon from '../common/logo/icon.svelte';
   import { filter_and_sort_suggestions } from '../suggestions/suggestions';
   import DocsGeneration from './docs-generation.svelte';
   import IconEllipse from './icons/icon-ellipse.svelte';
-  import IconLogo from './icons/icon-logo.svelte';
   import IconProcessing from './icons/icon-processing.svelte';
   import SuggestionsNumber from './suggestions-number.svelte';
   import SwiftFormat from './swift-format.svelte';
@@ -148,7 +148,7 @@
         </div>
         <SuggestionsNumber count={widget_mode} />
       {:else}
-        <IconLogo />
+        <Icon />
       {/if}
     </div>
   {/key}

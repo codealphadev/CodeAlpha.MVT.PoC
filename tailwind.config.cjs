@@ -1,19 +1,22 @@
 const colorNames = [
-	'background',
+	'accent_primary_emphasis',
+	'accent_primary',
+	'accent_secondary',
 	'background_secondary',
-	'contrast',
+	'background',
+	'code_overlay_primary',
+	'code_overlay_primary_emphasis',
+	'code_overlay_secondary',
 	'contrast_secondary',
+	'contrast',
+	'divider',
 	'inactive',
 	'primary',
 	'secondary',
-	'accent_primary',
-	'accent_primary_emphasis',
-	'accent_secondary',
 	'signal_bad',
 	'signal_good',
 	'signal_medium',
-	'signal_very_bad',
-	'divider'
+	'signal_very_bad'
 ];
 
 function mapColorNameToCssVarString(colorName) {
