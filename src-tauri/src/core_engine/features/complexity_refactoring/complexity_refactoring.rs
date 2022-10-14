@@ -16,7 +16,9 @@ use crate::{
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
         CodeDocument, EditorWindowUid, TextPosition, TextRange, XcodeText,
     },
-    platform::macos::replace_text_content,
+    platform::macos::{
+        replace_text_content, xcode::actions::replace_range_with_clipboard_text, GetVia,
+    },
     utils::calculate_hash,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
@@ -64,6 +66,7 @@ pub struct FERefactoringSuggestion {
 pub struct RefactoringSuggestion {
     pub new_text_content_string: Option<String>, // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
     pub old_text_content_string: Option<String>,
+    pub edits: Vec<Edit>,
     pub new_complexity: isize,
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
@@ -392,6 +395,7 @@ impl ComplexityRefactoring {
                 prev_complexity,
                 old_text_content_string: None,
                 new_text_content_string: None,
+                edits: Vec::new(),
             },
         );
 
@@ -423,11 +427,16 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
-            let (old_content, new_content) =
-                Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
+            let (old_content, new_content) = Self::format_and_apply_edits_to_text_content(
+                edits.clone(),
+                text_content,
+                file_path,
+            )
+            .await;
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
+            suggestion.edits = edits;
             Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
         });
     }
@@ -435,7 +444,7 @@ impl ComplexityRefactoring {
     async fn format_and_apply_edits_to_text_content(
         mut edits: Vec<Edit>,
         text_content: XcodeText,
-        file_path: Option<String>,
+        _file_path: Option<String>,
     ) -> (String, String) {
         let mut edited_content = text_content.clone();
 
@@ -446,24 +455,24 @@ impl ComplexityRefactoring {
             edited_content.replace_range(edit.start_index..edit.end_index, edit.text);
         }
 
-        let formatted_new_content = match format_code(&edited_content.as_string(), &file_path).await
-        {
-            Ok(content) => content,
-            Err(e) => {
-                error!(?e, "Failed to format during refactoring: new content");
-                edited_content.as_string()
-            }
-        };
+        // let formatted_new_content = match format_code(&edited_content.as_string(), &file_path).await
+        // {
+        //     Ok(content) => content,
+        //     Err(e) => {
+        //         error!(?e, "Failed to format during refactoring: new content");
+        //         edited_content.as_string()
+        //     }
+        // };
 
-        let formatted_old_content = match format_code(&text_content.as_string(), &file_path).await {
-            Ok(content) => content,
-            Err(e) => {
-                error!(?e, "Failed to format during refactoring: old content");
-                text_content.as_string()
-            }
-        };
+        // let formatted_old_content = match format_code(&text_content.as_string(), &file_path).await {
+        //     Ok(content) => content,
+        //     Err(e) => {
+        //         error!(?e, "Failed to format during refactoring: old content");
+        //         text_content.as_string()
+        //     }
+        // };
 
-        (formatted_old_content, formatted_new_content)
+        (text_content.as_string(), edited_content.as_string())
     }
 
     fn perform_operation(
@@ -471,6 +480,8 @@ impl ComplexityRefactoring {
         code_document: &CodeDocument,
         suggestion_id: SuggestionId,
     ) -> Result<(), ComplexityRefactoringError> {
+        println!("perform_operation");
+
         let suggestions = Self::get_suggestions_for_window(
             self.suggestions_arc.clone(),
             code_document.editor_window_props().window_uid,
@@ -484,7 +495,7 @@ impl ComplexityRefactoring {
             .clone();
 
         let new_content = suggestion_to_apply.clone().new_text_content_string.ok_or(
-            ComplexityRefactoringError::SuggestionIncomplete(suggestion_to_apply),
+            ComplexityRefactoringError::SuggestionIncomplete(suggestion_to_apply.clone()),
         )?;
 
         let text_content = code_document
@@ -492,26 +503,35 @@ impl ComplexityRefactoring {
             .as_ref()
             .ok_or(ComplexityRefactoringError::InsufficientContext)?;
 
+        println!("COME HERE!");
+
         tauri::async_runtime::spawn({
             let selected_text_range = code_document.selected_text_range().clone();
             let text_content = text_content.clone();
             let suggestions_arc = self.suggestions_arc.clone();
             let editor_window_uid = code_document.editor_window_props().window_uid;
 
+            let mut suggestion_to_apply = suggestion_to_apply.clone();
+
             async move {
-                match replace_text_content(
-                    &text_content,
-                    &XcodeText::from_str(&new_content),
-                    &selected_text_range,
-                )
-                .await
-                {
-                    Ok(_) => {}
-                    Err(err) => {
-                        error!(?err, "Error replacing text content");
-                        return;
-                    }
+                suggestion_to_apply.edits.sort_by_key(|e| e.start_index);
+                suggestion_to_apply.edits.reverse();
+
+                for edit in suggestion_to_apply.edits {
+                    replace_range_with_clipboard_text(
+                        &app_handle(),
+                        &GetVia::Current,
+                        &TextRange {
+                            index: edit.start_index,
+                            length: edit.end_index - edit.start_index,
+                        },
+                        Some(&edit.text.as_string()),
+                        true,
+                    )
+                    .await;
+                    println!("Replaced range with clipboard text");
                 }
+
                 let mut suggestions_per_window = suggestions_arc.lock();
                 if let Some(suggestions) = suggestions_per_window.get_mut(&editor_window_uid) {
                     suggestions.remove(&suggestion_id);

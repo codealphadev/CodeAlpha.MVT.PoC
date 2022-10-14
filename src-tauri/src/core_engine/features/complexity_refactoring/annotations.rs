@@ -79,3 +79,64 @@ pub fn create_annotation_group_for_extraction_and_context(
     ))
     .publish_to_tauri();
 }
+
+pub fn create_post_extraction_annotation_group(
+    suggestion_id: Uuid,
+    call_of_extracted_func_range: TextRange,
+    extracted_func_range: TextRange,
+) {
+    let extracted_func_start_char_job_id = uuid::Uuid::new_v4();
+    let extracted_func_start_char_job = AnnotationJobSingleChar::new(
+        extracted_func_start_char_job_id,
+        &TextRange {
+            index: extracted_func_range.index,
+            length: 1,
+        },
+        AnnotationKind::ExtractedFunctionStart,
+        AnnotationJobInstructions::default(),
+    );
+
+    let extracted_func_end_char_job_id = uuid::Uuid::new_v4();
+    let extracted_func_end_char_job = AnnotationJobSingleChar::new(
+        extracted_func_end_char_job_id,
+        &TextRange {
+            index: extracted_func_range.index + extracted_func_range.length,
+            length: 1,
+        },
+        AnnotationKind::ExtractedFunctionEnd,
+        AnnotationJobInstructions::default(),
+    );
+
+    let call_of_extracted_func_start_char_job_id = uuid::Uuid::new_v4();
+    let call_of_extracted_func_start_char_job = AnnotationJobSingleChar::new(
+        call_of_extracted_func_start_char_job_id,
+        &TextRange {
+            index: call_of_extracted_func_range.index,
+            length: 1,
+        },
+        AnnotationKind::CallOfExtractedFunctionStart,
+        AnnotationJobInstructions::default(),
+    );
+
+    let context_range_end_char_job_id = uuid::Uuid::new_v4();
+    let context_range_end_char_job = AnnotationJobSingleChar::new(
+        context_range_end_char_job_id,
+        &TextRange {
+            index: call_of_extracted_func_range.index + call_of_extracted_func_range.length,
+            length: 1,
+        },
+        AnnotationKind::CallOfExtractedFunctionEnd,
+        AnnotationJobInstructions::default(),
+    );
+
+    AnnotationManagerEvent::Update((
+        suggestion_id,
+        vec![
+            AnnotationJob::SingleChar(call_of_extracted_func_start_char_job),
+            AnnotationJob::SingleChar(context_range_end_char_job),
+            AnnotationJob::SingleChar(extracted_func_start_char_job),
+            AnnotationJob::SingleChar(extracted_func_end_char_job),
+        ],
+    ))
+    .publish_to_tauri();
+}
