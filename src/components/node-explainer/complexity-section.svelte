@@ -3,7 +3,7 @@
 </script>
 
 {#if complexity > 15}
-	<div class="p-4 bg-backgroundsecondary rounded-md w-full">
+	<div class="p-4 bg-background_secondary rounded-md w-full">
 		<div class="flex gap-3 items-center">
 			<div class="flex-shrink-0">
 				<!-- Heroicon name: mini/exclamation-triangle -->

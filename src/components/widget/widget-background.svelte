@@ -25,7 +25,7 @@
     cx="32"
     cy="32"
     r="25.85"
-    fill={colors.backgroundsecondary}
+    fill={colors.background_secondary}
     stroke="#A3A3A3"
     stroke-width="0.3"
   />

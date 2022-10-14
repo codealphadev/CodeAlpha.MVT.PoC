@@ -1,18 +1,18 @@
 const colorNames = [
 	'background',
-	'backgroundsecondary',
+	'background_secondary',
 	'contrast',
-	'contrastsecondary',
+	'contrast_secondary',
 	'inactive',
 	'primary',
 	'secondary',
 	'accent_primary',
-	'accent_primary_muted',
+	'accent_primary_emphasis',
 	'accent_secondary',
-	'signalbad',
-	'signalgood',
-	'signalmedium',
-	'signalverybad',
+	'signal_bad',
+	'signal_good',
+	'signal_medium',
+	'signal_very_bad',
 	'divider'
 ];
 

@@ -4,20 +4,20 @@ export type ThemeName = 'light' | 'dark';
 
 export const colorNames = [
 	'background',
-	'backgroundsecondary',
+	'background_secondary',
 	'contrast',
-	'contrastsecondary',
+	'contrast_secondary',
 	'divider',
 	'inactive',
 	'primary',
 	'secondary',
-  'accent_primary',
-  'accent_primary_muted',
-  'accent_secondary',
-	'signalbad',
-	'signalgood',
-	'signalmedium',
-	'signalverybad'
+	'accent_primary',
+	'accent_primary_emphasis',
+	'accent_secondary',
+	'signal_bad',
+	'signal_good',
+	'signal_medium',
+	'signal_very_bad'
 ] as const;
 
 const wild_sand = '#F7F7F7';
@@ -30,13 +30,13 @@ const palette = {
 		'300': '#BBBEC8',
 		'400': '#A5AAB8',
 		'600': '#7E8499',
-    '800': '#555F79',
+		'800': '#555F79',
 		'900': fiord
 	},
 	dodger_blue: {
 		'300': '#80B2FE',
 		'500': '#3A88FD',
-    '700': '#0F63E0',
+		'700': '#0F63E0',
 		'800': '#155CC5'
 	},
 	outrageous_orange: {
@@ -61,40 +61,40 @@ export const themes: { [name in ThemeName]: Theme } = {
 	light: {
 		colors: {
 			background: '#ffffff',
-			backgroundsecondary: palette.base[50],
+			background_secondary: palette.base[50],
 			contrast: '#000000',
-			contrastsecondary: palette.base[400],
+			contrast_secondary: palette.base[400],
 			divider: palette.base[200],
 			inactive: '#bbbbbb80',
 			primary: fiord,
 			secondary: palette.base[600],
-      accent_primary: palette.dodger_blue[500],
-      accent_primary_muted: palette.dodger_blue[700],
-      accent_secondary: palette.outrageous_orange[500],
-			signalbad: '#F97316',
-			signalgood: '#16A34A',
-			signalmedium: palette.dodger_blue[800],
-			signalverybad: '#E11D48'
+			accent_primary: palette.dodger_blue[500],
+			accent_primary_emphasis: palette.dodger_blue[700],
+			accent_secondary: palette.outrageous_orange[500],
+			signal_bad: '#F97316',
+			signal_good: '#16A34A',
+			signal_medium: palette.dodger_blue[800],
+			signal_very_bad: '#E11D48'
 		},
 		name: 'light'
 	},
 	dark: {
 		colors: {
 			background: '#ffffff',
-			backgroundsecondary: palette.base[100],
+			background_secondary: palette.base[100],
 			contrast: '#000000',
-			contrastsecondary: palette.base[600],
+			contrast_secondary: palette.base[600],
 			divider: palette.base[300],
 			inactive: '#80808080',
 			primary: fiord,
 			secondary: palette.base[600],
-      accent_primary: palette.dodger_blue[500],
-      accent_primary_muted: palette.dodger_blue[700],
-      accent_secondary: palette.outrageous_orange[500],
-			signalbad: '#F97316',
-			signalgood: '#16A34A',
-			signalmedium: palette.dodger_blue[800],
-			signalverybad: '#E11D48'
+			accent_primary: palette.dodger_blue[500],
+			accent_primary_emphasis: palette.dodger_blue[700],
+			accent_secondary: palette.outrageous_orange[500],
+			signal_bad: '#F97316',
+			signal_good: '#16A34A',
+			signal_medium: palette.dodger_blue[800],
+			signal_very_bad: '#E11D48'
 		},
 		name: 'dark'
 	}
