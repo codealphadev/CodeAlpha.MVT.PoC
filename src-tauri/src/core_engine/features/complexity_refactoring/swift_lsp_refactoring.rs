@@ -3,7 +3,6 @@ use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 use super::complexity_refactoring::Edit;
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
     #[serde(rename = "key.column")]

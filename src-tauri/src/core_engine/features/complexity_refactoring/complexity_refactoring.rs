@@ -53,6 +53,7 @@ enum ComplexityRefactoringProcedure {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub struct FERefactoringSuggestion {
+    pub state: SuggestionState,
     pub new_text_content_string: Option<String>,
     pub old_text_content_string: Option<String>,
     pub new_complexity: isize,
@@ -60,10 +61,18 @@ pub struct FERefactoringSuggestion {
     pub main_function_name: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq)]
+#[ts(export, export_to = "bindings/features/refactoring/")]
+pub enum SuggestionState {
+    New,
+    Recalculating,
+    Ready,
+}
 #[derive(Debug, Clone)]
 pub struct RefactoringSuggestion {
-    pub new_text_content_string: Option<String>, // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
+    pub new_text_content_string: Option<String>, // TODO: test if it works with utf 16 emojis etc
     pub old_text_content_string: Option<String>,
+    pub state: SuggestionState,
     pub new_complexity: isize,
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
@@ -74,6 +83,7 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
     suggestion: RefactoringSuggestion,
 ) -> FERefactoringSuggestion {
     FERefactoringSuggestion {
+        state: suggestion.state,
         new_text_content_string: suggestion.new_text_content_string,
         old_text_content_string: suggestion.old_text_content_string,
         new_complexity: suggestion.new_complexity,
@@ -157,9 +167,25 @@ impl ComplexityRefactoring {
         }
     }
 
+    fn set_suggestions_to_recomputing(&mut self, editor_window_uid: EditorWindowUid) -> Option<()> {
+        self.suggestions_arc
+            .lock()
+            .get_mut(&editor_window_uid)?
+            .values_mut()
+            .filter(|s| s.state == SuggestionState::Ready || s.state == SuggestionState::New)
+            .for_each(|suggestion| suggestion.state = SuggestionState::Recalculating);
+
+        Self::publish_to_frontend(self.suggestions_arc.lock().clone());
+
+        Some(())
+    }
+
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         debug!("Computing suggestions for complexity refactoring");
+
         let window_uid = code_document.editor_window_props().window_uid;
+        self.set_suggestions_to_recomputing(window_uid);
+
         let suggestions_arc = self.suggestions_arc.clone();
         let old_suggestions = Self::get_suggestions_for_window(suggestions_arc.clone(), window_uid);
 
@@ -191,15 +217,10 @@ impl ComplexityRefactoring {
                 code_document.editor_window_props().window_uid,
             )?);
         }
+
         self.suggestions_arc
             .lock()
             .insert(window_uid, suggestions.clone());
-
-        let added_suggestions_count = suggestions
-            .clone()
-            .iter()
-            .filter(|(id, _)| !old_suggestions.contains_key(&id))
-            .count();
 
         let removed_suggestion_ids: Vec<Uuid> = old_suggestions
             .clone()
@@ -209,9 +230,7 @@ impl ComplexityRefactoring {
 
         remove_annotations_for_suggestions(removed_suggestion_ids.clone());
 
-        if removed_suggestion_ids.len() > 0 || added_suggestions_count > 0 {
-            Self::publish_to_frontend(self.suggestions_arc.lock().clone());
-        }
+        Self::publish_to_frontend(self.suggestions_arc.lock().clone());
 
         Ok(())
     }
@@ -376,9 +395,17 @@ impl ComplexityRefactoring {
                 .filter(|&(_, suggestion)| suggestion.serialized_slice == serialized_node_slice)
                 .collect::<Vec<_>>();
 
-        // Re-identify ID with previous value to avoid unnecessary removal and addition
-        let id = if old_suggestions_with_same_serialization.len() == 1 {
-            *old_suggestions_with_same_serialization[0].0
+        let id;
+        let state;
+        if old_suggestions_with_same_serialization.len() == 1 {
+            // Re-identify ID with previous value to avoid unnecessary removal and addition
+            id = *old_suggestions_with_same_serialization[0].0;
+            state = match (*old_suggestions_with_same_serialization[0].1).state {
+                SuggestionState::New => SuggestionState::New,
+                SuggestionState::Ready | SuggestionState::Recalculating => {
+                    SuggestionState::Recalculating
+                }
+            }
         } else {
             uuid::Uuid::new_v4()
         };
@@ -386,6 +413,7 @@ impl ComplexityRefactoring {
         new_suggestions.insert(
             id,
             RefactoringSuggestion {
+                state,
                 serialized_slice: serialized_node_slice,
                 main_function_name: function.get_name(),
                 new_complexity,
@@ -428,6 +456,7 @@ impl ComplexityRefactoring {
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
+            suggestion.state = SuggestionState::Ready;
             Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
         });
     }

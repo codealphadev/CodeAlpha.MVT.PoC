@@ -8,9 +8,9 @@ use serde_json::Value;
 use tauri::api::process::{Command, CommandEvent};
 use tracing::{error, warn};
 pub struct SwiftLsp;
-use rand::Rng;
-
 use crate::utils::calculate_hash;
+use rand::Rng;
+use tracing::debug;
 
 #[automock]
 #[async_trait]
@@ -33,6 +33,7 @@ impl Lsp for SwiftLsp {
             return Err(SwiftLspError::FileNotExisting(file_path.to_string()));
         }
 
+        debug!("Calling Swift LSP");
         let (mut rx, _) = Command::new_sidecar("sourcekitten")
             .map_err(|err| SwiftLspError::GenericError(err.into()))?
             .args(["request".to_string(), "--yaml".to_string(), payload.clone()])
