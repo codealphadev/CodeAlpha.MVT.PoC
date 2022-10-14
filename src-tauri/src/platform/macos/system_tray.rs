@@ -1,16 +1,27 @@
-use tauri::{
-    utils::assets::EmbeddedAssets, Context, CustomMenuItem, SystemTray, SystemTrayEvent,
-    SystemTrayMenu, SystemTrayMenuItem,
-};
+use tauri::{CustomMenuItem, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
 use tracing::debug;
 
-use crate::platform;
+use crate::{
+    app_handle,
+    core_engine::events::{models::CoreActivationStatusMessage, EventUserInteraction},
+    platform, TAURI_PACKAGE_INFO,
+};
 
-pub fn construct_system_tray_menu(context: &Context<EmbeddedAssets>) -> SystemTray {
+pub fn construct_system_tray() -> SystemTray {
+    let tray_menu = construct_system_tray_menu(true);
+
+    SystemTray::new().with_menu(tray_menu)
+}
+
+fn construct_system_tray_menu(core_engine_active: bool) -> SystemTrayMenu {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let check_ax_api = CustomMenuItem::new("check_ax_api".to_string(), "Settings...");
 
-    let version = context.package_info().version.clone();
+    let version;
+    {
+        let package_info_mutex = TAURI_PACKAGE_INFO.lock();
+        version = package_info_mutex.as_ref().unwrap().version.clone();
+    }
 
     let version_label = CustomMenuItem::new(
         "version".to_string(),
@@ -22,31 +33,35 @@ pub fn construct_system_tray_menu(context: &Context<EmbeddedAssets>) -> SystemTr
     )
     .disabled();
 
-    let pause_core_engine = CustomMenuItem::new(
-        "pause_core_engine".to_string(),
-        format!("Pause Pretzl").as_str(),
-    );
+    let pause_core_engine =
+        CustomMenuItem::new("pause_core_engine".to_string(), format!("⏸️ Pause").as_str());
 
     let resume_core_engine = CustomMenuItem::new(
         "resume_core_engine".to_string(),
-        format!("Resume Pretzl",).as_str(),
+        format!("▶️ Resume",).as_str(),
     );
 
-    let tray_menu;
     if !platform::macos::is_application_trusted() {
-        tray_menu = SystemTrayMenu::new()
+        SystemTrayMenu::new()
             .add_item(check_ax_api)
             .add_item(version_label)
             .add_native_item(SystemTrayMenuItem::Separator)
             .add_item(quit)
     } else {
-        tray_menu = SystemTrayMenu::new()
-            .add_item(version_label)
-            .add_native_item(SystemTrayMenuItem::Separator)
-            .add_item(quit)
+        if core_engine_active {
+            SystemTrayMenu::new()
+                .add_item(pause_core_engine)
+                .add_item(version_label)
+                .add_native_item(SystemTrayMenuItem::Separator)
+                .add_item(quit)
+        } else {
+            SystemTrayMenu::new()
+                .add_item(resume_core_engine)
+                .add_item(version_label)
+                .add_native_item(SystemTrayMenuItem::Separator)
+                .add_item(quit)
+        }
     }
-
-    SystemTray::new().with_menu(tray_menu)
 }
 
 pub fn evaluate_system_tray_event(event: SystemTrayEvent) {
@@ -54,6 +69,8 @@ pub fn evaluate_system_tray_event(event: SystemTrayEvent) {
         SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
             "quit" => on_quit(),
             "check_ax_api" => on_check_permissions(),
+            "pause_core_engine" => on_pause_core_engine(),
+            "resume_core_engine" => on_resume_core_engine(),
             _ => {}
         },
         _ => {}
@@ -68,4 +85,34 @@ fn on_quit() {
 fn on_check_permissions() {
     debug!("System tray: check_ax_api");
     platform::macos::is_application_trusted_with_prompt();
+}
+
+fn on_pause_core_engine() {
+    debug!("System tray: PAUSE Pretzl");
+
+    if app_handle()
+        .tray_handle()
+        .set_menu(construct_system_tray_menu(false))
+        .is_ok()
+    {
+        EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
+            engine_active: false,
+        })
+        .publish_to_tauri();
+    }
+}
+
+fn on_resume_core_engine() {
+    debug!("System tray: RESUME Pretzl");
+
+    if app_handle()
+        .tray_handle()
+        .set_menu(construct_system_tray_menu(true))
+        .is_ok()
+    {
+        EventUserInteraction::CoreActivationStatus(CoreActivationStatusMessage {
+            engine_active: true,
+        })
+        .publish_to_tauri();
+    }
 }

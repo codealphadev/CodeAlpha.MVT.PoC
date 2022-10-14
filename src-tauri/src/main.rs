@@ -20,7 +20,7 @@ use platform::macos::{
     menu::mac_os_task_bar_menu,
     permissions_check::ax_permissions_check,
     setup_observers,
-    system_tray::{construct_system_tray_menu, evaluate_system_tray_event},
+    system_tray::{construct_system_tray, evaluate_system_tray_event},
 };
 use utils::{feedback::cmd_send_feedback, tracing::TracingSubscriber};
 use window_controls::{cmd_rebind_main_widget, cmd_resize_window, WindowManager};
@@ -31,6 +31,10 @@ use crate::utils::updater::listen_for_updates;
 
 lazy_static! {
     static ref APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
+}
+
+lazy_static! {
+    static ref TAURI_PACKAGE_INFO: Mutex<Option<tauri::PackageInfo>> = Mutex::new(None);
 }
 
 pub static CORE_ENGINE_ACTIVE_AT_STARTUP: bool = true;
@@ -50,6 +54,12 @@ fn main() {
     TracingSubscriber::new();
 
     let tauri_context = tauri::generate_context!("tauri.conf.json");
+
+    {
+        TAURI_PACKAGE_INFO
+            .lock()
+            .replace(tauri_context.package_info().clone());
+    }
 
     let mut app: tauri::App = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -84,7 +94,7 @@ fn main() {
 
             Ok(())
         })
-        .system_tray(construct_system_tray_menu(&tauri_context))
+        .system_tray(construct_system_tray())
         .on_system_tray_event(|_, event| evaluate_system_tray_event(event))
         .menu(Menu::with_items([mac_os_task_bar_menu()]))
         .build(tauri_context)
