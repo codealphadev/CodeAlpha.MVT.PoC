@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<AnnotationsManager>>) {
-    app_handle().listen_global(ChannelList::NodeAnnotationEvent.to_string(), {
+    app_handle().listen_global(ChannelList::AnnotationEvent.to_string(), {
         let annotations_manager = annotations_manager_arc.clone();
         move |msg| {
             let annotation_event: AnnotationManagerEvent =

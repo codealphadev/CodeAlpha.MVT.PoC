@@ -19,9 +19,9 @@
 	let annotation_context_pt1: LogicalFrame | null;
 	let annotation_context_pt2: LogicalFrame | null;
 
-	const listen_to_node_annotation_events = async () => {
-		let node_annotation_channel: ChannelList = 'NodeAnnotationEvent';
-		await listen(node_annotation_channel, (event) => {
+	const listen_to_annotation_events = async () => {
+		let annotation_channel: ChannelList = 'AnnotationEvent';
+		await listen(annotation_channel, (event) => {
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
 			switch (event_type) {
 				case 'AddAnnotationGroup':
@@ -163,7 +163,7 @@
 		};
 	};
 
-	listen_to_node_annotation_events();
+	listen_to_annotation_events();
 
 	const round_value = (value: number, precision: number): number => {
 		const factor = Math.pow(10, precision || 0);
