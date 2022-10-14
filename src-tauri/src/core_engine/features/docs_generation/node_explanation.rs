@@ -5,16 +5,13 @@ use ts_rs::TS;
 
 use cached::proc_macro::cached;
 
-use crate::{
-    core_engine::{
-        get_cloud_function_apikey, get_cloud_function_url,
-        syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
-        XcodeText,
-    },
-    NODE_EXPLANATION_CURRENT_DOCSTRING,
+use crate::core_engine::{
+    get_cloud_function_apikey, get_cloud_function_url,
+    syntax_tree::{FunctionParameter, SwiftCodeBlockKind},
+    XcodeText,
 };
 
-use super::node_annotation::AnnotationCodeBlock;
+use super::node_annotation::{AnnotationCodeBlock, NODE_EXPLANATION_CURRENT_DOCSTRING};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, TS)]
 #[ts(export, export_to = "bindings/features/node_explanation/")]

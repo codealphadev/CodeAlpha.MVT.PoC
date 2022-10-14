@@ -1,6 +1,7 @@
 pub use code_document::*;
 pub use core_engine::CoreEngine;
 pub use core_engine::EditorWindowUid;
+pub use features::cmd_paste_docs;
 pub use utils::*;
 
 mod annotations_manager;

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use tracing::debug;
 
@@ -19,15 +20,27 @@ use crate::{
         utils::XcodeText,
         EditorWindowUid, TextPosition, TextRange,
     },
-    platform::macos::{get_code_document_frame_properties, GetVia},
+    platform::macos::{
+        get_code_document_frame_properties, xcode::actions::replace_range_with_clipboard_text,
+        GetVia,
+    },
     utils::geometry::{LogicalFrame, LogicalPosition},
-    NODE_EXPLANATION_CURRENT_INSERTION_POINT,
 };
 
 use super::{
     docs_generator::{compute_docs_insertion_point_and_indentation, DocsGenerationError},
     fetch_node_explanation, NodeExplanation,
 };
+
+lazy_static! {
+    static ref NODE_EXPLANATION_CURRENT_INSERTION_POINT: Arc<Mutex<usize>> =
+        Arc::new(Mutex::new(0));
+}
+
+lazy_static! {
+    pub static ref NODE_EXPLANATION_CURRENT_DOCSTRING: Arc<Mutex<String>> =
+        Arc::new(Mutex::new("".to_string()));
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NodeAnnotationState {
@@ -236,4 +249,25 @@ impl Drop for NodeAnnotation {
     fn drop(&mut self) {
         AnnotationManagerEvent::Remove(self.annotation_group_id).publish_to_tauri();
     }
+}
+
+#[tauri::command]
+pub fn cmd_paste_docs() {
+    tauri::async_runtime::spawn(async move {
+        // Paste it at the docs insertion point
+        let insertion_point = NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock().clone();
+        let docstring = NODE_EXPLANATION_CURRENT_DOCSTRING.lock().clone();
+        replace_range_with_clipboard_text(
+            &app_handle(),
+            &GetVia::Current,
+            &TextRange {
+                index: insertion_point,
+                length: 0,
+            },
+            Some(&docstring),
+            true,
+        )
+        .await;
+        debug!(insertion_point, docstring, "Docstring inserted");
+    });
 }
