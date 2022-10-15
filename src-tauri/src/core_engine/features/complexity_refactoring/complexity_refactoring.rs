@@ -21,6 +21,7 @@ use crate::{
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 use anyhow::anyhow;
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc};
@@ -99,6 +100,10 @@ pub struct ComplexityRefactoring {
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 9;
+
+lazy_static! {
+    static ref CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID: Mutex<Option<Uuid>> = Mutex::new(None);
+}
 
 impl FeatureBase for ComplexityRefactoring {
     fn compute(
@@ -182,6 +187,8 @@ impl ComplexityRefactoring {
 
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         debug!("Computing suggestions for complexity refactoring");
+        let execution_id = uuid::Uuid::new_v4();
+        (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
 
         let window_uid = code_document.editor_window_props().window_uid;
         self.set_suggestions_to_recomputing(window_uid);
@@ -215,6 +222,7 @@ impl ComplexityRefactoring {
                 suggestions_arc.clone(),
                 self.dismissed_suggestions.clone(),
                 code_document.editor_window_props().window_uid,
+                execution_id,
             )?);
         }
 
@@ -231,7 +239,6 @@ impl ComplexityRefactoring {
         remove_annotations_for_suggestions(removed_suggestion_ids.clone());
 
         Self::publish_to_frontend(self.suggestions_arc.lock().clone());
-
         Ok(())
     }
 
@@ -264,6 +271,7 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
+        execution_id: Uuid,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
         let suggestions = Self::compute_suggestions_for_function(
             &function,
@@ -338,6 +346,7 @@ impl ComplexityRefactoring {
                                 binded_suggestions_arc,
                                 binded_file_path,
                                 window_uid,
+                                execution_id,
                             )
                         },
                         &binded_text_content_2,
@@ -454,7 +463,12 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         file_path: Option<String>,
         window_uid: EditorWindowUid,
+        execution_id: Uuid,
     ) {
+        if CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock().clone() != Some(execution_id) {
+            // Aborting due to new execution superseding
+            return;
+        }
         tauri::async_runtime::spawn(async move {
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
