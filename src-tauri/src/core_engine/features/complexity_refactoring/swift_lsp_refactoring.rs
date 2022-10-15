@@ -1,8 +1,8 @@
+use super::complexity_refactoring::Edit;
 use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-
-use super::complexity_refactoring::Edit;
+use tracing::debug;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
     #[serde(rename = "key.column")]
@@ -92,7 +92,7 @@ key.compilerargs:{}"#,
     if result.categorized_edits.len() == 0 {
         return Err(SwiftLspError::RefactoringNotPossible(payload));
     }
-
+    debug!("Got edits from Swift LSP");
     let edits: Vec<Edit> = result
         .categorized_edits
         .into_iter()

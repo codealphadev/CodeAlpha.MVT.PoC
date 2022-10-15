@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use tracing::instrument;
 use ts_rs::TS;
 
 use crate::{

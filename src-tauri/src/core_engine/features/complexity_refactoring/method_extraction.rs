@@ -76,6 +76,7 @@ pub async fn get_edits_for_method_extraction(
     text_content: &XcodeText,
     file_path: Option<String>,
 ) -> Result<(), ComplexityRefactoringError> {
+    debug!("Getting edits for method extraction");
     // Create temporary file
     let tmp_file_key = rand::thread_rng()
         .sample_iter(&Alphanumeric)

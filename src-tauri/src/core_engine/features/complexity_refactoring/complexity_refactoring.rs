@@ -24,9 +24,10 @@ use anyhow::anyhow;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc};
-use tracing::debug;
+use tokio::try_join;
 use tracing::error;
 use tracing::warn;
+use tracing::{debug, instrument};
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -179,8 +180,20 @@ impl ComplexityRefactoring {
 
         Some(())
     }
+    // TODO: Put whole feature execution into async fn; TODO: Generic way to create spans if and only if a procedure is satisfied.
+    async fn compute_suggestions(
+        &mut self,
+        code_document: &CodeDocument,
+    ) -> Result<(), FeatureError> {
+        let execution_id = Uuid::new_v4();
 
-    fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
+        let request_span = tracing::debug_span!(
+            "Computing suggestions for complexity refactoring.",
+            %execution_id,
+            file_path = code_document.file_path()   ,
+        );
+        let _request_span_guard = request_span.enter();
+
         debug!("Computing suggestions for complexity refactoring");
 
         let window_uid = code_document.editor_window_props().window_uid;
@@ -202,11 +215,26 @@ impl ComplexityRefactoring {
                 .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
 
         let file_path = code_document.file_path().clone();
-        let mut s_exps = vec![];
+        let mut s_exps = top_level_functions.iter().map(|f| f.props.node.to_sexp());
         let mut suggestions: SuggestionsMap = HashMap::new();
 
+        let suggestions_per_function = top_level_functions
+            .into_iter()
+            .map(|function| {
+                Self::generate_suggestions_for_function(
+                    function,
+                    &text_content,
+                    &file_path,
+                    code_document.syntax_tree(),
+                    suggestions_arc.clone(),
+                    self.dismissed_suggestions.clone(),
+                    window_uid,
+                )
+            })
+            .collect();
+        let results = try_join!(suggestions_per_function)?;
+
         for function in top_level_functions {
-            s_exps.push(function.props.node.to_sexp());
             suggestions.extend(Self::generate_suggestions_for_function(
                 function,
                 &text_content,
@@ -229,6 +257,8 @@ impl ComplexityRefactoring {
             .collect();
 
         remove_annotations_for_suggestions(removed_suggestion_ids.clone());
+
+        debug!("Publishing to frontend");
 
         Self::publish_to_frontend(self.suggestions_arc.lock().clone());
 
@@ -256,11 +286,11 @@ impl ComplexityRefactoring {
         .publish_to_tauri(&app_handle());
     }
 
-    fn generate_suggestions_for_function(
-        function: SwiftFunction,
+    async fn generate_suggestions_for_function<'b>(
+        function: SwiftFunction<'b>,
         text_content: &XcodeText,
         file_path: &Option<String>,
-        syntax_tree: &SwiftSyntaxTree,
+        syntax_tree: &'b SwiftSyntaxTree,
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
@@ -324,42 +354,39 @@ impl ComplexityRefactoring {
                 .first()
                 .and_then(|n| n.parent())
                 .map(|n| n.kind());
-            tauri::async_runtime::spawn({
-                async move {
-                    _ = get_edits_for_method_extraction(
-                        suggestion_start_pos,
-                        suggestion_range.length,
-                        move |edits: Vec<Edit>| {
-                            Self::update_suggestion_with_formatted_text_diff(
-                                binded_id,
-                                binded_suggestion,
-                                edits,
-                                binded_text_content,
-                                binded_suggestions_arc,
-                                binded_file_path,
-                                window_uid,
-                            )
-                        },
-                        &binded_text_content_2,
-                        binded_file_path_2,
-                    )
-                    .await
-                    .map_err(|e| match e {
-                        ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
-                            remove_annotations_for_suggestions(vec![binded_id]);
-                            Self::publish_to_frontend(binded_suggestions_arc2.lock().clone());
 
-                            warn!(
-                                ?payload,
-                                ?serialized_slice,
-                                ?node_kinds,
-                                ?parent_node_kind,
-                                "LSP rejected refactoring"
-                            );
-                        }
-                        _ => error!(?e, "Failed to perform refactoring"),
-                    });
+            _ = get_edits_for_method_extraction(
+                suggestion_start_pos,
+                suggestion_range.length,
+                move |edits: Vec<Edit>| {
+                    Self::update_suggestion_with_formatted_text_diff(
+                        binded_id,
+                        binded_suggestion,
+                        edits,
+                        binded_text_content,
+                        binded_suggestions_arc,
+                        binded_file_path,
+                        window_uid,
+                    )
+                },
+                &binded_text_content_2,
+                binded_file_path_2,
+            )
+            .await
+            .map_err(|e| match e {
+                ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
+                    remove_annotations_for_suggestions(vec![binded_id]);
+                    Self::publish_to_frontend(binded_suggestions_arc2.lock().clone());
+
+                    warn!(
+                        ?payload,
+                        ?serialized_slice,
+                        ?node_kinds,
+                        ?parent_node_kind,
+                        "LSP rejected refactoring"
+                    );
                 }
+                _ => error!(?e, "Failed to perform refactoring"),
             });
         }
         Ok(suggestions)
@@ -456,6 +483,7 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
     ) {
         tauri::async_runtime::spawn(async move {
+            debug!("Starting to format");
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
@@ -463,6 +491,7 @@ impl ComplexityRefactoring {
             suggestion.new_text_content_string = Some(new_content);
             suggestion.state = SuggestionState::Ready;
             Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
+            debug!("Finished updating suggestion");
         });
     }
 

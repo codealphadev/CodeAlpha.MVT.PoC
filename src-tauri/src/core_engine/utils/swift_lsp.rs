@@ -61,6 +61,7 @@ impl Lsp for SwiftLsp {
         source_file_path: &str,
         tmp_file_path: &str,
     ) -> Result<Vec<String>, SwiftLspError> {
+        debug!("Getting compiler arguments");
         // Try to get compiler arguments from xcodebuild
         let recompute_args_hash = match get_hashed_pbxproj_modification_date(source_file_path) {
             Err(e) => {
