@@ -6,9 +6,14 @@ button.button-icon.hover {
   filter: brightness(70%);
 }
 
+button.thumb-button.hover {
+  filter: brightness(30%);
+}
+
 button.button-secondary.hover {
   background-color: var(--theme-background_secondary);
 }
+
 
 button.button-primary.hover {
   background-color: var(--theme-accent_primary_emphasis);

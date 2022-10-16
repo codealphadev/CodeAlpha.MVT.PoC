@@ -92,7 +92,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 			background_secondary: palette.base[100],
 			background: '#ffffff',
 			code_overlay_primary: palette.dodger_blue[500],
-			code_overlay_primary_emphasis: palette.dodger_blue[700],
+			code_overlay_primary_emphasis: palette.dodger_blue[300],
 			code_overlay_secondary: palette.dodger_blue[500],
 			contrast_secondary: palette.base[600],
 			contrast: '#000000',
