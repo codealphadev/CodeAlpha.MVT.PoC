@@ -13,7 +13,7 @@ use parking_lot::Mutex;
 use tauri::Manager;
 use tracing::debug;
 
-use super::handlers::on_core_activation_status_update;
+use super::handlers::on_ai_features_activation_status_update;
 
 pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
     app_handle().listen_global(ChannelList::EventUserInteractions.to_string(), {
@@ -22,8 +22,8 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
             let event_user_interaction: EventUserInteraction =
                 serde_json::from_str(&msg.payload().unwrap()).unwrap();
             match event_user_interaction {
-                EventUserInteraction::CoreActivationStatus(msg) => {
-                    on_core_activation_status_update(&core_engine, &msg);
+                EventUserInteraction::AiFeaturesStatus(msg) => {
+                    on_ai_features_activation_status_update(&core_engine, &msg);
                 }
                 EventUserInteraction::NodeAnnotationClicked(msg) => {
                     _ = core_engine.lock().run_features(

@@ -98,6 +98,10 @@ impl FeatureBase for BracketHighlight {
         self.registered_jobs = vec![];
         Ok(())
     }
+
+    fn requires_ai(&self) -> bool {
+        false
+    }
 }
 
 impl BracketHighlight {

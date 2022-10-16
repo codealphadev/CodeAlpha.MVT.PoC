@@ -13,11 +13,6 @@ pub fn on_editor_shortcut_pressed(
 ) -> Result<(), CoreEngineError> {
     let mut core_engine = core_engine_arc.lock();
 
-    // Checking if the engine is active. If not, don't continue.
-    if !core_engine.engine_active() {
-        return Ok(());
-    }
-
     core_engine.run_features(
         msg.window_uid,
         &CoreEngineTrigger::OnShortcutPressed(msg.clone()),

@@ -1,3 +1,3 @@
-pub use on_core_activation_status_update::on_core_activation_status_update;
+pub use on_ai_features_activation_status_update::on_ai_features_activation_status_update;
 
-mod on_core_activation_status_update;
+mod on_ai_features_activation_status_update;

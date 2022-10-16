@@ -50,8 +50,7 @@ pub struct CoreEngine {
     /// Features include bracket highlighting, docs generation and formatters.
     features: Vec<Feature>,
 
-    /// Identifier indicating if the app is currently active and supposed to give suggestions
-    engine_active: bool,
+    ai_features_active: bool,
 
     /// Annotations manager handles where to draw annotations on the code editor via the CodeOverlay window
     _annotations_manager: Arc<Mutex<AnnotationsManager>>,
@@ -65,7 +64,7 @@ impl CoreEngine {
         Self {
             app_handle: app_handle(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
-            engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            ai_features_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
             features: vec![
                 Feature::BracketHighlighting(BracketHighlight::new()),
                 Feature::Formatter(SwiftFormatter::new()),
@@ -76,28 +75,12 @@ impl CoreEngine {
         }
     }
 
-    pub fn engine_active(&self) -> bool {
-        self.engine_active
-    }
-
     pub fn code_documents(&mut self) -> &mut CodeDocumentsArcMutex {
         &mut self.code_documents
     }
 
-    pub fn set_engine_active(&mut self, engine_active_status: bool) {
-        self.engine_active = engine_active_status;
-
-        if engine_active_status {
-            // Activate features (currently nothing needs to be done)
-            for feature in &mut self.features {
-                _ = feature.activate();
-            }
-        } else {
-            // Activate features (currently nothing needs to be done)
-            for feature in &mut self.features {
-                _ = feature.deactivate();
-            }
-        }
+    pub fn set_ai_features_active(&mut self, ai_features_active: bool) {
+        self.ai_features_active = ai_features_active;
     }
 
     pub fn run_features(
@@ -111,6 +94,12 @@ impl CoreEngine {
             .ok_or(CoreEngineError::CodeDocNotFound(editor_window_uid))?;
 
         for feature in self.features.iter_mut() {
+            // Don't run features which require AI if AI is disabled
+            if !self.ai_features_active && feature.requires_ai() {
+                _ = feature.reset();
+                continue;
+            }
+
             _ = feature
                 .compute(code_doc, trigger)
                 .map_err(|e| error!(?e, ?feature, "Error in feature compute()"));
