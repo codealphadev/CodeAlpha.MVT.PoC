@@ -82,6 +82,10 @@ impl FeatureBase for SwiftFormatter {
         // Do nothing
         Ok(())
     }
+
+    fn requires_ai(&self) -> bool {
+        false
+    }
 }
 
 impl SwiftFormatter {

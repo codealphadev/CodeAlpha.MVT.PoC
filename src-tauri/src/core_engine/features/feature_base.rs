@@ -110,6 +110,7 @@ pub trait FeatureBase {
     fn activate(&mut self) -> Result<(), FeatureError>;
     fn deactivate(&mut self) -> Result<(), FeatureError>;
     fn reset(&mut self) -> Result<(), FeatureError>;
+    fn requires_ai(&self) -> bool;
 }
 
 impl FeatureBase for Feature {
@@ -169,6 +170,15 @@ impl FeatureBase for Feature {
             Feature::DocsGeneration(feature) => feature.reset(),
             Feature::Formatter(feature) => feature.reset(),
             Feature::ComplexityRefactoring(feature) => feature.reset(),
+        }
+    }
+
+    fn requires_ai(&self) -> bool {
+        match self {
+            Feature::BracketHighlighting(feature) => feature.requires_ai(),
+            Feature::DocsGeneration(feature) => feature.requires_ai(),
+            Feature::Formatter(feature) => feature.requires_ai(),
+            Feature::ComplexityRefactoring(feature) => feature.requires_ai(),
         }
     }
 }

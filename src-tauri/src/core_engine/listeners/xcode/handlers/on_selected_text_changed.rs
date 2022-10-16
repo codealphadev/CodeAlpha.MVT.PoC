@@ -15,7 +15,6 @@ pub fn on_selected_text_changed(
 ) -> Result<(), CoreEngineError> {
     let core_engine = &mut core_engine_arc.lock();
 
-    let core_engine_active_status = core_engine.engine_active();
     let text_changed;
     {
         let code_documents = &mut core_engine.code_documents().lock();
@@ -31,11 +30,6 @@ pub fn on_selected_text_changed(
             },
             true,
         );
-
-        // Checking if the engine is active. If not, don't continue.
-        if !core_engine_active_status {
-            return Ok(());
-        }
     }
 
     core_engine.run_features(msg.window_uid, &CoreEngineTrigger::OnTextSelectionChange)?;

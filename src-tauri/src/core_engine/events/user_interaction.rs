@@ -2,10 +2,10 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use ts_rs::TS;
 
-use crate::{utils::messaging::ChannelList, app_handle};
+use crate::{app_handle, utils::messaging::ChannelList};
 
 use super::models::{
-    CoreActivationStatusMessage, DismissSuggestionMessage, NodeAnnotationClickedMessage,
+    AiFeaturesStatusMessage, DismissSuggestionMessage, NodeAnnotationClickedMessage,
     PerformSuggestionMessage, UpdateSelectedSuggestionMessage,
 };
 
@@ -13,7 +13,7 @@ use super::models::{
 #[ts(export, export_to = "bindings/user_interaction/")]
 #[serde(tag = "event", content = "payload")]
 pub enum EventUserInteraction {
-    CoreActivationStatus(CoreActivationStatusMessage),
+    AiFeaturesStatus(AiFeaturesStatusMessage),
     PerformSuggestion(PerformSuggestionMessage),
     DismissSuggestion(DismissSuggestionMessage),
     UpdateSelectedSuggestion(UpdateSelectedSuggestionMessage),

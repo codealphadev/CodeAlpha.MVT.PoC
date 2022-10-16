@@ -89,6 +89,10 @@ impl FeatureBase for DocsGenerator {
 
         Ok(())
     }
+
+    fn requires_ai(&self) -> bool {
+        true
+    }
 }
 
 impl DocsGenerator {

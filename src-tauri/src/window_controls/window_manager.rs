@@ -123,10 +123,6 @@ impl WindowManager {
         self.is_core_engine_active
     }
 
-    pub fn set_is_core_engine_active(&mut self, is_core_engine_active: bool) {
-        self.is_core_engine_active = is_core_engine_active;
-    }
-
     pub fn set_focused_editor_window(&mut self, editor_window_hash: Option<Uid>) {
         *self.focused_editor_window.lock() = editor_window_hash;
     }

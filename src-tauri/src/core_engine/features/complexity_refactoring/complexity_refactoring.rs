@@ -146,6 +146,10 @@ impl FeatureBase for ComplexityRefactoring {
     fn reset(&mut self) -> Result<(), FeatureError> {
         Ok(())
     }
+
+    fn requires_ai(&self) -> bool {
+        false
+    }
 }
 
 impl ComplexityRefactoring {

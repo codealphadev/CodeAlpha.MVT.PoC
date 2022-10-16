@@ -95,10 +95,6 @@ impl AppWindow {
         }
     }
 
-    pub fn shown_on_core_engine_activated() -> Vec<AppWindow> {
-        vec![AppWindow::Widget, AppWindow::CodeOverlay]
-    }
-
     pub fn shown_on_click_widget() -> Vec<AppWindow> {
         vec![AppWindow::Main]
     }
