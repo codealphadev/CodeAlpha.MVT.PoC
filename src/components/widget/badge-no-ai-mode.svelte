@@ -6,17 +6,17 @@
 	<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
 		<path
 			d="M26.1533 41.5373C24.8864 39.8228 24.1449 37.7771 24.0192 35.649C23.8934 33.5209 24.3887 31.4021 25.4449 29.5502C26.5011 27.6984 28.0726 26.1934 29.9683 25.2183C31.864 24.2431 34.0022 23.8398 36.1229 24.0575L35 35L26.1533 41.5373Z"
-			fill={colors.backgroundsecondary}
+			fill={colors.background_secondary}
 		/>
 		<circle
 			cx="35"
 			cy="35"
 			r="9.85"
 			fill={colors.primary}
-			stroke={colors.contrastsecondary}
+			stroke={colors.contrast_secondary}
 			stroke-width="0.3"
 		/>
-		<circle cx="35" cy="35" r="8.5" fill={colors.backgroundsecondary} />
+		<circle cx="35" cy="35" r="8.5" fill={colors.background_secondary} />
 		<path
 			fill-rule="evenodd"
 			clip-rule="evenodd"
