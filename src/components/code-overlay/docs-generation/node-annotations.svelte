@@ -10,6 +10,7 @@
 	import AnnotationLine from './annotation-line.svelte';
 	import type { AnnotationKind } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationKind';
 	import { is_rectangle } from '../annotation_utils';
+	import type { AiFeaturesStatusMessage } from '../../../../src-tauri/bindings/user_interaction/AiFeaturesStatusMessage';
 
 	let annotation_icon: LogicalFrame | null;
 	let annotation_codeblock: LogicalFrame | null;
@@ -23,6 +24,8 @@
 
 	let is_hovering = false;
 	let is_processing = false;
+
+	let ai_mode_active = true;
 
 	let processing_timeout = 15000; // ms
 
@@ -165,6 +168,23 @@
 	};
 	listen_to_docs_generation_events();
 
+	const listenEventUserInteractions = async () => {
+		let EventUserInteractionsChannel: ChannelList = 'EventUserInteractions';
+		await listen(EventUserInteractionsChannel, (e) => {
+			const { event, payload } = JSON.parse(e.payload as string) as EventUserInteraction;
+
+			switch (event) {
+				case 'AiFeaturesStatus':
+					const { ai_features_active } = payload as AiFeaturesStatusMessage;
+					ai_mode_active = ai_features_active;
+					break;
+				default:
+					break;
+			}
+		});
+	};
+	listenEventUserInteractions();
+
 	const annotation_click = async () => {
 		is_hovering = false;
 
@@ -188,7 +208,7 @@
 	};
 </script>
 
-{#if annotation_group_editor_window_uid === active_window_uid}
+{#if ai_mode_active && annotation_group_editor_window_uid === active_window_uid}
 	{#if annotation_icon}
 		<div
 			style="position: absolute;
