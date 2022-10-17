@@ -6,9 +6,14 @@ button.button-icon.hover {
   filter: brightness(70%);
 }
 
-button.button-muted.hover {
+button.thumb-button.hover.thumb-button-clickable > svg > rect {
+  fill: var(--theme-background_emphasis);
+}
+
+button.button-secondary.hover {
   background-color: var(--theme-background_secondary);
 }
+
 
 button.button-primary.hover {
   background-color: var(--theme-accent_primary_emphasis);

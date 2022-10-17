@@ -21,6 +21,7 @@ use crate::{
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 use anyhow::anyhow;
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc};
@@ -53,6 +54,7 @@ enum ComplexityRefactoringProcedure {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub struct FERefactoringSuggestion {
+    pub state: SuggestionState,
     pub new_text_content_string: Option<String>,
     pub old_text_content_string: Option<String>,
     pub new_complexity: isize,
@@ -60,10 +62,18 @@ pub struct FERefactoringSuggestion {
     pub main_function_name: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq)]
+#[ts(export, export_to = "bindings/features/refactoring/")]
+pub enum SuggestionState {
+    New,
+    Recalculating,
+    Ready,
+}
 #[derive(Debug, Clone)]
 pub struct RefactoringSuggestion {
-    pub new_text_content_string: Option<String>, // TODO: Use Xcode text - pasting is probably broken with utf 16 :(
+    pub new_text_content_string: Option<String>, // TODO: test if it works with utf 16 emojis etc
     pub old_text_content_string: Option<String>,
+    pub state: SuggestionState,
     pub new_complexity: isize,
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
@@ -74,6 +84,7 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
     suggestion: RefactoringSuggestion,
 ) -> FERefactoringSuggestion {
     FERefactoringSuggestion {
+        state: suggestion.state,
         new_text_content_string: suggestion.new_text_content_string,
         old_text_content_string: suggestion.old_text_content_string,
         new_complexity: suggestion.new_complexity,
@@ -89,6 +100,10 @@ pub struct ComplexityRefactoring {
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 9;
+
+lazy_static! {
+    static ref CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID: Mutex<Option<Uuid>> = Mutex::new(None);
+}
 
 impl FeatureBase for ComplexityRefactoring {
     fn compute(
@@ -161,9 +176,30 @@ impl ComplexityRefactoring {
         }
     }
 
+    fn set_suggestions_to_recalculating(
+        &mut self,
+        editor_window_uid: EditorWindowUid,
+    ) -> Option<()> {
+        self.suggestions_arc
+            .lock()
+            .get_mut(&editor_window_uid)?
+            .values_mut()
+            .filter(|s| s.state == SuggestionState::Ready)
+            .for_each(|suggestion| suggestion.state = SuggestionState::Recalculating);
+
+        Self::publish_to_frontend(self.suggestions_arc.lock().clone());
+
+        Some(())
+    }
+
     fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         debug!("Computing suggestions for complexity refactoring");
+        let execution_id = uuid::Uuid::new_v4();
+        (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
+
         let window_uid = code_document.editor_window_props().window_uid;
+        self.set_suggestions_to_recalculating(window_uid);
+
         let suggestions_arc = self.suggestions_arc.clone();
         let old_suggestions = Self::get_suggestions_for_window(suggestions_arc.clone(), window_uid);
 
@@ -193,17 +229,13 @@ impl ComplexityRefactoring {
                 suggestions_arc.clone(),
                 self.dismissed_suggestions.clone(),
                 code_document.editor_window_props().window_uid,
+                execution_id,
             )?);
         }
+
         self.suggestions_arc
             .lock()
             .insert(window_uid, suggestions.clone());
-
-        let added_suggestions_count = suggestions
-            .clone()
-            .iter()
-            .filter(|(id, _)| !old_suggestions.contains_key(&id))
-            .count();
 
         let removed_suggestion_ids: Vec<Uuid> = old_suggestions
             .clone()
@@ -213,10 +245,7 @@ impl ComplexityRefactoring {
 
         remove_annotations_for_suggestions(removed_suggestion_ids.clone());
 
-        if removed_suggestion_ids.len() > 0 || added_suggestions_count > 0 {
-            Self::publish_to_frontend(self.suggestions_arc.lock().clone());
-        }
-
+        Self::publish_to_frontend(self.suggestions_arc.lock().clone());
         Ok(())
     }
 
@@ -249,6 +278,7 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
+        execution_id: Uuid,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
         let suggestions = Self::compute_suggestions_for_function(
             &function,
@@ -297,7 +327,8 @@ impl ComplexityRefactoring {
             let binded_file_path_2 = file_path.clone();
             let binded_suggestion = suggestion.clone();
             let binded_id: Uuid = *id;
-            let binded_old_suggestions = suggestions_arc.clone();
+            let binded_suggestions_arc = suggestions_arc.clone();
+            let binded_suggestions_arc2 = suggestions_arc.clone();
 
             // For error reporting
             let serialized_slice = suggestion.serialized_slice.clone();
@@ -319,9 +350,10 @@ impl ComplexityRefactoring {
                                 binded_suggestion,
                                 edits,
                                 binded_text_content,
-                                binded_old_suggestions,
+                                binded_suggestions_arc,
                                 binded_file_path,
                                 window_uid,
+                                execution_id,
                             )
                         },
                         &binded_text_content_2,
@@ -330,6 +362,9 @@ impl ComplexityRefactoring {
                     .await
                     .map_err(|e| match e {
                         ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
+                            remove_annotations_for_suggestions(vec![binded_id]);
+                            Self::publish_to_frontend(binded_suggestions_arc2.lock().clone());
+
                             warn!(
                                 ?payload,
                                 ?serialized_slice,
@@ -380,16 +415,26 @@ impl ComplexityRefactoring {
                 .filter(|&(_, suggestion)| suggestion.serialized_slice == serialized_node_slice)
                 .collect::<Vec<_>>();
 
-        // Re-identify ID with previous value to avoid unnecessary removal and addition
-        let id = if old_suggestions_with_same_serialization.len() == 1 {
-            *old_suggestions_with_same_serialization[0].0
+        let id;
+        let state;
+        if old_suggestions_with_same_serialization.len() == 1 {
+            // Re-identify ID with previous value to avoid unnecessary removal and addition
+            id = *old_suggestions_with_same_serialization[0].0;
+            state = match (*old_suggestions_with_same_serialization[0].1).state {
+                SuggestionState::New => SuggestionState::New,
+                SuggestionState::Ready | SuggestionState::Recalculating => {
+                    SuggestionState::Recalculating
+                }
+            };
         } else {
-            uuid::Uuid::new_v4()
+            id = uuid::Uuid::new_v4();
+            state = SuggestionState::New;
         };
 
         new_suggestions.insert(
             id,
             RefactoringSuggestion {
+                state,
                 serialized_slice: serialized_node_slice,
                 main_function_name: function.get_name(),
                 new_complexity,
@@ -425,13 +470,19 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         file_path: Option<String>,
         window_uid: EditorWindowUid,
+        execution_id: Uuid,
     ) {
+        if CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock().clone() != Some(execution_id) {
+            // Aborting due to new execution superseding
+            return;
+        }
         tauri::async_runtime::spawn(async move {
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
             suggestion.old_text_content_string = Some(old_content);
             suggestion.new_text_content_string = Some(new_content);
+            suggestion.state = SuggestionState::Ready;
             Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
         });
     }

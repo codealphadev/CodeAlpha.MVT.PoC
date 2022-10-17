@@ -8,9 +8,8 @@ use serde_json::Value;
 use tauri::api::process::{Command, CommandEvent};
 use tracing::{error, warn};
 pub struct SwiftLsp;
-use rand::Rng;
-
 use crate::utils::calculate_hash;
+use rand::Rng;
 
 #[automock]
 #[async_trait]

@@ -8,6 +8,8 @@
 	import Arrow from './icons/arrow.svelte';
 	import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
 	import ComplexityBadge from './complexity-badge.svelte';
+	import IconProcessing from '../widget/icons/icon-processing.svelte';
+	import { fade } from 'svelte/transition';
 	import Button from '../common/button/button.svelte';
 	import { ButtonType } from '../common/button/button';
 
@@ -15,6 +17,8 @@
 	export let suggestion_id: string;
 	export let window_uid: number;
 	export let expanded = false;
+
+	$: recalculating = suggestion.state === 'Recalculating';
 
 	const apply_suggestion = async () => {
 		const event: EventUserInteraction = {
@@ -36,7 +40,15 @@
 	};
 </script>
 
-<Card on:click>
+<Card on:click additional_class="relative">
+	{#if expanded && recalculating}
+		<div
+			class="absolute left-0 top-0 z-10 bg-[#ffffffaa] w-full h-full flex flex-col items-center justify-center px-32 saturate(50%)"
+			transition:fade={{ duration: 200 }}
+		>
+			<IconProcessing muted={true} />
+		</div>
+	{/if}
 	<header>
 		<H3>Reduce complexity</H3>
 		<p class="text-contrast text-sm leading-[1.714]">
@@ -56,7 +68,6 @@
 				<Arrow />
 				<ComplexityBadge complexity={suggestion.new_complexity} />
 			</div>
-
 			<div class="flex justify-between w-full items-center">
 				<Button type={ButtonType.Primary} on:click={apply_suggestion}>Extract function</Button>
 				<Button type={ButtonType.Secondary} on:click={dismiss_suggestion}>Dismiss</Button>

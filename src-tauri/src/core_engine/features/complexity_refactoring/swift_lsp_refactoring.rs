@@ -1,9 +1,7 @@
+use super::complexity_refactoring::Edit;
 use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-
-use super::complexity_refactoring::Edit;
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
     #[serde(rename = "key.column")]

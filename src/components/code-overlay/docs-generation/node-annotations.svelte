@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { emit, listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
-	import type { AnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
+	import type { AnnotationEvent } from '../../../../src-tauri/bindings/annotations/AnnotationEvent';
 	import type { AnnotationGroup } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationGroup';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 	import type { EventRuleExecutionState } from '../../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
@@ -22,7 +22,7 @@
 	export let annotation_section: LogicalFrame;
 	export let code_document_rect: LogicalFrame;
 
-	let is_hovered = false;
+	let is_hovering = false;
 	let is_processing = false;
 
 	let ai_mode_active = true;
@@ -186,7 +186,7 @@
 	listenEventUserInteractions();
 
 	const annotation_click = async () => {
-		is_hovered = false;
+		is_hovering = false;
 
 		// invoke click on annotation
 		if (annotation_group_id && annotation_group_editor_window_uid) {
@@ -211,16 +211,16 @@
 {#if ai_mode_active && annotation_group_editor_window_uid === active_window_uid}
 	{#if annotation_icon}
 		<div
-			style="position: absolute; 
-			top: {round_value(annotation_icon.origin.y, 2)}px; 
+			style="position: absolute;
+			top: {round_value(annotation_icon.origin.y, 2)}px;
 			width: {round_value(annotation_icon.size.width, 2)}px; 
 			height: {round_value(annotation_icon.size.height, 2)}px;"
-			on:mouseenter={() => (is_hovered = true)}
-			on:mouseleave={() => (is_hovered = false)}
+			on:mouseenter={() => (is_hovering = true)}
+			on:mouseleave={() => (is_hovering = false)}
 			on:mousedown={annotation_click}
 			on:focus={null}
 		>
-			<AnnotationIcon {is_hovered} {is_processing} />
+			<AnnotationIcon {is_processing} {is_hovering} />
 		</div>
 	{/if}
 
@@ -232,8 +232,8 @@
 			height: {round_value(annotation_codeblock.size.height, 2)}px;"
 		>
 			<AnnotationLine
-				visible={is_hovered || is_processing}
-				highlighted={is_hovered && !is_processing}
+				visible={is_hovering || is_processing}
+				highlighted={is_hovering && !is_processing}
 			/>
 		</div>
 	{/if}
