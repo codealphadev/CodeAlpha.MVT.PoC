@@ -1,19 +1,19 @@
-use tauri::{CustomMenuItem, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
+use std::sync::Arc;
+
+use parking_lot::Mutex;
+use tauri::{CustomMenuItem, Manager, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
 use tracing::debug;
 
 use crate::{
     app_handle,
+    app_state::{CoreEngineState, CoreEngineStateCache},
     core_engine::events::{models::AiFeaturesStatusMessage, EventUserInteraction},
     platform, TAURI_PACKAGE_INFO,
 };
 
-pub fn construct_system_tray() -> SystemTray {
-    let tray_menu = construct_system_tray_menu(true);
+use crate::app_state::AppHandleExtension;
 
-    SystemTray::new().with_menu(tray_menu)
-}
-
-fn construct_system_tray_menu(ai_features_active: bool) -> SystemTrayMenu {
+pub fn construct_system_tray_menu() -> SystemTrayMenu {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let check_ax_api = CustomMenuItem::new("check_ax_api".to_string(), "Settings...");
 
@@ -50,7 +50,7 @@ fn construct_system_tray_menu(ai_features_active: bool) -> SystemTrayMenu {
             .add_native_item(SystemTrayMenuItem::Separator)
             .add_item(quit)
     } else {
-        if ai_features_active {
+        if check_ai_features() {
             SystemTrayMenu::new()
                 .add_item(pause_ai_features)
                 .add_item(version_label)
@@ -63,6 +63,14 @@ fn construct_system_tray_menu(ai_features_active: bool) -> SystemTrayMenu {
                 .add_native_item(SystemTrayMenuItem::Separator)
                 .add_item(quit)
         }
+    }
+}
+
+fn check_ai_features() -> bool {
+    if let Some(cache) = app_handle().try_state::<CoreEngineStateCache>() {
+        cache.0.lock().ai_features_active
+    } else {
+        true
     }
 }
 
@@ -81,7 +89,8 @@ pub fn evaluate_system_tray_event(event: SystemTrayEvent) {
 
 fn on_quit() {
     debug!("System tray: quit");
-    std::process::exit(0);
+    _ = app_handle().save_core_engine_state();
+    app_handle().exit(0);
 }
 
 fn on_check_permissions() {
@@ -92,13 +101,15 @@ fn on_check_permissions() {
 fn on_pause_ai_features() {
     debug!("System tray: PAUSE AI Features");
 
+    update_app_state_ai_features_active(false);
+
     if app_handle()
         .tray_handle()
-        .set_menu(construct_system_tray_menu(false))
+        .set_menu(construct_system_tray_menu())
         .is_ok()
     {
         EventUserInteraction::AiFeaturesStatus(AiFeaturesStatusMessage {
-            ai_features_active: false,
+            ai_features_active: check_ai_features(),
         })
         .publish_to_tauri();
     }
@@ -107,14 +118,32 @@ fn on_pause_ai_features() {
 fn on_resume_ai_features() {
     debug!("System tray: RESUME AI Features");
 
+    update_app_state_ai_features_active(true);
+
     if app_handle()
         .tray_handle()
-        .set_menu(construct_system_tray_menu(true))
+        .set_menu(construct_system_tray_menu())
         .is_ok()
     {
         EventUserInteraction::AiFeaturesStatus(AiFeaturesStatusMessage {
-            ai_features_active: true,
+            ai_features_active: check_ai_features(),
         })
         .publish_to_tauri();
     }
+}
+
+fn update_app_state_ai_features_active(ai_features_active: bool) {
+    if let Some(cache) = app_handle().try_state::<CoreEngineStateCache>() {
+        let current_core_engine_state = cache.0.lock().clone();
+        *cache.0.lock() = CoreEngineState {
+            ai_features_active,
+            ..current_core_engine_state
+        };
+    } else {
+        let cache = Arc::new(Mutex::new(CoreEngineState {
+            ai_features_active,
+            ..Default::default()
+        }));
+        app_handle().manage(CoreEngineStateCache(cache));
+    };
 }

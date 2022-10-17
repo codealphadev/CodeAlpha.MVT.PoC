@@ -3,13 +3,16 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
+use app_state::AppHandleExtension;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use std::sync::Arc;
+use tauri::{
+    ActivationPolicy, AppHandle, Builder, Menu, PackageInfo, RunEvent, SystemTray, UpdaterEvent,
+};
 use tracing::{debug, error, info};
 
-use tauri::Menu;
-
+mod app_state;
 mod core_engine;
 mod platform;
 mod utils;
@@ -17,33 +20,33 @@ mod window_controls;
 
 use core_engine::CoreEngine;
 use platform::macos::{
-    menu::mac_os_task_bar_menu,
-    permissions_check::ax_permissions_check,
-    setup_observers,
-    system_tray::{construct_system_tray, evaluate_system_tray_event},
+    menu::mac_os_task_bar_menu, permissions_check::ax_permissions_check, setup_observers,
+    system_tray::evaluate_system_tray_event,
 };
 use utils::{feedback::cmd_send_feedback, tracing::TracingSubscriber};
 use window_controls::{cmd_rebind_main_widget, cmd_resize_window, WindowManager};
 
-use crate::core_engine::cmd_paste_docs;
 #[cfg(not(debug_assertions))]
 use crate::utils::updater::listen_for_updates;
+use crate::{
+    core_engine::cmd_paste_docs, platform::macos::system_tray::construct_system_tray_menu, app_state::cmd_get_core_engine_state,
+};
 
 lazy_static! {
-    static ref APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
+    static ref APP_HANDLE: Mutex<Option<AppHandle>> = Mutex::new(None);
 }
 
 lazy_static! {
-    static ref TAURI_PACKAGE_INFO: Mutex<Option<tauri::PackageInfo>> = Mutex::new(None);
+    static ref TAURI_PACKAGE_INFO: Mutex<Option<PackageInfo>> = Mutex::new(None);
 }
 
 pub static CORE_ENGINE_ACTIVE_AT_STARTUP: bool = true;
 
-fn set_static_app_handle(app_handle: &tauri::AppHandle) {
+fn set_static_app_handle(app_handle: &AppHandle) {
     APP_HANDLE.lock().replace(app_handle.clone());
 }
 
-pub fn app_handle() -> tauri::AppHandle {
+pub fn app_handle() -> AppHandle {
     let app_handle = APP_HANDLE.lock().clone();
 
     app_handle.as_ref().unwrap().clone()
@@ -61,12 +64,13 @@ fn main() {
             .replace(tauri_context.package_info().clone());
     }
 
-    let mut app: tauri::App = tauri::Builder::default()
+    let mut app: tauri::App = Builder::default()
         .invoke_handler(tauri::generate_handler![
             cmd_resize_window,
             cmd_send_feedback,
             cmd_paste_docs,
             cmd_rebind_main_widget,
+            cmd_get_core_engine_state,
         ])
         .setup(|app| {
             debug!(app_version = ?app.package_info().version);
@@ -76,6 +80,15 @@ fn main() {
 
             // Set the app handle for the static APP_HANDLE variable
             set_static_app_handle(&app.handle());
+
+            // Load the app state
+            _ = app.handle().load_core_engine_state();
+
+            // Build system tray using the app handle; can't be done as part of the `.system_tray()` builder step
+            // because we need the app handle to load the app state
+            _ = app_handle()
+                .tray_handle()
+                .set_menu(construct_system_tray_menu());
 
             // Setup the observers for AX interactions and mouse events
             setup_observers();
@@ -94,45 +107,46 @@ fn main() {
 
             Ok(())
         })
-        .system_tray(construct_system_tray())
+        .system_tray(SystemTray::new())
         .on_system_tray_event(|_, event| evaluate_system_tray_event(event))
         .menu(Menu::with_items([mac_os_task_bar_menu()]))
         .build(tauri_context)
         .expect("error while running tauri application");
 
-    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-    app.run(|_app_handle, event| match event {
-        tauri::RunEvent::ExitRequested { api, .. } => {
-            api.prevent_exit();
-        }
-        tauri::RunEvent::Updater(updater_event) => match updater_event {
-            tauri::UpdaterEvent::DownloadProgress {
+    app.set_activation_policy(ActivationPolicy::Accessory);
+    app.run(|app_handle, event| match event {
+        RunEvent::Updater(updater_event) => match updater_event {
+            UpdaterEvent::DownloadProgress {
                 chunk_length,
                 content_length,
             } => {
                 println!("downloaded {} of {:?}", chunk_length, content_length);
             }
-            tauri::UpdaterEvent::UpdateAvailable {
+            UpdaterEvent::UpdateAvailable {
                 body,
                 date,
                 version,
             } => {
                 info!("update available {} {:?} {}", body, date, version);
             }
-            tauri::UpdaterEvent::Pending => {
+            UpdaterEvent::Pending => {
                 info!("update is pending!");
             }
-            tauri::UpdaterEvent::Downloaded => {
+            UpdaterEvent::Downloaded => {
                 info!("update has been downloaded!");
             }
-            tauri::UpdaterEvent::Updated => {
+            UpdaterEvent::Updated => {
                 info!("App has been updated");
             }
-            tauri::UpdaterEvent::AlreadyUpToDate => {}
-            tauri::UpdaterEvent::Error(error) => {
+            UpdaterEvent::AlreadyUpToDate => {}
+            UpdaterEvent::Error(error) => {
                 error!(?error, "Failed to update");
             }
         },
+        RunEvent::Exit => {
+            _ = app_handle.save_core_engine_state();
+            println!("Exiting");
+        }
         _ => {}
     });
 }

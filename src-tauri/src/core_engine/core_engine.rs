@@ -1,9 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
 use parking_lot::Mutex;
+use tauri::Manager;
 use tracing::error;
 
-use crate::{app_handle, platform::macos::XcodeError, CORE_ENGINE_ACTIVE_AT_STARTUP};
+use crate::{
+    app_handle, app_state::CoreEngineStateCache, platform::macos::XcodeError,
+    CORE_ENGINE_ACTIVE_AT_STARTUP,
+};
 
 use super::{
     annotations_manager::{AnnotationsManager, AnnotationsManagerTrait},
@@ -52,6 +56,9 @@ pub struct CoreEngine {
 
     ai_features_active: bool,
 
+    /// Identifier indicating if the app is currently active and supposed to give suggestions
+    _engine_active: bool,
+
     /// Annotations manager handles where to draw annotations on the code editor via the CodeOverlay window
     _annotations_manager: Arc<Mutex<AnnotationsManager>>,
 }
@@ -61,16 +68,24 @@ impl CoreEngine {
         let annotations_manager = Arc::new(Mutex::new(AnnotationsManager::new()));
         AnnotationsManager::start_event_listeners(&annotations_manager);
 
+        let ai_features_active =
+            if let Some(cache) = app_handle().try_state::<CoreEngineStateCache>() {
+                cache.0.lock().ai_features_active
+            } else {
+                true
+            };
+
         Self {
             app_handle: app_handle(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
-            ai_features_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            ai_features_active,
             features: vec![
                 Feature::BracketHighlighting(BracketHighlight::new()),
                 Feature::Formatter(SwiftFormatter::new()),
                 Feature::DocsGeneration(DocsGenerator::new()),
                 Feature::ComplexityRefactoring(ComplexityRefactoring::new()),
             ],
+            _engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
             _annotations_manager: annotations_manager,
         }
     }
