@@ -13,9 +13,15 @@ use crate::{
 
 use crate::app_state::AppHandleExtension;
 
+const TRAY_MENU_ACTIVATE_AI_FEATURES: &str = "activate_ai_features";
+const TRAY_MENU_DEACTIVATE_AI_FEATURES: &str = "deactivate_ai_features";
+const TRAY_MENU_EXIT: &str = "quit";
+const TRAY_MENU_CHECK_AX_API: &str = "check_ax_api";
+const TRAY_MENU_VERSION: &str = "version";
+
 pub fn construct_system_tray_menu() -> SystemTrayMenu {
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let check_ax_api = CustomMenuItem::new("check_ax_api".to_string(), "Settings...");
+    let quit = CustomMenuItem::new(TRAY_MENU_EXIT.to_string(), "Quit");
+    let check_ax_api = CustomMenuItem::new(TRAY_MENU_CHECK_AX_API.to_string(), "Settings...");
 
     let version;
     {
@@ -24,7 +30,7 @@ pub fn construct_system_tray_menu() -> SystemTrayMenu {
     }
 
     let version_label = CustomMenuItem::new(
-        "version".to_string(),
+        TRAY_MENU_VERSION.to_string(),
         format!(
             "Version: {}.{}.{}",
             version.major, version.minor, version.patch
@@ -33,14 +39,14 @@ pub fn construct_system_tray_menu() -> SystemTrayMenu {
     )
     .disabled();
 
-    let pause_ai_features = CustomMenuItem::new(
-        "pause_ai_features".to_string(),
-        format!("⏸️ Pause AI Features").as_str(),
+    let deactivate_ai_features = CustomMenuItem::new(
+        TRAY_MENU_DEACTIVATE_AI_FEATURES.to_string(),
+        format!("⏸️ Deactivate AI Features").as_str(),
     );
 
-    let resume_ai_features = CustomMenuItem::new(
-        "resume_ai_features".to_string(),
-        format!("▶️ Resume AI Features",).as_str(),
+    let activate_ai_features = CustomMenuItem::new(
+        TRAY_MENU_ACTIVATE_AI_FEATURES.to_string(),
+        format!("▶️ Activate AI Features",).as_str(),
     );
 
     if !platform::macos::is_application_trusted() {
@@ -52,13 +58,13 @@ pub fn construct_system_tray_menu() -> SystemTrayMenu {
     } else {
         if check_ai_features() {
             SystemTrayMenu::new()
-                .add_item(pause_ai_features)
+                .add_item(deactivate_ai_features)
                 .add_item(version_label)
                 .add_native_item(SystemTrayMenuItem::Separator)
                 .add_item(quit)
         } else {
             SystemTrayMenu::new()
-                .add_item(resume_ai_features)
+                .add_item(activate_ai_features)
                 .add_item(version_label)
                 .add_native_item(SystemTrayMenuItem::Separator)
                 .add_item(quit)
@@ -77,10 +83,10 @@ fn check_ai_features() -> bool {
 pub fn evaluate_system_tray_event(event: SystemTrayEvent) {
     match event {
         SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-            "quit" => on_quit(),
-            "check_ax_api" => on_check_permissions(),
-            "pause_ai_features" => on_pause_ai_features(),
-            "resume_ai_features" => on_resume_ai_features(),
+            TRAY_MENU_EXIT => on_quit(),
+            TRAY_MENU_CHECK_AX_API => on_check_permissions(),
+            TRAY_MENU_DEACTIVATE_AI_FEATURES => on_deactivate_ai_features(),
+            TRAY_MENU_ACTIVATE_AI_FEATURES => on_activate_ai_features(),
             _ => {}
         },
         _ => {}
@@ -89,7 +95,6 @@ pub fn evaluate_system_tray_event(event: SystemTrayEvent) {
 
 fn on_quit() {
     debug!("System tray: quit");
-    _ = app_handle().save_core_engine_state();
     app_handle().exit(0);
 }
 
@@ -98,8 +103,8 @@ fn on_check_permissions() {
     platform::macos::is_application_trusted_with_prompt();
 }
 
-fn on_pause_ai_features() {
-    debug!("System tray: PAUSE AI Features");
+fn on_deactivate_ai_features() {
+    debug!("System tray: DEACTIVATE AI Features");
 
     update_app_state_ai_features_active(false);
 
@@ -113,10 +118,12 @@ fn on_pause_ai_features() {
         })
         .publish_to_tauri();
     }
+
+    _ = app_handle().save_core_engine_state();
 }
 
-fn on_resume_ai_features() {
-    debug!("System tray: RESUME AI Features");
+fn on_activate_ai_features() {
+    debug!("System tray: ACTIVATE AI Features");
 
     update_app_state_ai_features_active(true);
 
@@ -130,6 +137,8 @@ fn on_resume_ai_features() {
         })
         .publish_to_tauri();
     }
+
+    _ = app_handle().save_core_engine_state();
 }
 
 fn update_app_state_ai_features_active(ai_features_active: bool) {

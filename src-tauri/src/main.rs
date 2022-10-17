@@ -29,7 +29,8 @@ use window_controls::{cmd_rebind_main_widget, cmd_resize_window, WindowManager};
 #[cfg(not(debug_assertions))]
 use crate::utils::updater::listen_for_updates;
 use crate::{
-    core_engine::cmd_paste_docs, platform::macos::system_tray::construct_system_tray_menu, app_state::cmd_get_core_engine_state,
+    app_state::cmd_get_core_engine_state, core_engine::cmd_paste_docs,
+    platform::macos::system_tray::construct_system_tray_menu,
 };
 
 lazy_static! {
@@ -143,10 +144,6 @@ fn main() {
                 error!(?error, "Failed to update");
             }
         },
-        RunEvent::Exit => {
-            _ = app_handle.save_core_engine_state();
-            println!("Exiting");
-        }
         _ => {}
     });
 }
