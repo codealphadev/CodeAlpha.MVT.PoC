@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{
-    core_engine::{EditorWindowUid, TextRange},
-    utils::geometry::LogicalPosition,
-};
+use crate::core_engine::{EditorWindowUid, TextRange};
 
 use super::{
     annotations_manager::{Annotation, AnnotationError, AnnotationResult},
@@ -101,7 +98,6 @@ pub trait AnnotationJobTrait {
     fn compute_bounds(
         &mut self,
         visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError>;
 
@@ -110,7 +106,6 @@ pub trait AnnotationJobTrait {
     fn compute_bounds_if_missing(
         &mut self,
         visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError>;
 
@@ -136,28 +131,22 @@ impl AnnotationJobTrait for AnnotationJob {
     fn compute_bounds(
         &mut self,
         visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
         match self {
-            Self::SingleChar(job) => {
-                job.compute_bounds(visible_text_range, code_doc_origin, editor_window_uid)
-            }
+            Self::SingleChar(job) => job.compute_bounds(visible_text_range, editor_window_uid),
         }
     }
 
     fn compute_bounds_if_missing(
         &mut self,
         visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
         match self {
-            Self::SingleChar(job) => job.compute_bounds_if_missing(
-                visible_text_range,
-                code_doc_origin,
-                editor_window_uid,
-            ),
+            Self::SingleChar(job) => {
+                job.compute_bounds_if_missing(visible_text_range, editor_window_uid)
+            }
         }
     }
 

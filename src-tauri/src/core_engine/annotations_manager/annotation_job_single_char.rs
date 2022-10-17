@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     core_engine::{EditorWindowUid, TextRange},
-    platform::macos::{get_bounds_for_TextRange, GetVia},
-    utils::geometry::LogicalPosition,
+    platform::macos::{
+        get_bounds_for_TextRange, get_textarea_uielement, internal::get_uielement_frame, GetVia,
+    },
 };
 
 use super::{
@@ -55,10 +56,9 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
     fn compute_bounds(
         &mut self,
         visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
-        let viewport_positioning = AnnotationsManager::get_position_relative_to_viewport(
+        let viewport_positioning = AnnotationsManager::get_visibility_relative_to_viewport(
             self.char_index,
             visible_text_range,
         );
@@ -75,6 +75,8 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
             return Ok(result);
         }
 
+        let textarea_uielement = get_textarea_uielement(&GetVia::Current).unwrap(); // TODO: Extract?, error handling
+
         let ax_bounds_global = get_bounds_for_TextRange(
             &TextRange {
                 index: self.char_index,
@@ -84,7 +86,10 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         )
         .map_err(|e| AnnotationError::GenericError(e.into()))?;
 
-        result.bounds = Some(vec![ax_bounds_global.to_local(code_doc_origin)]);
+        // Get current code_doc_frame to convert with sent frame
+        let updated_code_doc_origin = get_uielement_frame(&textarea_uielement).unwrap().origin; // TODO: Error handling
+
+        result.bounds = Some(vec![ax_bounds_global.to_local(&updated_code_doc_origin)]);
 
         self.result = Some(result.clone());
         Ok(result)
@@ -93,10 +98,9 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
     fn compute_bounds_if_missing(
         &mut self,
         visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
         editor_window_uid: EditorWindowUid,
     ) -> Result<AnnotationResult, AnnotationError> {
-        let viewport_positioning = AnnotationsManager::get_position_relative_to_viewport(
+        let viewport_positioning = AnnotationsManager::get_visibility_relative_to_viewport(
             self.char_index,
             visible_text_range,
         );
@@ -116,7 +120,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
             }
         }
 
-        self.compute_bounds(visible_text_range, code_doc_origin, editor_window_uid)
+        self.compute_bounds(visible_text_range, editor_window_uid)
     }
 
     fn get_annotation(&self) -> Option<Annotation> {

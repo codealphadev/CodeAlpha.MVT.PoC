@@ -10,8 +10,8 @@ use crate::{
         events::AnnotationManagerEvent, features::FeatureKind, EditorWindowUid, TextRange,
     },
     platform::macos::{
-        get_bounds_for_TextRange, get_code_document_frame_properties,
-        get_minimal_viewport_properties, get_visible_text_range, scroll_by_one_page, GetVia,
+        get_bounds_for_TextRange, get_minimal_viewport_properties, get_visible_text_range,
+        scroll_by_one_page, GetVia,
     },
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
@@ -22,7 +22,7 @@ use super::{
     VisibleTextRangePositioning,
 };
 
-static APROX_SCROLL_DURATION_PAGE_UP_DOWN_MS: u64 = 125;
+static APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS: u64 = 125;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AnnotationError {
@@ -142,14 +142,11 @@ impl AnnotationsManagerTrait for AnnotationsManager {
             group_id,
             AnnotationJobGroup::new(group_id, feature, jobs, editor_window_uid),
         );
-        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
-            get_visible_text_range(GetVia::Hash(editor_window_uid)),
-            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
-        ) {
+        if let Ok(visible_text_range) = get_visible_text_range(GetVia::Hash(editor_window_uid)) {
             self.groups
                 .get_mut(&group_id)
                 .unwrap() // Unwrap safe here because we just inserted the group
-                .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
+                .compute_annotations(&visible_text_range);
         }
     }
 
@@ -169,42 +166,29 @@ impl AnnotationsManagerTrait for AnnotationsManager {
             self.groups.get_mut(&group_id).unwrap().replace(jobs);
         }
 
-        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
-            get_visible_text_range(GetVia::Hash(editor_window_uid)),
-            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
-        ) {
+        if let Ok(visible_text_range) = get_visible_text_range(GetVia::Hash(editor_window_uid)) {
             self.groups
                 .get_mut(&group_id)
                 .unwrap() // Unwrap safe here because we just inserted the group
-                .compute_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
+                .compute_annotations(&visible_text_range);
         }
     }
 
     fn recompute_annotations(&mut self, editor_window_uid: EditorWindowUid) {
-        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
-            get_visible_text_range(GetVia::Hash(editor_window_uid)),
-            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
-        ) {
+        if let Ok(visible_text_range) = get_visible_text_range(GetVia::Hash(editor_window_uid)) {
             for group in self.groups.values_mut() {
                 if group.editor_window_uid() == editor_window_uid {
-                    group.compute_annotations(
-                        &visible_text_range,
-                        &code_doc_props.dimensions.origin,
-                    );
+                    group.compute_annotations(&visible_text_range);
                 }
             }
         }
     }
 
     fn update_annotations(&mut self, editor_window_uid: EditorWindowUid) {
-        if let (Ok(visible_text_range), Ok(code_doc_props)) = (
-            get_visible_text_range(GetVia::Hash(editor_window_uid)),
-            get_code_document_frame_properties(&GetVia::Hash(editor_window_uid)),
-        ) {
+        if let Ok(visible_text_range) = get_visible_text_range(GetVia::Hash(editor_window_uid)) {
             for group in self.groups.values_mut() {
                 if group.editor_window_uid() == editor_window_uid {
-                    group
-                        .update_annotations(&visible_text_range, &code_doc_props.dimensions.origin);
+                    group.update_annotations(&visible_text_range);
                 }
             }
         }
@@ -251,7 +235,7 @@ impl AnnotationsManagerTrait for AnnotationsManager {
                     return;
                 };
 
-                let viewport_positioning = Self::get_position_relative_to_viewport(
+                let viewport_positioning = Self::get_visibility_relative_to_viewport(
                     annotation.char_index,
                     &visible_text_range,
                 );
@@ -297,7 +281,7 @@ impl AnnotationsManager {
         xcode_listener(annotations_manager);
     }
 
-    pub fn get_position_relative_to_viewport(
+    pub fn get_visibility_relative_to_viewport(
         char_index: usize,
         visible_text_range: &TextRange,
     ) -> VisibleTextRangePositioning {
@@ -372,7 +356,7 @@ impl AnnotationsManager {
         }
 
         tokio::time::sleep(std::time::Duration::from_millis(
-            APROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
+            APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
         ))
         .await;
 
@@ -411,7 +395,7 @@ impl AnnotationsManager {
         }
 
         tokio::time::sleep(std::time::Duration::from_millis(
-            APROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
+            APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
         ))
         .await;
 
