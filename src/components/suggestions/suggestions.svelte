@@ -11,8 +11,8 @@
 	import type { EventUserInteraction } from '../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 	import { filter_and_sort_suggestions } from './suggestions';
 	import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
+	import type { EventViewport } from '../../../src-tauri/bindings/macOS_specific/EventViewport';
 
-	export let active_window_uid: number;
 	export let CONTAINER_DOM_ID: string;
 
 	let selected_suggestion_id: string | null = null;
@@ -32,10 +32,16 @@
 	};
 
 	afterUpdate(() => {
+		const old_window_width = window_width;
+		const old_window_height = window_height;
 		updateDimensions();
 
-		if (window_width && window_height) {
+		if (window_width && window_height && old_window_height && old_window_width) {
+			if (window_height === old_window_height && window_width === old_window_width) {
+				return;
+			}
 			let appWindow: AppWindow = 'Main';
+			console.log('Invoking', window_height + tail_height_px, new Date());
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
 				sizeY: window_height + tail_height_px,
@@ -44,6 +50,23 @@
 			});
 		}
 	});
+
+	let active_window_uid: number | null = null;
+
+	const listenToViewportEvents = async () => {
+		let ViewportChannel: ChannelList = 'EventViewport';
+		await listen(ViewportChannel, (e) => {
+			const { event, payload } = JSON.parse(e.payload as string) as EventViewport;
+			switch (event) {
+				case 'XcodeViewportUpdate':
+					active_window_uid = payload.viewport_properties.window_uid;
+					break;
+				default:
+					break;
+			}
+		});
+	};
+	listenToViewportEvents();
 
 	const updateDimensions = () => {
 		let element = document.getElementById(CONTAINER_DOM_ID);
@@ -70,6 +93,7 @@
 					suggestions = payload.suggestions;
 					if (
 						selected_suggestion_id &&
+						active_window_uid &&
 						!Object.keys(suggestions[active_window_uid] ?? []).includes(selected_suggestion_id)
 					) {
 						selected_suggestion_id = null;
@@ -83,7 +107,7 @@
 	listenToSuggestionEvents();
 </script>
 
-{#if filtered_suggestions?.length > 0}
+{#if active_window_uid !== null && filtered_suggestions?.length > 0}
 	<div
 		class="flex bg-background flex-col gap-5 shrink-0 rounded-b-xl max-h-[700px] overflow-y-auto overscroll-none mt-9 px-4 pt-3 pb-4"
 	>
@@ -91,6 +115,9 @@
 			{#key id}
 				<Suggestion
 					on:click={() => {
+						if (active_window_uid === null) {
+							return;
+						}
 						if (selected_suggestion_id === id) {
 							select_suggestion(null, active_window_uid);
 						} else {
