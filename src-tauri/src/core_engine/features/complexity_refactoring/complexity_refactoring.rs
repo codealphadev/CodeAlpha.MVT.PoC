@@ -37,6 +37,12 @@ type SuggestionsMap = HashMap<SuggestionId, RefactoringSuggestion>;
 type SuggestionsPerWindow = HashMap<EditorWindowUid, SuggestionsMap>;
 type SuggestionsArcMutex = Arc<Mutex<SuggestionsPerWindow>>;
 
+pub struct ComplexityRefactoring {
+    is_activated: bool,
+    suggestions_arc: SuggestionsArcMutex,
+    dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Edit {
     pub text: XcodeText,
@@ -59,6 +65,7 @@ pub struct FERefactoringSuggestion {
     pub old_text_content_string: Option<String>,
     pub new_complexity: isize,
     pub prev_complexity: isize,
+    pub start_index: usize,
     pub main_function_name: Option<String>,
 }
 
@@ -78,6 +85,7 @@ pub struct RefactoringSuggestion {
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
     pub serialized_slice: SerializedNodeSlice,
+    pub start_index: Option<usize>,
 }
 
 pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
@@ -90,13 +98,10 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
         new_complexity: suggestion.new_complexity,
         prev_complexity: suggestion.prev_complexity,
         main_function_name: suggestion.main_function_name,
+        start_index: suggestion
+            .start_index
+            .expect("Suggestion start index should be set"),
     }
-}
-
-pub struct ComplexityRefactoring {
-    is_activated: bool,
-    suggestions_arc: SuggestionsArcMutex,
-    dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 9;
@@ -276,7 +281,7 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
         execution_id: Uuid,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
-        let suggestions = Self::compute_suggestions_for_function(
+        let mut suggestions = Self::compute_suggestions_for_function(
             &function,
             suggestions_arc.clone(),
             &text_content,
@@ -285,7 +290,7 @@ impl ComplexityRefactoring {
             window_uid,
         )?;
 
-        for (id, suggestion) in suggestions.iter() {
+        for (id, mut suggestion) in suggestions.iter_mut() {
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
 
             let suggestion_start_pos = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
@@ -309,6 +314,8 @@ impl ComplexityRefactoring {
             .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
                 "Failed to derive context range"
             )))?;
+
+            suggestion.start_index = Some(suggestion_range.index);
 
             set_annotation_group_for_extraction_and_context(
                 *id,
@@ -437,6 +444,7 @@ impl ComplexityRefactoring {
                 prev_complexity,
                 old_text_content_string: None,
                 new_text_content_string: None,
+                start_index: None,
             },
         );
 

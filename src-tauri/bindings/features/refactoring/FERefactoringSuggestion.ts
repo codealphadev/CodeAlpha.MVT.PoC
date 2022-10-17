@@ -7,5 +7,6 @@ export interface FERefactoringSuggestion {
   old_text_content_string: string | null;
   new_complexity: number;
   prev_complexity: number;
+  start_index: number;
   main_function_name: string | null;
 }
