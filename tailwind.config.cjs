@@ -36,7 +36,7 @@ const config = {
 		extend: { colors }
 	},
 
-	plugins: []
+	plugins: [require('@tailwindcss/line-clamp')]
 };
 
 module.exports = config;

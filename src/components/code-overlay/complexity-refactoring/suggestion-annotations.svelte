@@ -4,13 +4,20 @@
 	import type { AnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
 	import type { AnnotationGroup } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationGroup';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
-	import { is_point } from '../annotation_utils';
+	import { is_point, round_value } from '../annotation_utils';
 	import type { Annotation } from '../../../../src-tauri/bindings/features/code_annotations/Annotation';
 	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 	import type { AnnotationKind } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationKind';
+	import { fade } from 'svelte/transition';
+	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
+	import type { HideAppWindowMessage } from '../../../../src-tauri/bindings/window_controls/HideAppWindowMessage';
+	import type { ShowAppWindowMessage } from '../../../../src-tauri/bindings/window_controls/ShowAppWindowMessage';
+
+	const TRANSITION_DURATION = 100;
 
 	let annotation_groups: AnnotationGroup[] = [];
 	let selected_suggestion_id: string | null = null;
+	let main_window_active = false;
 
 	export let active_window_uid: number;
 	export let annotation_section_rect: LogicalFrame;
@@ -58,7 +65,6 @@
 
 			switch (event_type) {
 				case 'UpdateSelectedSuggestion':
-					console.log(payload, event_type);
 					const { id } = payload;
 					selected_suggestion_id = id;
 			}
@@ -77,7 +83,6 @@
 					let group = payload;
 
 					if (group.feature === 'ComplexityRefactoring') {
-						console.log(payload, event_type);
 						const group_index = annotation_groups.findIndex((grp) => grp.id === group.id);
 
 						if (group_index === -1) {
@@ -147,15 +152,37 @@
 
 	listen_to_annotation_events();
 
-	const round_value = (value: number, precision: number): number => {
-		const factor = Math.pow(10, precision || 0);
-		return Math.round(value * factor) / factor;
+	const listenToMainWindowEvents = async () => {
+		let WindowControlsChannel: ChannelList = 'EventWindowControls';
+		await listen(WindowControlsChannel, (e) => {
+			const { event, payload } = JSON.parse(e.payload as string) as EventWindowControls;
+			switch (event) {
+				case 'AppWindowHide':
+					const hide_msg = payload as HideAppWindowMessage;
+					if (hide_msg.app_windows.includes('Main')) {
+						main_window_active = false;
+					}
+					break;
+				case 'AppWindowShow':
+					const show_msg = payload as ShowAppWindowMessage;
+					if (show_msg.app_windows.includes('Main')) {
+						main_window_active = true;
+					}
+					break;
+				default:
+					break;
+			}
+		});
 	};
+	listenToMainWindowEvents();
 </script>
 
-{#if current_annotation_group?.editor_window_uid === active_window_uid}
+{#if main_window_active && current_annotation_group?.editor_window_uid === active_window_uid}
 	{#if annotation_extraction}
 		<div
+			transition:fade={{
+				duration: TRANSITION_DURATION
+			}}
 			style="position: absolute; 
 			left: {round_value(annotation_extraction.origin.x, 2)}px; 
 			top: {round_value(annotation_extraction.origin.y, 2)}px; 
@@ -167,6 +194,9 @@
 
 	{#if annotation_context_before}
 		<div
+			transition:fade={{
+				duration: TRANSITION_DURATION
+			}}
 			style="position: absolute; 
 			left: {round_value(annotation_context_before.origin.x, 2)}px; 
 			top: {round_value(annotation_context_before.origin.y, 2)}px; 
@@ -178,6 +208,9 @@
 
 	{#if annotation_context_after}
 		<div
+			transition:fade={{
+				duration: TRANSITION_DURATION
+			}}
 			style="position: absolute; 
 			left: {round_value(annotation_context_after.origin.x, 2)}px; 
 			top: {round_value(annotation_context_after.origin.y, 2)}px; 

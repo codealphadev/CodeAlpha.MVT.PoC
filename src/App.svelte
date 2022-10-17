@@ -4,21 +4,22 @@
 	import Widget from './pages/widget.svelte';
 	import ThemeContext from './theme-context.svelte';
 	import Main from './pages/main.svelte';
-	import Explainer from './pages/explainer.svelte';
+	import Explain from './pages/explain.svelte';
+	import { WindowPath } from './utils';
 </script>
 
 <ThemeContext>
 	<Router>
-		<Route path="/widget">
+		<Route path={WindowPath.Widget}>
 			<Widget />
 		</Route>
-		<Route path="/codeoverlay">
+		<Route path={WindowPath.CodeOverlay}>
 			<CodeOverlay />
 		</Route>
-		<Route path="/explain">
-			<Explainer />
+		<Route path={WindowPath.Explain}>
+			<Explain />
 		</Route>
-		<Route path="/main">
+		<Route path={WindowPath.Main}>
 			<Main />
 		</Route>
 	</Router>

@@ -24,3 +24,8 @@ export function try_get_kind_as_rectangle(
 	}
 	return result.shapes[0].Rectangle;
 }
+
+export const round_value = (value: number, precision: number): number => {
+	const factor = Math.pow(10, precision || 0);
+	return Math.round(value * factor) / factor;
+};
