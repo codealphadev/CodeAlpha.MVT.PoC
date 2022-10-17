@@ -48,8 +48,8 @@ impl<S: Subscriber> Layer<S> for GcpLayer {
         _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) -> bool {
         if let Some(module) = metadata.module_path() {
-            if module.contains("CodeAlpha") {
-                // Filter all non-CodeAlpha events
+            if module.contains("Pretzl") {
+                // Filter all non-Pretzl events
                 return true;
             }
         }

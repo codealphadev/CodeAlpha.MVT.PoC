@@ -7,7 +7,7 @@
     "start-frontend": "vite",
     "build": "tauri build --target universal-apple-darwin",
     "start": "tauri dev",
-    "start-with-local-cloud-backend": "CODEALPHA_CLOUD_BACKEND_URL='http://localhost:8080' tauri dev",
+    "start-with-local-cloud-backend": "PRETZL_CLOUD_BACKEND_URL='http://localhost:8080' tauri dev",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
     "prepare": "husky install"
