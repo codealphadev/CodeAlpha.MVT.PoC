@@ -12,11 +12,11 @@ use crate::{
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
             UserCommand,
         },
-        format_code,
+        format_code, get_index_of_first_difference,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
         CodeDocument, EditorWindowUid, TextPosition, TextRange, XcodeText,
     },
-    platform::macos::replace_text_content,
+    platform::macos::{replace_text_content, set_selected_text_range, GetVia},
     utils::calculate_hash,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
@@ -531,6 +531,9 @@ impl ComplexityRefactoring {
             ))?
             .clone();
 
+        let text_range_to_scroll_to_after_performing =
+            Self::get_text_position_to_scroll_to_after_performing(&suggestion_to_apply);
+
         let new_content = suggestion_to_apply.clone().new_text_content_string.ok_or(
             ComplexityRefactoringError::SuggestionIncomplete(suggestion_to_apply),
         )?;
@@ -567,10 +570,37 @@ impl ComplexityRefactoring {
                     remove_annotations_for_suggestions(vec![suggestion_id]);
                     Self::publish_to_frontend(suggestions_per_window.clone());
                 }
+
+                match text_range_to_scroll_to_after_performing {
+                    Ok(range) => {
+                        _ = set_selected_text_range(&range, &GetVia::Current);
+                    }
+                    Err(e) => {
+                        error!(
+                            ?e,
+                            "Error getting final cursor position after performing suggestion"
+                        );
+                    }
+                }
             }
         });
 
         Ok(())
+    }
+
+    fn get_text_position_to_scroll_to_after_performing(
+        suggestion: &RefactoringSuggestion,
+    ) -> Result<TextRange, ComplexityRefactoringError> {
+        let prev_text = suggestion.old_text_content_string.as_ref().ok_or(
+            ComplexityRefactoringError::SuggestionIncomplete(suggestion.clone()),
+        )?;
+        let new_text: &String = suggestion.new_text_content_string.as_ref().ok_or(
+            ComplexityRefactoringError::SuggestionIncomplete(suggestion.clone()),
+        )?;
+
+        let index = get_index_of_first_difference(prev_text, new_text)
+            .ok_or(ComplexityRefactoringError::CouldNotGetCursorPositionAfterPerforming)?;
+        Ok(TextRange { index, length: 0 })
     }
 
     fn select_suggestion(
@@ -709,6 +739,8 @@ pub enum ComplexityRefactoringError {
     LspRejectedRefactoring(String),
     #[error("Failed to read or write dismissed suggestions file")]
     ReadWriteDismissedSuggestionsFailed,
+    #[error("Could not derive final cursor position to scroll to after performing suggestion")]
+    CouldNotGetCursorPositionAfterPerforming,
     #[error("Something went wrong when executing this ComplexityRefactoring feature.")]
     GenericError(#[source] anyhow::Error),
 }
