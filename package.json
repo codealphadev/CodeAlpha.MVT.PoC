@@ -1,6 +1,6 @@
 {
   "name": "code-alpha",
-  "version": "0.0.59",
+  "version": "0.0.60",
   "private": true,
   "scripts": {
     "build-frontend": "vite build",
