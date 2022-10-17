@@ -116,14 +116,14 @@ jobs:
         uses: 'google-github-actions/upload-cloud-storage@v0.10.2'
         with:
           path: './src-tauri/target/universal-apple-darwin/release/bundle/dmg'
-          destination: 'codealpha-releases/${{needs.update_version.outputs.version}}'
+          destination: 'pretzl-releases/${{needs.update_version.outputs.version}}'
           glob: '*.dmg'
 
       - name: Upload app and updater package
         uses: 'google-github-actions/upload-cloud-storage@v0.10.2'
         with:
           path: './src-tauri/target/universal-apple-darwin/release/bundle/macos'
-          destination: 'codealpha-releases/${{needs.update_version.outputs.version}}'
+          destination: 'pretzl-releases/${{needs.update_version.outputs.version}}'
 
       - name: Create manifest
         env:
@@ -134,7 +134,7 @@ jobs:
         uses: 'google-github-actions/upload-cloud-storage@v0.10.2'
         with:
           path: './manifest.json'
-          destination: 'codealpha-releases'
+          destination: 'pretzl-releases'
           parent: false
           headers: |-
             cache-control: no-cache
