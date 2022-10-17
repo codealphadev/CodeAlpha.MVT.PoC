@@ -4,15 +4,27 @@
 	import { emit, listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { EventUserInteraction } from '../../src-tauri/bindings/user_interaction/EventUserInteraction';
+	import type { CoreEngineState } from '../../src-tauri/bindings/app_state/CoreEngineState';
 	import { toggle_main_window } from '../utils';
 	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
 	import type { HideAppWindowMessage } from '../../src-tauri/bindings/window_controls/HideAppWindowMessage';
 	import WidgetContent from '../components/widget/widget-content.svelte';
 	import BadgeNoAiMode from '../components/widget/badge-no-ai-mode.svelte';
 	import type { AiFeaturesStatusMessage } from '../../src-tauri/bindings/user_interaction/AiFeaturesStatusMessage';
+	import { onMount } from 'svelte';
 
 	let main_window_active = false;
 	let ai_mode_active = true;
+
+	onMount(() => {
+		fetch_core_engine_state();
+	});
+
+	const fetch_core_engine_state = async () => {
+		let core_engine_state: CoreEngineState | null = await invoke('cmd_get_core_engine_state');
+
+		ai_mode_active = core_engine_state?.ai_features_active ?? true;
+	};
 
 	const clickAction = async () => {
 		main_window_active = !main_window_active;
