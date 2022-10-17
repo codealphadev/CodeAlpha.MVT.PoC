@@ -6,17 +6,18 @@ import type { MouseButton } from '../src-tauri/bindings/window_controls/MouseBut
 import type { ClickType } from '../src-tauri/bindings/window_controls/ClickType';
 import type { TrackingAreaClickedMessage } from '../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
 import type { TrackingAreaMouseOverMessage } from '../src-tauri/bindings/window_controls/TrackingAreaMouseOverMessage';
-import { get_current_window_path, map_window_path_to_app_window, WindowPath } from './utils';
+import { get_current_app_window } from './utils';
+import type { AppWindow } from '../src-tauri/bindings/AppWindow';
 
 export class MouseManager {
 	elements: HTMLElement[] = [];
-	window_path: WindowPath;
+	app_window: AppWindow;
 
 	constructor() {}
 
 	async init() {
 		await this.listen_mouse_events();
-		this.window_path = get_current_window_path();
+		this.app_window = get_current_app_window();
 	}
 
 	private async listen_mouse_events() {
@@ -24,7 +25,6 @@ export class MouseManager {
 			let tracking_event = JSON.parse(event.payload as string) as EventWindowControls;
 
 			if (!this.is_event_for_current_window(tracking_event)) {
-        console.log('Event is NOT for current window');
 				return;
 			}
 
@@ -115,14 +115,10 @@ export class MouseManager {
 			tracking_event.event === 'AppWindowShow' ||
 			tracking_event.event === 'AppWindowUpdate'
 		) {
-			if (
-				tracking_event.payload.app_windows.includes(map_window_path_to_app_window(this.window_path))
-			) {
+			if (tracking_event.payload.app_windows.includes(this.app_window)) {
 				return true;
 			}
-		} else if (
-			tracking_event.payload.app_window === map_window_path_to_app_window(this.window_path)
-		) {
+		} else if (tracking_event.payload.app_window === this.app_window) {
 			return true;
 		}
 		return false;

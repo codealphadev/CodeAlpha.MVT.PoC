@@ -108,6 +108,8 @@ impl AppWindow {
 }
 
 pub mod default_properties {
+    use convert_case::{Case, Casing};
+
     use super::*;
 
     pub fn url(window: &AppWindow) -> String {
@@ -128,11 +130,7 @@ pub mod default_properties {
                 format!("{}{}", r"\", AppWindow::Explain.to_string().to_lowercase())
             }
             AppWindow::CodeOverlay => {
-                format!(
-                    "{}{}",
-                    r"\",
-                    AppWindow::CodeOverlay.to_string().to_lowercase()
-                )
+                format!("{}{}", r"\", AppWindow::CodeOverlay.to_string()).to_case(Case::Kebab)
             }
             AppWindow::Main => format!("{}{}", r"\", AppWindow::Main.to_string().to_lowercase()),
         }

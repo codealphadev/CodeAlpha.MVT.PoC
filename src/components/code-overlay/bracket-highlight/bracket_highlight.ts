@@ -7,7 +7,7 @@ export const compute_bracket_highlight_lines = (
 	start: LogicalPosition | null,
 	end: LogicalPosition | null,
 	elbow: LogicalPosition | null,
-	codeoverlay_rect_height: LogicalSize['height']
+	code_overlay_rect_height: LogicalSize['height']
 ): { top_rect: LogicalFrame | null; bottom_rect: LogicalFrame | null } => {
 	const left_x = Math.min(
 		// TODO: Arrayify to get rid of these infinities
@@ -16,7 +16,7 @@ export const compute_bracket_highlight_lines = (
 		elbow?.x ?? Infinity // TODO: Simplify
 	);
 
-	const bottom_y = end?.y ?? codeoverlay_rect_height;
+	const bottom_y = end?.y ?? code_overlay_rect_height;
 
 	const top_y = start?.y ?? 0;
 

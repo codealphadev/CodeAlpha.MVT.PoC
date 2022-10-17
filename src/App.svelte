@@ -5,21 +5,20 @@
 	import ThemeContext from './theme-context.svelte';
 	import Main from './pages/main.svelte';
 	import Explain from './pages/explain.svelte';
-	import { WindowPath } from './utils';
 </script>
 
 <ThemeContext>
 	<Router>
-		<Route path={WindowPath.Widget}>
+		<Route path="/widget">
 			<Widget />
 		</Route>
-		<Route path={WindowPath.CodeOverlay}>
+		<Route path="/code-overlay">
 			<CodeOverlay />
 		</Route>
-		<Route path={WindowPath.Explain}>
+		<Route path="/explain">
 			<Explain />
 		</Route>
-		<Route path={WindowPath.Main}>
+		<Route path="/main">
 			<Main />
 		</Route>
 	</Router>
