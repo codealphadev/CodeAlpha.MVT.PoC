@@ -86,7 +86,7 @@ export const themes: { [name in ThemeName]: Theme } = {
 	},
 	dark: {
 		colors: {
-			accent_primary_emphasis: palette.dodger_blue[700],
+			accent_primary_emphasis: palette.dodger_blue[300],
 			accent_primary: palette.dodger_blue[500],
 			accent_secondary: palette.outrageous_orange[500],
 			background_secondary: palette.base[100],

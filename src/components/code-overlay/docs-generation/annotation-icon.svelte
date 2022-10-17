@@ -10,9 +10,9 @@
 <div style="display: flex; align-items: center; height: 100%; width: 100%">
 	{#if !is_processing}
 		{#if is_hovering}
-			<PretzlIcon color={colors.accent_primary_emphasis} />
+			<PretzlIcon color={colors.code_overlay_primary_emphasis} />
 		{:else}
-			<PretzlIcon color={colors.accent_primary} />
+			<PretzlIcon color={colors.code_overlay_primary} />
 		{/if}
 	{:else}
 		<IconProcessing />
