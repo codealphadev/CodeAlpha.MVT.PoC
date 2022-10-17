@@ -8,7 +8,7 @@
 	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 
 	import { colors } from '../../../themes';
-	import { is_point, try_get_kind_as_rectangle } from '../annotation_utils';
+	import { is_point, round_value, try_get_kind_as_rectangle } from '../annotation_utils';
 	import { BORDER_WIDTH, compute_bracket_highlight_lines } from './bracket_highlight';
 
 	export let code_document_rect: LogicalFrame;
@@ -121,11 +121,6 @@
 			top_rectangle,
 			bottom_rectangle
 		};
-	};
-
-	const round_value = (value: number, precision: number): number => {
-		const factor = Math.pow(10, precision || 0);
-		return Math.round(value * factor) / factor;
 	};
 </script>
 

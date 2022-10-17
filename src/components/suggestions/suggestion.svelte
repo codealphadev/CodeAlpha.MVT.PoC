@@ -40,7 +40,7 @@
 	};
 </script>
 
-<Card on:click additional_class="relative">
+<Card on:click additional_class="suggestion relative">
 	{#if expanded && recalculating}
 		<div
 			class="absolute left-0 top-0 z-10 bg-[#ffffffaa] w-full h-full flex flex-col items-center justify-center px-32 saturate(50%)"
@@ -49,9 +49,9 @@
 			<IconProcessing muted={true} />
 		</div>
 	{/if}
-	<header>
+	<header class="max-w-full">
 		<H3>Reduce complexity</H3>
-		<p class="text-contrast text-sm leading-[1.714]">
+		<p class="text-contrast text-sm max-w-full leading-[1.714] {!expanded ? 'line-clamp-2' : ''}">
 			{#if expanded}
 				Your function <code>{suggestion.main_function_name}</code> may be hard to understand due to nested
 				statements. Consider extracting this code block into a separate function.

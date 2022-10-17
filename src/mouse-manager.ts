@@ -6,30 +6,41 @@ import type { MouseButton } from '../src-tauri/bindings/window_controls/MouseBut
 import type { ClickType } from '../src-tauri/bindings/window_controls/ClickType';
 import type { TrackingAreaClickedMessage } from '../src-tauri/bindings/window_controls/TrackingAreaClickedMessage';
 import type { TrackingAreaMouseOverMessage } from '../src-tauri/bindings/window_controls/TrackingAreaMouseOverMessage';
+import { get_current_window_path, map_window_path_to_app_window, WindowPath } from './utils';
 
 export class MouseManager {
 	elements: HTMLElement[] = [];
+	window_path: WindowPath;
 
 	constructor() {}
 
 	async init() {
 		await this.listen_mouse_events();
+		this.window_path = get_current_window_path();
 	}
 
 	private async listen_mouse_events() {
 		await listen('EventWindowControls' as ChannelList, (event) => {
 			let tracking_event = JSON.parse(event.payload as string) as EventWindowControls;
+
+			if (!this.is_event_for_current_window(tracking_event)) {
+        console.log('Event is NOT for current window');
+				return;
+			}
+
 			switch (tracking_event.event) {
 				case 'TrackingAreaMouseOver':
 					this.mouse_over(tracking_event.payload);
 					break;
 				case 'TrackingAreaClicked':
-					let msg = tracking_event.payload as TrackingAreaClickedMessage;
-					if (msg.app_window === 'CodeOverlay') {
+					if (tracking_event.payload.app_window === 'CodeOverlay') {
 						this.clicked(tracking_event.payload);
 					}
 					break;
 				case 'TrackingAreaClickedOutside':
+					break;
+				case 'TrackingAreaExited':
+					this.area_exited();
 					break;
 			}
 		});
@@ -59,6 +70,13 @@ export class MouseManager {
 		});
 	}
 
+	private area_exited() {
+		this.elements.forEach((element) => {
+			element.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+			element.classList.remove('hover');
+		});
+	}
+
 	private simulate_mouse_event_on_element(
 		element: Element,
 		button: MouseButton,
@@ -85,5 +103,28 @@ export class MouseManager {
 		return document.elementsFromPoint(position.x, position.y).map((element) => {
 			return element as HTMLElement;
 		});
+	}
+
+	private is_event_for_current_window(tracking_event: EventWindowControls): boolean {
+		if (tracking_event.event === 'DarkModeUpdate') {
+			return false;
+		}
+
+		if (
+			tracking_event.event === 'AppWindowHide' ||
+			tracking_event.event === 'AppWindowShow' ||
+			tracking_event.event === 'AppWindowUpdate'
+		) {
+			if (
+				tracking_event.payload.app_windows.includes(map_window_path_to_app_window(this.window_path))
+			) {
+				return true;
+			}
+		} else if (
+			tracking_event.payload.app_window === map_window_path_to_app_window(this.window_path)
+		) {
+			return true;
+		}
+		return false;
 	}
 }

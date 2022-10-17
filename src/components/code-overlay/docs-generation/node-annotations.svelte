@@ -9,8 +9,8 @@
 	import AnnotationIcon from './annotation-icon.svelte';
 	import AnnotationLine from './annotation-line.svelte';
 	import type { AnnotationKind } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationKind';
-	import { is_rectangle } from '../annotation_utils';
 	import type { AiFeaturesStatusMessage } from '../../../../src-tauri/bindings/user_interaction/AiFeaturesStatusMessage';
+	import { is_rectangle, round_value } from '../annotation_utils';
 
 	let annotation_icon: LogicalFrame | null;
 	let annotation_codeblock: LogicalFrame | null;
@@ -200,11 +200,6 @@
 			const channel: ChannelList = 'EventUserInteractions';
 			await emit(channel, event);
 		}
-	};
-
-	const round_value = (value: number, precision: number): number => {
-		const factor = Math.pow(10, precision || 0);
-		return Math.round(value * factor) / factor;
 	};
 </script>
 

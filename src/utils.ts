@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api';
 import { emit } from '@tauri-apps/api/event';
+import type { AppWindow } from '../src-tauri/bindings/AppWindow';
 import type { ChannelList } from '../src-tauri/bindings/ChannelList';
 import type { LogicalFrame } from '../src-tauri/bindings/geometry/LogicalFrame';
 import type { LogicalPosition } from '../src-tauri/bindings/geometry/LogicalPosition';
@@ -41,3 +42,34 @@ export async function toggle_main_window(open: boolean) {
 		}, 100);
 	}
 }
+
+export enum WindowPath {
+	Main = '/main',
+	Widget = '/widget',
+	CodeOverlay = '/codeoverlay',
+	Explain = '/explain'
+}
+
+export const get_current_window_path = (): WindowPath => {
+	if (window.location.pathname === WindowPath.CodeOverlay) {
+		return WindowPath.CodeOverlay;
+	} else if (window.location.pathname === WindowPath.Explain) {
+		return WindowPath.Explain;
+	} else if (window.location.pathname === WindowPath.Main) {
+		return WindowPath.Main;
+	}
+	return WindowPath.Widget;
+};
+
+export const map_window_path_to_app_window = (window_path: WindowPath): AppWindow => {
+	switch (window_path) {
+		case WindowPath.Main:
+			return 'Main';
+		case WindowPath.Widget:
+			return 'Widget';
+		case WindowPath.CodeOverlay:
+			return 'CodeOverlay';
+		case WindowPath.Explain:
+			return 'Explain';
+	}
+};
