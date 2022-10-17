@@ -172,12 +172,15 @@ impl ComplexityRefactoring {
         }
     }
 
-    fn set_suggestions_to_recomputing(&mut self, editor_window_uid: EditorWindowUid) -> Option<()> {
+    fn set_suggestions_to_recalculating(
+        &mut self,
+        editor_window_uid: EditorWindowUid,
+    ) -> Option<()> {
         self.suggestions_arc
             .lock()
             .get_mut(&editor_window_uid)?
             .values_mut()
-            .filter(|s| s.state == SuggestionState::Ready || s.state == SuggestionState::New)
+            .filter(|s| s.state == SuggestionState::Ready)
             .for_each(|suggestion| suggestion.state = SuggestionState::Recalculating);
 
         Self::publish_to_frontend(self.suggestions_arc.lock().clone());
@@ -191,7 +194,7 @@ impl ComplexityRefactoring {
         (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
 
         let window_uid = code_document.editor_window_props().window_uid;
-        self.set_suggestions_to_recomputing(window_uid);
+        self.set_suggestions_to_recalculating(window_uid);
 
         let suggestions_arc = self.suggestions_arc.clone();
         let old_suggestions = Self::get_suggestions_for_window(suggestions_arc.clone(), window_uid);

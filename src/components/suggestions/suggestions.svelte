@@ -10,6 +10,7 @@
 	import type { ReplaceSuggestionsMessage } from '../../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
 	import type { EventUserInteraction } from '../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 	import { filter_and_sort_suggestions } from './suggestions';
+	import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
 
 	export let active_window_uid: number;
 	export let CONTAINER_DOM_ID: string;
@@ -17,7 +18,7 @@
 	let selected_suggestion_id: string | null = null;
 	let window_width: number | null = null;
 	let window_height: number | null = null;
-
+	let filtered_suggestions: [string, FERefactoringSuggestion][] = [];
 	let tail_height_px = 12;
 
 	const select_suggestion = async (suggestion_id: string | null, editor_window_uid: number) => {
