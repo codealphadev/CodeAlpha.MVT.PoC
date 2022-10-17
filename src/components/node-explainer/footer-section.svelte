@@ -40,6 +40,13 @@
 	<div class="flex gap-3 px-1 items-center">
 		<ThumbButton type={ThumbButtonType.Up} {thumb_vote} on:click={handle_click_thumbs_up} />
 		<ThumbButton type={ThumbButtonType.Down} {thumb_vote} on:click={handle_click_thumbs_down} />
+		<div class="text-secondary text-xs">
+			{#if thumb_vote}
+				Thanks for the feedback!
+			{:else}
+				Honestly, was this helpful?
+			{/if}
+		</div>
 	</div>
 	<Button type={ButtonType.Primary} on:click={paste_docs}>Insert as Docstring</Button>
 </div>

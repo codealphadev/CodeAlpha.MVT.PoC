@@ -2,6 +2,7 @@ const colorNames = [
 	'accent_primary_emphasis',
 	'accent_primary',
 	'accent_secondary',
+	'background_emphasis',
 	'background_secondary',
 	'background',
 	'code_overlay_primary',

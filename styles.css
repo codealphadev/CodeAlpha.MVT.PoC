@@ -6,8 +6,8 @@ button.button-icon.hover {
   filter: brightness(70%);
 }
 
-button.thumb-button.hover {
-  filter: brightness(30%);
+button.thumb-button.hover.thumb-button-clickable > svg > rect {
+  fill: var(--theme-background_emphasis);
 }
 
 button.button-secondary.hover {
