@@ -1,12 +1,13 @@
 pub use env::*;
 pub use formatting::*;
+pub use misc::*;
 pub use swift_lsp::{Lsp, SwiftLsp, SwiftLspError};
 pub use text_position::*;
 pub use text_range::*;
 pub use xcode_text::*;
-
 mod env;
 mod formatting;
+mod misc;
 mod swift_lsp;
 mod text_position;
 mod text_range;
