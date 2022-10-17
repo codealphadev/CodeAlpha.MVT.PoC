@@ -46,7 +46,7 @@ pub struct Edit {
 
 enum ComplexityRefactoringProcedure {
     ComputeSuggestions,
-    PerformOperation(SuggestionId),
+    PerformSuggestion(SuggestionId),
     DismissSuggestion(SuggestionId),
     SelectSuggestion(SuggestionId),
 }
@@ -123,8 +123,8 @@ impl FeatureBase for ComplexityRefactoring {
                         e
                     })
                 }
-                ComplexityRefactoringProcedure::PerformOperation(id) => self
-                    .perform_operation(code_document, id)
+                ComplexityRefactoringProcedure::PerformSuggestion(id) => self
+                    .perform_suggestion(code_document, id)
                     .map_err(|e| e.into()),
                 ComplexityRefactoringProcedure::DismissSuggestion(id) => self
                     .dismiss_suggestion(code_document, id)
@@ -514,7 +514,7 @@ impl ComplexityRefactoring {
         (formatted_old_content, formatted_new_content)
     }
 
-    fn perform_operation(
+    fn perform_suggestion(
         &mut self,
         code_document: &CodeDocument,
         suggestion_id: SuggestionId,
@@ -619,7 +619,7 @@ impl ComplexityRefactoring {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
             }
             CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)) => {
-                Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
+                Some(ComplexityRefactoringProcedure::PerformSuggestion(msg.id))
             }
             CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)) => {
                 Some(ComplexityRefactoringProcedure::DismissSuggestion(msg.id))
