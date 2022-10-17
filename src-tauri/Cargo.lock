@@ -3,10 +3,6 @@
 version = 3
 
 [[package]]
-<<<<<<< HEAD
-name = "CodeAlpha"
-version = "0.0.59"
-=======
 name = "Inflector"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -18,8 +14,7 @@ dependencies = [
 
 [[package]]
 name = "Pretzl"
-version = "0.0.58"
->>>>>>> ec55d06f (COD-451: Rename code references)
+version = "0.0.59"
 dependencies = [
  "accessibility",
  "accessibility-sys",
@@ -4810,15 +4805,9 @@ dependencies = [
 
 [[package]]
 name = "webkit2gtk"
-<<<<<<< HEAD
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8f859735e4a452aeb28c6c56a852967a8a76c8eb1cc32dbf931ad28a13d6370"
-=======
-version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e35143128317257daa794f00be0f5545faedf778a10dab54ac4b06fd74a44f4"
->>>>>>> ec55d06f (COD-451: Rename code references)
 dependencies = [
  "bitflags",
  "cairo-rs",
