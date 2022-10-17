@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-use crate::{
-    core_engine::{events::AnnotationEvent, features::FeatureKind, EditorWindowUid, TextRange},
-    utils::geometry::LogicalPosition,
+use crate::core_engine::{
+    events::AnnotationEvent, features::FeatureKind, EditorWindowUid, TextRange,
 };
 
 use super::{AnnotationGroup, AnnotationJob, AnnotationJobTrait, AnnotationResult};
@@ -20,16 +19,8 @@ pub trait AnnotationJobGroupTrait {
     fn id(&self) -> uuid::Uuid;
     fn editor_window_uid(&self) -> EditorWindowUid;
     fn replace(&mut self, jobs: Vec<AnnotationJob>);
-    fn compute_annotations(
-        &mut self,
-        visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
-    );
-    fn update_annotations(
-        &mut self,
-        visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
-    );
+    fn compute_annotations(&mut self, visible_text_range: &TextRange);
+    fn update_annotations(&mut self, visible_text_range: &TextRange);
 
     fn get_annotation_group(&self) -> Option<AnnotationGroup>;
 }
@@ -82,15 +73,9 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
         self.group = None;
     }
 
-    fn compute_annotations(
-        &mut self,
-        visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
-    ) {
+    fn compute_annotations(&mut self, visible_text_range: &TextRange) {
         for job in self.jobs.values_mut() {
-            if let Ok(result) =
-                job.compute_bounds(visible_text_range, code_doc_origin, self.editor_window_uid)
-            {
+            if let Ok(result) = job.compute_bounds(visible_text_range, self.editor_window_uid) {
                 self.results.insert(result.id, result);
             } else {
                 debug!(?job, feature = ?self.feature, "Failed to `compute_bounds`");
@@ -100,17 +85,11 @@ impl AnnotationJobGroupTrait for AnnotationJobGroup {
         self.publish_annotations();
     }
 
-    fn update_annotations(
-        &mut self,
-        visible_text_range: &TextRange,
-        code_doc_origin: &LogicalPosition,
-    ) {
+    fn update_annotations(&mut self, visible_text_range: &TextRange) {
         for job in self.jobs.values_mut() {
-            if let Ok(result) = job.compute_bounds_if_missing(
-                visible_text_range,
-                code_doc_origin,
-                self.editor_window_uid,
-            ) {
+            if let Ok(result) =
+                job.compute_bounds_if_missing(visible_text_range, self.editor_window_uid)
+            {
                 self.results.insert(result.id, result);
             } else {
                 debug!(?job, feature = ?self.feature, "Failed to `compute_bounds_if_missing`");
