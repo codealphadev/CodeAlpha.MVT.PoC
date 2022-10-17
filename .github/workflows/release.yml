@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - cod-451-rename-repository
 
 permissions:
   id-token: write # Make GitHub populate environment variables for OIDC with GCP
