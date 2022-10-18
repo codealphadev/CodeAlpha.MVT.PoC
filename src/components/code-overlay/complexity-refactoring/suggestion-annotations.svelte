@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
-	import type { AnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
+	import type { AnnotationEvent } from '../../../../src-tauri/bindings/annotations/AnnotationEvent';
 	import type { AnnotationGroup } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationGroup';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 	import { is_point, round_value } from '../annotation_utils';
