@@ -5,6 +5,7 @@ const colorNames = [
 	'background_emphasis',
 	'background_secondary',
 	'background',
+	'code_overlay_contrast',
 	'code_overlay_primary',
 	'code_overlay_primary_emphasis',
 	'code_overlay_secondary',
