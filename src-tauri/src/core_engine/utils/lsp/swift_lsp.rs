@@ -1,15 +1,17 @@
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use async_trait::async_trait;
 use cached::proc_macro::cached;
 use mockall::automock;
-use tauri::api::process::{Command, CommandEvent};
-use tracing::{error, warn};
+use parking_lot::Mutex;
+use tauri::api::process::{Command, CommandChild, CommandEvent};
+use tracing::error;
+use uuid::Uuid;
 pub struct SwiftLsp;
-use rand::Rng;
 
 use super::{
-    get_compiler_args_from_xcodebuild, get_hashed_pbxproj_modification_date, XCodebuildError,
+    get_compiler_args_from_xcodebuild, get_hashed_pbxproj_modification_date_with_random_fallback,
+    XCodebuildError,
 };
 
 use lazy_static::lazy_static;
@@ -84,17 +86,8 @@ impl Lsp for SwiftLsp {
         tmp_file_path: &str,
     ) -> Result<Vec<String>, SwiftLspError> {
         // Try to get compiler arguments from xcodebuild
-        let recompute_args_hash = match get_hashed_pbxproj_modification_date(source_file_path) {
-            Err(e) => {
-                warn!(
-                    ?e,
-                    "Unable to get hash for project.pbxproj modification date"
-                );
-                let mut rng = rand::thread_rng();
-                rng.gen::<u64>()
-            }
-            Ok(res) => res,
-        };
+        let recompute_args_hash =
+            get_hashed_pbxproj_modification_date_with_random_fallback(source_file_path);
 
         match get_compiler_args_from_xcodebuild(source_file_path.to_string(), recompute_args_hash)
             .await
