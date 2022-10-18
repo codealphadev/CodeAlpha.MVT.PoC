@@ -87,6 +87,17 @@ pub fn get_visible_text_range(get_via: GetVia) -> Result<TextRange, XcodeError> 
     }
 }
 
+pub fn get_number_of_characters(get_via: GetVia) -> Result<i64, XcodeError> {
+    let textarea_uielement = get_textarea_uielement(&get_via)?;
+
+    let number_of_characters =
+        ax_attribute(&textarea_uielement, AXAttribute::number_of_characters())?;
+
+    number_of_characters.to_i64().ok_or(XcodeError::CustomError(
+        "Could not convert CFNumber to i64".to_string(),
+    ))
+}
+
 pub fn get_dark_mode() -> Result<bool, &'static str> {
     let textarea_uielement = get_textarea_uielement(&GetVia::Current)
         .map_err(|_| "Could not get textarea ui_element")?;
