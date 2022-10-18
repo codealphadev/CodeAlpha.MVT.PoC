@@ -75,7 +75,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
             return Ok(result);
         }
 
-        let textarea_uielement = get_textarea_uielement(&GetVia::Current).unwrap(); // TODO: Extract?, error handling
+        let textarea_uielement = get_textarea_uielement(&GetVia::Current)?;
 
         let ax_bounds_global = get_bounds_for_TextRange(
             &TextRange {
@@ -87,7 +87,7 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
         .map_err(|e| AnnotationError::GenericError(e.into()))?;
 
         // Get current code_doc_frame to convert with sent frame
-        let updated_code_doc_origin = get_uielement_frame(&textarea_uielement).unwrap().origin; // TODO: Error handling
+        let updated_code_doc_origin = get_uielement_frame(&textarea_uielement)?.origin;
 
         result.bounds = Some(vec![ax_bounds_global.to_local(&updated_code_doc_origin)]);
 
