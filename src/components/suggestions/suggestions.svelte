@@ -41,7 +41,6 @@
 				return;
 			}
 			let appWindow: AppWindow = 'Main';
-			console.log('Invoking', window_height + tail_height_px, new Date());
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
 				sizeY: window_height + tail_height_px,
