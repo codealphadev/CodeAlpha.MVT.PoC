@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::{
+    log_list_of_module_names,
     syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
     utils::XcodeText,
     TextRange,
@@ -83,6 +84,9 @@ impl CodeDocument {
 
         if is_file_path_updated {
             self.file_path = file_path.clone();
+            if let Some(file_path) = file_path {
+                log_list_of_module_names(file_path.to_string());
+            }
         }
 
         if is_file_text_updated {
