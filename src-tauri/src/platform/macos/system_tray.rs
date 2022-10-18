@@ -8,7 +8,7 @@ use crate::{
     app_handle,
     app_state::{CoreEngineState, CoreEngineStateCache},
     core_engine::events::{models::AiFeaturesStatusMessage, EventUserInteraction},
-    platform, TAURI_PACKAGE_INFO,
+    platform,
 };
 
 use crate::app_state::AppHandleExtension;
@@ -23,17 +23,13 @@ pub fn construct_system_tray_menu() -> SystemTrayMenu {
     let quit = CustomMenuItem::new(TRAY_MENU_EXIT.to_string(), "Quit");
     let check_ax_api = CustomMenuItem::new(TRAY_MENU_CHECK_AX_API.to_string(), "Settings...");
 
-    let version;
-    {
-        let package_info_mutex = TAURI_PACKAGE_INFO.lock();
-        version = package_info_mutex.as_ref().unwrap().version.clone();
-    }
+    let package_info = app_handle().package_info().clone();
 
     let version_label = CustomMenuItem::new(
         TRAY_MENU_VERSION.to_string(),
         format!(
             "Version: {}.{}.{}",
-            version.major, version.minor, version.patch
+            package_info.version.major, package_info.version.minor, package_info.version.patch
         )
         .as_str(),
     )
