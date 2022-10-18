@@ -32,21 +32,21 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                     );
                 }
                 EventUserInteraction::PerformSuggestion(msg) => {
-                    debug!(?msg, "PerformRefactoringOperation request");
+                    debug!(?msg, "PerformSuggestion request");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)),
                     );
                 }
                 EventUserInteraction::DismissSuggestion(msg) => {
-                    debug!(?msg, "DismissRefactoringSuggestion request");
+                    debug!(?msg, "DismissSuggestion request");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)),
                     );
                 }
                 EventUserInteraction::UpdateSelectedSuggestion(msg) => {
-                    debug!(?msg, "SelectRefactoringSuggestion request");
+                    debug!(?msg, "UpdateSelectedSuggestion request");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)),

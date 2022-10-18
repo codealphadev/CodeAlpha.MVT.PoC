@@ -10,5 +10,5 @@ export const filter_and_sort_suggestions = (
 	}
 	return Object.entries(suggestions[active_window_uid] ?? {})
 		.filter(([_, value]) => value.state !== 'New')
-		.sort((a, b) => a[0].localeCompare(b[0]));
+		.sort((a, b) => a[1].start_index - b[1].start_index);
 };

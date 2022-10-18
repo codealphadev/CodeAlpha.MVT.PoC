@@ -1,7 +1,7 @@
 {
   "package": {
-    "productName": "CodeAlpha",
-    "version": "0.0.62"
+    "productName": "Pretzl",
+    "version": "0.0.65"
   },
   "build": {
     "distDir": "../dist",
@@ -19,7 +19,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.codealpha.dev",
+      "identifier": "com.pretzl.dev",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -57,7 +57,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://storage.googleapis.com/codealpha-releases/manifest.json"
+        "https://storage.googleapis.com/pretzl-releases/manifest.json"
       ],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFQzExN0Y3OEY1RDlDRUYKUldUdm5GMlA5eGZCVGxBek5hL1NYUHNVTDMzblp3MHY4WnBQMDc4RGtsTitlcUVYQUZMa2JlbDYK"

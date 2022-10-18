@@ -2,10 +2,10 @@ import os
 import datetime
 import json
 
-with open('./src-tauri/target/universal-apple-darwin/release/bundle/macos/CodeAlpha.app.tar.gz.sig', 'r') as file:
+with open('./src-tauri/target/universal-apple-darwin/release/bundle/macos/Pretzl.app.tar.gz.sig', 'r') as file:
     signature = file.read()
 
-url = "https://storage.googleapis.com/codealpha-releases/{}/macos/CodeAlpha.app.tar.gz".format(
+url = "https://storage.googleapis.com/pretzl-releases/{}/macos/Pretzl.app.tar.gz".format(
     os.environ['VERSION'])
 release = {
     "version": os.environ['VERSION'],

@@ -1,11 +1,11 @@
 [package]
-name = "CodeAlpha"
-version = "0.0.62"
-description = "CodeAlpha"
+name = "Pretzl"
+version = "0.0.65"
+description = "Pretzl"
 authors = [ "Adrian Hupka, Daniel Owens, Adam Nyberg",]
 license = ""
 repository = ""
-default-run = "CodeAlpha"
+default-run = "Pretzl"
 edition = "2021"
 rust-version = "1.63"
 

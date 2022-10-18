@@ -12,11 +12,11 @@ use crate::{
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
             UserCommand,
         },
-        format_code,
+        format_code, get_index_of_first_difference,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
         CodeDocument, EditorWindowUid, TextPosition, TextRange, XcodeText,
     },
-    platform::macos::replace_text_content,
+    platform::macos::{replace_text_content, set_selected_text_range, GetVia},
     utils::calculate_hash,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
@@ -37,6 +37,12 @@ type SuggestionsMap = HashMap<SuggestionId, RefactoringSuggestion>;
 type SuggestionsPerWindow = HashMap<EditorWindowUid, SuggestionsMap>;
 type SuggestionsArcMutex = Arc<Mutex<SuggestionsPerWindow>>;
 
+pub struct ComplexityRefactoring {
+    is_activated: bool,
+    suggestions_arc: SuggestionsArcMutex,
+    dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Edit {
     pub text: XcodeText,
@@ -46,7 +52,7 @@ pub struct Edit {
 
 enum ComplexityRefactoringProcedure {
     ComputeSuggestions,
-    PerformOperation(SuggestionId),
+    PerformSuggestion(SuggestionId),
     DismissSuggestion(SuggestionId),
     SelectSuggestion(SuggestionId),
 }
@@ -59,6 +65,7 @@ pub struct FERefactoringSuggestion {
     pub old_text_content_string: Option<String>,
     pub new_complexity: isize,
     pub prev_complexity: isize,
+    pub start_index: usize,
     pub main_function_name: Option<String>,
 }
 
@@ -78,6 +85,7 @@ pub struct RefactoringSuggestion {
     pub prev_complexity: isize,
     pub main_function_name: Option<String>,
     pub serialized_slice: SerializedNodeSlice,
+    pub start_index: Option<usize>,
 }
 
 pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
@@ -90,13 +98,10 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
         new_complexity: suggestion.new_complexity,
         prev_complexity: suggestion.prev_complexity,
         main_function_name: suggestion.main_function_name,
+        start_index: suggestion
+            .start_index
+            .expect("Suggestion start index should be set"),
     }
-}
-
-pub struct ComplexityRefactoring {
-    is_activated: bool,
-    suggestions_arc: SuggestionsArcMutex,
-    dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
 }
 
 const MAX_ALLOWED_COMPLEXITY: isize = 9;
@@ -123,8 +128,8 @@ impl FeatureBase for ComplexityRefactoring {
                         e
                     })
                 }
-                ComplexityRefactoringProcedure::PerformOperation(id) => self
-                    .perform_operation(code_document, id)
+                ComplexityRefactoringProcedure::PerformSuggestion(id) => self
+                    .perform_suggestion(code_document, id)
                     .map_err(|e| e.into()),
                 ComplexityRefactoringProcedure::DismissSuggestion(id) => self
                     .dismiss_suggestion(code_document, id)
@@ -280,7 +285,7 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
         execution_id: Uuid,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
-        let suggestions = Self::compute_suggestions_for_function(
+        let mut suggestions = Self::compute_suggestions_for_function(
             &function,
             suggestions_arc.clone(),
             &text_content,
@@ -289,7 +294,7 @@ impl ComplexityRefactoring {
             window_uid,
         )?;
 
-        for (id, suggestion) in suggestions.iter() {
+        for (id, mut suggestion) in suggestions.iter_mut() {
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
 
             let suggestion_start_pos = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
@@ -313,6 +318,8 @@ impl ComplexityRefactoring {
             .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
                 "Failed to derive context range"
             )))?;
+
+            suggestion.start_index = Some(suggestion_range.index);
 
             set_annotation_group_for_extraction_and_context(
                 *id,
@@ -441,6 +448,7 @@ impl ComplexityRefactoring {
                 prev_complexity,
                 old_text_content_string: None,
                 new_text_content_string: None,
+                start_index: None,
             },
         );
 
@@ -521,7 +529,7 @@ impl ComplexityRefactoring {
         (formatted_old_content, formatted_new_content)
     }
 
-    fn perform_operation(
+    fn perform_suggestion(
         &mut self,
         code_document: &CodeDocument,
         suggestion_id: SuggestionId,
@@ -537,6 +545,9 @@ impl ComplexityRefactoring {
                 suggestion_id.to_string(),
             ))?
             .clone();
+
+        let text_range_to_scroll_to_after_performing =
+            Self::get_text_position_to_scroll_to_after_performing(&suggestion_to_apply);
 
         let new_content = suggestion_to_apply.clone().new_text_content_string.ok_or(
             ComplexityRefactoringError::SuggestionIncomplete(suggestion_to_apply),
@@ -574,10 +585,37 @@ impl ComplexityRefactoring {
                     remove_annotations_for_suggestions(vec![suggestion_id]);
                     Self::publish_to_frontend(suggestions_per_window.clone());
                 }
+
+                match text_range_to_scroll_to_after_performing {
+                    Ok(range) => {
+                        _ = set_selected_text_range(&range, &GetVia::Current);
+                    }
+                    Err(e) => {
+                        error!(
+                            ?e,
+                            "Error getting final cursor position after performing suggestion"
+                        );
+                    }
+                }
             }
         });
 
         Ok(())
+    }
+
+    fn get_text_position_to_scroll_to_after_performing(
+        suggestion: &RefactoringSuggestion,
+    ) -> Result<TextRange, ComplexityRefactoringError> {
+        let prev_text = suggestion.old_text_content_string.as_ref().ok_or(
+            ComplexityRefactoringError::SuggestionIncomplete(suggestion.clone()),
+        )?;
+        let new_text: &String = suggestion.new_text_content_string.as_ref().ok_or(
+            ComplexityRefactoringError::SuggestionIncomplete(suggestion.clone()),
+        )?;
+
+        let index = get_index_of_first_difference(prev_text, new_text)
+            .ok_or(ComplexityRefactoringError::CouldNotGetCursorPositionAfterPerforming)?;
+        Ok(TextRange { index, length: 0 })
     }
 
     fn select_suggestion(
@@ -626,7 +664,7 @@ impl ComplexityRefactoring {
                 Some(ComplexityRefactoringProcedure::ComputeSuggestions)
             }
             CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)) => {
-                Some(ComplexityRefactoringProcedure::PerformOperation(msg.id))
+                Some(ComplexityRefactoringProcedure::PerformSuggestion(msg.id))
             }
             CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)) => {
                 Some(ComplexityRefactoringProcedure::DismissSuggestion(msg.id))
@@ -716,6 +754,8 @@ pub enum ComplexityRefactoringError {
     LspRejectedRefactoring(String),
     #[error("Failed to read or write dismissed suggestions file")]
     ReadWriteDismissedSuggestionsFailed,
+    #[error("Could not derive final cursor position to scroll to after performing suggestion")]
+    CouldNotGetCursorPositionAfterPerforming,
     #[error("Something went wrong when executing this ComplexityRefactoring feature.")]
     GenericError(#[source] anyhow::Error),
 }
