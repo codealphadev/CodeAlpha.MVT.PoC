@@ -11,7 +11,7 @@ use crate::{
     },
     platform::macos::{
         get_bounds_for_TextRange, get_minimal_viewport_properties, get_visible_text_range,
-        scroll_by_one_page, GetVia,
+        scroll_by_one_page, GetVia, XcodeError,
     },
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
@@ -32,6 +32,12 @@ pub enum AnnotationError {
     AnnotationJobGroupNotFound,
     #[error("Something went wrong when executing the AnnotationManager.")]
     GenericError(#[source] anyhow::Error),
+}
+
+impl From<XcodeError> for AnnotationError {
+    fn from(cause: XcodeError) -> Self {
+        AnnotationError::GenericError(cause.into())
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS)]
