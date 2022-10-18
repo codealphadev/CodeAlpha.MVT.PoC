@@ -3,7 +3,7 @@
 	import type { ChannelList } from '../../../../src-tauri/bindings/ChannelList';
 	import type { AnnotationGroup } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationGroup';
 	import type { AnnotationShape } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationShape';
-	import type { AnnotationEvent } from '../../../../src-tauri/bindings/features/node_annotation/AnnotationEvent';
+	import type { AnnotationEvent } from '../../../../src-tauri/bindings/annotations/AnnotationEvent';
 	import type { LogicalFrame } from '../../../../src-tauri/bindings/geometry/LogicalFrame';
 	import type { LogicalPosition } from '../../../../src-tauri/bindings/geometry/LogicalPosition';
 
@@ -30,24 +30,23 @@
 			const { payload, event: event_type } = JSON.parse(event.payload as string) as AnnotationEvent;
 			switch (event_type) {
 				case 'AddAnnotationGroup':
+					if (payload.feature === 'BracketHighlight') {
+						// Make sure everything is properly reset if a new annotation group is added
+						top_rectangle = null;
+						bottom_rectangle = null;
+
+						annotation_group_id = null;
+						annotation_group_editor_window_uid = null;
+
+						opening_bracket_box = null;
+						closing_bracket_box = null;
+
+						compute_annotations(payload);
+					}
+					break;
 				case 'UpdateAnnotationGroup':
 					if (payload.feature === 'BracketHighlight') {
-						let group = payload;
-						annotation_group_editor_window_uid = group.editor_window_uid;
-						annotation_group_id = group.id;
-
-						let closing_bracket = try_get_kind_as_rectangle(group, 'ClosingBracket');
-						if (closing_bracket) {
-							closing_bracket_box = closing_bracket;
-						}
-
-						let opening_bracket = try_get_kind_as_rectangle(group, 'OpeningBracket');
-						if (opening_bracket) {
-							opening_bracket_box = opening_bracket;
-						}
-						const rectangles = get_elbow_rectangles_from_annotation_group(group);
-						top_rectangle = rectangles.top_rectangle;
-						bottom_rectangle = rectangles.bottom_rectangle;
+						compute_annotations(payload);
 					}
 					break;
 				case 'RemoveAnnotationGroup':
@@ -70,6 +69,24 @@
 		});
 	};
 	listen_to_annotation_events();
+
+	function compute_annotations(group: AnnotationGroup) {
+		annotation_group_editor_window_uid = group.editor_window_uid;
+		annotation_group_id = group.id;
+
+		let closing_bracket = try_get_kind_as_rectangle(group, 'ClosingBracket');
+		if (closing_bracket) {
+			closing_bracket_box = closing_bracket;
+		}
+
+		let opening_bracket = try_get_kind_as_rectangle(group, 'OpeningBracket');
+		if (opening_bracket) {
+			opening_bracket_box = opening_bracket;
+		}
+		const rectangles = get_elbow_rectangles_from_annotation_group(group);
+		top_rectangle = rectangles.top_rectangle;
+		bottom_rectangle = rectangles.bottom_rectangle;
+	}
 
 	interface BracketHighlightRectangles {
 		top_rectangle: LogicalFrame | null;
