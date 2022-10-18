@@ -12,6 +12,7 @@
 	import { fade } from 'svelte/transition';
 	import Button from '../common/button/button.svelte';
 	import { ButtonType } from '../common/button/button';
+	import SuggestionsIcon from './icons/suggestions-icon.svelte';
 
 	export let suggestion: FERefactoringSuggestion;
 	export let suggestion_id: string;
@@ -50,7 +51,10 @@
 		</div>
 	{/if}
 	<header class="max-w-full">
-		<H3>Reduce complexity</H3>
+		<div class="flex justify-between w-full">
+			<H3>Reduce complexity</H3>
+			<SuggestionsIcon />
+		</div>
 		<p class="text-contrast text-sm max-w-full leading-[1.714] {!expanded ? 'line-clamp-2' : ''}">
 			{#if expanded}
 				Your function <code>{suggestion.main_function_name}</code> may be hard to understand due to nested
@@ -61,14 +65,14 @@
 		</p>
 	</header>
 	{#if expanded}
-		<div class="flex flex-col shrink-0 gap-3 items-start w-full">
-			<H4>Impact on complexity</H4>
-			<div class="flex items-center gap-1">
+		<div class="flex flex-col shrink-0 gap-2 pt-2 items-start w-full">
+			<H4>Change impact on complexity score</H4>
+			<div class="flex items-center gap-1 pb-2">
 				<ComplexityBadge complexity={suggestion.prev_complexity} />
 				<Arrow />
 				<ComplexityBadge complexity={suggestion.new_complexity} />
 			</div>
-			<div class="flex justify-between w-full items-center">
+			<div class="flex justify-between w-full items-center pt-2">
 				<Button type={ButtonType.Primary} on:click={apply_suggestion}>Extract function</Button>
 				<Button type={ButtonType.Secondary} on:click={dismiss_suggestion}>Dismiss</Button>
 			</div>
