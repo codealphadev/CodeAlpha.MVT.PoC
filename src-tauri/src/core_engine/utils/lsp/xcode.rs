@@ -3,6 +3,7 @@ use std::{
     path::Path,
     process::{Command, Stdio},
 };
+use tracing::{info, warn};
 
 use crate::utils::calculate_hash;
 use cached::proc_macro::cached;
@@ -15,8 +16,6 @@ pub async fn get_compiler_args_from_xcodebuild(
     source_file_path: String,
     _hash: u64,
 ) -> Result<Vec<String>, XCodebuildError> {
-    _ = get_list_of_module_names(&source_file_path);
-
     let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())?;
 
     let output = Command::new("xcodebuild")
@@ -107,7 +106,17 @@ pub fn get_hashed_pbxproj_modification_date(
     Ok(calculate_hash(&modified_time))
 }
 
-pub fn get_list_of_module_names(source_file_path: &str) -> Result<Vec<String>, XCodebuildError> {
+#[cached()]
+pub fn log_list_of_module_names(source_file_path: String) {
+    tauri::async_runtime::spawn(async move {
+        match get_list_of_module_names(&source_file_path) {
+            Ok(result) => info!(?result, ?source_file_path, "List of module names"),
+            Err(e) => warn!(?e, ?source_file_path, "Could not get list of module names"),
+        };
+    });
+}
+
+fn get_list_of_module_names(source_file_path: &str) -> Result<Vec<String>, XCodebuildError> {
     let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())?;
 
     // xcodebuild -alltargets -showBuildSettingsForIndex | sed -n '/-module-name/{n;p;}' | sort | uniq
@@ -118,6 +127,7 @@ pub fn get_list_of_module_names(source_file_path: &str) -> Result<Vec<String>, X
         .arg("-alltargets")
         .arg("-json")
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| XCodebuildError::GenericError(e.into()))?;
 
