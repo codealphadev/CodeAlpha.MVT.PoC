@@ -4,10 +4,7 @@ use parking_lot::Mutex;
 use tauri::Manager;
 use tracing::error;
 
-use crate::{
-    app_handle, app_state::CoreEngineStateCache, platform::macos::XcodeError,
-    CORE_ENGINE_ACTIVE_AT_STARTUP,
-};
+use crate::{app_handle, app_state::CoreEngineStateCache, platform::macos::XcodeError};
 
 use super::{
     annotations_manager::{AnnotationsManager, AnnotationsManagerTrait},
@@ -56,9 +53,6 @@ pub struct CoreEngine {
 
     ai_features_active: bool,
 
-    /// Identifier indicating if the app is currently active and supposed to give suggestions
-    _engine_active: bool,
-
     /// Annotations manager handles where to draw annotations on the code editor via the CodeOverlay window
     _annotations_manager: Arc<Mutex<AnnotationsManager>>,
 }
@@ -85,7 +79,6 @@ impl CoreEngine {
                 Feature::DocsGeneration(DocsGenerator::new()),
                 Feature::ComplexityRefactoring(ComplexityRefactoring::new()),
             ],
-            _engine_active: CORE_ENGINE_ACTIVE_AT_STARTUP,
             _annotations_manager: annotations_manager,
         }
     }

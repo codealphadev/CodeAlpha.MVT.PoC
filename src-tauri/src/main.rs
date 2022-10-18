@@ -7,9 +7,7 @@ use app_state::AppHandleExtension;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tauri::{
-    ActivationPolicy, AppHandle, Builder, Menu, PackageInfo, RunEvent, SystemTray, UpdaterEvent,
-};
+use tauri::{ActivationPolicy, AppHandle, Builder, Menu, RunEvent, SystemTray, UpdaterEvent};
 use tracing::{debug, error, info};
 
 mod app_state;
@@ -37,10 +35,6 @@ lazy_static! {
     static ref APP_HANDLE: Mutex<Option<AppHandle>> = Mutex::new(None);
 }
 
-lazy_static! {
-    static ref TAURI_PACKAGE_INFO: Mutex<Option<PackageInfo>> = Mutex::new(None);
-}
-
 pub static CORE_ENGINE_ACTIVE_AT_STARTUP: bool = true;
 
 fn set_static_app_handle(app_handle: &AppHandle) {
@@ -58,12 +52,6 @@ fn main() {
     TracingSubscriber::new();
 
     let tauri_context = tauri::generate_context!("tauri.conf.json");
-
-    {
-        TAURI_PACKAGE_INFO
-            .lock()
-            .replace(tauri_context.package_info().clone());
-    }
 
     let mut app: tauri::App = Builder::default()
         .invoke_handler(tauri::generate_handler![
