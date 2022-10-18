@@ -52,7 +52,7 @@ custom-protocol = [ "tauri/custom-protocol",]
 
 [dependencies.tauri]
 version = "1.1.1"
-features = [ "clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-hide", "window-start-dragging",]
+features = ["clipboard", "isolation", "macos-private-api", "process-command-api", "shell-sidecar", "system-tray", "updater", "window-hide", "window-start-dragging"]
 
 [dependencies.tauri-plugin-log]
 git = "https://github.com/tauri-apps/tauri-plugin-log"
@@ -101,7 +101,7 @@ features = [ "serde-compat", "format", "uuid-impl",]
 
 [build-dependencies.tauri-build]
 version = "1.0.0"
-features = [ "isolation",]
+features = ["isolation"]
 
 [patch.crates-io.tao]
 git = "https://github.com/codealphadev/tao"

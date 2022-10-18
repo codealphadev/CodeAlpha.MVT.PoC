@@ -10,8 +10,8 @@ use crate::{
         events::AnnotationManagerEvent, features::FeatureKind, EditorWindowUid, TextRange,
     },
     platform::macos::{
-        get_bounds_for_TextRange, get_minimal_viewport_properties, get_visible_text_range,
-        scroll_by_one_page, GetVia, XcodeError,
+        get_bounds_for_TextRange, get_minimal_viewport_properties, get_number_of_characters,
+        get_visible_text_range, scroll_by_one_page, GetVia, XcodeError,
     },
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
@@ -28,6 +28,8 @@ static APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS: u64 = 125;
 pub enum AnnotationError {
     #[error("Annotation of the given job uid does not exist.")]
     AnnotationNotFound,
+    #[error("The annotation char index is larger than the number of characters in the textarea.")]
+    AnnotationOutOfReach,
     #[error("AnnotationGroup of the given uid does not exist.")]
     AnnotationJobGroupNotFound,
     #[error("Something went wrong when executing the AnnotationManager.")]
@@ -229,6 +231,14 @@ impl AnnotationsManagerTrait for AnnotationsManager {
             } else {
                 *scroll_to_annotation_job_id = Some(annotation.id);
             }
+        }
+
+        // Safety net: check if annotation char_index is even reachable
+        if annotation.char_index as i32
+            >= get_number_of_characters(GetVia::Current)
+                .map_err(|e| AnnotationError::GenericError(e.into()))?
+        {
+            return Err(AnnotationError::AnnotationOutOfReach);
         }
 
         tauri::async_runtime::spawn({
