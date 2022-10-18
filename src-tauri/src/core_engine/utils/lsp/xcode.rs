@@ -1,15 +1,15 @@
+use crate::utils::calculate_hash;
+use cached::proc_macro::cached;
+use cached::SizedCache;
+use glob::glob;
+use rand::Rng;
+use serde_json::Value;
 use std::{
     fs,
     path::Path,
     process::{Command, Stdio},
 };
-use tracing::{info, warn};
-
-use crate::utils::calculate_hash;
-use cached::proc_macro::cached;
-use glob::glob;
-use serde_json::Value;
-use tracing::error;
+use tracing::{debug, error, warn};
 
 #[cached(result = true, size = 100)]
 pub async fn get_compiler_args_from_xcodebuild(
@@ -86,9 +86,22 @@ pub fn extract_compiler_args_from_xcodebuild_output_recursive(
 }
 
 // The project.pbxproj file contains the files in the project. It is one option for caching the compiler args.
-pub fn get_hashed_pbxproj_modification_date(
-    source_file_path: &str,
-) -> Result<u64, XCodebuildError> {
+pub fn get_hashed_pbxproj_modification_date_with_random_fallback(source_file_path: &str) -> u64 {
+    match get_hashed_pbxproj_modification_date(source_file_path) {
+        Err(e) => {
+            warn!(
+                ?e,
+                "Unable to get hash for project.pbxproj modification date"
+            );
+            let mut rng = rand::thread_rng();
+            rng.gen::<u64>()
+        }
+        Ok(res) => res,
+    }
+}
+
+// The project.pbxproj file contains the files in the project. It is one option for caching the compiler args.
+fn get_hashed_pbxproj_modification_date(source_file_path: &str) -> Result<u64, XCodebuildError> {
     let path_to_xcodeproj = get_path_to_xcodeproj(source_file_path.to_string())?;
 
     let path_to_pbxproj = Path::new(&path_to_xcodeproj).join("project.pbxproj");
@@ -106,11 +119,17 @@ pub fn get_hashed_pbxproj_modification_date(
     Ok(calculate_hash(&modified_time))
 }
 
-#[cached()]
+// Hash based on modification date of pbxproj file to cache based on file structure
+// This kind-of also caches based on project, since different projects have no reason to have same modification date
+#[cached(
+    type = "SizedCache<u64, ()>",
+    create = "{ SizedCache::with_size(1000) }",
+    convert = r#"{  get_hashed_pbxproj_modification_date_with_random_fallback(&source_file_path) }"#
+)]
 pub fn log_list_of_module_names(source_file_path: String) {
     tauri::async_runtime::spawn(async move {
         match get_list_of_module_names(&source_file_path) {
-            Ok(result) => info!(?result, ?source_file_path, "List of module names"),
+            Ok(result) => debug!(?result, ?source_file_path, "List of module names"),
             Err(e) => warn!(?e, ?source_file_path, "Could not get list of module names"),
         };
     });
