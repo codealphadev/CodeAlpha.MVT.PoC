@@ -113,27 +113,7 @@ pub mod default_properties {
     use super::*;
 
     pub fn url(window: &AppWindow) -> String {
-        match window {
-            AppWindow::Settings => {
-                format!("{}{}", r"\", AppWindow::Settings.to_string().to_lowercase())
-            }
-
-            AppWindow::Analytics => format!(
-                "{}{}",
-                r"\",
-                AppWindow::Analytics.to_string().to_lowercase()
-            ),
-            AppWindow::Widget => {
-                format!("{}{}", r"\", AppWindow::Widget.to_string().to_lowercase())
-            }
-            AppWindow::Explain => {
-                format!("{}{}", r"\", AppWindow::Explain.to_string().to_lowercase())
-            }
-            AppWindow::CodeOverlay => {
-                format!("{}{}", r"\", AppWindow::CodeOverlay.to_string()).to_case(Case::Kebab)
-            }
-            AppWindow::Main => format!("{}{}", r"\", AppWindow::Main.to_string().to_lowercase()),
-        }
+        format!("/{}", window.to_string().to_case(Case::Kebab))
     }
 
     pub fn title(window: &AppWindow) -> String {

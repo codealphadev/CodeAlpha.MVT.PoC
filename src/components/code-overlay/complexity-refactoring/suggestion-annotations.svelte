@@ -9,15 +9,18 @@
 	import type { EventUserInteraction } from '../../../../src-tauri/bindings/user_interaction/EventUserInteraction';
 	import type { AnnotationKind } from '../../../../src-tauri/bindings/features/code_annotations/AnnotationKind';
 	import { fade } from 'svelte/transition';
-	import type { EventWindowControls } from '../../../../src-tauri/bindings/window_controls/EventWindowControls';
-	import type { HideAppWindowMessage } from '../../../../src-tauri/bindings/window_controls/HideAppWindowMessage';
-	import type { ShowAppWindowMessage } from '../../../../src-tauri/bindings/window_controls/ShowAppWindowMessage';
+	import { main_window_active_store } from '../../../state';
+
+	let main_window_active: boolean;
+
+	main_window_active_store.subscribe((value: boolean) => {
+		main_window_active = value;
+	});
 
 	const TRANSITION_DURATION = 100;
 
 	let annotation_groups: AnnotationGroup[] = [];
 	let selected_suggestion_id: string | null = null;
-	let main_window_active = false;
 
 	export let active_window_uid: number;
 	export let annotation_section_rect: LogicalFrame;
@@ -151,30 +154,6 @@
 	};
 
 	listen_to_annotation_events();
-
-	const listenToMainWindowEvents = async () => {
-		let WindowControlsChannel: ChannelList = 'EventWindowControls';
-		await listen(WindowControlsChannel, (e) => {
-			const { event, payload } = JSON.parse(e.payload as string) as EventWindowControls;
-			switch (event) {
-				case 'AppWindowHide':
-					const hide_msg = payload as HideAppWindowMessage;
-					if (hide_msg.app_windows.includes('Main')) {
-						main_window_active = false;
-					}
-					break;
-				case 'AppWindowShow':
-					const show_msg = payload as ShowAppWindowMessage;
-					if (show_msg.app_windows.includes('Main')) {
-						main_window_active = true;
-					}
-					break;
-				default:
-					break;
-			}
-		});
-	};
-	listenToMainWindowEvents();
 </script>
 
 {#if main_window_active && current_annotation_group?.editor_window_uid === active_window_uid}

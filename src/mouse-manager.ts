@@ -75,6 +75,7 @@ export class MouseManager {
 			element.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
 			element.classList.remove('hover');
 		});
+		this.elements = [];
 	}
 
 	private simulate_mouse_event_on_element(

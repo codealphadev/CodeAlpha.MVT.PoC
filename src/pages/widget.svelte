@@ -1,19 +1,23 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/tauri';
 	import WidgetBackground from '../components/widget/widget-background.svelte';
-	import { emit, listen } from '@tauri-apps/api/event';
+	import { toggle_main_window } from '../utils';
+	import WidgetContent from '../components/widget/widget-content.svelte';
+	import { main_window_active_store } from '../state';
+	import BadgeNoAiMode from '../components/widget/badge-no-ai-mode.svelte';
+	import { onMount } from 'svelte';
+	import type { CoreEngineState } from '../../src-tauri/bindings/app_state/CoreEngineState';
 	import type { ChannelList } from '../../src-tauri/bindings/ChannelList';
 	import type { EventUserInteraction } from '../../src-tauri/bindings/user_interaction/EventUserInteraction';
-	import type { CoreEngineState } from '../../src-tauri/bindings/app_state/CoreEngineState';
-	import { toggle_main_window } from '../utils';
-	import type { EventWindowControls } from '../../src-tauri/bindings/window_controls/EventWindowControls';
-	import type { HideAppWindowMessage } from '../../src-tauri/bindings/window_controls/HideAppWindowMessage';
-	import WidgetContent from '../components/widget/widget-content.svelte';
-	import BadgeNoAiMode from '../components/widget/badge-no-ai-mode.svelte';
+	import { listen } from '@tauri-apps/api/event';
 	import type { AiFeaturesStatusMessage } from '../../src-tauri/bindings/user_interaction/AiFeaturesStatusMessage';
-	import { onMount } from 'svelte';
 
 	let main_window_active = false;
+
+	main_window_active_store.subscribe((value: boolean) => {
+		main_window_active = value;
+	});
+
 	let ai_mode_active = true;
 
 	onMount(() => {
@@ -25,30 +29,6 @@
 
 		ai_mode_active = core_engine_state?.ai_features_active ?? true;
 	};
-
-	const clickAction = async () => {
-		main_window_active = !main_window_active;
-		toggle_main_window(main_window_active);
-	};
-
-	const listenToMainWindowHideEvents = async () => {
-		let WindowControlsChannel: ChannelList = 'EventWindowControls';
-		await listen(WindowControlsChannel, (e) => {
-			const { event, payload } = JSON.parse(e.payload as string) as EventWindowControls;
-
-			switch (event) {
-				case 'AppWindowHide':
-					const { app_windows } = payload as HideAppWindowMessage;
-					if (app_windows.includes('Main')) {
-						main_window_active = false;
-					}
-					break;
-				default:
-					break;
-			}
-		});
-	};
-	listenToMainWindowHideEvents();
 
 	const listenEventUserInteractions = async () => {
 		let EventUserInteractionsChannel: ChannelList = 'EventUserInteractions';
@@ -67,15 +47,11 @@
 	};
 	listenEventUserInteractions();
 
+	const clickAction = async () => {
+		toggle_main_window(!main_window_active);
+	};
+
 	const handle_release_drag = async () => {
-		const event: EventUserInteraction = {
-			event: 'ToggleMainWindow',
-			payload: main_window_active
-		};
-		const channel: ChannelList = 'EventUserInteractions';
-
-		await emit(channel, event);
-
 		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
 		// delay between setting a new position and recreating the parent/child relationship.
 		// Pausing the main thread is not possible. Also, running this task async is also not trivial.

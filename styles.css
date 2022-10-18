@@ -1,5 +1,5 @@
 .suggestion.hover {
-  border: 1px solid #A5AAB8;
+  border: 1px solid var(--theme-background_emphasis);
 }
 
 code {
