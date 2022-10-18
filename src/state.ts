@@ -1,23 +1,32 @@
-import { writable } from "svelte/store";
-import { Event, listen } from '@tauri-apps/api/event';
+import { writable } from 'svelte/store';
+import { listen } from '@tauri-apps/api/event';
 import type { ChannelList } from '../src-tauri/bindings/ChannelList';
-import type { RuleMatch } from '../src-tauri/bindings/rules/RuleMatch';
-import type { RuleResults } from '../src-tauri/bindings/rules/RuleResults';
+import type { EventWindowControls } from '../src-tauri/bindings/window_controls/EventWindowControls';
+import type { HideAppWindowMessage } from '../src-tauri/bindings/window_controls/HideAppWindowMessage';
+import type { ShowAppWindowMessage } from '../src-tauri/bindings/window_controls/ShowAppWindowMessage';
 
-export const alerts = writable([]);
+export const main_window_active_store = writable(false);
 
-
-const listenToGlobalEvents = async () => {
-  let ruleMatches: RuleMatch[] = [];
-  await listen('RuleResults' as ChannelList, (event) => {
-    const tauriEvent = event as Event<any>;
-    let ruleResults: RuleResults[] = tauriEvent.payload;
-    ruleMatches = [];
-    for (let ruleResult of ruleResults) {
-      ruleMatches = ruleMatches.concat(ruleResult.results);
-    }
-    alerts.set(ruleMatches);
-  });
+const listenToMainWindowEvents = async () => {
+	let WindowControlsChannel: ChannelList = 'EventWindowControls';
+	await listen(WindowControlsChannel, (e) => {
+		const { event, payload } = JSON.parse(e.payload as string) as EventWindowControls;
+		switch (event) {
+			case 'AppWindowHide':
+				const hide_msg = payload as HideAppWindowMessage;
+				if (hide_msg.app_windows.includes('Main')) {
+					main_window_active_store.set(false);
+				}
+				break;
+			case 'AppWindowShow':
+				const show_msg = payload as ShowAppWindowMessage;
+				if (show_msg.app_windows.includes('Main')) {
+					main_window_active_store.set(true);
+				}
+				break;
+			default:
+				break;
+		}
+	});
 };
-
-listenToGlobalEvents();
+listenToMainWindowEvents();
