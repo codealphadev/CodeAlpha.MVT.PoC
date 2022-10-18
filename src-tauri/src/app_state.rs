@@ -30,10 +30,18 @@ pub enum AppError {
 
 pub type Result<T> = std::result::Result<T, AppError>;
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize, TS)]
+#[derive(Clone, Debug, Deserialize, Serialize, TS)]
 #[ts(export, export_to = "bindings/app_state/")]
 pub struct CoreEngineState {
     pub ai_features_active: bool,
+}
+
+impl Default for CoreEngineState {
+    fn default() -> Self {
+        CoreEngineState {
+            ai_features_active: true,
+        }
+    }
 }
 
 pub struct CoreEngineStateCache(pub Arc<Mutex<CoreEngineState>>);
