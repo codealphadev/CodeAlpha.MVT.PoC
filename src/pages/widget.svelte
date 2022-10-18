@@ -52,16 +52,9 @@
 	};
 
 	const handle_release_drag = async () => {
-		// Rebind the MainWindow and WidgetWindow. Because of how MacOS works, we need to have some
-		// delay between setting a new position and recreating the parent/child relationship.
-		// Pausing the main thread is not possible. Also, running this task async is also not trivial.
-		// We send a message to the main thread to run this task.
-		// EventWindowControls::RebindMainAndWidget.publish_to_tauri(&app_handle());
-		if (main_window_active) {
-			setTimeout(() => {
-				invoke('cmd_rebind_main_widget');
-			}, 100);
-		}
+		// We do this call to cope with the fact that macOS unpredictably
+		// repositions the main window when it is being dragged into the menu bar.
+		toggle_main_window(main_window_active);
 	};
 
 	let startX: number | undefined = undefined;
