@@ -78,30 +78,30 @@ fn check_ai_features() -> bool {
 
 pub fn evaluate_system_tray_event(event: SystemTrayEvent) {
     match event {
-        SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-            TRAY_MENU_EXIT => on_quit(),
-            TRAY_MENU_CHECK_AX_API => on_check_permissions(),
-            TRAY_MENU_DEACTIVATE_AI_FEATURES => on_deactivate_ai_features(),
-            TRAY_MENU_ACTIVATE_AI_FEATURES => on_activate_ai_features(),
-            _ => {}
-        },
+        SystemTrayEvent::MenuItemClick { id, .. } => {
+            debug!(action = id.as_str(), "System tray action");
+            match id.as_str() {
+                TRAY_MENU_EXIT => on_quit(),
+                TRAY_MENU_CHECK_AX_API => on_check_permissions(),
+                TRAY_MENU_DEACTIVATE_AI_FEATURES => on_deactivate_ai_features(),
+                TRAY_MENU_ACTIVATE_AI_FEATURES => on_activate_ai_features(),
+                _ => {}
+            }
+        }
+
         _ => {}
     }
 }
 
 fn on_quit() {
-    debug!("System tray: quit");
     app_handle().exit(0);
 }
 
 fn on_check_permissions() {
-    debug!("System tray: check_ax_api");
     platform::macos::is_application_trusted_with_prompt();
 }
 
 fn on_deactivate_ai_features() {
-    debug!("System tray: DEACTIVATE AI Features");
-
     update_app_state_ai_features_active(false);
 
     if app_handle()
@@ -119,8 +119,6 @@ fn on_deactivate_ai_features() {
 }
 
 fn on_activate_ai_features() {
-    debug!("System tray: ACTIVATE AI Features");
-
     update_app_state_ai_features_active(true);
 
     if app_handle()

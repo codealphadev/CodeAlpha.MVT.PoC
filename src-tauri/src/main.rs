@@ -103,7 +103,7 @@ fn main() {
         .expect("error while running tauri application");
 
     app.set_activation_policy(ActivationPolicy::Accessory);
-    app.run(|app_handle, event| match event {
+    app.run(|_, event| match event {
         RunEvent::Updater(updater_event) => match updater_event {
             UpdaterEvent::DownloadProgress {
                 chunk_length,
