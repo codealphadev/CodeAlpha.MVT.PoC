@@ -13,6 +13,7 @@
 	import Button from '../common/button/button.svelte';
 	import { ButtonType } from '../common/button/button';
 	import SuggestionsIcon from './icons/suggestions-icon.svelte';
+	import { ellipsis } from '../../utils';
 
 	export let suggestion: FERefactoringSuggestion;
 	export let suggestion_id: string;
@@ -57,10 +58,12 @@
 		</div>
 		<p class="text-contrast text-sm max-w-full leading-[1.714] {!expanded ? 'line-clamp-2' : ''}">
 			{#if expanded}
-				Your function <code>{suggestion.main_function_name}</code> may be hard to understand due to nested
-				statements. Consider extracting this code block into a separate function.
+				Your function <code>{ellipsis(suggestion.main_function_name, 18)}</code> may be hard to understand
+				due to nested statements. Consider extracting this code block into a separate function.
 			{:else}
-				Refactor deeply nested statements in function <code>{suggestion.main_function_name}</code>
+				Refactor deeply nested statements in function <code
+					>{ellipsis(suggestion.main_function_name, 23)}</code
+				>
 			{/if}
 		</p>
 	</header>
