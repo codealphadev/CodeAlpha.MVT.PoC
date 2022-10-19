@@ -47,3 +47,12 @@ export async function toggle_main_window_and_rebind_widget(open: boolean) {
 export const get_current_app_window = (): AppWindow => {
 	return pascalCase(window.location.pathname.replace('/', '')) as AppWindow;
 };
+
+export const ellipsis = (str: string | undefined | null, max_length: number): string => {
+	if (str === undefined || str === null) {
+		return '';
+	}
+	if (str.length > max_length) {
+		return str.slice(0, max_length) + '...';
+	}
+};
