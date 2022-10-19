@@ -5,9 +5,7 @@
 </script>
 
 <div
-	class="bg-background flex flex-col items-center justify-center gap-1 h-[136px] mt-9 rounded-b-xl"
+	class="bg-background flex flex-col items-center justify-center gap-1 h-[136px] mt-9 rounded-b-xl relative"
 >
-	<NoSuggestionsFoundIcon />
-	<H2>Pretty clean here!</H2>
-	<Caption>We couldn't spot anything. Happy coding!</Caption>
+	<H2>Checking for suggestions...</H2>
 </div>
