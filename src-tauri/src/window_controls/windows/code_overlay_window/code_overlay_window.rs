@@ -87,9 +87,18 @@ impl CodeOverlayWindow {
             .app_handle
             .get_window(&AppWindow::CodeOverlay.to_string())?;
 
-        tauri_window.set_size(size.as_tauri_LogicalSize()).ok()?;
         tauri_window
             .set_position(position.as_tauri_LogicalPosition())
+            .ok()?;
+
+        tauri_window.set_size(size.as_tauri_LogicalSize()).ok()?;
+
+        tauri_window
+            .set_min_size(Some(size.as_tauri_LogicalSize()))
+            .ok()?;
+
+        tauri_window
+            .set_max_size(Some(size.as_tauri_LogicalSize()))
             .ok()?;
 
         tauri_window.show().ok()?;
