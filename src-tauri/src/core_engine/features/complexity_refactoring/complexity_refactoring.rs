@@ -197,12 +197,14 @@ impl ComplexityRefactoring {
         code_document: &CodeDocument,
         execution_id: Uuid,
     ) -> Result<(), FeatureError> {
-        debug!("Computing suggestions for complexity refactoring");
-
-        if CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock().clone() != Some(execution_id) {
-            dbg!("compute_suggestions returning early");
+        if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+            println!("DIFF EXEC ID!");
             return Ok(());
+        } else {
+            println!("SAME EXEC ID!");
         }
+
+        debug!("Computing suggestions for complexity refactoring");
         let window_uid = code_document.editor_window_props().window_uid;
         self.set_suggestions_to_recalculating(window_uid);
 
@@ -226,6 +228,10 @@ impl ComplexityRefactoring {
         let mut suggestions: SuggestionsMap = HashMap::new();
 
         for function in top_level_functions {
+            if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+                dbg!("Return early: function loop");
+                return Ok(());
+            }
             s_exps.push(function.props.node.to_sexp());
             suggestions.extend(Self::generate_suggestions_for_function(
                 function,
@@ -296,6 +302,10 @@ impl ComplexityRefactoring {
         )?;
 
         for (id, mut suggestion) in suggestions.iter_mut() {
+            if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+                dbg!("Return early: suggestion loop");
+                return Err(ComplexityRefactoringError::ExecutionCancelled);
+            }
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
 
             let suggestion_start_pos = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
@@ -349,6 +359,10 @@ impl ComplexityRefactoring {
                 .map(|n| n.kind());
             tauri::async_runtime::spawn({
                 async move {
+                    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+                        println!("CHECK IN A");
+                        return;
+                    }
                     _ = get_edits_for_method_extraction(
                         suggestion_start_pos,
                         suggestion_range.length,
@@ -366,6 +380,7 @@ impl ComplexityRefactoring {
                         },
                         &binded_text_content_2,
                         binded_file_path_2,
+                        execution_id,
                     )
                     .await
                     .map_err(|e| match e {
@@ -481,11 +496,11 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
         execution_id: Uuid,
     ) {
-        if CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock().clone() != Some(execution_id) {
-            // Aborting due to new execution superseding
-            return;
-        }
         tauri::async_runtime::spawn(async move {
+            if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+                println!("Ignoring stale refactoring result");
+                return;
+            }
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
@@ -745,6 +760,8 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
+    #[error("Execution was cancelled")]
+    ExecutionCancelled,
     #[error("No suggestions found for window")]
     SuggestionsForWindowNotFound(usize),
     #[error("No suggestion found to apply")]

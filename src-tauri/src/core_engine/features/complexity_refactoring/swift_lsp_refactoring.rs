@@ -1,7 +1,8 @@
-use super::complexity_refactoring::Edit;
+use super::{complexity_refactoring::Edit, CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID};
 use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
 use anyhow::anyhow;
-use serde::{Deserialize, Serialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use uuid::Uuid;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
     #[serde(rename = "key.column")]
@@ -31,7 +32,15 @@ struct RefactoringResponse {
 fn map_edit_dto_to_edit(
     edit_dto: EditDto,
     text_content: &XcodeText,
+    execution_id: Uuid,
 ) -> Result<Edit, SwiftLspError> {
+    {
+        if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+            println!("EARLY EXIT map_edit_dto_to_edit");
+            return Err(SwiftLspError::GenericError(anyhow!("TODO4")));
+        }
+    }
+
     Ok(Edit {
         start_index: TextPosition {
             row: edit_dto.line - 1,
@@ -65,7 +74,12 @@ pub async fn refactor_function(
     length: usize,
     text_content: &XcodeText,
     tmp_file_path: &String,
+    execution_id: Uuid,
 ) -> Result<Vec<Edit>, SwiftLspError> {
+    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+        println!("EARLY EXIT refactor_function");
+        return Err(SwiftLspError::GenericError(anyhow!("TODO")));
+    }
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
@@ -83,7 +97,17 @@ key.compilerargs:{}"#,
     )
     .to_string();
 
+    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+        println!("EARLY EXIT refactor_function2");
+        return Err(SwiftLspError::GenericError(anyhow!("TODO2")));
+    }
+
     let result_str = SwiftLsp::make_lsp_request(&file_path, payload.clone()).await?;
+
+    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+        println!("EARLY EXIT refactor_function3");
+        return Err(SwiftLspError::GenericError(anyhow!("TODO3")));
+    }
 
     let result: RefactoringResponse =
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
@@ -98,7 +122,7 @@ key.compilerargs:{}"#,
         .map(|categorized_edit| categorized_edit.edits)
         .flatten()
         .map(|edit_dto| -> Result<Edit, SwiftLspError> {
-            map_edit_dto_to_edit(edit_dto, text_content)
+            map_edit_dto_to_edit(edit_dto, text_content, execution_id)
         })
         .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
