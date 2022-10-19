@@ -10,7 +10,8 @@ use super::{
     annotations_manager::{AnnotationsManager, AnnotationsManagerTrait},
     features::{
         BracketHighlight, ComplexityRefactoring, CoreEngineTrigger, DocsGenerator, Feature,
-        FeatureBase, FeatureError, SwiftFormatter,
+        FeatureBase, FeatureError, SwiftFormatter, CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID,
+        CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID,
     },
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     syntax_tree::SwiftSyntaxTree,
@@ -114,6 +115,14 @@ impl CoreEngine {
             .get(&editor_window_uid)
             .ok_or(CoreEngineError::CodeDocNotFound(editor_window_uid))?;
 
+        let execution_id = uuid::Uuid::new_v4();
+        if *trigger == CoreEngineTrigger::OnTextContentChange {
+            (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
+        }
+        if *trigger == CoreEngineTrigger::OnTextSelectionChange {
+            (*CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock()) = Some(execution_id);
+        }
+
         for feature in self.features.iter_mut() {
             tauri::async_runtime::spawn({
                 let code_doc = code_doc.clone();
@@ -128,12 +137,8 @@ impl CoreEngine {
                         return;
                     }
 
-                    if let Err(e) = feature.lock().compute(&code_doc, &trigger) {
+                    if let Err(e) = feature.lock().compute(&code_doc, &trigger, execution_id) {
                         error!(?e, ?feature, "Error in feature compute()")
-                    }
-
-                    if let Err(e) = feature.lock().update_visualization(&code_doc, &trigger) {
-                        error!(?e, ?feature, "Error in feature update_visualization()")
                     }
                 }
             });
