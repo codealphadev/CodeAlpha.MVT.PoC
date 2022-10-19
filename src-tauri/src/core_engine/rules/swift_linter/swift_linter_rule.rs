@@ -223,29 +223,3 @@ impl _SwiftLinterRule {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::core_engine::rules::RuleBase;
-
-    use super::{_SwiftLinterProps, _SwiftLinterRule};
-
-    #[test]
-    #[ignore]
-    fn test_swift_linter() {
-        let file_path_as_str = "/Users/adam/pretzl/code/adam-test/Shared/ContentView.swift";
-        let mut rule = _SwiftLinterRule::_new(12345);
-        rule._update_properties(_SwiftLinterProps {
-            file_path_as_str: Some(file_path_as_str.to_string()),
-            linter_config: None,
-            file_content: None,
-        });
-        rule.run();
-
-        if let Some(matches) = rule.rule_matches {
-            println!("{:#?}", matches);
-        } else {
-            assert!(false, "No rule matches!");
-        }
-    }
-}

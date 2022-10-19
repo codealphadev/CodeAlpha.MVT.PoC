@@ -149,12 +149,13 @@ fn deadlock_detection() {
             continue;
         }
 
-        println!("{} deadlocks detected", deadlocks.len());
-        for (i, threads) in deadlocks.iter().enumerate() {
-            println!("Deadlock #{}", i);
+        for (_, threads) in deadlocks.iter().enumerate() {
             for t in threads {
-                println!("Thread Id {:#?}", t.thread_id());
-                println!("{:#?}", t.backtrace());
+                error!(
+                    thread_id = t.thread_id(),
+                    backtrace = format!("{:?}", t.backtrace()),
+                    "Deadlock Detected"
+                );
             }
         }
     });

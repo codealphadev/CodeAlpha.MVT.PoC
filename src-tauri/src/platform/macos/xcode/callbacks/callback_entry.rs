@@ -15,6 +15,7 @@ use core_foundation::{
     base::TCFType,
     string::{CFString, CFStringRef},
 };
+use tracing::warn;
 
 use crate::platform::macos::xcode::{
     callbacks::{notify_window_created, notify_window_destroyed, notify_window_minimized},
@@ -102,7 +103,7 @@ pub unsafe extern "C" fn callback_xcode_notifications(
             let _ = notification_key_press_save(&element, &mut (*context));
         }
         _other => {
-            println!("Forgotten notification: {:?}", _other)
+            warn!("Forgotten notification: {:?}", _other)
         }
     }
 }

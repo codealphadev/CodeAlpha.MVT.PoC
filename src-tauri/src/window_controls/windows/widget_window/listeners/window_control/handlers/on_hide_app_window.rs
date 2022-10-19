@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use parking_lot::Mutex;
+use tracing::warn;
 
 use crate::window_controls::{
     config::AppWindow, events::models::app_window::HideAppWindowMessage, windows::WidgetWindow,
@@ -14,7 +15,7 @@ pub fn on_hide_app_window(
         let widget_window = widget_window.lock();
 
         if widget_window.hide().is_none() {
-            println!("Failed to hide widget window");
+            warn!("Failed to hide widget window");
         };
     }
 

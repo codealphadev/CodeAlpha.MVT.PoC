@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use parking_lot::Mutex;
+use tracing::warn;
 
 use crate::window_controls::{
     config::AppWindow, events::models::app_window::ShowAppWindowMessage, windows::ExplainWindow,
@@ -22,7 +23,7 @@ pub fn on_show_app_window(
             )
             .is_none()
         {
-            println!("Failed to show explain window");
+            warn!("Failed to show explain window");
         };
     }
 

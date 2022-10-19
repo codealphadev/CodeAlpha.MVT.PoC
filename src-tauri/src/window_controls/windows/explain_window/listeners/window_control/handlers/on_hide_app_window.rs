@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use parking_lot::Mutex;
+use tracing::warn;
 
 use crate::window_controls::{
     config::AppWindow, events::models::app_window::HideAppWindowMessage, windows::ExplainWindow,
@@ -14,7 +15,7 @@ pub fn on_hide_app_window(
         let mut explain_window = explain_window.try_lock()?;
 
         if explain_window.hide().is_none() {
-            println!("Failed to hide explain window");
+            warn!("Failed to hide explain window");
         };
     }
 

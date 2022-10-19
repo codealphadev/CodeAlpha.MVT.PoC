@@ -25,8 +25,6 @@ impl EventUserInteraction {
     pub fn publish_to_tauri(&self) {
         let event_name = ChannelList::EventUserInteractions.to_string();
 
-        println!("Publishing event: {}", event_name);
-
         // Emit to rust listeners
         app_handle().trigger_global(
             event_name.as_str(),
