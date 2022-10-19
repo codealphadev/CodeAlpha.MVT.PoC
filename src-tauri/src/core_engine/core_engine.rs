@@ -10,8 +10,7 @@ use super::{
     annotations_manager::{AnnotationsManager, AnnotationsManagerTrait},
     features::{
         BracketHighlight, ComplexityRefactoring, CoreEngineTrigger, DocsGenerator, Feature,
-        FeatureBase, FeatureError, SwiftFormatter, CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID,
-        CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID,
+        FeatureBase, FeatureError, SwiftFormatter,
     },
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     syntax_tree::SwiftSyntaxTree,
@@ -79,11 +78,11 @@ impl CoreEngine {
             code_documents: Arc::new(Mutex::new(HashMap::new())),
             ai_features_active,
             features: vec![
-                // Arc::new(Mutex::new(Feature::BracketHighlighting(
-                //     BracketHighlight::new(),
-                // ))),
-                // Arc::new(Mutex::new(Feature::Formatter(SwiftFormatter::new()))),
-                // Arc::new(Mutex::new(Feature::DocsGeneration(DocsGenerator::new()))),
+                Arc::new(Mutex::new(Feature::BracketHighlighting(
+                    BracketHighlight::new(),
+                ))),
+                Arc::new(Mutex::new(Feature::Formatter(SwiftFormatter::new()))),
+                Arc::new(Mutex::new(Feature::DocsGeneration(DocsGenerator::new()))),
                 Arc::new(Mutex::new(Feature::ComplexityRefactoring(
                     ComplexityRefactoring::new(),
                 ))),
@@ -116,16 +115,9 @@ impl CoreEngine {
             .ok_or(CoreEngineError::CodeDocNotFound(editor_window_uid))?;
 
         let execution_id = uuid::Uuid::new_v4();
-        if *trigger == CoreEngineTrigger::OnTextContentChange {
-            (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
-            println!(
-                "CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID: {:?}",
-                execution_id
-            );
-        }
-        if *trigger == CoreEngineTrigger::OnTextSelectionChange {
-            (*CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock()) = Some(execution_id);
-        }
+
+        BracketHighlight::register_new_execution(trigger, execution_id);
+        ComplexityRefactoring::register_new_execution(trigger, execution_id);
 
         for feature_arc in self.features.iter_mut() {
             tauri::async_runtime::spawn({
@@ -143,9 +135,10 @@ impl CoreEngine {
                     }
 
                     if let Err(e) = feature.compute(&code_doc, &trigger, execution_id) {
-                        error!(?e, ?feature, "Error in feature compute()")
-                    } else {
-                        println!("FINISHED COMPUTING FEATURE: {:?}", feature);
+                        match e {
+                            FeatureError::ExecutionCancelled(_) => (),
+                            _ => error!(?e, ?feature, "Error in feature compute()"),
+                        }
                     }
                 }
             });

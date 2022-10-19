@@ -90,7 +90,6 @@ pub async fn get_edits_for_method_extraction(
     let temp_file = create_temp_file(&text_content, tmp_file_key)?;
 
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        println!("EARLY EXIT get_edits_for_method_extraction");
         return Err(ComplexityRefactoringError::GenericError(anyhow!("TODO")));
     }
 
@@ -108,6 +107,9 @@ pub async fn get_edits_for_method_extraction(
         match e {
             SwiftLspError::RefactoringNotPossible(payload) => {
                 ComplexityRefactoringError::LspRejectedRefactoring(payload)
+            }
+            SwiftLspError::ExecutionCancelled(id) => {
+                ComplexityRefactoringError::ExecutionCancelled(id)
             }
             _ => ComplexityRefactoringError::GenericError(e.into()),
         }

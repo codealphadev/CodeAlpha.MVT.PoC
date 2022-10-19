@@ -64,10 +64,9 @@ impl AnnotationManagerEvent {
     pub fn publish_to_tauri(&self) {
         let event_name = ChannelList::AnnotationEvent.to_string();
 
-        // Emit to rust listeners
-        app_handle().trigger_global(
-            event_name.as_str(),
-            Some(serde_json::to_string(self).unwrap()),
-        );
+        let serialized_self = serde_json::to_string(self).ok();
+        tauri::async_runtime::spawn(async move {
+            app_handle().trigger_global(event_name.as_str(), serialized_self.clone());
+        });
     }
 }

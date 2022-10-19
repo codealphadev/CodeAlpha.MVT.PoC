@@ -14,7 +14,7 @@ use crate::{
         },
         format_code, get_index_of_first_difference,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
-        CodeDocument, EditorWindowUid, TextPosition, TextRange, XcodeText,
+        CodeDocument, EditorWindowUid, TextPosition, TextRange, XcodeText, SWIFT_LSP_COMMAND_QUEUE,
     },
     platform::macos::{replace_text_content, set_selected_text_range, GetVia},
     utils::calculate_hash,
@@ -168,6 +168,16 @@ impl FeatureBase for ComplexityRefactoring {
 }
 
 impl ComplexityRefactoring {
+    pub fn register_new_execution(trigger: &CoreEngineTrigger, execution_id: Uuid) {
+        if *trigger == CoreEngineTrigger::OnTextContentChange {
+            (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
+            for (_, commands) in SWIFT_LSP_COMMAND_QUEUE.lock().drain() {
+                for command in commands {
+                    command.kill().unwrap();
+                }
+            }
+        }
+    }
     pub fn new() -> Self {
         Self {
             suggestions_arc: Arc::new(Mutex::new(HashMap::new())),
@@ -198,13 +208,12 @@ impl ComplexityRefactoring {
         execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-            println!("DIFF EXEC ID!");
             return Ok(());
-        } else {
-            println!("SAME EXEC ID!");
         }
-
-        debug!("Computing suggestions for complexity refactoring");
+        debug!(
+            ?execution_id,
+            "Computing suggestions for complexity refactoring"
+        );
         let window_uid = code_document.editor_window_props().window_uid;
         self.set_suggestions_to_recalculating(window_uid);
 
@@ -229,7 +238,6 @@ impl ComplexityRefactoring {
 
         for function in top_level_functions {
             if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                dbg!("Return early: function loop");
                 return Ok(());
             }
             s_exps.push(function.props.node.to_sexp());
@@ -258,6 +266,7 @@ impl ComplexityRefactoring {
         remove_annotations_for_suggestions(removed_suggestion_ids.clone());
 
         Self::publish_to_frontend(self.suggestions_arc.lock().clone());
+
         Ok(())
     }
 
@@ -303,11 +312,9 @@ impl ComplexityRefactoring {
 
         for (id, mut suggestion) in suggestions.iter_mut() {
             if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                dbg!("Return early: suggestion loop");
-                return Err(ComplexityRefactoringError::ExecutionCancelled);
+                return Err(ComplexityRefactoringError::ExecutionCancelled(execution_id));
             }
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
-
             let suggestion_start_pos = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
             let suggestion_end_pos =
                 TextPosition::from_TSPoint(&slice.nodes.last().unwrap().end_position());
@@ -320,7 +327,6 @@ impl ComplexityRefactoring {
             .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
                 "Failed to derive suggestion range"
             )))?;
-
             let context_range = TextRange::from_StartEndTextPosition(
                 &text_content,
                 &function.get_first_char_position(),
@@ -329,7 +335,6 @@ impl ComplexityRefactoring {
             .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
                 "Failed to derive context range"
             )))?;
-
             suggestion.start_index = Some(suggestion_range.index);
 
             set_annotation_group_for_extraction_and_context(
@@ -360,7 +365,6 @@ impl ComplexityRefactoring {
             tauri::async_runtime::spawn({
                 async move {
                     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                        println!("CHECK IN A");
                         return;
                     }
                     _ = get_edits_for_method_extraction(
@@ -498,7 +502,6 @@ impl ComplexityRefactoring {
     ) {
         tauri::async_runtime::spawn(async move {
             if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                println!("Ignoring stale refactoring result");
                 return;
             }
             let (old_content, new_content) =
@@ -760,8 +763,8 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
-    #[error("Execution was cancelled")]
-    ExecutionCancelled,
+    #[error("Execution was cancelled: '{0}'")]
+    ExecutionCancelled(Uuid),
     #[error("No suggestions found for window")]
     SuggestionsForWindowNotFound(usize),
     #[error("No suggestion found to apply")]

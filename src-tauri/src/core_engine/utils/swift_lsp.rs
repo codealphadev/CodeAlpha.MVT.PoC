@@ -8,6 +8,7 @@ use parking_lot::Mutex;
 use serde_json::Value;
 use tauri::api::process::{Command, CommandChild, CommandEvent};
 use tracing::{error, warn};
+use uuid::Uuid;
 pub struct SwiftLsp;
 use crate::utils::calculate_hash;
 use rand::Rng;
@@ -15,7 +16,7 @@ use rand::Rng;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SWIFT_LSP_COMMAND_QUEUE: Mutex<HashMap<String, CommandChild>> =
+    pub static ref SWIFT_LSP_COMMAND_QUEUE: Mutex<HashMap<Uuid, Vec<CommandChild>>> =
         Mutex::new(HashMap::new());
 }
 
@@ -25,7 +26,7 @@ pub trait Lsp {
     async fn make_lsp_request(
         file_path: &String,
         payload: String,
-        id: String,
+        execution_id: Uuid,
     ) -> Result<String, SwiftLspError>;
 
     async fn get_compiler_args(
@@ -39,7 +40,7 @@ impl Lsp for SwiftLsp {
     async fn make_lsp_request(
         file_path: &String,
         payload: String,
-        use_case_id: String,
+        execution_id: Uuid, // TODO: Refactor this
     ) -> Result<String, SwiftLspError> {
         if !Path::new(file_path).exists() {
             return Err(SwiftLspError::FileNotExisting(file_path.to_string()));
@@ -47,18 +48,6 @@ impl Lsp for SwiftLsp {
 
         let mut rx;
         {
-            let mut command_queue = SWIFT_LSP_COMMAND_QUEUE.lock();
-
-            if let Some(command_child) = command_queue.remove(&use_case_id) {
-                println!("Attempt to kill");
-                command_child
-                    .kill()
-                    .map_err(|e| SwiftLspError::GenericError(e.into()))?;
-                println!("Killed old command");
-            } else {
-                println!("No old command to kill");
-            }
-
             let cmd_child;
             (rx, cmd_child) = Command::new_sidecar("sourcekitten")
                 .map_err(|err| SwiftLspError::GenericError(err.into()))?
@@ -66,7 +55,11 @@ impl Lsp for SwiftLsp {
                 .spawn()
                 .map_err(|err| SwiftLspError::GenericError(err.into()))?;
 
-            command_queue.insert(use_case_id, cmd_child);
+            let mut command_queue = SWIFT_LSP_COMMAND_QUEUE.lock();
+            let mut commands = command_queue.remove(&execution_id).unwrap_or(vec![]);
+            commands.push(cmd_child);
+
+            command_queue.insert(execution_id.clone(), commands);
         }
 
         let mut text_content = "".to_string();
@@ -272,6 +265,9 @@ fn get_hashed_pbxproj_modification_date(source_file_path: &str) -> Result<u64, S
 }
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
+    #[error("Execution was cancelled: '{0}'")]
+    ExecutionCancelled(Uuid),
+
     #[error("File does not exist: '{0}'")]
     FileNotExisting(String),
 
