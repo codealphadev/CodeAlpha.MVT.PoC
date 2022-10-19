@@ -37,9 +37,10 @@ pub fn on_editor_focused_uielement_changed(
 
     let mut text_changed;
     {
+        let swift_parser = core_engine.swift_parser();
         let code_documents = &mut core_engine.code_documents().lock();
 
-        check_if_code_doc_needs_to_be_created(code_documents, pid, window_uid);
+        check_if_code_doc_needs_to_be_created(code_documents, pid, window_uid, swift_parser);
 
         let code_doc = code_documents
             .get_mut(&window_uid)

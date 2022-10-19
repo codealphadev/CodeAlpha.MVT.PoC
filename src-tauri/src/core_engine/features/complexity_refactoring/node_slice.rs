@@ -129,7 +129,7 @@ mod tests {
             "#,
                 );
 
-                let mut swift_syntax_tree = SwiftSyntaxTree::new();
+                let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
                 swift_syntax_tree.parse(&text_content).unwrap();
                 let tree = swift_syntax_tree.tree().unwrap();
                 let root_node = tree.root_node();
@@ -220,7 +220,7 @@ mod tests {
             "#,
             );
             // Re-parse tree from scratch
-            let mut swift_syntax_tree = SwiftSyntaxTree::new();
+            let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
             swift_syntax_tree.parse(&text_content).unwrap();
             let tree = swift_syntax_tree.tree().unwrap();
             let root_node = tree.root_node();

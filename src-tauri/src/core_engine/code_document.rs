@@ -1,16 +1,12 @@
+use std::sync::Arc;
+
 use super::{
-    rules::{rule_base::RuleResults, RuleBase, RuleType},
     syntax_tree::{SwiftSyntaxTree, SwiftSyntaxTreeError},
     utils::XcodeText,
     TextRange,
 };
-use crate::{
-    app_handle,
-    platform::macos::{get_textarea_content, GetVia},
-    utils::messaging::ChannelList,
-    window_controls::config::AppWindow,
-};
-use tauri::Manager;
+use crate::platform::macos::{get_textarea_content, GetVia};
+use parking_lot::Mutex;
 use tracing::error;
 
 #[derive(Clone, Debug)]
@@ -22,12 +18,10 @@ pub struct EditorWindowProps {
     pub pid: i32,
 }
 
+#[derive(Clone)]
 pub struct CodeDocument {
     /// Properties of the editor window that contains this code document.
     editor_window_props: EditorWindowProps,
-
-    /// The list of rules that are applied to this code document.
-    rules: Vec<RuleType>,
 
     /// The content of the loaded code document.
     text: Option<XcodeText>,
@@ -45,14 +39,16 @@ pub struct CodeDocument {
 }
 
 impl CodeDocument {
-    pub fn new(editor_window_props: &EditorWindowProps) -> Self {
+    pub fn new(
+        editor_window_props: &EditorWindowProps,
+        parser: Arc<Mutex<tree_sitter::Parser>>,
+    ) -> Self {
         Self {
-            rules: vec![],
             editor_window_props: editor_window_props.clone(),
             text: None,
             file_path: None,
             selected_text_range: None,
-            syntax_tree: SwiftSyntaxTree::new(),
+            syntax_tree: SwiftSyntaxTree::new(parser),
         }
     }
 
@@ -101,29 +97,6 @@ impl CodeDocument {
             self.text = Some(new_content);
         }
         return is_file_text_updated;
-    }
-
-    pub fn process_rules(&mut self) {
-        for rule in &mut self.rules {
-            rule.run();
-        }
-    }
-
-    pub fn compute_rule_visualizations(&mut self) {
-        let mut rule_results = Vec::<RuleResults>::new();
-        for rule in &mut self.rules {
-            if let Some(rule_match_results) =
-                rule.compute_rule_match_rectangles(self.editor_window_props.pid)
-            {
-                rule_results.push(rule_match_results);
-            }
-        }
-        // Send to CodeOverlay window
-        let _ = app_handle().emit_to(
-            &AppWindow::CodeOverlay.to_string(),
-            &ChannelList::RuleResults.to_string(),
-            &rule_results,
-        );
     }
 
     pub fn set_selected_text_range_and_get_if_text_changed(
@@ -194,7 +167,7 @@ impl CodeDocument {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::core_engine::TextRange;
+    use crate::core_engine::{syntax_tree::SwiftSyntaxTree, TextRange};
 
     use super::{CodeDocument, EditorWindowProps};
 
@@ -237,7 +210,7 @@ pub mod tests {
             pid: 1,
         };
 
-        let mut code_doc = CodeDocument::new(&editor_window);
+        let mut code_doc = CodeDocument::new(&editor_window, SwiftSyntaxTree::parser_mutex());
         code_doc.update_doc_properties(&code_snippet, &file_path);
         code_doc.set_selected_text_range_and_get_if_text_changed(&selected_text_range, false);
 
