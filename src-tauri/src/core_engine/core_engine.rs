@@ -13,6 +13,7 @@ use super::{
         FeatureBase, FeatureError, SwiftFormatter,
     },
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
+    syntax_tree::SwiftSyntaxTree,
     CodeDocument,
 };
 
@@ -55,6 +56,9 @@ pub struct CoreEngine {
 
     /// Annotations manager handles where to draw annotations on the code editor via the CodeOverlay window
     _annotations_manager: Arc<Mutex<AnnotationsManager>>,
+
+    /// The swift parser in an Arc<Mutex> to allow it to be shared between threads -> TSParser does not implement Clone.
+    parser_swift: Arc<Mutex<tree_sitter::Parser>>,
 }
 
 impl CoreEngine {
@@ -80,7 +84,12 @@ impl CoreEngine {
                 Feature::ComplexityRefactoring(ComplexityRefactoring::new()),
             ],
             _annotations_manager: annotations_manager,
+            parser_swift: SwiftSyntaxTree::parser_mutex(),
         }
+    }
+
+    pub fn swift_parser(&self) -> Arc<Mutex<tree_sitter::Parser>> {
+        self.parser_swift.clone()
     }
 
     pub fn code_documents(&mut self) -> &mut CodeDocumentsArcMutex {

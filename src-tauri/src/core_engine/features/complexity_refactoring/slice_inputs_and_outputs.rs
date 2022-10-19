@@ -365,7 +365,7 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new();
+            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
             syntax_tree.parse(&text_content).unwrap();
 
             let functions =
@@ -403,7 +403,7 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new();
+            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
             syntax_tree.parse(&text_content).unwrap();
 
             let functions =
@@ -442,7 +442,7 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new();
+            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
             syntax_tree.parse(&text_content).unwrap();
 
             let functions =
@@ -477,7 +477,7 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new();
+            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
             syntax_tree.parse(&text_content).unwrap();
 
             let functions =

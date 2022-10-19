@@ -209,7 +209,7 @@ mod tests {
             "#,
             );
 
-            let mut swift_syntax_tree = SwiftSyntaxTree::new();
+            let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
             swift_syntax_tree.parse(&text_content).unwrap();
 
             assert_eq!(
