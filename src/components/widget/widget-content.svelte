@@ -8,7 +8,10 @@
 	import type { EventViewport } from '../../../src-tauri/bindings/macOS_specific/EventViewport';
 	import type { EventRuleExecutionState } from '../../../src-tauri/bindings/rule_execution_state/EventRuleExecutionState';
 	import PretzlIcon from '../common/logo/pretzl-icon.svelte';
-	import { filter_and_sort_suggestions } from '../suggestions/suggestions';
+	import {
+		every_suggestion_is_new as get_every_suggestion_is_new,
+		filter_and_sort_suggestions
+	} from '../suggestions/suggestions';
 	import DocsGeneration from './docs-generation.svelte';
 	import IconEllipse from './icons/icon-ellipse.svelte';
 	import IconProcessing from './icons/icon-processing.svelte';
@@ -37,7 +40,10 @@
 	listenToViewportEvents();
 
 	let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
+
 	$: filtered_suggestions = filter_and_sort_suggestions(suggestions, active_window_uid);
+	$: every_suggestion_is_new = get_every_suggestion_is_new(suggestions, active_window_uid);
+
 	const listenToSuggestionEvents = async () => {
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
 		await listen(suggestion_channel, (event) => {
@@ -104,9 +110,17 @@
 
 	function get_widget_mode(
 		rule_execution_state: EventRuleExecutionState | null,
-		suggestions: [string, FERefactoringSuggestion][],
+		filtered_suggestions: [string, FERefactoringSuggestion][],
+		every_suggestion_is_new: boolean,
 		window_uid: number | null
 	): WidgetMode {
+		let is_loading_suggestions =
+			filtered_suggestions.some(([_, suggestion]) => suggestion.state === 'Recalculating') ||
+			every_suggestion_is_new;
+
+		if (is_loading_suggestions) {
+			return 'processing';
+		}
 		switch (rule_execution_state?.event) {
 			case 'NodeExplanationFailed':
 			case 'NodeExplanationFetched':
@@ -117,14 +131,19 @@
 				return 'processing';
 		}
 		if (window_uid) {
-			let suggestions_count = suggestions.length;
+			let suggestions_count = filtered_suggestions.length;
 			if (suggestions_count > 0) {
 				return suggestions_count;
 			}
 		}
 		return 'default';
 	}
-	$: widget_mode = get_widget_mode(ruleExecutionState, filtered_suggestions, active_window_uid);
+	$: widget_mode = get_widget_mode(
+		ruleExecutionState,
+		filtered_suggestions,
+		every_suggestion_is_new,
+		active_window_uid
+	);
 </script>
 
 <div class="absolute bottom-0 right-0 w-12 h-12">

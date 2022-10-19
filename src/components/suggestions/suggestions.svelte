@@ -9,9 +9,10 @@
 	import NoSuggestions from '../suggestions/no-suggestions.svelte';
 	import type { ReplaceSuggestionsMessage } from '../../../src-tauri/bindings/features/refactoring/ReplaceSuggestionsMessage';
 	import type { EventUserInteraction } from '../../../src-tauri/bindings/user_interaction/EventUserInteraction';
-	import { filter_and_sort_suggestions } from './suggestions';
+	import { every_suggestion_is_new, filter_and_sort_suggestions } from './suggestions';
 	import type { FERefactoringSuggestion } from '../../../src-tauri/bindings/features/refactoring/FERefactoringSuggestion';
 	import type { EventViewport } from '../../../src-tauri/bindings/macOS_specific/EventViewport';
+	import LoadingSuggestions from './loading-suggestions.svelte';
 
 	export let CONTAINER_DOM_ID: string;
 
@@ -40,6 +41,7 @@
 			if (window_height === old_window_height && window_width === old_window_width) {
 				return;
 			}
+			console.log(window_height, new Date().toISOString());
 			let appWindow: AppWindow = 'Main';
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
@@ -82,6 +84,8 @@
 	let suggestions: ReplaceSuggestionsMessage['suggestions'] = {};
 	$: filtered_suggestions = filter_and_sort_suggestions(suggestions, active_window_uid);
 
+	$: is_loading_suggestions = every_suggestion_is_new(suggestions, active_window_uid);
+
 	const listenToSuggestionEvents = async () => {
 		let suggestion_channel: ChannelList = 'SuggestionEvent';
 		await listen(suggestion_channel, (event) => {
@@ -89,6 +93,7 @@
 
 			switch (event_type) {
 				case 'ReplaceSuggestions':
+					console.log(new Date().toISOString());
 					suggestions = payload.suggestions;
 					if (
 						selected_suggestion_id &&
@@ -131,6 +136,8 @@
 			{/key}
 		{/each}
 	</div>
+{:else if is_loading_suggestions == true}
+	<LoadingSuggestions />
 {:else}
 	<NoSuggestions />
 {/if}
