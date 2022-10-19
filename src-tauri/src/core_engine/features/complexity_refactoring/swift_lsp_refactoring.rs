@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use super::{complexity_refactoring::Edit, CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID};
 use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
 use anyhow::anyhow;
-use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
@@ -16,6 +18,9 @@ struct EditDto {
     #[serde(rename = "key.text")]
     text: String,
 }
+
+const SWIFT_LSP_EXTRACT_FUNCTION_USECASE_ID: &str =
+    "sourcekit.request.refactoring.extract.function";
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct CategorizedEditDto {
@@ -102,7 +107,12 @@ key.compilerargs:{}"#,
         return Err(SwiftLspError::GenericError(anyhow!("TODO2")));
     }
 
-    let result_str = SwiftLsp::make_lsp_request(&file_path, payload.clone()).await?;
+    let result_str = SwiftLsp::make_lsp_request(
+        &file_path,
+        payload.clone(),
+        SWIFT_LSP_EXTRACT_FUNCTION_USECASE_ID.to_string(),
+    )
+    .await?;
 
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
         println!("EARLY EXIT refactor_function3");

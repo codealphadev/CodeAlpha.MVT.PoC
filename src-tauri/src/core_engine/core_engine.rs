@@ -79,11 +79,11 @@ impl CoreEngine {
             code_documents: Arc::new(Mutex::new(HashMap::new())),
             ai_features_active,
             features: vec![
-                Arc::new(Mutex::new(Feature::BracketHighlighting(
-                    BracketHighlight::new(),
-                ))),
-                Arc::new(Mutex::new(Feature::Formatter(SwiftFormatter::new()))),
-                Arc::new(Mutex::new(Feature::DocsGeneration(DocsGenerator::new()))),
+                // Arc::new(Mutex::new(Feature::BracketHighlighting(
+                //     BracketHighlight::new(),
+                // ))),
+                // Arc::new(Mutex::new(Feature::Formatter(SwiftFormatter::new()))),
+                // Arc::new(Mutex::new(Feature::DocsGeneration(DocsGenerator::new()))),
                 Arc::new(Mutex::new(Feature::ComplexityRefactoring(
                     ComplexityRefactoring::new(),
                 ))),
