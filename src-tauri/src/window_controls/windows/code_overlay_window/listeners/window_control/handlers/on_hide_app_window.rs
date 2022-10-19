@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use parking_lot::Mutex;
+use tracing::warn;
 
 use crate::window_controls::{
     config::AppWindow, events::models::app_window::HideAppWindowMessage, windows::CodeOverlayWindow,
@@ -14,7 +15,7 @@ pub fn on_hide_app_window(
         let code_overlay_window = code_overlay_window.lock();
 
         if code_overlay_window.hide().is_none() {
-            println!("Failed to hide code overlay window");
+            warn!("Failed to hide code overlay window");
         };
     }
 

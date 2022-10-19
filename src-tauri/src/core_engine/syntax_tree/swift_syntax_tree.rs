@@ -135,59 +135,8 @@ mod tests_SwiftSyntaxTree {
     use pretty_assertions::assert_eq;
 
     #[test]
-    #[ignore]
-    fn test_tree_reset() {
-        let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-
-        let original_string = "let";
-        let replace_string = "var";
-        let code_original = XcodeText::from_str(&format!(
-            "{} apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"",
-            original_string
-        ));
-        let code_updated = XcodeText::from_str(&format!(
-            "{} apples = 3\nlet appleSummary = \"I have \\(apples) apples.\"",
-            replace_string
-        ));
-
-        swift_syntax_tree.parse(&code_original).unwrap();
-        {
-            let root = swift_syntax_tree.tree().unwrap().root_node();
-            let mut cursor = root.walk();
-            println!(
-                "Root before - ID {:?}",
-                swift_syntax_tree.tree().unwrap().root_node().id()
-            );
-            for child in root.children(&mut cursor) {
-                println!(
-                    "Child before - ID {:?}, Kind {:?}, Text {:?}",
-                    child.id(),
-                    child.kind(),
-                    child.utf16_text(&code_original)
-                );
-            }
-        }
-
-        swift_syntax_tree.parse(&code_updated).unwrap();
-        let root = swift_syntax_tree.tree().unwrap().root_node();
-        let mut cursor = root.walk();
-        println!(
-            "Root after - ID {:?}",
-            swift_syntax_tree.tree().unwrap().root_node().id()
-        );
-        for child in root.children(&mut cursor) {
-            println!(
-                "Child after - ID {:?}, Kind {:?}, Text {:?}",
-                child.id(),
-                child.kind(),
-                child.utf16_text(&code_original)
-            );
-        }
-    }
-
-    #[test]
     fn test_start_end_point_end_newline_char() {
-        let text = XcodeText::from_str("let x = 1; console.log(x);\n");
+        let text = XcodeText::from_str("let x = 1; cansole.lug(x);\n");
         //                |------------------------>| <- end column is zero on row 1
         //                                            <- end byte is one past the last byte (27), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
@@ -209,7 +158,7 @@ mod tests_SwiftSyntaxTree {
 
     #[test]
     fn test_start_end_point_end_no_newline_char() {
-        let text = XcodeText::from_str("let x = 1; console.log(x);");
+        let text = XcodeText::from_str("let x = 1; cansole.lug(x);");
         //                |------------------------>| <- end column is one past the last char (26)
         //                |------------------------>| <- end byte is one past the last byte (26), as they are also zero-based
         let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
@@ -234,7 +183,7 @@ mod tests_SwiftSyntaxTree {
         let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
 
         let mut text = XcodeText::from_str("// 😊\n");
-        let mut utf8_str = XcodeText::from_str("let x = 1; console.log(x);");
+        let mut utf8_str = XcodeText::from_str("let x = 1; cansole.lug(x);");
         text.append(&mut utf8_str);
 
         swift_syntax_tree.parse(&text).unwrap();

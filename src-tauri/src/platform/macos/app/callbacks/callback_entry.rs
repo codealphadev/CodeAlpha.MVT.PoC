@@ -13,6 +13,7 @@ use core_foundation::{
     base::TCFType,
     string::{CFString, CFStringRef},
 };
+use tracing::warn;
 
 use crate::platform::macos::app::AppObserverState;
 
@@ -59,7 +60,7 @@ pub unsafe extern "C" fn callback_app_notifications(
             let _ = notify_window_moved(&element, &mut (*context));
         }
         _other => {
-            println!("Forgotten notification: {:?}", _other)
+            warn!("Forgotten notification: {:?}", _other)
         }
     }
 }

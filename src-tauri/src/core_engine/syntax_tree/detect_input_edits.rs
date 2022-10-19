@@ -210,8 +210,8 @@ mod tests {
     #[test]
     fn replace_beginning_of_file() {
         test_fn(
-            "let x = 1; console.log(x);",
-            "const x = 1; console.log(x);",
+            "let x = 1; cansole.lug(x);",
+            "const x = 1; cansole.lug(x);",
             0,
             2,
             4,

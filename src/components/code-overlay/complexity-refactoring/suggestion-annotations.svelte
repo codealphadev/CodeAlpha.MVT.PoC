@@ -97,7 +97,6 @@
 					}
 					break;
 				case 'RemoveAnnotationGroup':
-					console.log(payload, event_type);
 					let group_id = payload as string;
 					annotation_groups = annotation_groups.filter((group) => group.id !== group_id);
 
