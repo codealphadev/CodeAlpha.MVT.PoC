@@ -23,7 +23,7 @@ export function convert_global_frame_to_local(
 	};
 }
 
-export async function toggle_main_window(open: boolean) {
+export async function toggle_main_window_and_rebind_widget(open: boolean) {
 	const event: EventUserInteraction = {
 		event: 'ToggleMainWindow',
 		payload: open

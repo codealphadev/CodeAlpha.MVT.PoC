@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/tauri';
 	import WidgetBackground from '../components/widget/widget-background.svelte';
-	import { toggle_main_window } from '../utils';
+	import { toggle_main_window_and_rebind_widget } from '../utils';
 	import WidgetContent from '../components/widget/widget-content.svelte';
 	import { main_window_active_store } from '../state';
 	import BadgeNoAiMode from '../components/widget/badge-no-ai-mode.svelte';
@@ -48,13 +48,13 @@
 	listenEventUserInteractions();
 
 	const clickAction = async () => {
-		toggle_main_window(!main_window_active);
+		toggle_main_window_and_rebind_widget(!main_window_active);
 	};
 
 	const handle_release_drag = async () => {
 		// We do this call to cope with the fact that macOS unpredictably
 		// repositions the main window when it is being dragged into the menu bar.
-		toggle_main_window(main_window_active);
+		toggle_main_window_and_rebind_widget(main_window_active);
 	};
 
 	let startX: number | undefined = undefined;
