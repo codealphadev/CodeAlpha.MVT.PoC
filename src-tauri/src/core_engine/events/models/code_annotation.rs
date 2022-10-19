@@ -3,7 +3,7 @@ use ts_rs::TS;
 
 use crate::core_engine::EditorWindowUid;
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS, PartialEq)]
 #[ts(export, export_to = "bindings/user_interaction/")]
 pub struct NodeAnnotationClickedMessage {
     pub annotation_id: uuid::Uuid,

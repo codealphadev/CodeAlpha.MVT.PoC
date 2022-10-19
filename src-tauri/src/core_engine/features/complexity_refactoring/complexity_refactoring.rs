@@ -22,6 +22,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use lazy_static::lazy_static;
+
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc};
@@ -107,7 +108,8 @@ pub fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
 const MAX_ALLOWED_COMPLEXITY: isize = 9;
 
 lazy_static! {
-    static ref CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID: Mutex<Option<Uuid>> = Mutex::new(None);
+    pub static ref CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID: Mutex<Option<Uuid>> =
+        Mutex::new(None);
 }
 
 impl FeatureBase for ComplexityRefactoring {
@@ -115,6 +117,7 @@ impl FeatureBase for ComplexityRefactoring {
         &mut self,
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
+        execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
@@ -122,12 +125,12 @@ impl FeatureBase for ComplexityRefactoring {
 
         if let Some(procedure) = self.should_compute(trigger) {
             match procedure {
-                ComplexityRefactoringProcedure::ComputeSuggestions => {
-                    self.compute_suggestions(code_document).map_err(|e| {
+                ComplexityRefactoringProcedure::ComputeSuggestions => self
+                    .compute_suggestions(code_document, execution_id)
+                    .map_err(|e| {
                         self.suggestions_arc.lock().clear();
                         e
-                    })
-                }
+                    }),
                 ComplexityRefactoringProcedure::PerformSuggestion(id) => self
                     .perform_suggestion(code_document, id)
                     .map_err(|e| e.into()),
@@ -141,14 +144,6 @@ impl FeatureBase for ComplexityRefactoring {
         } else {
             Ok(())
         }
-    }
-
-    fn update_visualization(
-        &mut self,
-        _code_document: &CodeDocument,
-        _trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
-        Ok(())
     }
 
     fn activate(&mut self) -> Result<(), FeatureError> {
@@ -197,11 +192,17 @@ impl ComplexityRefactoring {
         Some(())
     }
 
-    fn compute_suggestions(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
+    fn compute_suggestions(
+        &mut self,
+        code_document: &CodeDocument,
+        execution_id: Uuid,
+    ) -> Result<(), FeatureError> {
         debug!("Computing suggestions for complexity refactoring");
-        let execution_id = uuid::Uuid::new_v4();
-        (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
 
+        if CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock().clone() != Some(execution_id) {
+            dbg!("compute_suggestions returning early");
+            return Ok(());
+        }
         let window_uid = code_document.editor_window_props().window_uid;
         self.set_suggestions_to_recalculating(window_uid);
 

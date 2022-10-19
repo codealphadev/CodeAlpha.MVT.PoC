@@ -1,7 +1,3 @@
-use serde::{Deserialize, Serialize};
-use std::fmt;
-use ts_rs::TS;
-
 use crate::{
     core_engine::{
         events::models::{
@@ -12,6 +8,10 @@ use crate::{
     },
     platform::macos::models::editor::EditorShortcutPressedMessage,
 };
+use serde::{Deserialize, Serialize};
+use std::fmt;
+use ts_rs::TS;
+use uuid::Uuid;
 
 use super::{
     complexity_refactoring::ComplexityRefactoringError,
@@ -20,7 +20,7 @@ use super::{
     BracketHighlight, BracketHighlightError, ComplexityRefactoring, DocsGenerator,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UserCommand {
     PerformSuggestion(PerformSuggestionMessage),
     DismissSuggestion(DismissSuggestionMessage),
@@ -28,7 +28,7 @@ pub enum UserCommand {
     NodeAnnotationClicked(NodeAnnotationClickedMessage),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CoreEngineTrigger {
     OnShortcutPressed(EditorShortcutPressedMessage),
     OnTextContentChange,
@@ -101,11 +101,7 @@ pub trait FeatureBase {
         &mut self,
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError>;
-    fn update_visualization(
-        &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
+        execution_id: Uuid,
     ) -> Result<(), FeatureError>;
     fn activate(&mut self) -> Result<(), FeatureError>;
     fn deactivate(&mut self) -> Result<(), FeatureError>;
@@ -118,30 +114,18 @@ impl FeatureBase for Feature {
         &mut self,
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
-        match self {
-            Feature::BracketHighlighting(feature) => feature.compute(code_document, trigger),
-            Feature::DocsGeneration(feature) => feature.compute(code_document, trigger),
-            Feature::Formatter(feature) => feature.compute(code_document, trigger),
-            Feature::ComplexityRefactoring(feature) => feature.compute(code_document, trigger),
-        }
-    }
-
-    fn update_visualization(
-        &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
+        execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         match self {
             Feature::BracketHighlighting(feature) => {
-                feature.update_visualization(code_document, trigger)
+                feature.compute(code_document, trigger, execution_id)
             }
             Feature::DocsGeneration(feature) => {
-                feature.update_visualization(code_document, trigger)
+                feature.compute(code_document, trigger, execution_id)
             }
-            Feature::Formatter(feature) => feature.update_visualization(code_document, trigger),
+            Feature::Formatter(feature) => feature.compute(code_document, trigger, execution_id),
             Feature::ComplexityRefactoring(feature) => {
-                feature.update_visualization(code_document, trigger)
+                feature.compute(code_document, trigger, execution_id)
             }
         }
     }

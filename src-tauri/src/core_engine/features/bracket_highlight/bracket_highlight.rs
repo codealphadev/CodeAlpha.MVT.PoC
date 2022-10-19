@@ -1,7 +1,3 @@
-use anyhow::anyhow;
-use tracing::debug;
-use tree_sitter::Node;
-
 use crate::{
     core_engine::{
         annotations_manager::{
@@ -21,6 +17,12 @@ use crate::{
     platform::macos::{is_text_of_line_wrapped, GetVia},
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
+use anyhow::anyhow;
+use lazy_static::lazy_static;
+use parking_lot::Mutex;
+use tracing::debug;
+use tree_sitter::Node;
+use uuid::Uuid;
 
 use super::utils::{
     get_char_rectangle_from_text_index, get_code_block_parent,
@@ -35,13 +37,23 @@ pub struct BracketHighlight {
     group_id: Option<uuid::Uuid>,
 }
 
+lazy_static! {
+    pub static ref CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID: Mutex<Option<Uuid>> = Mutex::new(None);
+}
+
 impl FeatureBase for BracketHighlight {
     fn compute(
         &mut self,
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
+        execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         if !self.is_activated || !self.should_compute(trigger) {
+            return Ok(());
+        }
+
+        if CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock().clone() != Some(execution_id) {
+            dbg!("bracket_highlight returning early");
             return Ok(());
         }
 
@@ -61,14 +73,6 @@ impl FeatureBase for BracketHighlight {
             }
         }
 
-        Ok(())
-    }
-
-    fn update_visualization(
-        &mut self,
-        _code_document: &CodeDocument,
-        _trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
         Ok(())
     }
 

@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use tauri::api::process::{Command, CommandEvent};
 use tracing::debug;
 use tracing::error;
+use uuid::Uuid;
 
 use crate::platform::macos::replace_text_content;
 use crate::{
@@ -38,6 +39,7 @@ impl FeatureBase for SwiftFormatter {
         &mut self,
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
+        _execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
@@ -56,15 +58,6 @@ impl FeatureBase for SwiftFormatter {
             _ => {}
         }
 
-        Ok(())
-    }
-
-    fn update_visualization(
-        &mut self,
-        _code_document: &CodeDocument,
-        _trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
-        // SwiftFormatter is not running on update_visualization step.
         Ok(())
     }
 
