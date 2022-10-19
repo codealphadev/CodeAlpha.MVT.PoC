@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::SystemTime};
 
+use chrono::{DateTime, Utc};
 use parking_lot::Mutex;
 use tauri::Manager;
 use tracing::debug;
@@ -17,6 +18,13 @@ pub fn on_update_app_window(
     main_window: &Arc<Mutex<MainWindow>>,
     update_msg: &UpdateAppWindowMessage,
 ) -> Option<()> {
+    if update_msg.window_size.is_some() {
+        let now = SystemTime::now();
+        let now: DateTime<Utc> = now.into();
+        let now = now.to_rfc3339();
+
+        println!("{} {:?}", now, update_msg.window_size.map(|s| s.height));
+    }
     if update_msg.app_windows.contains(&AppWindow::Main) {
         if let Some(main_window_size) = update_msg.window_size {
             // We fetch the window where the widget is on
