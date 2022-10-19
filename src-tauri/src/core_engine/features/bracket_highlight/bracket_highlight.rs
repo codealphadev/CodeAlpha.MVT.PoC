@@ -53,7 +53,6 @@ impl FeatureBase for BracketHighlight {
         }
 
         if CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock().clone() != Some(execution_id) {
-            dbg!("bracket_highlight returning early");
             return Ok(());
         }
 

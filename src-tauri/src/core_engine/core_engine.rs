@@ -118,27 +118,34 @@ impl CoreEngine {
         let execution_id = uuid::Uuid::new_v4();
         if *trigger == CoreEngineTrigger::OnTextContentChange {
             (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
+            println!(
+                "CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID: {:?}",
+                execution_id
+            );
         }
         if *trigger == CoreEngineTrigger::OnTextSelectionChange {
             (*CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock()) = Some(execution_id);
         }
 
-        for feature in self.features.iter_mut() {
+        for feature_arc in self.features.iter_mut() {
             tauri::async_runtime::spawn({
                 let code_doc = code_doc.clone();
                 let ai_features_active = self.ai_features_active;
-                let feature = feature.clone();
+                let feature_arc = feature_arc.clone();
                 let trigger = trigger.clone();
 
                 async move {
+                    let mut feature = feature_arc.lock();
                     // Don't run features which require AI if AI is disabled
-                    if !ai_features_active && feature.lock().requires_ai() {
-                        _ = feature.lock().reset();
+                    if !ai_features_active && feature.requires_ai() {
+                        _ = feature.reset();
                         return;
                     }
 
-                    if let Err(e) = feature.lock().compute(&code_doc, &trigger, execution_id) {
+                    if let Err(e) = feature.compute(&code_doc, &trigger, execution_id) {
                         error!(?e, ?feature, "Error in feature compute()")
+                    } else {
+                        println!("FINISHED COMPUTING FEATURE: {:?}", feature);
                     }
                 }
             });
