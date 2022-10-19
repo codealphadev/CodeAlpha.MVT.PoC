@@ -55,12 +55,19 @@
 			<H3>Reduce complexity</H3>
 			<SuggestionsIcon />
 		</div>
-		<p class="text-contrast text-sm max-w-full leading-[1.714] {!expanded ? 'line-clamp-2' : ''}">
+		<p class="text-contrast text-sm max-w-full leading-[1.714] truncate ">
 			{#if expanded}
-				Your function <code>{suggestion.main_function_name}</code> may be hard to understand due to nested
-				statements. Consider extracting this code block into a separate function.
+				Your function <code>{suggestion.main_function_name}</code>
 			{:else}
-				Refactor deeply nested statements in function <code>{suggestion.main_function_name}</code>
+				Refactor deeply nested statements in
+			{/if}
+		</p>
+		<p class="text-contrast text-sm max-w-full leading-[1.714] {!expanded ? 'truncate' : ''}">
+			{#if expanded}
+				may be hard to understand due to nested statements. Consider extracting this code block into
+				a separate function.
+			{:else}
+				function <code>{suggestion.main_function_name}</code>
 			{/if}
 		</p>
 	</header>
