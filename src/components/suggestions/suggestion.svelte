@@ -56,7 +56,7 @@
 			<H3>Reduce complexity</H3>
 			<SuggestionsIcon />
 		</div>
-		<p class="text-contrast text-sm max-w-full leading-[1.714] {!expanded ? 'line-clamp-2' : ''}">
+		<p class="text-contrast text-sm max-w-full leading-[1.714]">
 			{#if expanded}
 				Your function <code>{ellipsis(suggestion.main_function_name, 18)}</code> may be hard to understand
 				due to nested statements. Consider extracting this code block into a separate function.
