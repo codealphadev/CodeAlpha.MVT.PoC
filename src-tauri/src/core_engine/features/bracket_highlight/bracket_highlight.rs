@@ -53,7 +53,7 @@ impl FeatureBase for BracketHighlight {
         }
 
         if CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock().clone() != Some(execution_id) {
-            return Ok(());
+            return Err(FeatureError::ExecutionCancelled(execution_id));
         }
 
         let group_id_before_compute = self.group_id;
@@ -108,6 +108,12 @@ impl FeatureBase for BracketHighlight {
 }
 
 impl BracketHighlight {
+    pub fn register_new_execution(trigger: &CoreEngineTrigger, execution_id: Uuid) {
+        if *trigger == CoreEngineTrigger::OnTextSelectionChange {
+            (*CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock()) = Some(execution_id);
+        }
+    }
+
     fn compute_procedure(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         let selected_text_range = match code_document.selected_text_range() {
             Some(range) => range,

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use super::{complexity_refactoring::Edit, CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID};
 use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
 use anyhow::anyhow;
@@ -18,9 +16,6 @@ struct EditDto {
     #[serde(rename = "key.text")]
     text: String,
 }
-
-const SWIFT_LSP_EXTRACT_FUNCTION_USECASE_ID: &str =
-    "sourcekit.request.refactoring.extract.function";
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct CategorizedEditDto {
@@ -41,8 +36,7 @@ fn map_edit_dto_to_edit(
 ) -> Result<Edit, SwiftLspError> {
     {
         if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-            println!("EARLY EXIT map_edit_dto_to_edit");
-            return Err(SwiftLspError::GenericError(anyhow!("TODO4")));
+            return Err(SwiftLspError::ExecutionCancelled(execution_id));
         }
     }
 
@@ -82,7 +76,6 @@ pub async fn refactor_function(
     execution_id: Uuid,
 ) -> Result<Vec<Edit>, SwiftLspError> {
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        println!("EARLY EXIT refactor_function");
         return Err(SwiftLspError::GenericError(anyhow!("TODO")));
     }
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
@@ -103,20 +96,13 @@ key.compilerargs:{}"#,
     .to_string();
 
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        println!("EARLY EXIT refactor_function2");
-        return Err(SwiftLspError::GenericError(anyhow!("TODO2")));
+        return Err(SwiftLspError::ExecutionCancelled(execution_id));
     }
 
-    let result_str = SwiftLsp::make_lsp_request(
-        &file_path,
-        payload.clone(),
-        SWIFT_LSP_EXTRACT_FUNCTION_USECASE_ID.to_string(),
-    )
-    .await?;
+    let result_str = SwiftLsp::make_lsp_request(&file_path, payload.clone(), execution_id).await?;
 
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        println!("EARLY EXIT refactor_function3");
-        return Err(SwiftLspError::GenericError(anyhow!("TODO3")));
+        return Err(SwiftLspError::ExecutionCancelled(execution_id));
     }
 
     let result: RefactoringResponse =
