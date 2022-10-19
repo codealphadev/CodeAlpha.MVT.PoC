@@ -1,21 +1,33 @@
-use std::{fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 use async_trait::async_trait;
 use cached::proc_macro::cached;
 use glob::glob;
 use mockall::automock;
+use parking_lot::Mutex;
 use serde_json::Value;
-use tauri::api::process::{Command, CommandEvent};
+use tauri::api::process::{Command, CommandChild, CommandEvent};
 use tracing::{error, warn};
 pub struct SwiftLsp;
 use crate::utils::calculate_hash;
 use rand::Rng;
 
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref SWIFT_LSP_COMMAND_QUEUE: Mutex<HashMap<String, CommandChild>> =
+        Mutex::new(HashMap::new());
+}
+
 #[automock]
 #[async_trait]
 pub trait Lsp {
-    async fn make_lsp_request(file_path: &String, payload: String)
-        -> Result<String, SwiftLspError>;
+    async fn make_lsp_request(
+        file_path: &String,
+        payload: String,
+        id: String,
+    ) -> Result<String, SwiftLspError>;
+
     async fn get_compiler_args(
         source_file_path: &str,
         tmp_file_path: &str,
@@ -27,16 +39,35 @@ impl Lsp for SwiftLsp {
     async fn make_lsp_request(
         file_path: &String,
         payload: String,
+        use_case_id: String,
     ) -> Result<String, SwiftLspError> {
         if !Path::new(file_path).exists() {
             return Err(SwiftLspError::FileNotExisting(file_path.to_string()));
         }
 
-        let (mut rx, _) = Command::new_sidecar("sourcekitten")
-            .map_err(|err| SwiftLspError::GenericError(err.into()))?
-            .args(["request".to_string(), "--yaml".to_string(), payload.clone()])
-            .spawn()
-            .map_err(|err| SwiftLspError::GenericError(err.into()))?;
+        let mut rx;
+        {
+            let mut command_queue = SWIFT_LSP_COMMAND_QUEUE.lock();
+
+            if let Some(command_child) = command_queue.remove(&use_case_id) {
+                println!("Attempt to kill");
+                command_child
+                    .kill()
+                    .map_err(|e| SwiftLspError::GenericError(e.into()))?;
+                println!("Killed old command");
+            } else {
+                println!("No old command to kill");
+            }
+
+            let cmd_child;
+            (rx, cmd_child) = Command::new_sidecar("sourcekitten")
+                .map_err(|err| SwiftLspError::GenericError(err.into()))?
+                .args(["request".to_string(), "--yaml".to_string(), payload.clone()])
+                .spawn()
+                .map_err(|err| SwiftLspError::GenericError(err.into()))?;
+
+            command_queue.insert(use_case_id, cmd_child);
+        }
 
         let mut text_content = "".to_string();
         while let Some(event) = rx.recv().await {
