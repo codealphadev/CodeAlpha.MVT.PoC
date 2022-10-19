@@ -50,7 +50,7 @@ pub struct CoreEngine {
     code_documents: CodeDocumentsArcMutex,
 
     /// Features include bracket highlighting, docs generation and formatters.
-    features: Vec<Feature>,
+    features: Vec<Arc<Mutex<Feature>>>,
 
     ai_features_active: bool,
 
@@ -78,10 +78,14 @@ impl CoreEngine {
             code_documents: Arc::new(Mutex::new(HashMap::new())),
             ai_features_active,
             features: vec![
-                Feature::BracketHighlighting(BracketHighlight::new()),
-                Feature::Formatter(SwiftFormatter::new()),
-                Feature::DocsGeneration(DocsGenerator::new()),
-                Feature::ComplexityRefactoring(ComplexityRefactoring::new()),
+                Arc::new(Mutex::new(Feature::BracketHighlighting(
+                    BracketHighlight::new(),
+                ))),
+                Arc::new(Mutex::new(Feature::Formatter(SwiftFormatter::new()))),
+                Arc::new(Mutex::new(Feature::DocsGeneration(DocsGenerator::new()))),
+                Arc::new(Mutex::new(Feature::ComplexityRefactoring(
+                    ComplexityRefactoring::new(),
+                ))),
             ],
             _annotations_manager: annotations_manager,
             parser_swift: SwiftSyntaxTree::parser_mutex(),
@@ -111,18 +115,28 @@ impl CoreEngine {
             .ok_or(CoreEngineError::CodeDocNotFound(editor_window_uid))?;
 
         for feature in self.features.iter_mut() {
-            // Don't run features which require AI if AI is disabled
-            if !self.ai_features_active && feature.requires_ai() {
-                _ = feature.reset();
-                continue;
-            }
+            tauri::async_runtime::spawn({
+                let code_doc = code_doc.clone();
+                let ai_features_active = self.ai_features_active;
+                let feature = feature.clone();
+                let trigger = trigger.clone();
 
-            _ = feature
-                .compute(code_doc, trigger)
-                .map_err(|e| error!(?e, ?feature, "Error in feature compute()"));
-            _ = feature
-                .update_visualization(code_doc, trigger)
-                .map_err(|e| error!(?e, ?feature, "Error in feature update_visualization()"));
+                async move {
+                    // Don't run features which require AI if AI is disabled
+                    if !ai_features_active && feature.lock().requires_ai() {
+                        _ = feature.lock().reset();
+                        return;
+                    }
+
+                    if let Err(e) = feature.lock().compute(&code_doc, &trigger) {
+                        error!(?e, ?feature, "Error in feature compute()")
+                    }
+
+                    if let Err(e) = feature.lock().update_visualization(&code_doc, &trigger) {
+                        error!(?e, ?feature, "Error in feature update_visualization()")
+                    }
+                }
+            });
         }
 
         Ok(())
@@ -130,7 +144,7 @@ impl CoreEngine {
 
     pub fn reset_features(&mut self) {
         for feature in &mut self.features {
-            _ = feature.reset();
+            _ = feature.lock().reset();
         }
     }
 
