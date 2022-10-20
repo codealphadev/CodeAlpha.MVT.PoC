@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use cached::proc_macro::cached;
@@ -24,29 +24,17 @@ lazy_static! {
 #[automock]
 #[async_trait]
 pub trait Lsp {
-    async fn make_lsp_request(
-        file_path: &String,
-        payload: String,
-        use_case: String,
-    ) -> Result<String, SwiftLspError>;
+    async fn make_lsp_request(payload: String, use_case: String) -> Result<String, SwiftLspError>;
 
     async fn get_compiler_args(
-        source_file_path: &str,
+        source_file_path: &Option<String>,
         tmp_file_path: &str,
     ) -> Result<Vec<String>, SwiftLspError>;
 }
 
 #[async_trait]
 impl Lsp for SwiftLsp {
-    async fn make_lsp_request(
-        file_path: &String,
-        payload: String,
-        use_case: String,
-    ) -> Result<String, SwiftLspError> {
-        if !Path::new(file_path).exists() {
-            return Err(SwiftLspError::FileNotExisting(file_path.to_string()));
-        }
-
+    async fn make_lsp_request(payload: String, use_case: String) -> Result<String, SwiftLspError> {
         let mut rx;
         {
             let cmd_child;
@@ -80,39 +68,41 @@ impl Lsp for SwiftLsp {
         } else if termination_signal == Some(9) {
             Err(SwiftLspError::ExecutionCancelled(None))
         } else {
-            Err(SwiftLspError::SourceKittenCommandFailed(
-                file_path.clone(),
-                payload,
-            ))
+            Err(SwiftLspError::SourceKittenCommandFailed(payload))
         }
     }
 
     async fn get_compiler_args(
-        source_file_path: &str,
+        source_file_path: &Option<String>,
         tmp_file_path: &str,
     ) -> Result<Vec<String>, SwiftLspError> {
-        // Try to get compiler arguments from xcodebuild
-        let recompute_args_hash =
-            get_hashed_pbxproj_modification_date_with_random_fallback(source_file_path);
+        if let Some(source_file_path) = source_file_path {
+            // Try to get compiler arguments from xcodebuild
+            let recompute_args_hash =
+                get_hashed_pbxproj_modification_date_with_random_fallback(source_file_path);
 
-        match get_compiler_args_from_xcodebuild(source_file_path.to_string(), recompute_args_hash)
+            match get_compiler_args_from_xcodebuild(
+                source_file_path.to_string(),
+                recompute_args_hash,
+            )
             .await
-        {
-            Ok(mut compiler_args) => {
-                if let Some(insertion_index) = compiler_args
-                    .iter()
-                    .position(|a| a.contains(source_file_path))
-                {
-                    compiler_args.insert(insertion_index, format!("\"{}\"", tmp_file_path));
+            {
+                Ok(mut compiler_args) => {
+                    if let Some(insertion_index) = compiler_args
+                        .iter()
+                        .position(|a| a.contains(source_file_path))
+                    {
+                        compiler_args.insert(insertion_index, format!("\"{}\"", tmp_file_path));
+                    }
+                    return Ok(compiler_args);
                 }
-                return Ok(compiler_args);
-            }
-            Err(e) => {
-                error!(
+                Err(e) => {
+                    error!(
                 ?e,
                 ?source_file_path,
                 "Failed to get compiler arguments from Xcodebuild, will fall-back to single-file mode"
             );
+                }
             }
         }
 
@@ -156,7 +146,7 @@ pub enum SwiftLspError {
     RefactoringNotPossible(String),
 
     #[error("SourceKitten command failed")]
-    SourceKittenCommandFailed(String, String),
+    SourceKittenCommandFailed(String),
 
     #[error("Unable to find MacOSX SDK path")]
     CouldNotFindSdk,

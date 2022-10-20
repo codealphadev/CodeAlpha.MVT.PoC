@@ -67,7 +67,7 @@ fn format_array_as_yaml(compiler_args: Vec<String>) -> String {
 }
 
 pub async fn refactor_function(
-    file_path: &String,
+    file_path: &Option<String>,
     start_position: TextPosition,
     length: usize,
     text_content: &XcodeText,
@@ -95,7 +95,6 @@ key.compilerargs:{}"#,
     make_sure_execution_is_most_recent(execution_id)?;
 
     let result_str = SwiftLsp::make_lsp_request(
-        &file_path,
         payload.clone(),
         COMPLEXITY_REFACTORING_EXTRACT_FUNCTION_USE_CASE.to_string(),
     )

@@ -91,7 +91,7 @@ pub async fn get_edits_for_method_extraction(
     make_sure_execution_is_most_recent(execution_id)?;
 
     let suggestion = refactor_function(
-        &file_path.unwrap(),
+        &file_path,
         start_position,
         range_length,
         &text_content,
