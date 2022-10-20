@@ -41,7 +41,6 @@
 			if (window_height === old_window_height && window_width === old_window_width) {
 				return;
 			}
-			console.log(window_height, new Date().toISOString());
 			let appWindow: AppWindow = 'Main';
 			invoke('cmd_resize_window', {
 				appWindow: appWindow,
@@ -93,7 +92,6 @@
 
 			switch (event_type) {
 				case 'ReplaceSuggestions':
-					console.log(new Date().toISOString());
 					suggestions = payload.suggestions;
 					if (
 						selected_suggestion_id &&

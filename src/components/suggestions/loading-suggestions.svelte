@@ -7,5 +7,5 @@
 <div
 	class="bg-background flex flex-col items-center justify-center gap-1 h-[136px] mt-9 rounded-b-xl relative"
 >
-	<H2>Checking for suggestions...</H2>
+	<H2>Checking for suggestions…</H2>
 </div>
