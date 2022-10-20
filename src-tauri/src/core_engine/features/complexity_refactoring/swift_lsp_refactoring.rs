@@ -1,4 +1,7 @@
-use super::{complexity_refactoring::Edit, CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID};
+use super::{
+    complexity_refactoring::Edit, COMPLEXITY_REFACTORING_EXTRACT_FUNCTION_USE_CASE,
+    CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID,
+};
 use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
@@ -91,7 +94,12 @@ key.compilerargs:{}"#,
 
     make_sure_execution_is_most_recent(execution_id)?;
 
-    let result_str = SwiftLsp::make_lsp_request(&file_path, payload.clone(), execution_id).await?;
+    let result_str = SwiftLsp::make_lsp_request(
+        &file_path,
+        payload.clone(),
+        COMPLEXITY_REFACTORING_EXTRACT_FUNCTION_USE_CASE.to_string(),
+    )
+    .await?;
 
     make_sure_execution_is_most_recent(execution_id)?;
 

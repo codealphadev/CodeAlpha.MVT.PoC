@@ -16,7 +16,7 @@ use rand::Rng;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SWIFT_LSP_COMMAND_QUEUE: Mutex<HashMap<Uuid, Vec<CommandChild>>> =
+    pub static ref SWIFT_LSP_COMMAND_QUEUE: Mutex<HashMap<String, Vec<CommandChild>>> =
         Mutex::new(HashMap::new());
 }
 
@@ -26,7 +26,7 @@ pub trait Lsp {
     async fn make_lsp_request(
         file_path: &String,
         payload: String,
-        execution_id: Uuid,
+        use_case: String,
     ) -> Result<String, SwiftLspError>;
 
     async fn get_compiler_args(
@@ -40,7 +40,7 @@ impl Lsp for SwiftLsp {
     async fn make_lsp_request(
         file_path: &String,
         payload: String,
-        execution_id: Uuid, // TODO: Refactor this
+        use_case: String,
     ) -> Result<String, SwiftLspError> {
         if !Path::new(file_path).exists() {
             return Err(SwiftLspError::FileNotExisting(file_path.to_string()));
@@ -56,10 +56,11 @@ impl Lsp for SwiftLsp {
                 .map_err(|err| SwiftLspError::GenericError(err.into()))?;
 
             let mut command_queue = SWIFT_LSP_COMMAND_QUEUE.lock();
-            let mut commands = command_queue.remove(&execution_id).unwrap_or(vec![]);
-            commands.push(cmd_child);
-
-            command_queue.insert(execution_id.clone(), commands);
+            if let Some(commands) = command_queue.get_mut(&use_case) {
+                commands.push(cmd_child);
+            } else {
+                command_queue.insert(use_case, vec![cmd_child]);
+            }
         }
 
         let mut text_content = "".to_string();
