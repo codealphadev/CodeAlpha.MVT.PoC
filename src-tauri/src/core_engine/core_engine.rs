@@ -116,7 +116,6 @@ impl CoreEngine {
 
         let execution_id = uuid::Uuid::new_v4();
 
-        BracketHighlight::register_new_execution(trigger, execution_id);
         ComplexityRefactoring::register_new_execution(trigger, execution_id);
 
         for feature_arc in self.features.iter_mut() {
