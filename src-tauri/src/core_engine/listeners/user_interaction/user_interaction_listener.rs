@@ -11,7 +11,7 @@ use crate::{
 };
 use parking_lot::Mutex;
 use tauri::Manager;
-use tracing::debug;
+use tracing::info;
 
 use super::handlers::on_ai_features_activation_status_update;
 
@@ -26,27 +26,29 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                     on_ai_features_activation_status_update(&core_engine, &msg);
                 }
                 EventUserInteraction::NodeAnnotationClicked(msg) => {
+                    info!(?msg, "User request: Node annotation clicked");
+
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::NodeAnnotationClicked(msg)),
                     );
                 }
                 EventUserInteraction::PerformSuggestion(msg) => {
-                    debug!(?msg, "PerformSuggestion request");
+                    info!(?msg, "User request: Perform suggestion");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)),
                     );
                 }
                 EventUserInteraction::DismissSuggestion(msg) => {
-                    debug!(?msg, "DismissSuggestion request");
+                    info!(?msg, "User request: Dismiss suggestion");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)),
                     );
                 }
                 EventUserInteraction::UpdateSelectedSuggestion(msg) => {
-                    debug!(?msg, "UpdateSelectedSuggestion request");
+                    info!(?msg, "User request: Update selected suggestion");
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)),

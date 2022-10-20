@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 use tauri::{CustomMenuItem, Manager, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     app_handle,
@@ -109,6 +109,7 @@ fn on_deactivate_ai_features() {
         .set_menu(construct_system_tray_menu())
         .is_ok()
     {
+        info!("User request: Deactivate AI Features");
         EventUserInteraction::AiFeaturesStatus(AiFeaturesStatusMessage {
             ai_features_active: check_ai_features(),
         })
@@ -126,6 +127,7 @@ fn on_activate_ai_features() {
         .set_menu(construct_system_tray_menu())
         .is_ok()
     {
+        info!("User request: Activate AI Features");
         EventUserInteraction::AiFeaturesStatus(AiFeaturesStatusMessage {
             ai_features_active: check_ai_features(),
         })

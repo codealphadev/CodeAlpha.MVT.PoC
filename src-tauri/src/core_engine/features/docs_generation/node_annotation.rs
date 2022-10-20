@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     app_handle,
@@ -254,6 +254,7 @@ impl Drop for NodeAnnotation {
 #[tauri::command]
 pub fn cmd_paste_docs() {
     tauri::async_runtime::spawn(async move {
+        info!("User request: Insert docstring");
         // Paste it at the docs insertion point
         let insertion_point = NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock().clone();
         let docstring = NODE_EXPLANATION_CURRENT_DOCSTRING.lock().clone();
@@ -268,6 +269,5 @@ pub fn cmd_paste_docs() {
             true,
         )
         .await;
-        debug!(insertion_point, docstring, "Docstring inserted");
     });
 }

@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 use tauri::api::process::{Command, CommandEvent};
-use tracing::debug;
-use tracing::error;
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
 use crate::platform::macos::replace_text_content;
@@ -49,6 +48,7 @@ impl FeatureBase for SwiftFormatter {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
                     "S" => {
+                        info!("User request: Format document");
                         return self.format(code_document).map_err(|err| err.into());
                     }
                     _ => {}

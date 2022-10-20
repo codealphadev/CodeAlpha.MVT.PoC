@@ -195,7 +195,7 @@ mod tests {
             Metadata {
                 timestamp: Utc::now(),
                 name: "event src/utils/gcp/logging.rs:153".to_string(),
-                level: Level::INFO,
+                level: Level::DEBUG,
             },
         );
 
@@ -208,7 +208,7 @@ mod tests {
             Metadata {
                 timestamp: Utc::now(),
                 name: "event src/utils/gcp/logging.rs:153".to_string(),
-                level: Level::INFO,
+                level: Level::DEBUG,
             },
         );
         block_on(async {
