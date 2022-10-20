@@ -68,8 +68,8 @@ impl fmt::Debug for Feature {
 
 #[derive(thiserror::Error, Debug)]
 pub enum FeatureError {
-    #[error("Execution was cancelled: '{0}'")]
-    ExecutionCancelled(Uuid),
+    #[error("Execution was cancelled: '{}'", 0)]
+    ExecutionCancelled(Option<Uuid>),
 
     #[error("Something went wrong when executing this feature.")]
     GenericError(#[source] anyhow::Error),

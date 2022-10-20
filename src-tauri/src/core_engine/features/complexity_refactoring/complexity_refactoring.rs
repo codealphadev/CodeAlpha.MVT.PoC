@@ -213,7 +213,7 @@ impl ComplexityRefactoring {
         code_document: &CodeDocument,
         execution_id: Uuid,
     ) -> Result<(), FeatureError> {
-        make_sure_execution_is_most_recent(execution_id)?;
+        make_sure_execution_is_most_recent(execution_id, "compute_suggestions")?;
 
         debug!(
             ?execution_id,
@@ -242,7 +242,7 @@ impl ComplexityRefactoring {
         let mut suggestions: SuggestionsMap = HashMap::new();
 
         for function in top_level_functions {
-            make_sure_execution_is_most_recent(execution_id)?;
+            make_sure_execution_is_most_recent(execution_id, "function loop start")?;
             s_exps.push(function.props.node.to_sexp());
             suggestions.extend(Self::generate_suggestions_for_function(
                 function,
@@ -314,7 +314,10 @@ impl ComplexityRefactoring {
         )?;
 
         for (id, mut suggestion) in suggestions.iter_mut() {
-            make_sure_execution_is_most_recent(execution_id)?;
+            make_sure_execution_is_most_recent(
+                execution_id,
+                "start_of_suggestions_for_function_loop",
+            )?;
 
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
 
@@ -368,7 +371,7 @@ impl ComplexityRefactoring {
 
             tauri::async_runtime::spawn({
                 async move {
-                    match make_sure_execution_is_most_recent(execution_id) {
+                    match make_sure_execution_is_most_recent(execution_id, "suggestion - async") {
                         Err(ComplexityRefactoringError::ExecutionCancelled(_)) => return,
                         _ => (),
                     }
@@ -393,20 +396,31 @@ impl ComplexityRefactoring {
                         execution_id,
                     )
                     .await
-                    .map_err(|e| match e {
-                        ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
-                            remove_annotations_for_suggestions(vec![binded_id]);
-                            Self::publish_to_frontend(binded_suggestions_arc2.lock().clone());
-
-                            warn!(
-                                ?payload,
-                                ?serialized_slice,
-                                ?node_kinds,
-                                ?parent_node_kind,
-                                "LSP rejected refactoring"
+                    .map_err(|e| {
+                        let should_remove_suggestion = match e {
+                            ComplexityRefactoringError::ExecutionCancelled(_) => false,
+                            ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
+                                warn!(
+                                    ?payload,
+                                    ?serialized_slice,
+                                    ?node_kinds,
+                                    ?parent_node_kind,
+                                    "LSP rejected refactoring"
+                                );
+                                true
+                            }
+                            _ => {
+                                error!(?e, "Failed to perform refactoring");
+                                true
+                            }
+                        };
+                        if should_remove_suggestion {
+                            Self::remove_suggestion_and_publish(
+                                &window_uid,
+                                &binded_id,
+                                &binded_suggestions_arc2,
                             );
                         }
-                        _ => error!(?e, "Failed to perform refactoring"),
                     });
                 }
             });
@@ -507,7 +521,10 @@ impl ComplexityRefactoring {
         execution_id: Uuid,
     ) {
         tauri::async_runtime::spawn(async move {
-            match make_sure_execution_is_most_recent(execution_id) {
+            match make_sure_execution_is_most_recent(
+                execution_id,
+                "update_suggestion_with_formatted_text_diff",
+            ) {
                 Err(ComplexityRefactoringError::ExecutionCancelled(_)) => return,
                 _ => (),
             }
@@ -605,13 +622,11 @@ impl ComplexityRefactoring {
                         return;
                     }
                 }
-                let mut suggestions_per_window = suggestions_arc.lock();
-                if let Some(suggestions) = suggestions_per_window.get_mut(&editor_window_uid) {
-                    suggestions.remove(&suggestion_id);
-
-                    remove_annotations_for_suggestions(vec![suggestion_id]);
-                    Self::publish_to_frontend(suggestions_per_window.clone());
-                }
+                Self::remove_suggestion_and_publish(
+                    &editor_window_uid,
+                    &suggestion_id,
+                    &suggestions_arc,
+                );
 
                 match text_range_to_scroll_to_after_performing {
                     Ok(range) => {
@@ -658,28 +673,43 @@ impl ComplexityRefactoring {
         Ok(())
     }
 
+    fn remove_suggestion_and_publish(
+        window_uid: &EditorWindowUid,
+        suggestion_id: &SuggestionId,
+        suggestions_arc: &Arc<
+            Mutex<HashMap<EditorWindowUid, HashMap<SuggestionId, RefactoringSuggestion>>>,
+        >,
+    ) -> Result<(), ComplexityRefactoringError> {
+        let mut suggestions_per_window = suggestions_arc.lock();
+        let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
+            ComplexityRefactoringError::SuggestionsForWindowNotFound(*window_uid),
+        )?;
+
+        remove_annotations_for_suggestions(vec![*suggestion_id]);
+        suggestions.remove(&suggestion_id);
+        Self::publish_to_frontend(suggestions_per_window.clone());
+        Ok(())
+    }
+
     fn dismiss_suggestion(
         &mut self,
         code_document: &CodeDocument,
         suggestion_id: SuggestionId,
     ) -> Result<(), ComplexityRefactoringError> {
         let window_uid = code_document.editor_window_props().window_uid;
-        let mut suggestions_per_window = self.suggestions_arc.lock();
-        let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
-            ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
-        )?;
-        let suggestion_to_dismiss = suggestions.get(&suggestion_id).ok_or(
-            ComplexityRefactoringError::SuggestionNotFound(suggestion_id.to_string()),
-        )?;
+        {
+            let mut suggestions_per_window = self.suggestions_arc.lock();
+            let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
+                ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
+            )?;
+            let suggestion_to_dismiss = suggestions.get(&suggestion_id).ok_or(
+                ComplexityRefactoringError::SuggestionNotFound(suggestion_id.to_string()),
+            )?;
 
-        let hash = write_dismissed_suggestion(&suggestion_to_dismiss.serialized_slice)?;
-        self.dismissed_suggestions.lock().push(hash);
-
-        suggestions.remove(&suggestion_id);
-        remove_annotations_for_suggestions(vec![suggestion_id]);
-
-        Self::publish_to_frontend(suggestions_per_window.clone());
-        Ok(())
+            let hash = write_dismissed_suggestion(&suggestion_to_dismiss.serialized_slice)?;
+            self.dismissed_suggestions.lock().push(hash);
+        }
+        Self::remove_suggestion_and_publish(&window_uid, &suggestion_id, &self.suggestions_arc)
     }
 
     fn should_compute(
@@ -769,9 +799,12 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
 
 pub fn make_sure_execution_is_most_recent(
     execution_id: Uuid,
+    _code_location: &str,
 ) -> Result<(), ComplexityRefactoringError> {
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        return Err(ComplexityRefactoringError::ExecutionCancelled(execution_id));
+        return Err(ComplexityRefactoringError::ExecutionCancelled(Some(
+            execution_id,
+        )));
     }
     Ok(())
 }
@@ -780,8 +813,8 @@ pub fn make_sure_execution_is_most_recent(
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
-    #[error("Execution was cancelled: '{0}'")]
-    ExecutionCancelled(Uuid),
+    #[error("Execution was cancelled: '{}'", 0)]
+    ExecutionCancelled(Option<Uuid>),
     #[error("No suggestions found for window")]
     SuggestionsForWindowNotFound(usize),
     #[error("No suggestion found to apply")]

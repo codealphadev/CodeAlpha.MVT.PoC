@@ -65,14 +65,20 @@ impl Lsp for SwiftLsp {
         }
 
         let mut text_content = "".to_string();
+
+        let mut termination_signal = None;
         while let Some(event) = rx.recv().await {
             if let CommandEvent::Stdout(line) = event {
                 text_content.push_str(&(line + "\n"));
+            } else if let CommandEvent::Terminated(payload) = event {
+                termination_signal = payload.signal;
             }
         }
 
         if !text_content.is_empty() {
             Ok(text_content)
+        } else if termination_signal == Some(9) {
+            Err(SwiftLspError::ExecutionCancelled(None))
         } else {
             Err(SwiftLspError::SourceKittenCommandFailed(
                 file_path.clone(),
@@ -140,8 +146,8 @@ async fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
-    #[error("Execution was cancelled: '{0}'")]
-    ExecutionCancelled(Uuid),
+    #[error("Execution was cancelled: '{}'", 0)]
+    ExecutionCancelled(Option<Uuid>),
 
     #[error("File does not exist: '{0}'")]
     FileNotExisting(String),
