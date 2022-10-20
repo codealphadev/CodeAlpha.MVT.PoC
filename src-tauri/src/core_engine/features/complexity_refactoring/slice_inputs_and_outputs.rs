@@ -365,11 +365,14 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-            syntax_tree.parse(&text_content).unwrap();
+            let swift_syntax_tree =
+                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
 
-            let functions =
-                SwiftFunction::get_top_level_functions(&syntax_tree, &text_content).unwrap();
+            let functions = SwiftFunction::get_top_level_functions(
+                &swift_syntax_tree,
+                &swift_syntax_tree.text_content(),
+            )
+            .unwrap();
             assert_eq!(functions.len(), 1);
 
             let function_decl_node = functions[0].props.node;
@@ -378,8 +381,8 @@ mod tests {
             let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
             walk_node_test(
                 function_decl_node,
-                &text_content,
-                &syntax_tree,
+                &swift_syntax_tree.text_content(),
+                &swift_syntax_tree,
                 function_node_address.clone(),
                 &mut parsing_metadata,
             );
@@ -403,11 +406,14 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-            syntax_tree.parse(&text_content).unwrap();
+            let swift_syntax_tree =
+                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
 
-            let functions =
-                SwiftFunction::get_top_level_functions(&syntax_tree, &text_content).unwrap();
+            let functions = SwiftFunction::get_top_level_functions(
+                &swift_syntax_tree,
+                &swift_syntax_tree.text_content(),
+            )
+            .unwrap();
             assert_eq!(functions.len(), 1);
 
             let function_decl_node = functions[0].props.node;
@@ -416,8 +422,8 @@ mod tests {
             let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
             walk_node_test(
                 function_decl_node,
-                &text_content,
-                &syntax_tree,
+                &swift_syntax_tree.text_content(),
+                &swift_syntax_tree,
                 function_node_address.clone(),
                 &mut parsing_metadata,
             );
@@ -442,11 +448,14 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-            syntax_tree.parse(&text_content).unwrap();
+            let swift_syntax_tree =
+                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
 
-            let functions =
-                SwiftFunction::get_top_level_functions(&syntax_tree, &text_content).unwrap();
+            let functions = SwiftFunction::get_top_level_functions(
+                &swift_syntax_tree,
+                &swift_syntax_tree.text_content(),
+            )
+            .unwrap();
             assert_eq!(functions.len(), 1);
 
             let function_decl_node = functions[0].props.node;
@@ -455,8 +464,8 @@ mod tests {
             let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
             walk_node_test(
                 function_decl_node,
-                &text_content,
-                &syntax_tree,
+                &swift_syntax_tree.text_content(),
+                &swift_syntax_tree,
                 function_node_address.clone(),
                 &mut parsing_metadata,
             );
@@ -477,11 +486,14 @@ mod tests {
                 }
             "#,
             );
-            let mut syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-            syntax_tree.parse(&text_content).unwrap();
+            let swift_syntax_tree =
+                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
 
-            let functions =
-                SwiftFunction::get_top_level_functions(&syntax_tree, &text_content).unwrap();
+            let functions = SwiftFunction::get_top_level_functions(
+                &swift_syntax_tree,
+                &swift_syntax_tree.text_content(),
+            )
+            .unwrap();
             assert_eq!(functions.len(), 1);
 
             let function_decl_node = functions[0].props.node;
@@ -490,8 +502,8 @@ mod tests {
             let mut parsing_metadata = ParsingMetadata::new(function_node_address.clone());
             walk_node_test(
                 function_decl_node,
-                &text_content,
-                &syntax_tree,
+                &swift_syntax_tree.text_content(),
+                &swift_syntax_tree,
                 function_node_address.clone(),
                 &mut parsing_metadata,
             );

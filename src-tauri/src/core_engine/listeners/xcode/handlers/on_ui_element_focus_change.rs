@@ -10,8 +10,6 @@ use crate::{
     },
 };
 
-use super::check_if_code_doc_needs_to_be_created;
-
 pub fn on_editor_focused_uielement_changed(
     core_engine_arc: &Arc<Mutex<CoreEngine>>,
     uielement_focus_changed_msg: &EditorUIElementFocusedMessage,
@@ -34,32 +32,27 @@ pub fn on_editor_focused_uielement_changed(
             ))?;
 
     let core_engine = &mut core_engine_arc.lock();
+    core_engine.add_code_document(pid, window_uid);
 
-    let mut text_changed;
-    {
-        let swift_parser = core_engine.swift_parser();
-        let code_documents = &mut core_engine.code_documents().lock();
+    let content_str = get_textarea_content(&GetVia::Pid(pid))?;
+    let file_path = get_textarea_file_path(&GetVia::Pid(pid)).ok();
+    let selected_text_range = get_selected_text_range(&GetVia::Pid(pid))?;
 
-        check_if_code_doc_needs_to_be_created(code_documents, pid, window_uid, swift_parser);
+    _ = core_engine.run_features(
+        window_uid,
+        CoreEngineTrigger::OnTextSelectionChange,
+        None,
+        None,
+        Some(&selected_text_range),
+    );
 
-        let code_doc = code_documents
-            .get_mut(&window_uid)
-            .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
+    _ = core_engine.run_features(
+        window_uid,
+        CoreEngineTrigger::OnTextContentChange,
+        Some(&content_str),
+        file_path.as_ref(),
+        None,
+    );
 
-        // Update code document properties
-        let content_str = get_textarea_content(&GetVia::Pid(pid))?;
-        let file_path = get_textarea_file_path(&GetVia::Pid(pid)).ok();
-        text_changed = code_doc.update_doc_properties(&content_str, &file_path);
-
-        let selected_text_range = get_selected_text_range(&GetVia::Pid(pid))?;
-        text_changed = code_doc
-            .set_selected_text_range_and_get_if_text_changed(&selected_text_range, true)
-            || text_changed;
-    }
-
-    core_engine.run_features(window_uid, &CoreEngineTrigger::OnTextSelectionChange)?;
-    if text_changed {
-        core_engine.run_features(window_uid, &CoreEngineTrigger::OnTextContentChange)?;
-    }
     Ok(())
 }

@@ -12,11 +12,6 @@ pub fn on_editor_window_destroyed(
     destroyed_msg: &EditorWindowDestroyedMessage,
 ) -> Result<(), CoreEngineError> {
     let core_engine = &mut core_engine_arc.lock();
-    let code_documents = &mut core_engine.code_documents().lock();
 
-    _ = code_documents
-        .remove(&destroyed_msg.window_uid)
-        .ok_or(CoreEngineError::CodeDocNotFound(destroyed_msg.window_uid))?;
-
-    Ok(())
+    core_engine.remove_code_document(destroyed_msg.window_uid)
 }

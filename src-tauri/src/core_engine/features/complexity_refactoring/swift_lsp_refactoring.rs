@@ -1,11 +1,8 @@
-use super::{
-    complexity_refactoring::Edit, COMPLEXITY_REFACTORING_EXTRACT_FUNCTION_USE_CASE,
-    CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID,
-};
+use super::Edit;
 use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
     #[serde(rename = "key.column")]
@@ -35,10 +32,7 @@ struct RefactoringResponse {
 fn map_edit_dto_to_edit(
     edit_dto: EditDto,
     text_content: &XcodeText,
-    execution_id: Uuid,
 ) -> Result<Edit, SwiftLspError> {
-    make_sure_execution_is_most_recent(execution_id)?;
-
     Ok(Edit {
         start_index: TextPosition {
             row: edit_dto.line - 1,
@@ -72,9 +66,7 @@ pub async fn refactor_function(
     length: usize,
     text_content: &XcodeText,
     tmp_file_path: &String,
-    execution_id: Uuid,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    make_sure_execution_is_most_recent(execution_id)?;
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
@@ -92,15 +84,7 @@ key.compilerargs:{}"#,
     )
     .to_string();
 
-    make_sure_execution_is_most_recent(execution_id)?;
-
-    let result_str = SwiftLsp::make_lsp_request(
-        payload.clone(),
-        COMPLEXITY_REFACTORING_EXTRACT_FUNCTION_USE_CASE.to_string(),
-    )
-    .await?;
-
-    make_sure_execution_is_most_recent(execution_id)?;
+    let result_str = SwiftLsp::make_lsp_request(payload.clone()).await?;
 
     let result: RefactoringResponse =
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
@@ -115,16 +99,9 @@ key.compilerargs:{}"#,
         .map(|categorized_edit| categorized_edit.edits)
         .flatten()
         .map(|edit_dto| -> Result<Edit, SwiftLspError> {
-            map_edit_dto_to_edit(edit_dto, text_content, execution_id)
+            map_edit_dto_to_edit(edit_dto, text_content)
         })
         .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
     return Ok(edits);
-}
-
-fn make_sure_execution_is_most_recent(execution_id: Uuid) -> Result<(), SwiftLspError> {
-    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        return Err(SwiftLspError::ExecutionCancelled(Some(execution_id)));
-    }
-    Ok(())
 }

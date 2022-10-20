@@ -3,18 +3,14 @@ use std::collections::HashMap;
 use cached::proc_macro::cached;
 
 use tree_sitter::Node;
-use uuid::Uuid;
 
 use super::{
-    complexity_refactoring::{make_sure_execution_is_most_recent, Edit},
     get_node_address, get_slice_inputs_and_outputs, get_sub_slice_inputs_and_outputs, is_child_of,
-    update_parsing_metadata_for_node, ComplexityRefactoringError, NodeSubSlice,
-    SliceInputsAndOutputs,
+    refactor_function, update_parsing_metadata_for_node, ComplexityRefactoringError, Edit,
+    NodeAddress, NodeSubSlice, SliceInputsAndOutputs,
 };
 use crate::core_engine::{
-    features::complexity_refactoring::{
-        refactor_function, NodeAddress, NodeSlice, ParsingMetadata, SerializedNodeSlice,
-    },
+    features::complexity_refactoring::{NodeSlice, ParsingMetadata, SerializedNodeSlice},
     rules::TemporaryFileOnDisk,
     syntax_tree::{
         calculate_cognitive_complexities, is_expression, is_l_expression, Complexities,
@@ -53,7 +49,7 @@ pub fn check_for_method_extraction(
     )?;
 
     let function_complexity = syntax_tree
-        .get_node_metadata(&node)
+        .get_metadata_of_node(&node)
         .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?
         .complexities
         .clone();
@@ -74,11 +70,9 @@ pub fn check_for_method_extraction(
 pub async fn get_edits_for_method_extraction(
     start_position: TextPosition,
     range_length: usize,
-    set_result_callback: impl FnOnce(Vec<Edit>) -> () + Send + 'static,
     text_content: &XcodeText,
     file_path: Option<String>,
-    execution_id: Uuid,
-) -> Result<(), ComplexityRefactoringError> {
+) -> Result<Vec<Edit>, ComplexityRefactoringError> {
     // Create temporary file
     let tmp_file_key = rand::thread_rng()
         .sample_iter(&Alphanumeric)
@@ -88,15 +82,12 @@ pub async fn get_edits_for_method_extraction(
 
     let temp_file = create_temp_file(&text_content, tmp_file_key)?;
 
-    make_sure_execution_is_most_recent(execution_id)?;
-
-    let suggestion = refactor_function(
+    let suggestion: Vec<Edit> = refactor_function(
         &file_path,
         start_position,
         range_length,
         &text_content,
         &temp_file.path.to_string_lossy().to_string(),
-        execution_id,
     )
     .await
     .map_err(|e| {
@@ -105,17 +96,13 @@ pub async fn get_edits_for_method_extraction(
             SwiftLspError::RefactoringNotPossible(payload) => {
                 ComplexityRefactoringError::LspRejectedRefactoring(payload)
             }
-            SwiftLspError::ExecutionCancelled(id) => {
-                ComplexityRefactoringError::ExecutionCancelled(id)
-            }
             _ => ComplexityRefactoringError::GenericError(e.into()),
         }
     })?;
 
     delete_temp_file(&temp_file);
-    set_result_callback(suggestion);
 
-    Ok(())
+    Ok(suggestion)
 }
 
 fn delete_temp_file(temp_file: &TemporaryFileOnDisk) {
@@ -406,7 +393,7 @@ fn get_resulting_complexities(
         |acc, n| -> Result<Complexities, ComplexityRefactoringError> {
             Ok(acc
                 + syntax_tree
-                    .get_node_metadata(n)
+                    .get_metadata_of_node(n)
                     .map_err(|e| ComplexityRefactoringError::GenericError(e.into()))?
                     .complexities
                     .clone())
@@ -470,17 +457,23 @@ mod tests {
             "#,
             );
 
-            let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-            swift_syntax_tree.parse(&text_content).unwrap();
+            let swift_syntax_tree =
+                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
 
-            let functions =
-                SwiftFunction::get_top_level_functions(&swift_syntax_tree, &text_content).unwrap();
+            let functions = SwiftFunction::get_top_level_functions(
+                &swift_syntax_tree,
+                &swift_syntax_tree.text_content(),
+            )
+            .unwrap();
             assert_eq!(functions.len(), 1);
 
-            let result =
-                check_for_method_extraction(&functions[0], &text_content, &swift_syntax_tree)
-                    .unwrap()
-                    .unwrap();
+            let result = check_for_method_extraction(
+                &functions[0],
+                &swift_syntax_tree.text_content(),
+                &swift_syntax_tree,
+            )
+            .unwrap()
+            .unwrap();
             assert_eq!(result.0.count, 8);
             assert_eq!(result.0.function_sexp, functions[0].props.node.to_sexp());
             assert_eq!(result.0.path_from_function_root, vec![8, 1, 0, 7, 4, 0]);
@@ -510,17 +503,23 @@ mod tests {
             "#,
             );
 
-            let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-            swift_syntax_tree.parse(&text_content).unwrap();
+            let swift_syntax_tree =
+                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
 
-            let functions =
-                SwiftFunction::get_top_level_functions(&swift_syntax_tree, &text_content).unwrap();
+            let functions = SwiftFunction::get_top_level_functions(
+                &swift_syntax_tree,
+                &swift_syntax_tree.text_content(),
+            )
+            .unwrap();
             assert_eq!(functions.len(), 1);
 
-            let result =
-                check_for_method_extraction(&functions[0], &text_content, &swift_syntax_tree)
-                    .unwrap()
-                    .unwrap();
+            let result = check_for_method_extraction(
+                &functions[0],
+                &swift_syntax_tree.text_content(),
+                &swift_syntax_tree,
+            )
+            .unwrap()
+            .unwrap();
             assert_eq!(result.0.count, 1);
             assert_eq!(
                 result.clone().0.clone().function_sexp.clone(),

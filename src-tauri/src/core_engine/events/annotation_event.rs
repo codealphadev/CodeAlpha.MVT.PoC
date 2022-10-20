@@ -26,12 +26,15 @@ impl AnnotationEvent {
     pub fn publish_to_tauri(&self) {
         let event_name = ChannelList::AnnotationEvent.to_string();
 
+        let serialized_self = serde_json::to_string(self).ok();
+        // tauri::async_runtime::spawn(async move {
         // Emit to frontend
         _ = app_handle().emit_to(
             &AppWindow::CodeOverlay.to_string(),
             event_name.as_str(),
-            Some(serde_json::to_string(self).unwrap()),
+            serialized_self.clone(),
         );
+        // });
     }
 }
 

@@ -36,18 +36,20 @@ pub struct BracketHighlight {
 }
 
 impl FeatureBase for BracketHighlight {
-    fn compute(
+    fn compute_short_running(
         &mut self,
-        code_document: &CodeDocument,
-        trigger: &CoreEngineTrigger,
-        _execution_id: Uuid,
+        code_document: CodeDocument,
+        _trigger: &CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
-        if !self.is_activated || !self.should_compute(trigger) {
+        if !self.is_activated {
             return Ok(());
         }
 
         let group_id_before_compute = self.group_id;
-        if self.compute_procedure(code_document).is_err() {
+        if self
+            .procedure_compute_bracket_highlights(&code_document)
+            .is_err()
+        {
             if let Some(group_id) = group_id_before_compute {
                 AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
                 self.group_id = None;
@@ -60,6 +62,19 @@ impl FeatureBase for BracketHighlight {
                     AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    fn compute_long_running(
+        &mut self,
+        _code_document: CodeDocument,
+        _trigger: &CoreEngineTrigger,
+        _execution_id: Option<Uuid>,
+    ) -> Result<(), FeatureError> {
+        if !self.is_activated {
+            return Ok(());
         }
 
         Ok(())
@@ -95,10 +110,17 @@ impl FeatureBase for BracketHighlight {
     fn requires_ai(&self) -> bool {
         false
     }
+
+    fn kind(&self) -> FeatureKind {
+        FeatureKind::BracketHighlight
+    }
 }
 
 impl BracketHighlight {
-    fn compute_procedure(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
+    fn procedure_compute_bracket_highlights(
+        &mut self,
+        code_document: &CodeDocument,
+    ) -> Result<(), FeatureError> {
         let selected_text_range = match code_document.selected_text_range() {
             Some(range) => range,
             None => {
@@ -110,13 +132,11 @@ impl BracketHighlight {
             }
         };
 
-        let text_content =
-            code_document
-                .text_content()
-                .as_ref()
-                .ok_or(FeatureError::GenericError(
-                    BracketHighlightError::InsufficientContext.into(),
-                ))?;
+        let text_content = code_document
+            .text_content()
+            .ok_or(FeatureError::GenericError(
+                BracketHighlightError::InsufficientContext.into(),
+            ))?;
 
         let (opening_bracket, closing_bracket, line_opening_character, line_closing_character) =
             self.compute_annotation_text_positions(
@@ -471,14 +491,6 @@ impl BracketHighlight {
             group_id: None,
         }
     }
-
-    fn should_compute(&self, trigger: &CoreEngineTrigger) -> bool {
-        match trigger {
-            CoreEngineTrigger::OnTextContentChange => false, // The TextSelectionChange is already triggered on text content change
-            CoreEngineTrigger::OnTextSelectionChange => true,
-            _ => false,
-        }
-    }
 }
 
 fn get_selected_code_block_node(
@@ -486,7 +498,6 @@ fn get_selected_code_block_node(
 ) -> Result<Option<Node>, BracketHighlightError> {
     let text_content = code_document
         .text_content()
-        .as_ref()
         .ok_or(BracketHighlightError::InsufficientContext)?;
 
     let selected_text_range = match code_document.selected_text_range() {
@@ -496,6 +507,7 @@ fn get_selected_code_block_node(
 
     let selected_node = match code_document
         .syntax_tree()
+        .ok_or(BracketHighlightError::InsufficientContext)?
         .get_code_node_by_text_range(selected_text_range)
     {
         Ok(node) => node,

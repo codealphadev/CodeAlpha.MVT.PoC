@@ -6,7 +6,7 @@ use crate::{
     core_engine::{
         core_engine::EditorWindowUid,
         events::models::NodeAnnotationClickedMessage,
-        features::{CoreEngineTrigger, FeatureBase, FeatureError, UserCommand},
+        features::{CoreEngineTrigger, FeatureBase, FeatureError, FeatureKind, UserCommand},
         syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange, XcodeChar,
@@ -27,6 +27,7 @@ pub enum DocsGenerationError {
     GenericError(#[source] anyhow::Error),
 }
 
+#[derive(Debug)]
 enum DocsGenComputeProcedure {
     CreateNewNodeAnnotation,
     FetchNodeExplanation(NodeAnnotationClickedMessage),
@@ -39,23 +40,28 @@ pub struct DocsGenerator {
 }
 
 impl FeatureBase for DocsGenerator {
-    fn compute(
+    fn compute_short_running(
         &mut self,
-        code_document: &CodeDocument,
+        code_document: CodeDocument,
         trigger: &CoreEngineTrigger,
-        _execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
         }
 
-        if let Some(procedure) = self.should_compute(code_document, trigger) {
+        if let Some(procedure) = self.determine_short_running_procedure(
+            &code_document.editor_window_props().window_uid,
+            trigger,
+        ) {
             match procedure {
                 DocsGenComputeProcedure::FetchNodeExplanation(msg) => {
-                    self.procedure_fetch_node_explanation(code_document, msg)?;
+                    self.procedure_fetch_node_explanation(&code_document, msg)?;
                 }
                 DocsGenComputeProcedure::CreateNewNodeAnnotation => {
-                    if self.procedure_create_new_annotation(code_document).is_err() {
+                    if self
+                        .procedure_create_new_annotation(&code_document)
+                        .is_err()
+                    {
                         self.node_annotations
                             .remove(&code_document.editor_window_props().window_uid);
                     }
@@ -63,7 +69,20 @@ impl FeatureBase for DocsGenerator {
             }
         }
 
-        return Ok(());
+        Ok(())
+    }
+
+    fn compute_long_running(
+        &mut self,
+        _code_document: CodeDocument,
+        _trigger: &CoreEngineTrigger,
+        _execution_id: Option<Uuid>,
+    ) -> Result<(), FeatureError> {
+        if !self.is_activated {
+            return Ok(());
+        }
+
+        Ok(())
     }
 
     fn activate(&mut self) -> Result<(), FeatureError> {
@@ -88,6 +107,10 @@ impl FeatureBase for DocsGenerator {
     fn requires_ai(&self) -> bool {
         true
     }
+
+    fn kind(&self) -> FeatureKind {
+        FeatureKind::DocsGeneration
+    }
 }
 
 impl DocsGenerator {
@@ -99,13 +122,12 @@ impl DocsGenerator {
         }
     }
 
-    fn should_compute(
+    fn determine_short_running_procedure(
         &self,
-        code_document: &CodeDocument,
+        window_uid: &EditorWindowUid,
         trigger: &CoreEngineTrigger,
     ) -> Option<DocsGenComputeProcedure> {
-        let no_annotation_is_running =
-            !self.is_docs_gen_task_running(&code_document.editor_window_props().window_uid);
+        let no_annotation_is_running = !self.is_docs_gen_task_running(window_uid);
 
         match trigger {
             CoreEngineTrigger::OnTextContentChange => {
@@ -114,7 +136,6 @@ impl DocsGenerator {
             CoreEngineTrigger::OnTextSelectionChange => {
                 no_annotation_is_running.then(|| DocsGenComputeProcedure::CreateNewNodeAnnotation)
             }
-            CoreEngineTrigger::OnShortcutPressed(_) => None,
             CoreEngineTrigger::OnUserCommand(cmd) => match cmd {
                 UserCommand::NodeAnnotationClicked(msg) => {
                     Some(DocsGenComputeProcedure::FetchNodeExplanation(msg.clone()))
@@ -136,19 +157,21 @@ impl DocsGenerator {
             }
         };
 
-        let text_content =
-            code_document
-                .text_content()
-                .as_ref()
-                .ok_or(FeatureError::GenericError(
-                    DocsGenerationError::MissingContext.into(),
-                ))?;
+        let text_content = code_document
+            .text_content()
+            .ok_or(FeatureError::GenericError(
+                DocsGenerationError::MissingContext.into(),
+            ))?;
 
         let window_uid = code_document.editor_window_props().window_uid;
 
         let new_codeblock = Self::derive_codeblock(
             selected_text_range,
-            code_document.syntax_tree(),
+            code_document
+                .syntax_tree()
+                .ok_or(FeatureError::GenericError(
+                    DocsGenerationError::MissingContext.into(),
+                ))?,
             text_content,
         )?;
 
@@ -173,13 +196,11 @@ impl DocsGenerator {
         code_document: &CodeDocument,
         msg: NodeAnnotationClickedMessage,
     ) -> Result<(), FeatureError> {
-        let text_content =
-            code_document
-                .text_content()
-                .as_ref()
-                .ok_or(FeatureError::GenericError(
-                    DocsGenerationError::MissingContext.into(),
-                ))?;
+        let text_content = code_document
+            .text_content()
+            .ok_or(FeatureError::GenericError(
+                DocsGenerationError::MissingContext.into(),
+            ))?;
         Ok(
             if let Some(annotation) = self.node_annotations.get_mut(&msg.editor_window_uid) {
                 if msg.annotation_id == annotation.id() {

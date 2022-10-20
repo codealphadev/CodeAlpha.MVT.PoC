@@ -48,6 +48,8 @@ pub fn app_handle() -> AppHandle {
 }
 
 fn main() {
+    // console_subscriber::init();
+
     // Configure tracing
     TracingSubscriber::new();
 

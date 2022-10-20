@@ -43,6 +43,8 @@ async-trait = "0.1.57"
 bincode = "1.3.3"
 convert_case = "0.6.0"
 similar = "2.2.0"
+console-subscriber = "0.1.8"
+rayon = "1.5.3"
 
 [dev-dependencies]
 pretty_assertions = "1.2.0"
@@ -69,7 +71,7 @@ features = [ "v4", "serde",]
 
 [dependencies.tokio]
 version = "1.17.0"
-features = [ "time",]
+features = [ "time", "tracing"]
 
 [dependencies.strum]
 version = "0.24.1"
@@ -103,4 +105,3 @@ features = [ "isolation",]
 [patch.crates-io.tao]
 git = "https://github.com/codealphadev/tao"
 branch = "0.12.2"
-

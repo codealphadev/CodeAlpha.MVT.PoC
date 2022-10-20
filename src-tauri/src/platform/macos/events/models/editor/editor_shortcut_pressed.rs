@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash)]
 pub enum ModifierKey {
     Cmd = 0,
     ShiftCmd = 1,
@@ -13,7 +13,7 @@ pub enum ModifierKey {
     Unknown,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash)]
 pub struct EditorShortcutPressedMessage {
     pub window_uid: usize,
     pub key: String,
