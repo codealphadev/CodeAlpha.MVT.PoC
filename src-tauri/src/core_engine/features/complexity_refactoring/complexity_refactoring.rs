@@ -167,11 +167,17 @@ impl FeatureBase for ComplexityRefactoring {
     }
 }
 
+pub const COMPLEXITY_REFACTORING_EXTRACT_FUNCTION_USE_CASE: &str =
+    "complexity_refactoring_extract_function";
+
 impl ComplexityRefactoring {
     pub fn register_new_execution(trigger: &CoreEngineTrigger, execution_id: Uuid) {
         if *trigger == CoreEngineTrigger::OnTextContentChange {
             (*CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock()) = Some(execution_id);
-            for (_, commands) in SWIFT_LSP_COMMAND_QUEUE.lock().drain() {
+            for commands in SWIFT_LSP_COMMAND_QUEUE
+                .lock()
+                .remove(COMPLEXITY_REFACTORING_EXTRACT_FUNCTION_USE_CASE)
+            {
                 for command in commands {
                     command.kill().unwrap();
                 }
