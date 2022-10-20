@@ -26,7 +26,11 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                     on_ai_features_activation_status_update(&core_engine, &msg);
                 }
                 EventUserInteraction::NodeAnnotationClicked(msg) => {
-                    info!(?msg, "User request: Node annotation clicked");
+                    info!(
+                        ?msg,
+                        feature = "DocsGeneration",
+                        "User request: Node annotation clicked"
+                    );
 
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
@@ -34,21 +38,33 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                     );
                 }
                 EventUserInteraction::PerformSuggestion(msg) => {
-                    info!(?msg, "User request: Perform suggestion");
+                    info!(
+                        ?msg,
+                        feature = "ComplexityRefactoring",
+                        "User request: Perform suggestion"
+                    );
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)),
                     );
                 }
                 EventUserInteraction::DismissSuggestion(msg) => {
-                    info!(?msg, "User request: Dismiss suggestion");
+                    info!(
+                        ?msg,
+                        feature = "ComplexityRefactoring",
+                        "User request: Dismiss suggestion"
+                    );
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)),
                     );
                 }
                 EventUserInteraction::UpdateSelectedSuggestion(msg) => {
-                    info!(?msg, "User request: Update selected suggestion");
+                    info!(
+                        ?msg,
+                        feature = "ComplexityRefactoring",
+                        "User request: Update selected suggestion"
+                    );
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         &CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)),
