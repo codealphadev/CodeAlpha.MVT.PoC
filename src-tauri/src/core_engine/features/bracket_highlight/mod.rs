@@ -1,6 +1,4 @@
-pub use bracket_highlight::{
-    BracketHighlight, BracketHighlightError, CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID,
-};
+pub use bracket_highlight::{BracketHighlight, BracketHighlightError};
 
 mod bracket_highlight;
 mod utils;

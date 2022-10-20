@@ -18,8 +18,6 @@ use crate::{
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 use anyhow::anyhow;
-use lazy_static::lazy_static;
-use parking_lot::Mutex;
 use tracing::debug;
 use tree_sitter::Node;
 use uuid::Uuid;
@@ -37,23 +35,15 @@ pub struct BracketHighlight {
     group_id: Option<uuid::Uuid>,
 }
 
-lazy_static! {
-    pub static ref CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID: Mutex<Option<Uuid>> = Mutex::new(None);
-}
-
 impl FeatureBase for BracketHighlight {
     fn compute(
         &mut self,
         code_document: &CodeDocument,
         trigger: &CoreEngineTrigger,
-        execution_id: Uuid,
+        _execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         if !self.is_activated || !self.should_compute(trigger) {
             return Ok(());
-        }
-
-        if CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock().clone() != Some(execution_id) {
-            return Err(FeatureError::ExecutionCancelled(execution_id));
         }
 
         let group_id_before_compute = self.group_id;
@@ -108,12 +98,6 @@ impl FeatureBase for BracketHighlight {
 }
 
 impl BracketHighlight {
-    pub fn register_new_execution(trigger: &CoreEngineTrigger, execution_id: Uuid) {
-        if *trigger == CoreEngineTrigger::OnTextSelectionChange {
-            (*CURRENT_BRACKET_HIGHLIGHT_EXECUTION_ID.lock()) = Some(execution_id);
-        }
-    }
-
     fn compute_procedure(&mut self, code_document: &CodeDocument) -> Result<(), FeatureError> {
         let selected_text_range = match code_document.selected_text_range() {
             Some(range) => range,
