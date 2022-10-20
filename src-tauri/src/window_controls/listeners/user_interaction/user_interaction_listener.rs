@@ -19,7 +19,12 @@ pub fn user_interaction_listener(window_manager: &Arc<Mutex<WindowManager>>) {
 
             match event_user_interaction {
                 EventUserInteraction::ToggleMainWindow(msg) => {
-                    info!("ToggleMainWindow: {:?}", msg);
+                    info!(
+                        ?msg,
+                        feature = "ComplexityRefactoring",
+                        "User request: Toggle main window"
+                    );
+
                     on_main_window_toggle(&window_manager, msg);
                 }
                 _ => {}
