@@ -20,9 +20,7 @@ export const every_suggestion_is_new = (
 	if (!active_window_uid) {
 		return false;
 	}
-	let suggestions_for_window = Object.entries(suggestions[active_window_uid] ?? {}).filter(
-		([_, value]) => value.state == 'New'
-	);
+	let suggestions_for_window = Object.entries(suggestions[active_window_uid] ?? {});
 	return (
 		suggestions_for_window.length > 0 &&
 		suggestions_for_window.every(([_, suggestion]) => suggestion.state == 'New')
