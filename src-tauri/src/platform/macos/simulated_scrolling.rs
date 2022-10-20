@@ -2,6 +2,8 @@ use rdev::{simulate, EventType};
 
 use crate::{core_engine::TextRange, utils::geometry::LogicalSize};
 
+use tracing::error;
+
 use super::{
     get_bounds_for_TextRange, get_viewport_frame, is_focused_uielement_xcode_editor_textarea,
     GetVia, XcodeError,
@@ -39,7 +41,7 @@ pub async fn scroll_with_constant_speed(
             match simulate(&event_type) {
                 Ok(()) => {}
                 Err(_) => {
-                    println!("We could not send {:?}", event_type);
+                    error!("We could not send {:?}", event_type);
                 }
             }
 

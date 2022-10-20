@@ -6,11 +6,14 @@ use crate::{
         },
         CodeDocument, SwiftFormatError,
     },
-    platform::macos::models::editor::EditorShortcutPressedMessage,
+    platform::macos::models::editor::{EditorShortcutPressedMessage, ModifierKey},
 };
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use strum::Display;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
+use strum::EnumIter;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -20,7 +23,7 @@ use super::{
     DocsGenerator,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum UserCommand {
     PerformSuggestion(PerformSuggestionMessage),
     DismissSuggestion(DismissSuggestionMessage),
@@ -28,7 +31,7 @@ pub enum UserCommand {
     NodeAnnotationClicked(NodeAnnotationClickedMessage),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum CoreEngineTrigger {
     OnShortcutPressed(EditorShortcutPressedMessage),
     OnTextContentChange,
@@ -39,7 +42,7 @@ pub enum CoreEngineTrigger {
     OnUserCommand(UserCommand),
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS, Display)]
+#[derive(EnumIter, Clone, Serialize, Deserialize, Debug, PartialEq, Eq, TS, Hash)]
 #[ts(export, export_to = "bindings/features/code_annotations/")]
 pub enum FeatureKind {
     BracketHighlight,
@@ -48,12 +51,70 @@ pub enum FeatureKind {
     Formatter,
 }
 
+#[derive(Clone)]
+pub enum FeatureProcedure {
+    LongRunning,
+    ShortRunning,
+}
+
+impl FeatureKind {
+    pub fn should_compute(&self, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
+        match self {
+            FeatureKind::ComplexityRefactoring => match trigger {
+                CoreEngineTrigger::OnTextContentChange => Some(FeatureProcedure::LongRunning),
+                CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(_)) => {
+                    Some(FeatureProcedure::ShortRunning)
+                }
+                CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(_)) => {
+                    Some(FeatureProcedure::ShortRunning)
+                }
+                CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(_)) => {
+                    Some(FeatureProcedure::ShortRunning)
+                }
+                _ => None,
+            },
+            FeatureKind::DocsGeneration => match trigger {
+                CoreEngineTrigger::OnTextContentChange => Some(FeatureProcedure::ShortRunning),
+                CoreEngineTrigger::OnTextSelectionChange => Some(FeatureProcedure::ShortRunning),
+                CoreEngineTrigger::OnUserCommand(cmd) => match cmd {
+                    UserCommand::NodeAnnotationClicked(_) => Some(FeatureProcedure::ShortRunning),
+                    _ => None,
+                },
+                _ => None,
+            },
+            FeatureKind::BracketHighlight => match trigger {
+                CoreEngineTrigger::OnTextSelectionChange => Some(FeatureProcedure::ShortRunning),
+                CoreEngineTrigger::OnTextContentChange => None, // The TextSelectionChange is already triggered on text content change
+                _ => None,
+            },
+            FeatureKind::Formatter => match trigger {
+                CoreEngineTrigger::OnShortcutPressed(msg) => {
+                    if msg.modifier == ModifierKey::Cmd && msg.key == "S" {
+                        return Some(FeatureProcedure::ShortRunning);
+                    } else {
+                        return None;
+                    }
+                }
+                _ => None,
+            },
+        }
+    }
+}
+
+pub fn hash_trigger_and_feature(trigger: &CoreEngineTrigger, feature: &FeatureKind) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    trigger.hash(&mut hasher);
+    feature.hash(&mut hasher);
+    hasher.finish()
+}
+
 pub enum Feature {
     BracketHighlighting(BracketHighlight),
     DocsGeneration(DocsGenerator),
     Formatter(SwiftFormatter),
     ComplexityRefactoring(ComplexityRefactoring),
 }
+
 impl fmt::Debug for Feature {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let name = match self {
@@ -68,9 +129,6 @@ impl fmt::Debug for Feature {
 
 #[derive(thiserror::Error, Debug)]
 pub enum FeatureError {
-    #[error("Execution was cancelled: '{}'", 0)]
-    ExecutionCancelled(Option<Uuid>),
-
     #[error("Something went wrong when executing this feature.")]
     GenericError(#[source] anyhow::Error),
 }
@@ -84,9 +142,6 @@ impl From<BracketHighlightError> for FeatureError {
 impl From<ComplexityRefactoringError> for FeatureError {
     fn from(cause: ComplexityRefactoringError) -> Self {
         match cause {
-            ComplexityRefactoringError::ExecutionCancelled(execution_id) => {
-                FeatureError::ExecutionCancelled(execution_id)
-            }
             _ => FeatureError::GenericError(cause.into()),
         }
     }
@@ -105,11 +160,17 @@ impl From<SwiftFormatError> for FeatureError {
 }
 
 pub trait FeatureBase {
-    fn compute(
+    fn kind(&self) -> FeatureKind;
+    fn compute_short_running(
         &mut self,
-        code_document: &CodeDocument,
+        code_document: CodeDocument,
         trigger: &CoreEngineTrigger,
-        execution_id: Uuid,
+    ) -> Result<(), FeatureError>;
+    fn compute_long_running(
+        &mut self,
+        code_document: CodeDocument,
+        trigger: &CoreEngineTrigger,
+        execution_id: Option<Uuid>,
     ) -> Result<(), FeatureError>;
     fn activate(&mut self) -> Result<(), FeatureError>;
     fn deactivate(&mut self) -> Result<(), FeatureError>;
@@ -118,22 +179,24 @@ pub trait FeatureBase {
 }
 
 impl FeatureBase for Feature {
-    fn compute(
+    fn compute_long_running(
         &mut self,
-        code_document: &CodeDocument,
+        code_document: CodeDocument,
         trigger: &CoreEngineTrigger,
-        execution_id: Uuid,
+        execution_id: Option<Uuid>,
     ) -> Result<(), FeatureError> {
         match self {
             Feature::BracketHighlighting(feature) => {
-                feature.compute(code_document, trigger, execution_id)
+                feature.compute_long_running(code_document, trigger, execution_id)
             }
             Feature::DocsGeneration(feature) => {
-                feature.compute(code_document, trigger, execution_id)
+                feature.compute_long_running(code_document, trigger, execution_id)
             }
-            Feature::Formatter(feature) => feature.compute(code_document, trigger, execution_id),
+            Feature::Formatter(feature) => {
+                feature.compute_long_running(code_document, trigger, execution_id)
+            }
             Feature::ComplexityRefactoring(feature) => {
-                feature.compute(code_document, trigger, execution_id)
+                feature.compute_long_running(code_document, trigger, execution_id)
             }
         }
     }
@@ -171,6 +234,34 @@ impl FeatureBase for Feature {
             Feature::DocsGeneration(feature) => feature.requires_ai(),
             Feature::Formatter(feature) => feature.requires_ai(),
             Feature::ComplexityRefactoring(feature) => feature.requires_ai(),
+        }
+    }
+
+    fn kind(&self) -> FeatureKind {
+        match self {
+            Feature::BracketHighlighting(feature) => feature.kind(),
+            Feature::DocsGeneration(feature) => feature.kind(),
+            Feature::Formatter(feature) => feature.kind(),
+            Feature::ComplexityRefactoring(feature) => feature.kind(),
+        }
+    }
+
+    fn compute_short_running(
+        &mut self,
+        code_document: CodeDocument,
+        trigger: &CoreEngineTrigger,
+    ) -> Result<(), FeatureError> {
+        match self {
+            Feature::BracketHighlighting(feature) => {
+                feature.compute_short_running(code_document, trigger)
+            }
+            Feature::DocsGeneration(feature) => {
+                feature.compute_short_running(code_document, trigger)
+            }
+            Feature::Formatter(feature) => feature.compute_short_running(code_document, trigger),
+            Feature::ComplexityRefactoring(feature) => {
+                feature.compute_short_running(code_document, trigger)
+            }
         }
     }
 }

@@ -63,12 +63,16 @@ pub trait SwiftCodeBlockBase<'a> {
     fn get_parent_code_block(&self) -> Result<SwiftCodeBlock, SwiftCodeBlockError>;
 }
 
+#[derive(Clone)]
 pub struct SwiftCodeBlockProps<'a> {
     pub text_content: &'a XcodeText,
     pub node: Node<'a>,
     pub node_metadata: &'a NodeMetadata,
     pub tree: &'a SwiftSyntaxTree,
 }
+
+unsafe impl<'a> Send for SwiftCodeBlockProps<'a> {}
+unsafe impl<'a> Sync for SwiftCodeBlockProps<'a> {}
 
 impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
     fn as_text(&self) -> Result<XcodeText, SwiftCodeBlockError> {
@@ -178,7 +182,7 @@ fn get_code_block_of_node<'a>(
         if let Ok(codeblock) = SwiftCodeBlock::new(
             tree,
             current_node,
-            tree.get_node_metadata(&node).map_err(|err| {
+            tree.get_metadata_of_node(&node).map_err(|err| {
                 SwiftCodeBlockError::GenericError(anyhow!(
                     "get_code_block_of_node: get_node_metadata() failed for: {:?}, err: {:?}",
                     current_node,

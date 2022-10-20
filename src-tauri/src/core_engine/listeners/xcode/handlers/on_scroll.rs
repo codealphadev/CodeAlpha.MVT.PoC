@@ -15,5 +15,11 @@ pub fn on_editor_textarea_scrolled(
 
     let focused_window = get_focused_window()?;
 
-    core_engine.run_features(focused_window, &CoreEngineTrigger::OnVisibleTextRangeChange)
+    core_engine.run_features(
+        focused_window,
+        CoreEngineTrigger::OnVisibleTextRangeChange,
+        None,
+        None,
+        None,
+    )
 }

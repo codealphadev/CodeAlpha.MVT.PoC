@@ -19,9 +19,14 @@ pub struct FunctionParameter {
     pub param_type: String,
 }
 
+#[derive(Clone)]
 pub struct SwiftFunction<'a> {
     pub props: SwiftCodeBlockProps<'a>,
 }
+
+unsafe impl<'a> Send for SwiftFunction<'a> {}
+unsafe impl<'a> Sync for SwiftFunction<'a> {}
+
 impl SwiftFunction<'_> {
     pub fn get_complexity(&self) -> isize {
         self.props.node_metadata.complexities.get_total_complexity()
@@ -63,10 +68,7 @@ impl SwiftFunction<'_> {
         syntax_tree: &'a SwiftSyntaxTree,
         text_content: &'a XcodeText,
     ) -> Result<Vec<SwiftFunction<'a>>, SwiftCodeBlockError> {
-        let node = syntax_tree
-            .tree()
-            .ok_or(SwiftCodeBlockError::GenericError(anyhow!("No tree found")))?
-            .root_node();
+        let node = syntax_tree.tree().root_node();
         Self::get_top_level_functions_recursive(node, syntax_tree, text_content)
     }
 
@@ -78,7 +80,7 @@ impl SwiftFunction<'_> {
         let mut results: Vec<SwiftFunction<'a>> = vec![];
         if node.kind() == "function_declaration" {
             let node_metadata = syntax_tree
-                .get_node_metadata(&node)
+                .get_metadata_of_node(&node)
                 .map_err(|err| SwiftCodeBlockError::GenericError(err.into()))?;
             let new_func = SwiftFunction::new(syntax_tree, node, node_metadata, &text_content)
                 .map(|f| match f {
@@ -209,13 +211,16 @@ mod tests {
             "#,
             );
 
-            let mut swift_syntax_tree = SwiftSyntaxTree::new(SwiftSyntaxTree::parser_mutex());
-            swift_syntax_tree.parse(&text_content).unwrap();
+            let swift_syntax_tree =
+                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
 
             assert_eq!(
-                SwiftFunction::get_top_level_functions(&swift_syntax_tree, &text_content)
-                    .unwrap()
-                    .len(),
+                SwiftFunction::get_top_level_functions(
+                    &swift_syntax_tree,
+                    &swift_syntax_tree.text_content()
+                )
+                .unwrap()
+                .len(),
                 2
             )
         }

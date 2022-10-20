@@ -13,7 +13,6 @@ use crate::{
         utils::XcodeText,
         CodeDocument,
     },
-    platform::macos::models::editor::ModifierKey,
     CORE_ENGINE_ACTIVE_AT_STARTUP,
 };
 
@@ -22,11 +21,14 @@ pub struct SwiftFormatter {
 }
 
 impl FeatureBase for SwiftFormatter {
-    fn compute(
+    fn kind(&self) -> FeatureKind {
+        FeatureKind::Formatter
+    }
+
+    fn compute_short_running(
         &mut self,
-        code_document: &CodeDocument,
+        code_document: CodeDocument,
         trigger: &CoreEngineTrigger,
-        _execution_id: Uuid,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
@@ -36,17 +38,26 @@ impl FeatureBase for SwiftFormatter {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
                     "S" => {
-                        info!(
-                            feature = FeatureKind::Formatter.to_string(),
-                            "User request: Format document",
-                        );
-                        return self.format(code_document).map_err(|err| err.into());
+                        return self.format(&code_document).map_err(|err| err.into());
                     }
                     _ => {}
                 },
                 _ => {}
             },
             _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn compute_long_running(
+        &mut self,
+        _code_document: CodeDocument,
+        _trigger: &CoreEngineTrigger,
+        _execution_id: Option<Uuid>,
+    ) -> Result<(), FeatureError> {
+        if !self.is_activated {
+            return Ok(());
         }
 
         Ok(())
@@ -83,7 +94,6 @@ impl SwiftFormatter {
         tauri::async_runtime::spawn({
             let text_content = code_document
                 .text_content()
-                .as_ref()
                 .ok_or(SwiftFormatError::InsufficientContextForFormat)?
                 .clone();
 
