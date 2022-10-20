@@ -207,9 +207,8 @@ impl ComplexityRefactoring {
         code_document: &CodeDocument,
         execution_id: Uuid,
     ) -> Result<(), FeatureError> {
-        if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-            return Ok(());
-        }
+        make_sure_execution_is_most_recent(execution_id)?;
+
         debug!(
             ?execution_id,
             "Computing suggestions for complexity refactoring"
@@ -237,9 +236,7 @@ impl ComplexityRefactoring {
         let mut suggestions: SuggestionsMap = HashMap::new();
 
         for function in top_level_functions {
-            if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                return Ok(());
-            }
+            make_sure_execution_is_most_recent(execution_id)?;
             s_exps.push(function.props.node.to_sexp());
             suggestions.extend(Self::generate_suggestions_for_function(
                 function,
@@ -311,10 +308,10 @@ impl ComplexityRefactoring {
         )?;
 
         for (id, mut suggestion) in suggestions.iter_mut() {
-            if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                return Err(ComplexityRefactoringError::ExecutionCancelled(execution_id));
-            }
+            make_sure_execution_is_most_recent(execution_id)?;
+
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
+
             let suggestion_start_pos = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
             let suggestion_end_pos =
                 TextPosition::from_TSPoint(&slice.nodes.last().unwrap().end_position());
@@ -362,11 +359,14 @@ impl ComplexityRefactoring {
                 .first()
                 .and_then(|n| n.parent())
                 .map(|n| n.kind());
+
             tauri::async_runtime::spawn({
                 async move {
-                    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                        return;
+                    match make_sure_execution_is_most_recent(execution_id) {
+                        Err(ComplexityRefactoringError::ExecutionCancelled(_)) => return,
+                        _ => (),
                     }
+
                     _ = get_edits_for_method_extraction(
                         suggestion_start_pos,
                         suggestion_range.length,
@@ -501,9 +501,11 @@ impl ComplexityRefactoring {
         execution_id: Uuid,
     ) {
         tauri::async_runtime::spawn(async move {
-            if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-                return;
+            match make_sure_execution_is_most_recent(execution_id) {
+                Err(ComplexityRefactoringError::ExecutionCancelled(_)) => return,
+                _ => (),
             }
+
             let (old_content, new_content) =
                 Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
@@ -757,6 +759,15 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
         error!(DISMISSED_SUGGESTIONS_FILE_NAME, "Error getting app dir");
     }
     vec![]
+}
+
+pub fn make_sure_execution_is_most_recent(
+    execution_id: Uuid,
+) -> Result<(), ComplexityRefactoringError> {
+    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+        return Err(ComplexityRefactoringError::ExecutionCancelled(execution_id));
+    }
+    Ok(())
 }
 
 #[derive(thiserror::Error, Debug)]
