@@ -49,7 +49,7 @@
 	{#if expanded && recalculating}
 		<div
 			class="absolute left-0 top-0 z-10 bg-[#ffffffaa] w-full h-full flex flex-col items-center justify-center px-32 saturate(50%)"
-			transition:fade={{ duration: 200 }}
+			transition:fade|local={{ duration: 200 }}
 		>
 			<IconProcessing muted={true} />
 		</div>

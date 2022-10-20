@@ -109,33 +109,36 @@
 	listenToSuggestionEvents();
 </script>
 
-{#if active_window_uid !== null && filtered_suggestions?.length > 0}
-	<div
-		class="flex bg-background flex-col gap-5 shrink-0 rounded-b-xl max-h-[700px] overflow-y-auto overscroll-none mt-9 px-4 pt-3 pb-4"
-	>
-		{#each filtered_suggestions as [id, suggestion]}
-			{#key id}
-				<Suggestion
-					on:click={() => {
-						if (active_window_uid === null) {
-							return;
-						}
-						if (selected_suggestion_id === id) {
-							select_suggestion(null, active_window_uid);
-						} else {
-							select_suggestion(id, active_window_uid);
-						}
-					}}
-					expanded={id == selected_suggestion_id}
-					{suggestion}
-					suggestion_id={id}
-					window_uid={active_window_uid}
-				/>
-			{/key}
-		{/each}
-	</div>
-{:else if is_loading_suggestions == true}
-	<LoadingSuggestions />
-{:else}
-	<NoSuggestions />
-{/if}
+<!-- Use grid so that svelte transitions (e.g. fading of loading suggestion) don't bloat the dom and make window height wrong -->
+<div class="grid overflow-hidden rounded-xl bg-background">
+	{#if active_window_uid !== null && filtered_suggestions?.length > 0}
+		<div
+			class="row-[1/2] col-[1/2] flex bg-background flex-col gap-5 shrink-0 rounded-b-xl max-h-[700px] overflow-y-auto overscroll-none mt-9 px-4 pt-3 pb-4"
+		>
+			{#each filtered_suggestions as [id, suggestion]}
+				{#key id}
+					<Suggestion
+						on:click={() => {
+							if (active_window_uid === null) {
+								return;
+							}
+							if (selected_suggestion_id === id) {
+								select_suggestion(null, active_window_uid);
+							} else {
+								select_suggestion(id, active_window_uid);
+							}
+						}}
+						expanded={id == selected_suggestion_id}
+						{suggestion}
+						suggestion_id={id}
+						window_uid={active_window_uid}
+					/>
+				{/key}
+			{/each}
+		</div>
+	{:else if is_loading_suggestions == true}
+		<LoadingSuggestions />
+	{:else}
+		<NoSuggestions />
+	{/if}
+</div>
