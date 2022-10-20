@@ -619,11 +619,17 @@ impl ComplexityRefactoring {
                         return;
                     }
                 }
-                Self::remove_suggestion_and_publish(
+                match Self::remove_suggestion_and_publish(
                     &editor_window_uid,
                     &suggestion_id,
                     &suggestions_arc,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        error!(?err, "Error removing suggestion");
+                        return;
+                    }
+                }
 
                 match text_range_to_scroll_to_after_performing {
                     Ok(range) => {

@@ -139,9 +139,6 @@ pub enum SwiftLspError {
     #[error("Execution was cancelled: '{}'", 0)]
     ExecutionCancelled(Option<Uuid>),
 
-    #[error("File does not exist: '{0}'")]
-    FileNotExisting(String),
-
     #[error("Refactoring could not be carried out")]
     RefactoringNotPossible(String),
 

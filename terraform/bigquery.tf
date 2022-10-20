@@ -49,7 +49,7 @@ resource "google_bigquery_table" "default" {
         query = <<EOT
         SELECT 
           DATE(timestamp) as dte, 
-          COUNT(DISTINCT (CASE WHEN labels.machine_id NOT IN (SELECT machine_id FROM `client-backend-x.active_users.internal_machine_id`) THEN labels.machine_id END)) as foreign_users, 
+          COUNT(DISTINCT CASE WHEN labels.machine_id NOT IN (SELECT machine_id FROM `client-backend-x.active_users.internal_machine_id`) THEN labels.machine_id END) as foreign_users, 
           COUNT(DISTINCT labels.machine_id) as total_users 
           FROM `client-backend-x.active_users.client` 
           GROUP BY dte 
@@ -66,14 +66,14 @@ resource "google_bigquery_table" "feature_usage" {
         use_legacy_sql = false
         query = <<EOT
         SELECT 
-          DATE(timestamp) as dte, 
-          COUNT(CASE WHEN jsonPayload.feature = "DocsGeneration" THEN timestamp END) as DocsGeneration,
-          COUNT(CASE WHEN jsonPayload.feature = "ComplexityRefactoring" THEN timestamp END) as ComplexityRefactoring,
-          COUNT(CASE WHEN jsonPayload.feature = "Formatting" THEN timestamp END) as Formatting,
+          DATE(timestamp) as dte,
+          jsonPayload.feature as feature,
+          COUNT(*) as count
           FROM `client-backend-x.active_users.client` 
           WHERE jsonPayload.metadata.level = "INFO"
+          AND jsonPayload.feature IS NOT NULL
           AND labels.machine_id NOT IN (SELECT machine_id FROM `client-backend-x.active_users.internal_machine_id`)
-          GROUP BY dte 
+          GROUP BY dte, feature 
           ORDER by dte;
         EOT
     }
