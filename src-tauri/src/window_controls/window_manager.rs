@@ -4,9 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chrono::{DateTime, Utc};
 use parking_lot::Mutex;
-use std::time::SystemTime;
 use tracing::debug;
 
 use crate::{
@@ -327,11 +325,6 @@ impl WindowManager {
 
 #[tauri::command]
 pub fn cmd_resize_window(app_window: AppWindow, size_x: u32, size_y: u32) {
-    let now = SystemTime::now();
-    let now: DateTime<Utc> = now.into();
-    let now = now.to_rfc3339();
-
-    println!("{} {} trigger", now, size_y);
     EventWindowControls::AppWindowUpdate(UpdateAppWindowMessage {
         app_windows: vec![app_window],
         viewport: None,

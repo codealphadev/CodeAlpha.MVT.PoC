@@ -1,6 +1,5 @@
-use std::{sync::Arc, time::SystemTime};
+use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
 use cocoa::{appkit::NSWindowOrderingMode, base::id, foundation::NSInteger};
 
 use objc::{msg_send, sel, sel_impl};
@@ -153,11 +152,6 @@ impl MainWindow {
 
             _ = main_tauri_window.emit("tail-orientation-changed", self.tail_orientation);
 
-            let now = SystemTime::now();
-            let now: DateTime<Utc> = now.into();
-            let now = now.to_rfc3339();
-
-            println!("{} inside1", now,);
             // If the window is flipped as part of the update, we briefly hide it to prevent outdated window shadows from staying on-screen
             if old_tail_orientation != self.tail_orientation {
                 self.hide();
@@ -177,11 +171,6 @@ impl MainWindow {
                 corrected_position.y += offscreen_dist_y;
             }
 
-            let now = SystemTime::now();
-            let now: DateTime<Utc> = now.into();
-            let now = now.to_rfc3339();
-
-            println!("{} inside2", now,);
             Self::update_widget_position(
                 LogicalFrame {
                     origin: corrected_position,
@@ -194,25 +183,12 @@ impl MainWindow {
                 .set_position(corrected_position.as_tauri_LogicalPosition())
                 .ok()?;
         }
-
-        let now = SystemTime::now();
-        let now: DateTime<Utc> = now.into();
-        let now = now.to_rfc3339();
-
-        println!("{} inside3", now,);
         if *updated_main_window_size != MainWindow::dimensions().size {
             self.size = *updated_main_window_size;
             main_tauri_window
                 .set_size(updated_main_window_size.as_tauri_LogicalSize())
                 .ok()?;
         }
-
-        let now = SystemTime::now();
-        let now: DateTime<Utc> = now.into();
-        let now = now.to_rfc3339();
-
-        println!("{} inside4", now,);
-
         Some(())
     }
 
