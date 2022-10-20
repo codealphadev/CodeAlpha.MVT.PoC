@@ -213,7 +213,7 @@ impl ComplexityRefactoring {
         code_document: &CodeDocument,
         execution_id: Uuid,
     ) -> Result<(), FeatureError> {
-        make_sure_execution_is_most_recent(execution_id, "compute_suggestions")?;
+        make_sure_execution_is_most_recent(execution_id)?;
 
         debug!(
             ?execution_id,
@@ -242,7 +242,7 @@ impl ComplexityRefactoring {
         let mut suggestions: SuggestionsMap = HashMap::new();
 
         for function in top_level_functions {
-            make_sure_execution_is_most_recent(execution_id, "function loop start")?;
+            make_sure_execution_is_most_recent(execution_id)?;
             s_exps.push(function.props.node.to_sexp());
             suggestions.extend(Self::generate_suggestions_for_function(
                 function,
@@ -314,10 +314,7 @@ impl ComplexityRefactoring {
         )?;
 
         for (id, mut suggestion) in suggestions.iter_mut() {
-            make_sure_execution_is_most_recent(
-                execution_id,
-                "start_of_suggestions_for_function_loop",
-            )?;
+            make_sure_execution_is_most_recent(execution_id)?;
 
             let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
 
@@ -371,7 +368,7 @@ impl ComplexityRefactoring {
 
             tauri::async_runtime::spawn({
                 async move {
-                    match make_sure_execution_is_most_recent(execution_id, "suggestion - async") {
+                    match make_sure_execution_is_most_recent(execution_id) {
                         Err(ComplexityRefactoringError::ExecutionCancelled(_)) => return,
                         _ => (),
                     }
@@ -524,10 +521,7 @@ impl ComplexityRefactoring {
         execution_id: Uuid,
     ) {
         tauri::async_runtime::spawn(async move {
-            match make_sure_execution_is_most_recent(
-                execution_id,
-                "update_suggestion_with_formatted_text_diff",
-            ) {
+            match make_sure_execution_is_most_recent(execution_id) {
                 Err(ComplexityRefactoringError::ExecutionCancelled(_)) => return,
                 _ => (),
             }
@@ -802,7 +796,6 @@ fn read_dismissed_suggestions() -> Vec<SuggestionHash> {
 
 pub fn make_sure_execution_is_most_recent(
     execution_id: Uuid,
-    _code_location: &str,
 ) -> Result<(), ComplexityRefactoringError> {
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
         return Err(ComplexityRefactoringError::ExecutionCancelled(Some(
