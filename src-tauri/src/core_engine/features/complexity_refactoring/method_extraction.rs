@@ -88,7 +88,7 @@ pub async fn get_edits_for_method_extraction(
 
     let temp_file = create_temp_file(&text_content, tmp_file_key)?;
 
-    make_sure_execution_is_most_recent(execution_id, "get_edits_for_method_extraction")?;
+    make_sure_execution_is_most_recent(execution_id)?;
 
     let suggestion = refactor_function(
         &file_path.unwrap(),
