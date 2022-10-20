@@ -91,12 +91,11 @@ impl CodeOverlayWindow {
             .set_position(position.as_tauri_LogicalPosition())
             .ok()?;
 
+        // Need to set the size with all of these calls, don't know why. See question here https://discord.com/channels/616186924390023171/1032276378617380946
         tauri_window.set_size(size.as_tauri_LogicalSize()).ok()?;
-
         tauri_window
             .set_min_size(Some(size.as_tauri_LogicalSize()))
             .ok()?;
-
         tauri_window
             .set_max_size(Some(size.as_tauri_LogicalSize()))
             .ok()?;
