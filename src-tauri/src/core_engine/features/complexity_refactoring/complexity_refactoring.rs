@@ -419,7 +419,10 @@ impl ComplexityRefactoring {
                                 &window_uid,
                                 &binded_id,
                                 &binded_suggestions_arc2,
-                            );
+                            )
+                            .unwrap_or_else(|e| {
+                                error!(?e, "Failed to remove suggestion when cleaning up after other error");
+                            });
                         }
                     });
                 }
