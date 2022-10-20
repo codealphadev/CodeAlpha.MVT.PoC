@@ -1,16 +1,15 @@
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use cached::proc_macro::cached;
 
 use tree_sitter::Node;
 use uuid::Uuid;
 
 use super::{
-    complexity_refactoring::Edit, get_node_address, get_slice_inputs_and_outputs,
-    get_sub_slice_inputs_and_outputs, is_child_of, update_parsing_metadata_for_node,
-    ComplexityRefactoringError, NodeSubSlice, SliceInputsAndOutputs,
-    CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID,
+    complexity_refactoring::{make_sure_execution_is_most_recent, Edit},
+    get_node_address, get_slice_inputs_and_outputs, get_sub_slice_inputs_and_outputs, is_child_of,
+    update_parsing_metadata_for_node, ComplexityRefactoringError, NodeSubSlice,
+    SliceInputsAndOutputs,
 };
 use crate::core_engine::{
     features::complexity_refactoring::{
@@ -89,9 +88,7 @@ pub async fn get_edits_for_method_extraction(
 
     let temp_file = create_temp_file(&text_content, tmp_file_key)?;
 
-    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        return Err(ComplexityRefactoringError::GenericError(anyhow!("TODO")));
-    }
+    make_sure_execution_is_most_recent(execution_id)?;
 
     let suggestion = refactor_function(
         &file_path.unwrap(),

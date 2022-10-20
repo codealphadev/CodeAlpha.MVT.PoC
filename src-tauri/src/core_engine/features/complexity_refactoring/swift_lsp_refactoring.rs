@@ -34,11 +34,7 @@ fn map_edit_dto_to_edit(
     text_content: &XcodeText,
     execution_id: Uuid,
 ) -> Result<Edit, SwiftLspError> {
-    {
-        if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-            return Err(SwiftLspError::ExecutionCancelled(execution_id));
-        }
-    }
+    make_sure_execution_is_most_recent(execution_id)?;
 
     Ok(Edit {
         start_index: TextPosition {
@@ -75,9 +71,7 @@ pub async fn refactor_function(
     tmp_file_path: &String,
     execution_id: Uuid,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        return Err(SwiftLspError::GenericError(anyhow!("TODO")));
-    }
+    make_sure_execution_is_most_recent(execution_id)?;
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
@@ -95,15 +89,11 @@ key.compilerargs:{}"#,
     )
     .to_string();
 
-    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        return Err(SwiftLspError::ExecutionCancelled(execution_id));
-    }
+    make_sure_execution_is_most_recent(execution_id)?;
 
     let result_str = SwiftLsp::make_lsp_request(&file_path, payload.clone(), execution_id).await?;
 
-    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        return Err(SwiftLspError::ExecutionCancelled(execution_id));
-    }
+    make_sure_execution_is_most_recent(execution_id)?;
 
     let result: RefactoringResponse =
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
@@ -123,4 +113,11 @@ key.compilerargs:{}"#,
         .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
     return Ok(edits);
+}
+
+fn make_sure_execution_is_most_recent(execution_id: Uuid) -> Result<(), SwiftLspError> {
+    if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
+        return Err(SwiftLspError::ExecutionCancelled(execution_id));
+    }
+    Ok(())
 }
