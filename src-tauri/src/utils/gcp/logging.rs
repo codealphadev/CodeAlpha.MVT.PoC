@@ -49,6 +49,9 @@ pub struct LogEntry {
 impl LogEntry {
     pub fn new(log_name: String, jsonPayload: Value, metadata: Metadata) -> Self {
         let mut labels = HashMap::new();
+        if let Some(feature) = jsonPayload.get("feature") {
+            labels.insert("feature".to_string(), feature.to_string());
+        }
         if let Ok(machine_id) = machine_uid::get() {
             labels.insert("machine_id".to_string(), machine_id);
         }

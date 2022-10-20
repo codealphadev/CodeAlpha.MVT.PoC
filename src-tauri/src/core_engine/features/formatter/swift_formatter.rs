@@ -48,7 +48,7 @@ impl FeatureBase for SwiftFormatter {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
                     "S" => {
-                        info!("User request: Format document");
+                        info!(feature = "Formatting", "User request: Format document",);
                         return self.format(code_document).map_err(|err| err.into());
                     }
                     _ => {}
