@@ -13,7 +13,7 @@
 	import Button from '../common/button/button.svelte';
 	import { ButtonType } from '../common/button/button';
 	import SuggestionsIcon from './icons/suggestions-icon.svelte';
-	import { ellipsis } from '../../utils';
+	import { format_with_ellipsis_if_too_long } from '../../utils';
 
 	export let suggestion: FERefactoringSuggestion;
 	export let suggestion_id: string;
@@ -40,6 +40,9 @@
 		const channel: ChannelList = 'EventUserInteractions';
 		await emit(channel, event);
 	};
+
+	const EXPANDED_MAX_FUNCTION_NAME_LENGTH = 18;
+	const MAX_FUNCTION_NAME_LENGTH = 23;
 </script>
 
 <Card on:click additional_class="suggestion relative">
@@ -58,11 +61,19 @@
 		</div>
 		<p class="text-contrast text-sm max-w-full leading-[1.714]">
 			{#if expanded}
-				Your function <code>{ellipsis(suggestion.main_function_name, 18)}</code> may be hard to understand
-				due to nested statements. Consider extracting this code block into a separate function.
+				Your function <code
+					>{format_with_ellipsis_if_too_long(
+						suggestion.main_function_name,
+						EXPANDED_MAX_FUNCTION_NAME_LENGTH
+					)}</code
+				> may be hard to understand due to nested statements. Consider extracting this code block into
+				a separate function.
 			{:else}
 				Refactor deeply nested statements in function <code
-					>{ellipsis(suggestion.main_function_name, 23)}</code
+					>{format_with_ellipsis_if_too_long(
+						suggestion.main_function_name,
+						MAX_FUNCTION_NAME_LENGTH
+					)}</code
 				>
 			{/if}
 		</p>
