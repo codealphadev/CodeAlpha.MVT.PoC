@@ -37,7 +37,7 @@ fn map_edit_dto_to_edit(
     text_content: &XcodeText,
     execution_id: Uuid,
 ) -> Result<Edit, SwiftLspError> {
-    make_sure_execution_is_most_recent(execution_id)?;
+    make_sure_execution_is_most_recent(execution_id, "map_edit_dto_to_edit")?;
 
     Ok(Edit {
         start_index: TextPosition {
@@ -74,7 +74,7 @@ pub async fn refactor_function(
     tmp_file_path: &String,
     execution_id: Uuid,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    make_sure_execution_is_most_recent(execution_id)?;
+    make_sure_execution_is_most_recent(execution_id, "refactor_function1")?;
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
@@ -92,7 +92,7 @@ key.compilerargs:{}"#,
     )
     .to_string();
 
-    make_sure_execution_is_most_recent(execution_id)?;
+    make_sure_execution_is_most_recent(execution_id, "refactor_function2")?;
 
     let result_str = SwiftLsp::make_lsp_request(
         &file_path,
@@ -101,7 +101,7 @@ key.compilerargs:{}"#,
     )
     .await?;
 
-    make_sure_execution_is_most_recent(execution_id)?;
+    make_sure_execution_is_most_recent(execution_id, "refactor_function3")?;
 
     let result: RefactoringResponse =
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
@@ -123,9 +123,12 @@ key.compilerargs:{}"#,
     return Ok(edits);
 }
 
-fn make_sure_execution_is_most_recent(execution_id: Uuid) -> Result<(), SwiftLspError> {
+fn make_sure_execution_is_most_recent(
+    execution_id: Uuid,
+    _code_location: &str, // For logging
+) -> Result<(), SwiftLspError> {
     if *CURRENT_COMPLEXITY_REFACTORING_EXECUTION_ID.lock() != Some(execution_id) {
-        return Err(SwiftLspError::ExecutionCancelled(execution_id));
+        return Err(SwiftLspError::ExecutionCancelled(Some(execution_id)));
     }
     Ok(())
 }
