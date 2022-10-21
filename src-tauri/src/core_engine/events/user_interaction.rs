@@ -6,7 +6,7 @@ use crate::{app_handle, utils::messaging::ChannelList};
 
 use super::models::{
     AiFeaturesStatusMessage, DismissSuggestionMessage, NodeAnnotationClickedMessage,
-    PerformSuggestionMessage, UpdateSelectedSuggestionMessage,
+    PerformSuggestionMessage, SwiftFormatOnCMDSMessage, UpdateSelectedSuggestionMessage,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, TS)]
@@ -14,6 +14,7 @@ use super::models::{
 #[serde(tag = "event", content = "payload")]
 pub enum EventUserInteraction {
     AiFeaturesStatus(AiFeaturesStatusMessage),
+    SwiftFormatOnCMDS(SwiftFormatOnCMDSMessage),
     PerformSuggestion(PerformSuggestionMessage),
     DismissSuggestion(DismissSuggestionMessage),
     UpdateSelectedSuggestion(UpdateSelectedSuggestionMessage),

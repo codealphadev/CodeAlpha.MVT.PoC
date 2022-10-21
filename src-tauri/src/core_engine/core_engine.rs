@@ -53,6 +53,7 @@ pub struct CoreEngine {
     features: Vec<Arc<Mutex<Feature>>>,
 
     ai_features_active: bool,
+    swift_format_on_cmd_s_active: bool,
 
     /// Annotations manager handles where to draw annotations on the code editor via the CodeOverlay window
     _annotations_manager: Arc<Mutex<AnnotationsManager>>,
@@ -73,10 +74,18 @@ impl CoreEngine {
                 true
             };
 
+        let swift_format_on_cmd_s_active =
+            if let Some(cache) = app_handle().try_state::<CoreEngineStateCache>() {
+                cache.0.lock().swift_format_on_cmd_s
+            } else {
+                true
+            };
+
         Self {
             app_handle: app_handle(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
             ai_features_active,
+            swift_format_on_cmd_s_active,
             features: vec![
                 Arc::new(Mutex::new(Feature::BracketHighlighting(
                     BracketHighlight::new(),
@@ -102,6 +111,10 @@ impl CoreEngine {
 
     pub fn set_ai_features_active(&mut self, ai_features_active: bool) {
         self.ai_features_active = ai_features_active;
+    }
+
+    pub fn set_swift_format_on_cmd_s_active(&mut self, swift_format_on_cmd_s_active: bool) {
+        self.swift_format_on_cmd_s_active = swift_format_on_cmd_s_active;
     }
 
     pub fn run_features(
@@ -131,6 +144,15 @@ impl CoreEngine {
                     if !ai_features_active && feature.requires_ai() {
                         _ = feature.reset();
                         return;
+                    }
+
+                    match feature {
+                        Feature::Formatter(_) => {
+                            if !self.swift_format_on_cmd_s_active {
+                                return;
+                            }
+                        }
+                        _ => {}
                     }
 
                     if let Err(e) = feature.compute(&code_doc, &trigger, execution_id) {

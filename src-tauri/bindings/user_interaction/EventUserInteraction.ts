@@ -3,10 +3,12 @@ import type { AiFeaturesStatusMessage } from "./AiFeaturesStatusMessage";
 import type { DismissSuggestionMessage } from "./DismissSuggestionMessage";
 import type { NodeAnnotationClickedMessage } from "./NodeAnnotationClickedMessage";
 import type { PerformSuggestionMessage } from "./PerformSuggestionMessage";
+import type { SwiftFormatOnCMDSMessage } from "./SwiftFormatOnCMDSMessage";
 import type { UpdateSelectedSuggestionMessage } from "./UpdateSelectedSuggestionMessage";
 
 export type EventUserInteraction =
   | { event: "AiFeaturesStatus"; payload: AiFeaturesStatusMessage }
+  | { event: "SwiftFormatOnCMDS"; payload: SwiftFormatOnCMDSMessage }
   | { event: "PerformSuggestion"; payload: PerformSuggestionMessage }
   | { event: "DismissSuggestion"; payload: DismissSuggestionMessage }
   | {

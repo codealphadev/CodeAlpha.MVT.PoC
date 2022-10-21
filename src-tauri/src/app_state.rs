@@ -34,12 +34,14 @@ pub type Result<T> = std::result::Result<T, AppError>;
 #[ts(export, export_to = "bindings/app_state/")]
 pub struct CoreEngineState {
     pub ai_features_active: bool,
+    pub swift_format_on_cmd_s: bool,
 }
 
 impl Default for CoreEngineState {
     fn default() -> Self {
         CoreEngineState {
             ai_features_active: true,
+            swift_format_on_cmd_s: true,
         }
     }
 }
