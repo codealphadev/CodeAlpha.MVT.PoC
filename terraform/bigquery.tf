@@ -7,7 +7,6 @@ resource "google_bigquery_dataset" "dataset" {
 resource "google_logging_project_sink" "default" {
   name = "bigquery-sink"
   destination = "bigquery.googleapis.com/projects/${google_project.project.project_id}/datasets/${google_bigquery_dataset.dataset.dataset_id}"
-  filter = "User request"
   unique_writer_identity = true
 
   bigquery_options {
