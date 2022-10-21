@@ -13,7 +13,9 @@ use parking_lot::Mutex;
 use tauri::Manager;
 use tracing::info;
 
-use super::handlers::on_ai_features_activation_status_update;
+use super::handlers::{
+    on_ai_features_activation_status_update, on_swift_format_on_cmd_s_activation_status_update,
+};
 
 pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
     app_handle().listen_global(ChannelList::EventUserInteractions.to_string(), {
@@ -24,6 +26,9 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
             match event_user_interaction {
                 EventUserInteraction::AiFeaturesStatus(msg) => {
                     on_ai_features_activation_status_update(&core_engine, &msg);
+                }
+                EventUserInteraction::SwiftFormatOnCMDS(msg) => {
+                    on_swift_format_on_cmd_s_activation_status_update(&core_engine, &msg);
                 }
                 EventUserInteraction::NodeAnnotationClicked(msg) => {
                     info!(?msg, "User request: Node annotation clicked");
