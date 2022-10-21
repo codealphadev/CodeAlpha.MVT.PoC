@@ -113,8 +113,8 @@ impl CoreEngine {
         self.ai_features_active = ai_features_active;
     }
 
-    pub fn set_swift_format_on_cmd_s_active(&mut self, swift_format_on_cmd_s_active: bool) {
-        self.swift_format_on_cmd_s_active = swift_format_on_cmd_s_active;
+    pub fn set_swift_format_on_cmd_s_active(&mut self, active: bool) {
+        self.swift_format_on_cmd_s_active = active;
     }
 
     pub fn run_features(
@@ -137,6 +137,7 @@ impl CoreEngine {
                 let ai_features_active = self.ai_features_active;
                 let feature_arc = feature_arc.clone();
                 let trigger = trigger.clone();
+                let swift_format_on_cmd_s_active = self.swift_format_on_cmd_s_active;
 
                 async move {
                     let mut feature = feature_arc.lock();
@@ -146,9 +147,9 @@ impl CoreEngine {
                         return;
                     }
 
-                    match feature {
+                    match *feature {
                         Feature::Formatter(_) => {
-                            if !self.swift_format_on_cmd_s_active {
+                            if !swift_format_on_cmd_s_active {
                                 return;
                             }
                         }

@@ -174,7 +174,7 @@ fn on_deactivate_swift_format_on_cmd_s() {
         .is_ok()
     {
         EventUserInteraction::SwiftFormatOnCMDS(SwiftFormatOnCMDSMessage {
-            swift_format_on_cmd_s_active: check_swift_format_on_cmd_s(),
+            active: check_swift_format_on_cmd_s(),
         })
         .publish_to_tauri();
     }
@@ -191,7 +191,7 @@ fn on_activate_swift_format_on_cmd_s() {
         .is_ok()
     {
         EventUserInteraction::SwiftFormatOnCMDS(SwiftFormatOnCMDSMessage {
-            swift_format_on_cmd_s_active: check_swift_format_on_cmd_s(),
+            active: check_swift_format_on_cmd_s(),
         })
         .publish_to_tauri();
     }

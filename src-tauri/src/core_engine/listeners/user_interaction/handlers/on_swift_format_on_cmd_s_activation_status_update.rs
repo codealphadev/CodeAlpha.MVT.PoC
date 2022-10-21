@@ -10,6 +10,5 @@ pub fn on_swift_format_on_cmd_s_activation_status_update(
 ) {
     let mut core_engine = core_engine_arc.lock();
 
-    core_engine
-        .set_swift_format_on_cmd_s_active(swift_format_status_msg.swift_format_on_cmd_s_active);
+    core_engine.set_swift_format_on_cmd_s_active(swift_format_status_msg.active);
 }
