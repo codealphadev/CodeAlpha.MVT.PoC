@@ -2,7 +2,6 @@ resource "google_bigquery_dataset" "dataset" {
   dataset_id                  = "active_users"
   friendly_name               = "Active users"
   location                    = local.region
-  default_table_expiration_ms = 3600000
 }
 
 resource "google_logging_project_sink" "default" {

@@ -32,6 +32,7 @@ pub struct NodeExplanation {
     pub summary: String,
     pub kind: SwiftCodeBlockKind,
     pub parameters: Option<Vec<FunctionParameterWithExplanation>>,
+    pub name_suggestion: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -39,6 +40,7 @@ pub struct NodeExplanationResponse {
     pub summary: String,
     pub kind: SwiftCodeBlockKind,
     pub parameters: Option<Vec<FunctionParameterDto>>,
+    pub name_suggestion: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -55,6 +57,7 @@ pub struct NodeExplanationRequest {
     context: Option<String>,
     method: String,
     parameter_names: Option<Vec<String>>,
+    code_block_name: Option<String>,
 }
 
 pub async fn fetch_node_explanation(
@@ -70,6 +73,7 @@ pub async fn fetch_node_explanation(
         code_block.text,
         code_block.kind,
         code_block.func_parameters_todo,
+        code_block.name,
         context,
     )
     .await;
@@ -85,6 +89,7 @@ async fn cached_fetch_node_explanation(
     text: XcodeText,
     kind: SwiftCodeBlockKind,
     func_parameters: Option<Vec<FunctionParameter>>,
+    name: Option<String>,
     context: Option<String>,
 ) -> Result<NodeExplanation, reqwest::Error> {
     let url = get_cloud_function_url();
@@ -92,6 +97,7 @@ async fn cached_fetch_node_explanation(
     let codeblock_text_string = String::from_utf16_lossy(&text);
 
     let req_body = NodeExplanationRequest {
+        code_block_name: name,
         version: "v1".to_string(),
         method: "explain".to_string(),
         apiKey: get_cloud_function_apikey(),
@@ -158,6 +164,7 @@ fn map_node_explanation_response_to_node_explanation(
         summary: response.summary,
         kind: response.kind,
         parameters: parameters,
+        name_suggestion: response.name_suggestion,
     }
 }
 
@@ -215,6 +222,8 @@ mod tests {
         #[test]
         fn no_parameters() {
             let response = NodeExplanationResponse {
+                name_suggestion: None,
+
                 summary: "summary".to_string(),
                 kind: SwiftCodeBlockKind::Function,
                 parameters: None,
@@ -223,6 +232,7 @@ mod tests {
                 map_node_explanation_response_to_node_explanation(response, None),
                 NodeExplanation {
                     summary: "summary".to_string(),
+                    name_suggestion: None,
                     kind: SwiftCodeBlockKind::Function,
                     parameters: None,
                 }
@@ -232,6 +242,8 @@ mod tests {
         #[test]
         fn correct_parameters() {
             let response = NodeExplanationResponse {
+                name_suggestion: None,
+
                 summary: "summary".to_string(),
                 kind: SwiftCodeBlockKind::Function,
                 parameters: Some(vec![
@@ -262,6 +274,7 @@ mod tests {
                     input_parameters.as_ref()
                 ),
                 NodeExplanation {
+                    name_suggestion: None,
                     summary: "summary".to_string(),
                     kind: SwiftCodeBlockKind::Function,
                     parameters: Some(vec![
@@ -283,6 +296,8 @@ mod tests {
         #[test]
         fn filters_out_wrong_parameters() {
             let response = NodeExplanationResponse {
+                name_suggestion: None,
+
                 summary: "summary".to_string(),
                 kind: SwiftCodeBlockKind::Function,
                 parameters: Some(vec![
@@ -321,6 +336,8 @@ mod tests {
                     input_parameters.as_ref()
                 ),
                 NodeExplanation {
+                    name_suggestion: None,
+
                     summary: "summary".to_string(),
                     kind: SwiftCodeBlockKind::Function,
                     parameters: Some(vec![FunctionParameterWithExplanation {
@@ -375,6 +392,7 @@ mod tests {
                 summary: "This is a summary".to_string(),
                 kind: SwiftCodeBlockKind::Class,
                 parameters: None,
+                name_suggestion: None,
             };
             let docstring = explanation_to_docstring(&explanation);
             assert_eq!(docstring, "/// This is a summary");
@@ -383,6 +401,7 @@ mod tests {
         #[test]
         fn function_with_two_parameters() {
             let explanation = NodeExplanation {
+                name_suggestion: None,
                 summary: "This is a summary".to_string(),
                 kind: SwiftCodeBlockKind::Function,
                 parameters: Some(vec![

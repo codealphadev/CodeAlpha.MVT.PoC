@@ -6,4 +6,5 @@ export interface NodeExplanation {
   summary: string;
   kind: SwiftCodeBlockKind;
   parameters: Array<FunctionParameterWithExplanation> | null;
+  name_suggestion: string | null;
 }
