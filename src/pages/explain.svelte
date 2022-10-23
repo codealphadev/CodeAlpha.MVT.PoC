@@ -11,6 +11,7 @@
 	import ParametersSection from '../components/node-explainer/parameters-section.svelte';
 	import Footer from '../components/node-explainer/footer-section.svelte';
 	import Window from '../components/common/window.svelte';
+	import NameSuggestion from '../components/node-explainer/name-suggestion.svelte';
 
 	let explanation: NodeExplanation | null = null;
 	let complexity: number | null = null;
@@ -80,13 +81,21 @@
 	{#if explanation !== null}
 		<Window id={dom_id}>
 			<div data-tauri-drag-region class=" absolute w-full h-20" />
-			<Header kind={explanation.kind} name={node_name} summary={explanation.summary} />
+			<Header
+				kind={explanation.kind}
+				name={node_name}
+				summary={explanation.summary}
+				name_suggestion={explanation.name_suggestion}
+			/>
 
 			{#if explanation.parameters}
 				<ParametersSection parameters={explanation.parameters} />
 			{/if}
 			{#if complexity !== null}
 				<ComplexitySection {complexity} />
+			{/if}
+			{#if explanation.name_suggestion}
+				<NameSuggestion suggested_name={explanation.name_suggestion} />
 			{/if}
 			<hr class="border-background_secondary w-full" />
 			<Footer />
