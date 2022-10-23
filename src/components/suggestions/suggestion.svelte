@@ -14,6 +14,7 @@
 	import { ButtonType } from '../common/button/button';
 	import SuggestionsIcon from './icons/suggestions-icon.svelte';
 	import { format_with_ellipsis_if_too_long } from '../../utils';
+	import FeedbackBar from '../common/feedback-bar.svelte';
 
 	export let suggestion: FERefactoringSuggestion;
 	export let suggestion_id: string;
@@ -86,6 +87,7 @@
 				<Arrow />
 				<ComplexityBadge complexity={suggestion.new_complexity} />
 			</div>
+			<FeedbackBar feedback_target={'MethodExtraction'} />
 			<div class="flex justify-between w-full items-center pt-2">
 				<Button type={ButtonType.Primary} on:click={apply_suggestion}>Extract function</Button>
 				<Button type={ButtonType.Secondary} on:click={dismiss_suggestion}>Dismiss</Button>
