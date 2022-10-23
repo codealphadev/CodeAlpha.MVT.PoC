@@ -587,6 +587,12 @@ impl ComplexityRefactoring {
             ))?
             .clone();
 
+        debug!(
+            ?suggestion_to_apply,
+            feature = "ComplexityRefactoring",
+            "Performing suggestion"
+        );
+
         let text_range_to_scroll_to_after_performing =
             Self::get_text_position_to_scroll_to_after_performing(&suggestion_to_apply);
 
