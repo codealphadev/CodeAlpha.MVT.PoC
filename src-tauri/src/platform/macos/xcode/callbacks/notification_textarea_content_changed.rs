@@ -1,14 +1,14 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 
-use core_foundation::{
-    base::{CFEqual, TCFType},
-    string::CFString,
-};
-
 use crate::platform::macos::{
     get_textarea_file_path, models::editor::EditorTextareaContentChangedMessage,
     xcode::XCodeObserverState, AXEventXcode, GetVia,
 };
+use core_foundation::{
+    base::{CFEqual, TCFType},
+    string::CFString,
+};
+use tracing::error;
 
 /// It checks if the `AXUIElement`'s role is a `AXScrollBar` or a `AXTextArea` and if it is, it sends a
 /// message to the Tauri app
@@ -25,7 +25,12 @@ pub fn notify_textarea_content_changed(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    assert_eq!(uielement.role()?, "AXTextArea");
+    if uielement.role()?.to_string() != "AXTextArea" {
+        error!(
+            "notify_textarea_content_changed() called with AXUIElement of type {}; expected AXTextArea",
+            uielement.role()?.to_string()
+        );
+    }
 
     let window_element = uielement.window()?;
 

@@ -5,13 +5,19 @@ use crate::platform::macos::{
     models::editor::EditorTextareaSelectedTextChangedMessage, xcode::XCodeObserverState,
     AXEventXcode,
 };
+use tracing::error;
 
 pub fn notify_textarea_selected_text_changed(
     uielement: &AXUIElement,
     uielement_textarea: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    assert_eq!(uielement.role()?, "AXStaticText");
+    if uielement.role()?.to_string() != "AXStaticText" {
+        error!(
+            "notify_textarea_selected_text_changed() called with AXUIElement of type {}; expected AXStaticText",
+            uielement.role()?.to_string()
+        );
+    }
 
     let window_element = uielement.window()?;
 
