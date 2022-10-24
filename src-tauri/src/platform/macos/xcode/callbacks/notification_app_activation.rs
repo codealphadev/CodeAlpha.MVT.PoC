@@ -6,6 +6,7 @@ use crate::platform::macos::{
     xcode::XCodeObserverState,
     AXEventXcode, EventViewport, GetVia,
 };
+use tracing::error;
 
 /// Notify Tauri that XCode has been activated, which means focus has moved to XCode from a different application.
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
@@ -14,7 +15,12 @@ pub fn notify_app_activated(
     xcode_observer_state: &XCodeObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
-    assert_eq!(role.to_string(), "AXApplication");
+    if role.to_string() != "AXApplication" {
+        error!(
+            "notify_app_activated() called with app_element of type {}; expected AXApplication",
+            role.to_string()
+        );
+    }
 
     let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
@@ -46,8 +52,13 @@ pub fn notify_app_deactivated(
     xcode_observer_state: &XCodeObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
-    assert_eq!(role.to_string(), "AXApplication");
 
+    if role.to_string() != "AXApplication" {
+        error!(
+            "notify_app_deactivated() called with AXUIElement of type {}; expected AXApplication",
+            role.to_string()
+        );
+    }
     let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
 

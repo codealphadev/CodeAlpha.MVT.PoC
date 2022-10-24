@@ -6,12 +6,18 @@ use crate::platform::macos::{
     xcode::XCodeObserverState,
     AXEventXcode,
 };
+use tracing::error;
 
 pub fn notification_key_press_save(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    assert_eq!(uielement.role()?, "AXMenuItem");
+    if uielement.role()?.to_string() != "AXMenuItem" {
+        error!(
+            "notification_key_press_save() called with AXUIElement of type {}; expected AXMenuItem",
+            uielement.role()?.to_string()
+        );
+    }
 
     let cmd_title = uielement.title()?;
     let cmd_modifier_option = uielement.menu_item_cmd_modifier()?.to_i64();

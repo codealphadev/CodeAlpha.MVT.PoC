@@ -2,6 +2,7 @@ use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
+use tracing::error;
 
 use crate::{
     platform::macos::{
@@ -124,7 +125,12 @@ fn derive_resize_parameters_from_scrollbar(
 ) -> Result<(), Error> {
     let role = scrollbar_element.role()?;
 
-    assert_eq!(role.to_string(), "AXScrollBar");
+    if role.to_string() != "AXScrollBar" {
+        error!(
+            "derive_resize_parameters_from_scrollbar() called with scrollbar_element of type {}; expected AXScrollBar",
+            role.to_string()
+        );
+    }
 
     if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
         // Update EditorWindowResizedMessage

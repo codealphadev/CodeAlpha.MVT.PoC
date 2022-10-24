@@ -5,13 +5,18 @@ use crate::platform::macos::{
     models::editor::EditorTextareaZoomedMessage, xcode::XCodeObserverState, AXEventXcode,
     EventViewport, GetVia,
 };
+use tracing::error;
 
 pub fn notify_textarea_zoomed(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    assert_eq!(uielement.role()?, "AXTextArea");
-
+    if uielement.role()?.to_string() != "AXTextArea" {
+        error!(
+            "notify_textarea_zoomed() called with AXUIElement of type {}; expected AXTextArea",
+            uielement.role()?.to_string()
+        );
+    }
     let window_element = uielement.window()?;
 
     // Find window_element in xcode_observer_state.window_list to get id

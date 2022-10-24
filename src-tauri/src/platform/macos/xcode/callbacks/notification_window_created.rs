@@ -1,9 +1,3 @@
-use accessibility::{AXAttribute, AXUIElement, Error};
-use accessibility_sys::kAXErrorInvalidUIElement;
-use cocoa::appkit::CGPoint;
-use core_foundation::base::{CFEqual, TCFType};
-use core_graphics_types::geometry::CGSize;
-
 use crate::platform::macos::{
     generate_axui_element_hash,
     internal::get_focused_uielement,
@@ -11,6 +5,12 @@ use crate::platform::macos::{
     xcode::{callbacks::notify_uielement_focused, XCodeObserverState},
     AXEventXcode, GetVia,
 };
+use accessibility::{AXAttribute, AXUIElement, Error};
+use accessibility_sys::kAXErrorInvalidUIElement;
+use cocoa::appkit::CGPoint;
+use core_foundation::base::{CFEqual, TCFType};
+use core_graphics_types::geometry::CGSize;
+use tracing::error;
 
 /// Notify Tauri that an editor window has been created
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
@@ -26,7 +26,12 @@ pub fn notify_window_created(
     }
 
     let role = app_element.attribute(&AXAttribute::role())?;
-    assert_eq!(role.to_string(), "AXApplication");
+    if role.to_string() != "AXApplication" {
+        error!(
+            "notify_window_created() called with AXUIElement of type {}; expected AXApplication",
+            role.to_string()
+        );
+    }
 
     let windows = app_element.attribute(&AXAttribute::children())?;
 
@@ -88,7 +93,12 @@ fn window_creation_msg(
 ) -> Result<AXEventXcode, Error> {
     let role = window_element.attribute(&AXAttribute::role())?;
 
-    assert_eq!(role.to_string(), "AXWindow");
+    if role.to_string() != "AXWindow" {
+        error!(
+            "window_creation_msg() called with AXUIElement of type {}; expected AXWindow",
+            role.to_string()
+        );
+    }
 
     let size_ax_value = window_element.attribute(&AXAttribute::size())?;
     let pos_ax_value = window_element.attribute(&AXAttribute::position())?;

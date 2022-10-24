@@ -1,4 +1,5 @@
 use accessibility::{AXAttribute, AXUIElement, Error};
+use tracing::error;
 
 use crate::{
     platform::macos::{app::AppObserverState, models::app::AppWindowFocusedMessage, AXEventApp},
@@ -13,7 +14,12 @@ pub fn notify_window_focused(
 ) -> Result<(), Error> {
     let role = window_element.attribute(&AXAttribute::role())?;
 
-    assert_eq!(role.to_string(), "AXWindow");
+    if role.to_string() != "AXWindow" {
+        error!(
+            "notify_window_focused() called with window_element of type {}; expected AXWindow",
+            role.to_string()
+        );
+    }
 
     let title = window_element.attribute(&AXAttribute::title())?;
 
