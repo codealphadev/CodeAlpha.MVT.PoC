@@ -53,13 +53,24 @@ impl Lsp for SwiftLsp {
         }
 
         let mut text_content = "".to_string();
+        let mut stderr = "".to_string();
 
         let mut termination_signal = None;
         while let Some(event) = rx.recv().await {
-            if let CommandEvent::Stdout(line) = event {
-                text_content.push_str(&(line + "\n"));
-            } else if let CommandEvent::Terminated(payload) = event {
-                termination_signal = payload.signal;
+            match event {
+                CommandEvent::Stdout(lin) => {
+                    text_content.push_str(&(lin + "\n"));
+                }
+                CommandEvent::Stderr(lin) => {
+                    stderr.push_str(&(lin + "\n"));
+                }
+                CommandEvent::Terminated(payload) => {
+                    termination_signal = payload.signal;
+                }
+                CommandEvent::Error(err) => {
+                    error!("Error while running sourcekitten: {}", err);
+                }
+                _ => todo!(),
             }
         }
 
@@ -68,7 +79,7 @@ impl Lsp for SwiftLsp {
         } else if termination_signal == Some(9) {
             Err(SwiftLspError::ExecutionCancelled(None))
         } else {
-            Err(SwiftLspError::SourceKittenCommandFailed(payload))
+            Err(SwiftLspError::SourceKittenCommandFailed(payload, stderr))
         }
     }
 
@@ -139,14 +150,11 @@ pub enum SwiftLspError {
     #[error("Execution was cancelled: '{}'", 0)]
     ExecutionCancelled(Option<Uuid>),
 
-    #[error("File does not exist: '{}'", 0)]
-    FileNotExisting(String),
-
     #[error("Refactoring could not be carried out: '{}'", 0)]
     RefactoringNotPossible(String),
 
-    #[error("SourceKitten command failed: '{}'", 0)]
-    SourceKittenCommandFailed(String),
+    #[error("SourceKitten command failed: '{}' with stderr: '{}'", 0, 1)]
+    SourceKittenCommandFailed(String, String),
 
     #[error("Unable to find MacOSX SDK path")]
     CouldNotFindSdk,
