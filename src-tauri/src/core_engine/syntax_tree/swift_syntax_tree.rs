@@ -85,9 +85,8 @@ impl SwiftSyntaxTree {
                 old_tree.edit(change);
             }
         }
-        let mut updated_tree_lock = self.parser.lock();
 
-        let updated_tree = updated_tree_lock.parse_utf16(content, self.tree());
+        let updated_tree = self.parser.lock().parse_utf16(content, self.tree());
 
         if let Some(tree) = updated_tree {
             calculate_cognitive_complexities(
