@@ -31,7 +31,6 @@ dependencies = [
  "core-graphics 0.22.3",
  "core-graphics-types",
  "diff",
- "differ",
  "enigo",
  "gcp_auth",
  "glob",
@@ -1002,17 +1001,6 @@ name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
-
-[[package]]
-name = "differ"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3891198bf010b6c988c293a7cb17a3fd3396256567c1bcd6ae0015c61cedc98"
-dependencies = [
- "fnv",
- "serde",
- "serde_derive",
-]
 
 [[package]]
 name = "difflib"

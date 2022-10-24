@@ -4,16 +4,8 @@ use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 use diff;
 use tree_sitter::InputEdit;
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum DiffType {
-    Add,
-    Delete,
-    Replace,
-}
-
 #[derive(Clone, Debug)]
 pub struct TextDiff {
-    pub diff_type: DiffType,
     pub added_char_sequence: Vec<u16>,
     pub removed_char_sequence: Vec<u16>,
     pub start_index: usize,
@@ -29,26 +21,9 @@ pub fn detect_input_edits(old_string: &XcodeText, new_string: &XcodeText) -> Vec
         match diff {
             diff::Result::Left(l) => {
                 if let Some(current_edit) = &mut current_edit {
-                    match current_edit.diff_type {
-                        DiffType::Add | DiffType::Replace => {
-                            // Because both, 'Add' and 'Replace', only get characters added and not removed.
-                            // The reason why 'Replace' only gets characters added is a) we always first remove and then add chars
-                            // and b) a 'Replace' is only detected if after the removal of consecutive chars there is a add.
-                            edits.push(current_edit.clone());
-                            current_edit.clone_from(&TextDiff {
-                                diff_type: DiffType::Delete,
-                                added_char_sequence: vec![],
-                                removed_char_sequence: vec![*l],
-                                start_index: walk_index,
-                            });
-                        }
-                        DiffType::Delete => {
-                            current_edit.removed_char_sequence.push(*l);
-                        }
-                    }
+                    current_edit.removed_char_sequence.push(*l);
                 } else {
                     current_edit = Some(TextDiff {
-                        diff_type: DiffType::Delete,
                         added_char_sequence: Vec::new(),
                         removed_char_sequence: vec![*l],
                         start_index: walk_index,
@@ -57,19 +32,9 @@ pub fn detect_input_edits(old_string: &XcodeText, new_string: &XcodeText) -> Vec
             }
             diff::Result::Right(r) => {
                 if let Some(current_edit) = &mut current_edit {
-                    match current_edit.diff_type {
-                        DiffType::Add | DiffType::Replace => {
-                            current_edit.added_char_sequence.push(*r);
-                        }
-                        DiffType::Delete => {
-                            // We detect that we actually have a "replace" edit and not a "delete" edit
-                            current_edit.diff_type = DiffType::Replace;
-                            current_edit.added_char_sequence.push(*r);
-                        }
-                    }
+                    current_edit.added_char_sequence.push(*r);
                 } else {
                     current_edit = Some(TextDiff {
-                        diff_type: DiffType::Add,
                         added_char_sequence: vec![*r],
                         removed_char_sequence: Vec::new(),
                         start_index: walk_index,
@@ -101,11 +66,7 @@ fn construct_InputEdits_from_detected_edits(
         let removed_char_count = edit.removed_char_sequence.len();
         let added_char_count = edit.added_char_sequence.len();
 
-        let edit_range_before = match edit.diff_type {
-            DiffType::Add => TextRange::new(edit.start_index, 0),
-            DiffType::Delete => TextRange::new(edit.start_index, removed_char_count),
-            DiffType::Replace => TextRange::new(edit.start_index, removed_char_count),
-        };
+        let edit_range_before = TextRange::new(edit.start_index, removed_char_count);
         let edit_range_after = TextRange::new(edit.start_index, added_char_count);
 
         if let (Some(old_pts), Some(new_pts), Some(start_position)) = (
