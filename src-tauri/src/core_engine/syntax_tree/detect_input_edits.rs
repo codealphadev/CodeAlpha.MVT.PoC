@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use differ::Differ;
-use tree_sitter::InputEdit;
-
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
+use diff;
+use tree_sitter::InputEdit;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum DiffType {
@@ -15,50 +14,78 @@ pub enum DiffType {
 #[derive(Clone, Debug)]
 pub struct TextDiff {
     pub diff_type: DiffType,
-    pub added_char_sequence: XcodeText,
-    pub removed_char_sequence: XcodeText,
+    pub added_char_sequence: Vec<u16>,
+    pub removed_char_sequence: Vec<u16>,
     pub start_index: usize,
 }
 
 pub fn detect_input_edits(old_string: &XcodeText, new_string: &XcodeText) -> Vec<InputEdit> {
     let mut edits: Vec<TextDiff> = Vec::new();
-    let differ = Differ::new(old_string, new_string);
-    for span in differ.spans() {
-        match span.tag {
-            differ::Tag::Equal => (),
-            differ::Tag::Insert => {
-                edits.push(TextDiff {
-                    diff_type: DiffType::Add,
-                    added_char_sequence: XcodeText::from_array(
-                        &new_string[span.b_start..span.b_end],
-                    ),
-                    removed_char_sequence: XcodeText::new_empty(),
-                    start_index: span.b_start,
-                });
+    let mut walk_index = 0;
+
+    let mut current_edit: Option<TextDiff> = None;
+
+    for diff in diff::slice(&old_string.text, &new_string.text) {
+        match diff {
+            diff::Result::Left(l) => {
+                if let Some(current_edit) = &mut current_edit {
+                    match current_edit.diff_type {
+                        DiffType::Add | DiffType::Replace => {
+                            // Because both, 'Add' and 'Replace', only get characters added and not removed.
+                            // The reason why 'Replace' only gets characters added is a) we always first remove and then add chars
+                            // and b) a 'Replace' is only detected if after the removal of consecutive chars there is a add.
+                            edits.push(current_edit.clone());
+                            current_edit.clone_from(&TextDiff {
+                                diff_type: DiffType::Delete,
+                                added_char_sequence: vec![],
+                                removed_char_sequence: vec![*l],
+                                start_index: walk_index,
+                            });
+                        }
+                        DiffType::Delete => {
+                            current_edit.removed_char_sequence.push(*l);
+                        }
+                    }
+                } else {
+                    current_edit = Some(TextDiff {
+                        diff_type: DiffType::Delete,
+                        added_char_sequence: Vec::new(),
+                        removed_char_sequence: vec![*l],
+                        start_index: walk_index,
+                    });
+                }
             }
-            differ::Tag::Delete => {
-                edits.push(TextDiff {
-                    diff_type: DiffType::Delete,
-                    added_char_sequence: XcodeText::new_empty(),
-                    removed_char_sequence: XcodeText::from_array(
-                        &old_string[span.a_start..span.a_end],
-                    ),
-                    start_index: span.a_start,
-                });
+            diff::Result::Right(r) => {
+                if let Some(current_edit) = &mut current_edit {
+                    match current_edit.diff_type {
+                        DiffType::Add | DiffType::Replace => {
+                            current_edit.added_char_sequence.push(*r);
+                        }
+                        DiffType::Delete => {
+                            // We detect that we actually have a "replace" edit and not a "delete" edit
+                            current_edit.diff_type = DiffType::Replace;
+                            current_edit.added_char_sequence.push(*r);
+                        }
+                    }
+                } else {
+                    current_edit = Some(TextDiff {
+                        diff_type: DiffType::Add,
+                        added_char_sequence: vec![*r],
+                        removed_char_sequence: Vec::new(),
+                        start_index: walk_index,
+                    });
+                }
             }
-            differ::Tag::Replace => {
-                edits.push(TextDiff {
-                    diff_type: DiffType::Replace,
-                    added_char_sequence: XcodeText::from_array(
-                        &new_string[span.b_start..span.b_end],
-                    ),
-                    removed_char_sequence: XcodeText::from_array(
-                        &old_string[span.a_start..span.a_end],
-                    ),
-                    start_index: span.a_start,
-                });
+            diff::Result::Both(_, _) => {
+                if let Some(current_edit) = current_edit.take() {
+                    edits.push(current_edit);
+                }
             }
         }
+        walk_index += 1;
+    }
+    if let Some(current_edit) = current_edit.take() {
+        edits.push(current_edit);
     }
 
     construct_InputEdits_from_detected_edits(old_string, new_string, &edits)

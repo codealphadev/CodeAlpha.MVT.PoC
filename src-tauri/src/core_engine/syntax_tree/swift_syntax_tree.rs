@@ -4,7 +4,9 @@ use tree_sitter::{Node, Parser, Tree};
 
 use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 
-use super::{calculate_cognitive_complexities, Complexities, SwiftCodeBlockError};
+use super::{
+    calculate_cognitive_complexities, detect_input_edits, Complexities, SwiftCodeBlockError,
+};
 
 #[derive(Debug, Clone)]
 pub struct NodeMetadata {
@@ -75,7 +77,17 @@ impl SwiftSyntaxTree {
     }
 
     pub fn parse(&mut self, content: &XcodeText) -> Result<(), SwiftSyntaxTreeError> {
-        let updated_tree = self.parser.lock().parse_utf16(content, None);
+        if let (Some(old_content), Some(old_tree)) = (&self.content, &mut self.tree) {
+            let changes = detect_input_edits(&old_content, content);
+
+            // Changes should be in ascending order of start_byte
+            for change in changes.iter().rev() {
+                old_tree.edit(change);
+            }
+        }
+        let mut updated_tree_lock = self.parser.lock();
+
+        let updated_tree = updated_tree_lock.parse_utf16(content, self.tree());
 
         if let Some(tree) = updated_tree {
             calculate_cognitive_complexities(
