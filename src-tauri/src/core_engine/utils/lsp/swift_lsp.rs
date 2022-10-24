@@ -139,13 +139,13 @@ pub enum SwiftLspError {
     #[error("Execution was cancelled: '{}'", 0)]
     ExecutionCancelled(Option<Uuid>),
 
-    #[error("File does not exist: '{0}'")]
+    #[error("File does not exist: '{}'", 0)]
     FileNotExisting(String),
 
-    #[error("Refactoring could not be carried out")]
+    #[error("Refactoring could not be carried out: '{}'", 0)]
     RefactoringNotPossible(String),
 
-    #[error("SourceKitten command failed")]
+    #[error("SourceKitten command failed: '{}'", 0)]
     SourceKittenCommandFailed(String),
 
     #[error("Unable to find MacOSX SDK path")]
