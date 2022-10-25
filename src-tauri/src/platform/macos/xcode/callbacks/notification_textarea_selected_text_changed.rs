@@ -1,23 +1,26 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, CFRange, TCFType};
 
-use crate::platform::macos::{
-    models::editor::EditorTextareaSelectedTextChangedMessage, xcode::XCodeObserverState,
-    AXEventXcode,
+use crate::{
+    platform::macos::{
+        models::editor::EditorTextareaSelectedTextChangedMessage, xcode::XCodeObserverState,
+        AXEventXcode,
+    },
+    utils::assert_or_error_trace,
 };
-use tracing::error;
 
 pub fn notify_textarea_selected_text_changed(
     uielement: &AXUIElement,
     uielement_textarea: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    if uielement.role()?.to_string() != "AXStaticText" {
-        error!(
+    assert_or_error_trace(
+        uielement.role()?.to_string() == "AXStaticText",
+        &format!(
             "notify_textarea_selected_text_changed() called with AXUIElement of type {}; expected AXStaticText",
             uielement.role()?.to_string()
-        );
-    }
+        ),
+    );
 
     let window_element = uielement.window()?;
 

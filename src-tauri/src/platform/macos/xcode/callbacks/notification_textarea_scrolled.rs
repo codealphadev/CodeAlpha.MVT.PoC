@@ -1,6 +1,9 @@
-use crate::platform::macos::{
-    models::editor::EditorTextareaScrolledMessage, xcode::XCodeObserverState, AXEventXcode,
-    EventViewport, GetVia,
+use crate::{
+    platform::macos::{
+        models::editor::EditorTextareaScrolledMessage, xcode::XCodeObserverState, AXEventXcode,
+        EventViewport, GetVia,
+    },
+    utils::assert_or_error_trace,
 };
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use lazy_static::lazy_static;
@@ -10,7 +13,6 @@ use std::time::Duration;
 
 use core_foundation::base::{CFEqual, TCFType};
 use throttle::Throttle;
-use tracing::error;
 
 lazy_static! {
     static ref SCROLL_THROTTLE: Mutex<Throttle> =
@@ -20,12 +22,13 @@ pub fn notify_textarea_scrolled(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    if uielement.role()?.to_string() != "AXScrollBar" {
-        error!(
+    assert_or_error_trace(
+        uielement.role()?.to_string() == "AXScrollBar",
+        &format!(
             "notify_textarea_scrolled() called with AXUIElement of type {}; expected AXScrollBar",
             uielement.role()?.to_string()
-        );
-    }
+        ),
+    );
     let _ = SCROLL_THROTTLE.try_lock().ok_or(Error::NotFound)?.accept();
 
     let window_element = uielement.window()?;

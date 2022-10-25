@@ -1,22 +1,22 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use core_foundation::base::{CFEqual, TCFType};
 
-use crate::platform::macos::{
+use crate::{platform::macos::{
     models::editor::EditorTextareaZoomedMessage, xcode::XCodeObserverState, AXEventXcode,
     EventViewport, GetVia,
-};
-use tracing::error;
+}, utils::assert_or_error_trace};
 
 pub fn notify_textarea_zoomed(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    if uielement.role()?.to_string() != "AXTextArea" {
-        error!(
+    assert_or_error_trace(
+        uielement.role()?.to_string() == "AXTextArea",
+        &format!(
             "notify_textarea_zoomed() called with AXUIElement of type {}; expected AXTextArea",
             uielement.role()?.to_string()
-        );
-    }
+        ),
+    );
     let window_element = uielement.window()?;
 
     // Find window_element in xcode_observer_state.window_list to get id

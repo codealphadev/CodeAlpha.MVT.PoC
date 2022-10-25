@@ -1,10 +1,10 @@
 use crate::{
     platform::macos::{app::AppObserverState, models::app::AppWindowMovedMessage, AXEventApp},
+    utils::assert_or_error_trace,
     window_controls::config::{default_properties, AppWindow},
 };
 use accessibility::{AXAttribute, AXUIElement, Error};
 use cocoa::appkit::CGPoint;
-use tracing::error;
 
 /// Notify Tauri that a window of our app has been moved
 /// Method requires AXUIElement of type "AXWindow". Asserts if different AXUIElement is provided as argument.
@@ -14,12 +14,13 @@ pub fn notify_window_moved(
 ) -> Result<(), Error> {
     let role = window_element.attribute(&AXAttribute::role())?;
 
-    if role.to_string() != "AXWindow" {
-        error!(
+    assert_or_error_trace(
+        role.to_string() == "AXWindow",
+        &format!(
             "notify_window_moved() called with window_element of type {}; expected AXWindow",
             role.to_string()
-        );
-    }
+        ),
+    );
 
     let title = window_element.attribute(&AXAttribute::title())?;
 

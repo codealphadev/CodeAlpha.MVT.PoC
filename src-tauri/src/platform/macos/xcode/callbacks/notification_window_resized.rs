@@ -2,7 +2,6 @@ use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 use cocoa::appkit::CGPoint;
 use core_foundation::base::{CFEqual, TCFType};
 use core_graphics_types::geometry::CGSize;
-use tracing::error;
 
 use crate::{
     platform::macos::{
@@ -10,7 +9,7 @@ use crate::{
         models::editor::EditorWindowResizedMessage, xcode::XCodeObserverState, AXEventXcode,
         GetVia,
     },
-    utils::geometry::LogicalSize,
+    utils::{assert_or_error_trace, geometry::LogicalSize},
 };
 
 /// Notify Tauri that an editor window has been resized
@@ -124,13 +123,13 @@ fn derive_resize_parameters_from_scrollbar(
     scrollbar_element: &AXUIElement,
 ) -> Result<(), Error> {
     let role = scrollbar_element.role()?;
-
-    if role.to_string() != "AXScrollBar" {
-        error!(
+    assert_or_error_trace(
+        role.to_string() == "AXScrollBar",
+        &format!(
             "derive_resize_parameters_from_scrollbar() called with scrollbar_element of type {}; expected AXScrollBar",
             role.to_string()
-        );
-    }
+        ),
+    );
 
     if let Ok(code_section_frame) = get_viewport_frame(&GetVia::Current) {
         // Update EditorWindowResizedMessage
