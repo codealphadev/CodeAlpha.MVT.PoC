@@ -1,6 +1,6 @@
 [package]
 name = "Pretzl"
-version = "0.0.82"
+version = "0.0.83"
 description = "Pretzl"
 authors = [ "Adrian Hupka, Daniel Owens, Adam Nyberg",]
 license = ""
