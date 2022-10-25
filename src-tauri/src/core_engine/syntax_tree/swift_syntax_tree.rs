@@ -23,8 +23,6 @@ pub enum SwiftSyntaxTreeError {
     NoTreeParsed,
     #[error("Could not parse tree.")]
     CouldNotParseTree,
-    #[error("Too many edits to apply to syntax tree.")]
-    TooManyEdits(usize),
     #[error("Something went wrong.")]
     GenericError(#[source] anyhow::Error),
 }
@@ -83,12 +81,8 @@ impl SwiftSyntaxTree {
         new_content: &XcodeText,
         tree: &mut Tree,
     ) -> Result<(), SwiftSyntaxTreeError> {
-        // If too many edits are applied to the tree, we get problems. 5 is just a first guess.
-        const MAX_ALLOWED_EDITS: usize = 5;
-        let edits = detect_input_edits(old_content, new_content);
-        if edits.len() > MAX_ALLOWED_EDITS {
-            return Err(SwiftSyntaxTreeError::TooManyEdits(edits.len()));
-        }
+        const DIFF_DEADLINE_MS: u64 = 20;
+        let edits = detect_input_edits(old_content, new_content, DIFF_DEADLINE_MS);
         for edit in edits {
             tree.edit(&edit);
         }
@@ -104,7 +98,6 @@ impl SwiftSyntaxTree {
             };
         }
         let updated_tree = self.parser.lock().parse_utf16(content, old_tree);
-
         if let Some(tree) = updated_tree {
             calculate_cognitive_complexities(
                 &tree.root_node(),

@@ -1,56 +1,78 @@
 #![allow(dead_code)]
 
-use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
-use diff;
-use tree_sitter::InputEdit;
+use std::time::Instant;
 
+use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
+use similar::{capture_diff_slices_deadline, Algorithm, DiffOp};
+use tree_sitter::InputEdit;
 #[derive(Clone, Debug)]
-pub struct TextDiff {
-    pub added_char_sequence: Vec<u16>,
-    pub removed_char_sequence: Vec<u16>,
+pub struct TextDiff2 {
+    pub added_char_count: usize,
+    pub removed_char_count: usize,
     pub start_index: usize,
 }
 
-pub fn detect_input_edits(old_string: &XcodeText, new_string: &XcodeText) -> Vec<InputEdit> {
-    let mut edits: Vec<TextDiff> = Vec::new();
-    let mut walk_index = 0;
+pub fn detect_input_edits(
+    old_string: &XcodeText,
+    new_string: &XcodeText,
+    deadline_ms: u64,
+) -> Vec<InputEdit> {
+    let mut edits: Vec<TextDiff2> = Vec::new();
 
-    let mut current_edit: Option<TextDiff> = None;
+    // https://docs.rs/similar/latest/similar/#deadlines-and-performance
+    // "Due to the recursive, divide and conquer nature of Myer’s diff you will still get a pretty decent diff in many cases if the deadline is reached"
+    let deadline = Instant::now() + std::time::Duration::from_millis(deadline_ms);
 
-    for diff in diff::slice(&old_string.text, &new_string.text) {
+    let ops = capture_diff_slices_deadline(
+        Algorithm::Myers,
+        &old_string.text,
+        &new_string.text,
+        Some(deadline),
+    );
+    dbg!(ops.len());
+
+    for diff in ops {
         match diff {
-            diff::Result::Left(l) => {
-                if let Some(current_edit) = &mut current_edit {
-                    current_edit.removed_char_sequence.push(*l);
-                } else {
-                    current_edit = Some(TextDiff {
-                        added_char_sequence: Vec::new(),
-                        removed_char_sequence: vec![*l],
-                        start_index: walk_index,
-                    });
-                }
+            DiffOp::Equal {
+                old_index: _,
+                new_index: _,
+                len: _,
+            } => {}
+            DiffOp::Insert {
+                old_index,
+                new_index: _,
+                new_len,
+            } => {
+                edits.push(TextDiff2 {
+                    added_char_count: new_len,
+                    removed_char_count: 0,
+                    start_index: old_index,
+                });
             }
-            diff::Result::Right(r) => {
-                if let Some(current_edit) = &mut current_edit {
-                    current_edit.added_char_sequence.push(*r);
-                } else {
-                    current_edit = Some(TextDiff {
-                        added_char_sequence: vec![*r],
-                        removed_char_sequence: Vec::new(),
-                        start_index: walk_index,
-                    });
-                }
+            DiffOp::Delete {
+                old_index,
+                old_len,
+                new_index: _,
+            } => {
+                edits.push(TextDiff2 {
+                    added_char_count: 0,
+                    removed_char_count: old_len,
+                    start_index: old_index,
+                });
             }
-            diff::Result::Both(_, _) => {
-                if let Some(current_edit) = current_edit.take() {
-                    edits.push(current_edit);
-                }
+            DiffOp::Replace {
+                old_index,
+                old_len,
+                new_index: _,
+                new_len,
+            } => {
+                edits.push(TextDiff2 {
+                    added_char_count: new_len,
+                    removed_char_count: old_len,
+                    start_index: old_index,
+                });
             }
         }
-        walk_index += 1;
-    }
-    if let Some(current_edit) = current_edit.take() {
-        edits.push(current_edit);
     }
 
     construct_InputEdits_from_detected_edits(old_string, new_string, &edits)
@@ -59,15 +81,12 @@ pub fn detect_input_edits(old_string: &XcodeText, new_string: &XcodeText) -> Vec
 fn construct_InputEdits_from_detected_edits(
     old_string: &XcodeText,
     new_string: &XcodeText,
-    detected_edits: &Vec<TextDiff>,
+    detected_edits: &Vec<TextDiff2>,
 ) -> Vec<InputEdit> {
     let mut input_edits: Vec<InputEdit> = Vec::new();
     for edit in detected_edits.iter() {
-        let removed_char_count = edit.removed_char_sequence.len();
-        let added_char_count = edit.added_char_sequence.len();
-
-        let edit_range_before = TextRange::new(edit.start_index, removed_char_count);
-        let edit_range_after = TextRange::new(edit.start_index, added_char_count);
+        let edit_range_before = TextRange::new(edit.start_index, edit.removed_char_count);
+        let edit_range_after = TextRange::new(edit.start_index, edit.added_char_count);
 
         if let (Some(old_pts), Some(new_pts), Some(start_position)) = (
             edit_range_before.as_StartEndTSPoint(&old_string),
@@ -75,9 +94,9 @@ fn construct_InputEdits_from_detected_edits(
             TextPosition::from_TextIndex(old_string, edit.start_index),
         ) {
             input_edits.push(InputEdit {
-                start_byte: edit.start_index * 2,
-                old_end_byte: (edit.start_index + removed_char_count) * 2,
-                new_end_byte: (edit.start_index + added_char_count) * 2,
+                start_byte: edit.start_index * 2, // UTF-16
+                old_end_byte: (edit.start_index + edit.removed_char_count) * 2,
+                new_end_byte: (edit.start_index + edit.added_char_count) * 2,
                 start_position: start_position.as_TSPoint(),
                 old_end_position: old_pts.1,
                 new_end_position: new_pts.1,
@@ -106,6 +125,7 @@ mod tests {
         let input_edits = detect_input_edits(
             &XcodeText::from_str(&old_string),
             &XcodeText::from_str(&new_string),
+            1000,
         );
         assert_eq!(input_edits.len(), 1);
         assert_eq!(input_edits[0].start_byte, start_index * 2);
