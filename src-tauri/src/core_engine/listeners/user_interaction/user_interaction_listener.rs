@@ -4,7 +4,7 @@ use crate::{
     app_handle,
     core_engine::{
         events::EventUserInteraction,
-        features::{CoreEngineTrigger, UserCommand},
+        features::{CoreEngineTrigger, FeatureKind, UserCommand},
         CoreEngine,
     },
     utils::messaging::ChannelList,
@@ -33,7 +33,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventUserInteraction::NodeAnnotationClicked(msg) => {
                     info!(
                         ?msg,
-                        feature = "DocsGeneration",
+                        feature = FeatureKind::DocsGeneration.to_string(),
                         "User request: Node annotation clicked"
                     );
 
@@ -45,7 +45,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventUserInteraction::PerformSuggestion(msg) => {
                     info!(
                         ?msg,
-                        feature = "ComplexityRefactoring",
+                        feature = FeatureKind::ComplexityRefactoring.to_string(),
                         "User request: Perform suggestion"
                     );
                     _ = core_engine.lock().run_features(
@@ -56,7 +56,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventUserInteraction::DismissSuggestion(msg) => {
                     info!(
                         ?msg,
-                        feature = "ComplexityRefactoring",
+                        feature = FeatureKind::ComplexityRefactoring.to_string(),
                         "User request: Dismiss suggestion"
                     );
                     _ = core_engine.lock().run_features(
@@ -67,7 +67,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                 EventUserInteraction::UpdateSelectedSuggestion(msg) => {
                     info!(
                         ?msg,
-                        feature = "ComplexityRefactoring",
+                        feature = FeatureKind::ComplexityRefactoring.to_string(),
                         "User request: Update selected suggestion"
                     );
                     _ = core_engine.lock().run_features(

@@ -3,6 +3,7 @@ use tauri::api::process::{Command, CommandEvent};
 use tracing::{debug, error, info};
 use uuid::Uuid;
 
+use crate::core_engine::features::FeatureKind;
 use crate::platform::macos::replace_text_content;
 use crate::{
     app_handle,
@@ -48,7 +49,10 @@ impl FeatureBase for SwiftFormatter {
             CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
                 ModifierKey::Cmd => match msg.key.as_str() {
                     "S" => {
-                        info!(feature = "Formatting", "User request: Format document",);
+                        info!(
+                            feature = FeatureKind::Formatter.to_string(),
+                            "User request: Format document",
+                        );
                         return self.format(code_document).map_err(|err| err.into());
                     }
                     _ => {}
