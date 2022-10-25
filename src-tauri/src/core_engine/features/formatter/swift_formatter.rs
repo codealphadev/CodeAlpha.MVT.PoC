@@ -125,6 +125,9 @@ impl SwiftFormatter {
                     if let Some(extension) = PathBuf::from(&file_path).extension() {
                         if extension == "swift" {
                             text_file_path = file_path;
+                        } else {
+                            debug!(?extension, "Attempted to run SwiftFormat on file with extension that is not swift.");
+                            return;
                         }
                     }
                 }
