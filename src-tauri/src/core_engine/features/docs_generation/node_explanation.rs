@@ -397,6 +397,25 @@ mod tests {
             let docstring = explanation_to_docstring(&explanation);
             assert_eq!(docstring, "/// This is a summary");
         }
+        #[test]
+        fn function_with_parameter_and_name() {
+            let explanation = NodeExplanation {
+                name_suggestion: Some("calculateFibonacci".to_string()),
+                summary: "This is a summary".to_string(),
+                kind: SwiftCodeBlockKind::Function,
+                parameters: Some(vec![FunctionParameterWithExplanation {
+                    name: "param1".to_string(),
+                    explanation: "This is a UIElement".to_string(),
+                    param_type: "UIElement".to_string(),
+                }]),
+            };
+            let docstring = explanation_to_docstring(&explanation);
+            assert_eq!(
+                docstring,
+                r#"/// This is a summary
+/// - parameter param1: `UIElement` This is a UIElement"#
+            );
+        }
 
         #[test]
         fn function_with_two_parameters() {
