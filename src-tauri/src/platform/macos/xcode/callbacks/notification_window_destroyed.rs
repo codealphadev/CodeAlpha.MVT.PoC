@@ -2,10 +2,12 @@ use accessibility::{AXAttribute, AXUIElement, Error};
 use accessibility_sys::kAXErrorInvalidUIElement;
 use core_foundation::base::{CFEqual, TCFType};
 
-use crate::platform::macos::{
-    models::editor::EditorWindowDestroyedMessage, xcode::XCodeObserverState, AXEventXcode,
+use crate::{
+    platform::macos::{
+        models::editor::EditorWindowDestroyedMessage, xcode::XCodeObserverState, AXEventXcode,
+    },
+    utils::assert_or_error_trace,
 };
-use tracing::error;
 
 /// Notify Tauri that an editor window has been destroyed
 /// Method requires AXUIElement of type "AXApplication". Asserts if different AXUIElement is provided as argument.
@@ -21,12 +23,13 @@ pub fn notify_window_destroyed(
     }
 
     let role = app_element.attribute(&AXAttribute::role())?;
-    if role.to_string() != "AXApplication" {
-        error!(
-            "notify_window_destroyed() called with AXUIElement of type {}; expected AXApplication",
+    assert_or_error_trace(
+        role.to_string() == "AXApplication",
+        &format!(
+            "notify_window_destroyed() called with app_element of type {}; expected AXApplication",
             role.to_string()
-        );
-    }
+        ),
+    );
 
     let windows = app_element.attribute(&AXAttribute::children())?;
 

@@ -1,7 +1,6 @@
 use accessibility::{AXAttribute, AXUIElement, Error};
 use enigo::Enigo;
 use tauri::Manager;
-use tracing::error;
 
 use crate::{
     platform::macos::{
@@ -9,6 +8,7 @@ use crate::{
         models::app::{AppActivatedMessage, AppDeactivatedMessage},
         AXEventApp,
     },
+    utils::assert_or_error_trace,
     window_controls::config::AppWindow,
 };
 
@@ -19,12 +19,14 @@ pub fn notify_app_activated(
     app_state: &AppObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
-    if role.to_string() != "AXApplication" {
-        error!(
+
+    assert_or_error_trace(
+        role.to_string() == "AXApplication",
+        &format!(
             "notify_app_activated() called with app_element of type {}; expected AXApplication",
             role.to_string()
-        );
-    }
+        ),
+    );
 
     let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;
@@ -50,12 +52,13 @@ pub fn notify_app_deactivated(
     app_state: &AppObserverState,
 ) -> Result<(), Error> {
     let role = app_element.attribute(&AXAttribute::role())?;
-    if role.to_string() != "AXApplication" {
-        error!(
+    assert_or_error_trace(
+        role.to_string() == "AXApplication",
+        &format!(
             "notify_app_deactivated() called with AXUIElement of type {}; expected AXApplication",
             role.to_string()
-        );
-    }
+        ),
+    );
 
     let name = app_element.attribute(&AXAttribute::title())?;
     let pid = app_element.pid()?;

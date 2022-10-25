@@ -8,9 +8,8 @@ use crate::{
         models::editor::EditorWindowMovedMessage, xcode::XCodeObserverState, AXEventXcode,
         EventViewport, GetVia,
     },
-    utils::geometry::LogicalSize,
+    utils::{assert_or_error_trace, geometry::LogicalSize},
 };
-use tracing::error;
 
 /// Notify Tauri that an editor window has been moved
 /// Method requires AXUIElement of type "AXWindow". Asserts if different AXUIElement is provided as argument.
@@ -19,13 +18,13 @@ pub fn notify_window_moved(
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
     let role = window_element.attribute(&AXAttribute::role())?;
-
-    if role.to_string() != "AXWindow" {
-        error!(
+    assert_or_error_trace(
+        role.to_string() == "AXWindow",
+        &format!(
             "notify_window_moved() called with window_element of type {}; expected AXWindow",
             role.to_string()
-        );
-    }
+        ),
+    );
 
     // Find window_element in xcode_observer_state.window_list to get id
     let known_window = xcode_observer_state

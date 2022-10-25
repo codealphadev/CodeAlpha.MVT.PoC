@@ -122,6 +122,12 @@ impl TracingSubscriber {
     }
 }
 
+pub fn assert_or_error_trace(condition: bool, message: &str) {
+    if !condition {
+        error!("Assertion failed: {}", message);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use tracing::info;

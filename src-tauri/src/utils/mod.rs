@@ -1,3 +1,4 @@
+pub use self::tracing::assert_or_error_trace;
 pub use gcp::auth;
 pub use gcp::logging;
 pub use hash::*;

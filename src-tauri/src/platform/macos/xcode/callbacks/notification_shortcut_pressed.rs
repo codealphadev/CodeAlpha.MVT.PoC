@@ -1,23 +1,26 @@
 use accessibility::{AXUIElement, AXUIElementAttributes, Error};
 
-use crate::platform::macos::{
-    get_focused_window,
-    models::editor::{EditorShortcutPressedMessage, ModifierKey},
-    xcode::XCodeObserverState,
-    AXEventXcode,
+use crate::{
+    platform::macos::{
+        get_focused_window,
+        models::editor::{EditorShortcutPressedMessage, ModifierKey},
+        xcode::XCodeObserverState,
+        AXEventXcode,
+    },
+    utils::assert_or_error_trace,
 };
-use tracing::error;
 
 pub fn notification_key_press_save(
     uielement: &AXUIElement,
     xcode_observer_state: &mut XCodeObserverState,
 ) -> Result<(), Error> {
-    if uielement.role()?.to_string() != "AXMenuItem" {
-        error!(
+    assert_or_error_trace(
+        uielement.role()?.to_string() == "AXMenuItem",
+        &format!(
             "notification_key_press_save() called with AXUIElement of type {}; expected AXMenuItem",
             uielement.role()?.to_string()
-        );
-    }
+        ),
+    );
 
     let cmd_title = uielement.title()?;
     let cmd_modifier_option = uielement.menu_item_cmd_modifier()?.to_i64();
