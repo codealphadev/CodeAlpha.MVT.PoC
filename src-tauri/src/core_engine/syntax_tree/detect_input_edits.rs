@@ -6,7 +6,7 @@ use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
 use similar::{capture_diff_slices_deadline, Algorithm, DiffOp};
 use tree_sitter::InputEdit;
 #[derive(Clone, Debug)]
-pub struct TextDiff2 {
+pub struct Diff {
     pub added_char_count: usize,
     pub removed_char_count: usize,
     pub start_index: usize,
@@ -17,7 +17,7 @@ pub fn detect_input_edits(
     new_string: &XcodeText,
     deadline_ms: u64,
 ) -> Vec<InputEdit> {
-    let mut edits: Vec<TextDiff2> = Vec::new();
+    let mut edits: Vec<Diff> = Vec::new();
 
     // https://docs.rs/similar/latest/similar/#deadlines-and-performance
     // "Due to the recursive, divide and conquer nature of Myer’s diff you will still get a pretty decent diff in many cases if the deadline is reached"
@@ -29,7 +29,6 @@ pub fn detect_input_edits(
         &new_string.text,
         Some(deadline),
     );
-    dbg!(ops.len());
 
     for diff in ops {
         match diff {
@@ -43,7 +42,7 @@ pub fn detect_input_edits(
                 new_index: _,
                 new_len,
             } => {
-                edits.push(TextDiff2 {
+                edits.push(Diff {
                     added_char_count: new_len,
                     removed_char_count: 0,
                     start_index: old_index,
@@ -54,7 +53,7 @@ pub fn detect_input_edits(
                 old_len,
                 new_index: _,
             } => {
-                edits.push(TextDiff2 {
+                edits.push(Diff {
                     added_char_count: 0,
                     removed_char_count: old_len,
                     start_index: old_index,
@@ -66,7 +65,7 @@ pub fn detect_input_edits(
                 new_index: _,
                 new_len,
             } => {
-                edits.push(TextDiff2 {
+                edits.push(Diff {
                     added_char_count: new_len,
                     removed_char_count: old_len,
                     start_index: old_index,
@@ -81,7 +80,7 @@ pub fn detect_input_edits(
 fn construct_InputEdits_from_detected_edits(
     old_string: &XcodeText,
     new_string: &XcodeText,
-    detected_edits: &Vec<TextDiff2>,
+    detected_edits: &Vec<Diff>,
 ) -> Vec<InputEdit> {
     let mut input_edits: Vec<InputEdit> = Vec::new();
     for edit in detected_edits.iter() {
