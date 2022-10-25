@@ -23,6 +23,8 @@ pub enum SwiftSyntaxTreeError {
     NoTreeParsed,
     #[error("Could not parse tree.")]
     CouldNotParseTree,
+    #[error("Too many edits to apply to syntax tree.")]
+    TooManyEdits(usize),
     #[error("Something went wrong.")]
     GenericError(#[source] anyhow::Error),
 }
@@ -76,17 +78,32 @@ impl SwiftSyntaxTree {
             .ok_or(SwiftSyntaxTreeError::NoMetadataFoundForNode)
     }
 
-    pub fn parse(&mut self, content: &XcodeText) -> Result<(), SwiftSyntaxTreeError> {
-        if let (Some(old_content), Some(old_tree)) = (&self.content, &mut self.tree) {
-            let changes = detect_input_edits(&old_content, content);
-
-            // Changes should be in ascending order of start_byte
-            for change in changes.iter().rev() {
-                old_tree.edit(change);
-            }
+    fn apply_edits_from_diff_to_tree(
+        old_content: &XcodeText,
+        new_content: &XcodeText,
+        tree: &mut Tree,
+    ) -> Result<(), SwiftSyntaxTreeError> {
+        // If too many edits are applied to the tree, we get problems. 5 is just a first guess.
+        const MAX_ALLOWED_EDITS: usize = 5;
+        let edits = detect_input_edits(old_content, new_content);
+        if edits.len() > MAX_ALLOWED_EDITS {
+            return Err(SwiftSyntaxTreeError::TooManyEdits(edits.len()));
         }
+        for edit in edits {
+            tree.edit(&edit);
+        }
+        return Ok(());
+    }
 
-        let updated_tree = self.parser.lock().parse_utf16(content, self.tree());
+    pub fn parse(&mut self, content: &XcodeText) -> Result<(), SwiftSyntaxTreeError> {
+        let mut old_tree: Option<&Tree> = None;
+        if let (Some(old_content), Some(tree)) = (&self.content, &mut self.tree) {
+            old_tree = match Self::apply_edits_from_diff_to_tree(old_content, content, tree) {
+                Ok(_) => Some(tree),
+                Err(_) => None,
+            };
+        }
+        let updated_tree = self.parser.lock().parse_utf16(content, old_tree);
 
         if let Some(tree) = updated_tree {
             calculate_cognitive_complexities(
