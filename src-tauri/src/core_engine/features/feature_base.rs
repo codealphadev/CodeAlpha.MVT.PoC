@@ -10,6 +10,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use strum::Display;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -39,7 +40,7 @@ pub enum CoreEngineTrigger {
     OnUserCommand(UserCommand),
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, TS, Display)]
 #[ts(export, export_to = "bindings/features/code_annotations/")]
 pub enum FeatureKind {
     BracketHighlight,

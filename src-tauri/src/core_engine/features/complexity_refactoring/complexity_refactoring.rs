@@ -10,7 +10,7 @@ use crate::{
                 remove_annotations_for_suggestions,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            UserCommand,
+            FeatureKind, UserCommand,
         },
         format_code, get_index_of_first_difference,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
@@ -589,7 +589,7 @@ impl ComplexityRefactoring {
 
         debug!(
             ?suggestion_to_apply,
-            feature = "ComplexityRefactoring",
+            feature = FeatureKind::ComplexityRefactoring.to_string(),
             "Performing suggestion"
         );
 
