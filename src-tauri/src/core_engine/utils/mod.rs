@@ -1,6 +1,6 @@
 pub use env::*;
-pub use swift_format::*;
-pub use lsp::{log_list_of_module_names, Lsp, SwiftLsp, SwiftLspError, SWIFT_LSP_COMMAND_QUEUE};
+pub use formatting::*;
+pub use lsp::{log_list_of_module_names, Lsp, SwiftLsp, SwiftLspError};
 pub use misc::*;
 pub use text_position::*;
 pub use text_range::*;

@@ -107,10 +107,6 @@ impl FeatureBase for BracketHighlight {
         Ok(())
     }
 
-    fn requires_ai(&self) -> bool {
-        false
-    }
-
     fn kind(&self) -> FeatureKind {
         FeatureKind::BracketHighlight
     }

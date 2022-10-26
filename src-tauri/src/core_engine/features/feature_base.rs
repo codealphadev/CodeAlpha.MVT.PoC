@@ -13,7 +13,7 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
 };
-use strum::EnumIter;
+use strum::{Display, EnumIter};
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -42,7 +42,7 @@ pub enum CoreEngineTrigger {
     OnUserCommand(UserCommand),
 }
 
-#[derive(EnumIter, Clone, Serialize, Deserialize, Debug, PartialEq, Eq, TS, Hash)]
+#[derive(EnumIter, Clone, Serialize, Deserialize, Debug, PartialEq, Eq, TS, Hash, Display)]
 #[ts(export, export_to = "bindings/features/code_annotations/")]
 pub enum FeatureKind {
     BracketHighlight,
@@ -58,6 +58,14 @@ pub enum FeatureProcedure {
 }
 
 impl FeatureKind {
+    pub fn requires_ai(&self) -> bool {
+        match self {
+            FeatureKind::BracketHighlight => false,
+            FeatureKind::ComplexityRefactoring => false,
+            FeatureKind::DocsGeneration => true,
+            FeatureKind::Formatter => false,
+        }
+    }
     pub fn should_compute(&self, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
         match self {
             FeatureKind::ComplexityRefactoring => match trigger {
@@ -175,7 +183,6 @@ pub trait FeatureBase {
     fn activate(&mut self) -> Result<(), FeatureError>;
     fn deactivate(&mut self) -> Result<(), FeatureError>;
     fn reset(&mut self) -> Result<(), FeatureError>;
-    fn requires_ai(&self) -> bool;
 }
 
 impl FeatureBase for Feature {
@@ -225,15 +232,6 @@ impl FeatureBase for Feature {
             Feature::DocsGeneration(feature) => feature.reset(),
             Feature::Formatter(feature) => feature.reset(),
             Feature::ComplexityRefactoring(feature) => feature.reset(),
-        }
-    }
-
-    fn requires_ai(&self) -> bool {
-        match self {
-            Feature::BracketHighlighting(feature) => feature.requires_ai(),
-            Feature::DocsGeneration(feature) => feature.requires_ai(),
-            Feature::Formatter(feature) => feature.requires_ai(),
-            Feature::ComplexityRefactoring(feature) => feature.requires_ai(),
         }
     }
 

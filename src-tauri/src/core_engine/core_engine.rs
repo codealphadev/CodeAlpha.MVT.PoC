@@ -6,7 +6,6 @@ use strum::IntoEnumIterator;
 use tauri::Manager;
 use tokio::sync::oneshot::{self, Receiver};
 use tracing::{debug, error};
-use tree_sitter::Tree;
 
 use crate::{
     app_handle,
@@ -102,6 +101,13 @@ impl CoreEngine {
                 true
             };
 
+        let swift_format_on_cmd_s_active =
+            if let Some(cache) = app_handle().try_state::<CoreEngineStateCache>() {
+                cache.0.lock().swift_format_on_cmd_s
+            } else {
+                true
+            };
+
         let mut features = HashMap::new();
         features.insert(
             FeatureKind::BracketHighlight,
@@ -136,6 +142,7 @@ impl CoreEngine {
             cancel_code_doc_update_task_send: Some(send),
             finished_code_doc_update_task_recv: None,
             awaiting_code_doc_update_task: Arc::new(Mutex::new(())),
+            swift_format_on_cmd_s_active,
         }
     }
 
@@ -260,7 +267,21 @@ impl CoreEngine {
         window_uid: EditorWindowUid,
     ) {
         let mut feature_procedures_schedule = self.feature_procedures_schedule.lock();
+
         for feature_kind in FeatureKind::iter() {
+            match feature_kind {
+                FeatureKind::Formatter => {
+                    if !self.swift_format_on_cmd_s_active {
+                        continue;
+                    }
+                }
+                _ => {}
+            }
+
+            if feature_kind.requires_ai() && !self.ai_features_active {
+                continue;
+            }
+
             if let Some(procedure) = feature_kind.should_compute(trigger) {
                 feature_procedures_schedule.insert(
                     hash_trigger_and_feature(trigger, &feature_kind),
@@ -309,11 +330,19 @@ impl CoreEngine {
                         // Spin up task to compute syntax tree
                         tauri::async_runtime::spawn({
                             let code_documents = code_documents.clone();
+
+                            let previous_tree;
+                            {
+                                let mut code_docs = code_documents.lock();
+                                let code_doc = code_docs.get_mut(&window_uid).unwrap();
+                                previous_tree = code_doc.syntax_tree().cloned();
+                            }
+
                             async move {
                                 if let Err(e) = Self::compute_abstract_syntax_tree(
                                     code_documents,
                                     window_uid,
-                                    None,
+                                    previous_tree,
                                     ast_compute_send,
                                 )
                                 .await
@@ -360,7 +389,7 @@ impl CoreEngine {
     pub async fn compute_abstract_syntax_tree(
         code_documents: Arc<Mutex<HashMap<EditorWindowUid, CodeDocument>>>,
         window_uid: EditorWindowUid,
-        previous_TSTree: Option<Tree>,
+        previous_ast: Option<SwiftSyntaxTree>,
         mut sender: oneshot::Sender<Option<SwiftSyntaxTree>>,
     ) -> Result<(), CoreEngineError> {
         let code_text_u16;
@@ -389,7 +418,7 @@ impl CoreEngine {
 
         // Recompute AST because code text has changed
         Ok(tokio::select! {
-            syntax_tree = SwiftSyntaxTree::from_XcodeText(code_text_u16, previous_TSTree) => {
+            syntax_tree = SwiftSyntaxTree::from_XcodeText(code_text_u16, previous_ast) => {
                 match syntax_tree {
                     Ok(tree) => {
                         _ = sender.send(Some(tree));

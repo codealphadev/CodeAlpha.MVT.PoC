@@ -6,10 +6,13 @@ use parking_lot::Mutex;
 use crate::{
     app_handle,
     core_engine::{
-        features::{complexity_refactoring::{
-            remove_annotations_for_suggestions, ComplexityRefactoringError, SerializedNodeSlice,
-            SuggestionHash, SuggestionId, SuggestionsArcMutex,
-        }, ComplexityRefactoring},
+        features::{
+            complexity_refactoring::{
+                remove_annotations_for_suggestions, ComplexityRefactoringError,
+                SerializedNodeSlice, SuggestionHash, SuggestionId, SuggestionsArcMutex,
+            },
+            ComplexityRefactoring,
+        },
         CodeDocument, EditorWindowUid,
     },
     utils::calculate_hash,

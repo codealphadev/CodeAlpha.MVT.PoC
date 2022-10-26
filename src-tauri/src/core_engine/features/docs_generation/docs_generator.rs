@@ -104,10 +104,6 @@ impl FeatureBase for DocsGenerator {
         Ok(())
     }
 
-    fn requires_ai(&self) -> bool {
-        true
-    }
-
     fn kind(&self) -> FeatureKind {
         FeatureKind::DocsGeneration
     }
