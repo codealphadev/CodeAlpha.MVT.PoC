@@ -41,8 +41,6 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::NodeAnnotationClicked(msg)),
                         None,
-                        None,
-                        None,
                     );
                 }
                 EventUserInteraction::PerformSuggestion(msg) => {
@@ -54,8 +52,6 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)),
-                        None,
-                        None,
                         None,
                     );
                 }
@@ -69,8 +65,6 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)),
                         None,
-                        None,
-                        None,
                     );
                 }
                 EventUserInteraction::UpdateSelectedSuggestion(msg) => {
@@ -82,8 +76,6 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                     _ = core_engine.lock().run_features(
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)),
-                        None,
-                        None,
                         None,
                     );
                 }

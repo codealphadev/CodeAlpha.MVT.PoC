@@ -17,7 +17,5 @@ pub fn on_app_activated(
         activated_msg.window_uid,
         CoreEngineTrigger::OnTextSelectionChange,
         None,
-        None,
-        None,
     )
 }

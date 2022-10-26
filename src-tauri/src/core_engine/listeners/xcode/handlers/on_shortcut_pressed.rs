@@ -17,7 +17,5 @@ pub fn on_editor_shortcut_pressed(
         msg.window_uid,
         CoreEngineTrigger::OnShortcutPressed(msg.clone()),
         None,
-        None,
-        None,
     )
 }

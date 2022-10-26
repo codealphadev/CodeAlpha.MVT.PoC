@@ -19,7 +19,5 @@ pub fn on_editor_textarea_scrolled(
         focused_window,
         CoreEngineTrigger::OnVisibleTextRangeChange,
         None,
-        None,
-        None,
     )
 }

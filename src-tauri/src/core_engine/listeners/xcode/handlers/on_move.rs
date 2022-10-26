@@ -17,7 +17,5 @@ pub fn on_editor_window_moved(
         moved_msg.window_uid,
         CoreEngineTrigger::OnViewportMove,
         None,
-        None,
-        None,
     )
 }

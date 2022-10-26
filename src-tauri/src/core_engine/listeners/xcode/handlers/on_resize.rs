@@ -17,7 +17,5 @@ pub fn on_editor_window_resized(
         resized_msg.window_uid,
         CoreEngineTrigger::OnViewportDimensionsChange,
         None,
-        None,
-        None,
     )
 }

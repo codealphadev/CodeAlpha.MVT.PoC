@@ -158,8 +158,6 @@ impl CoreEngine {
         &mut self,
         editor_window_uid: EditorWindowUid,
         trigger: CoreEngineTrigger,
-        _textarea_content: Option<&String>,
-        _file_path: Option<&String>,
         text_range: Option<&TextRange>,
     ) -> Result<(), CoreEngineError> {
         self.schedule_feature_procedures(&trigger, editor_window_uid);

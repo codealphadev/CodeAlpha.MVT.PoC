@@ -18,8 +18,6 @@ pub fn on_selected_text_changed(
     core_engine.run_features(
         msg.window_uid,
         CoreEngineTrigger::OnTextSelectionChange,
-        None,
-        None,
         Some(&TextRange {
             index: msg.index,
             length: msg.length,

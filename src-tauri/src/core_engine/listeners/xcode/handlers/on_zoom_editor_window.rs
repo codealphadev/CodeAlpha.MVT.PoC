@@ -17,7 +17,5 @@ pub fn on_editor_textarea_zoomed(
         zoomed_msg.window_uid,
         CoreEngineTrigger::OnViewportDimensionsChange,
         None,
-        None,
-        None,
     )
 }
