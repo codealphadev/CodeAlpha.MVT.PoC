@@ -68,8 +68,8 @@ impl AnnotationManagerEvent {
         let event_name = ChannelList::AnnotationEvent.to_string();
 
         let serialized_self = serde_json::to_string(self).ok();
-        tauri::async_runtime::spawn(async move {
-            app_handle().trigger_global(event_name.as_str(), serialized_self.clone());
-        });
+        // tauri::async_runtime::spawn(async move {
+        app_handle().trigger_global(event_name.as_str(), serialized_self.clone());
+        // });
     }
 }
