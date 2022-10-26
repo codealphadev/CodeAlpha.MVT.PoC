@@ -17,8 +17,6 @@ pub fn on_text_content_changed(
     core_engine.run_features(
         content_changed_msg.window_uid,
         CoreEngineTrigger::OnTextContentChange,
-        Some(&content_changed_msg.content),
-        content_changed_msg.file_path_as_str.as_ref(),
         None,
     )
 }
