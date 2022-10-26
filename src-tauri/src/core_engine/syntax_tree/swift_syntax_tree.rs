@@ -9,9 +9,7 @@ use crate::core_engine::{
     utils::{TextPosition, TextRange, XcodeText},
 };
 
-use super::{
-    calculate_cognitive_complexities, detect_input_edits, Complexities, SwiftCodeBlockError,
-};
+use super::{calculate_cognitive_complexities, Complexities, SwiftCodeBlockError};
 
 #[derive(Debug, Clone)]
 pub struct NodeMetadata {

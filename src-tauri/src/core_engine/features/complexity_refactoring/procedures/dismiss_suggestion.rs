@@ -44,8 +44,7 @@ pub async fn dismiss_suggestion(
         &window_uid,
         &suggestion_id,
         &suggestions_arc,
-    );
-    Ok(())
+    )
 }
 
 fn write_dismissed_suggestion(
