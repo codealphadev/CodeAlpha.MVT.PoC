@@ -20,6 +20,10 @@ use crate::{
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftFormatError {
+    #[error("Failed to get swift version")]
+    VersionParsingFailed(String),
+    #[error("Wrong argument passed to swiftformat")]
+    StdErr(String),
     #[error("Formatter failed.")]
     FormatFailed,
     #[error("Formatter could not run due to missing configuration.")]
@@ -189,34 +193,131 @@ impl SwiftFormatter {
             return Err(SwiftFormatError::FileNotExisting(file_path.to_string()));
         }
 
+        let args = Self::get_swiftformat_args(file_path).await;
+
         let (mut rx, _) = Command::new_sidecar("swiftformat")
             .map_err(|err| SwiftFormatError::GenericError(err.into()))?
-            .args([
-                file_path.to_string(),
-                "--output".to_string(),
-                "stdout".to_string(),
-                "--quiet".to_string(),
-            ])
+            .args(args)
             .spawn()
             .map_err(|err| SwiftFormatError::GenericError(err.into()))?;
 
         let mut text_content = "".to_string();
+        let mut error_content = "".to_string();
         while let Some(event) = rx.recv().await {
-            if let CommandEvent::Stdout(line) = event {
-                text_content.push_str(&(line + "\n"));
+            match event {
+                CommandEvent::Stdout(line) => {
+                    text_content.push_str(&(line + "\n"));
+                }
+                CommandEvent::Stderr(line) => {
+                    error_content.push_str(&(line + "\n"));
+                }
+                _ => (),
             }
         }
 
-        if !text_content.is_empty() {
+        if !error_content.is_empty() {
+            return Err(SwiftFormatError::StdErr(error_content.into()));
+        } else if !text_content.is_empty() {
             Ok(text_content)
         } else {
             Err(SwiftFormatError::FormatFailed)
         }
     }
+
+    async fn get_swiftformat_args(file_path: &String) -> Vec<String> {
+        let mut args = vec![file_path.as_ref(), "--output", "stdout", "--quiet"];
+
+        let swift_version;
+        if let Ok(version) = Self::get_xcode_swift_version().await {
+            swift_version = version.to_owned();
+            args.push("--swiftversion");
+            args.push(swift_version.as_str());
+        }
+
+        if !Self::swiftformat_config_file_exists(file_path) {
+            let mut default_config = vec![
+                "--maxwidth",
+                "100",
+                "--wraparguments",
+                "before-first",
+                "--wrapparameters",
+                "before-first",
+                "--wrapcollections",
+                "before-first",
+                "--indent",
+                "4",
+                "--semicolons",
+                "never",
+                "--enable",
+                "isEmpty,blankLineAfterImports,blankLinesBetweenImports,organizeDeclarations,preferDouble,sortedSwitchCases,wrapEnumCases,wrapSwitchCases",
+            ];
+            args.append(&mut default_config);
+        }
+        args.iter().map(|&s| s.into()).collect()
+    }
+
+    fn swiftformat_config_file_exists(starting_directory: &String) -> bool {
+        let mut path: PathBuf = starting_directory.into();
+        let file = Path::new(".swiftformat");
+
+        loop {
+            path.push(file);
+
+            if path.is_file() {
+                return true;
+            }
+
+            if !(path.pop() && path.pop()) {
+                // remove file && remove parent
+                return false;
+            }
+        }
+    }
+
+    async fn get_xcode_swift_version() -> Result<String, SwiftFormatError> {
+        let text_content = Command::new("xcrun")
+            .args(["swift", "--version"])
+            .output()
+            .map_err(|e| SwiftFormatError::VersionParsingFailed(e.to_string()))?;
+
+        if text_content.stdout.is_empty() {
+            return Err(SwiftFormatError::VersionParsingFailed(text_content.stderr));
+        } else {
+            let version = text_content.stdout.split_whitespace().nth(3).ok_or(
+                SwiftFormatError::VersionParsingFailed("Failed to find version".to_string()),
+            )?;
+            if !Self::check_version_format(version) {
+                return Err(SwiftFormatError::VersionParsingFailed(
+                    "Version is not correct format".to_string(),
+                ));
+            }
+            Ok(version.to_string())
+        }
+    }
+
+    fn check_version_format(version: &str) -> bool {
+        version.parse::<f64>().is_ok()
+    }
 }
 
 #[cfg(test)]
 mod tests {
+
+    mod check_version_format {
+        use crate::core_engine::features::SwiftFormatter;
+
+        #[test]
+        fn good_format() {
+            let version = "5.3";
+            assert!(SwiftFormatter::check_version_format(version));
+        }
+
+        #[test]
+        fn bad_format() {
+            let version = "(swiftlang-5.7.0.127.4";
+            assert!(!SwiftFormatter::check_version_format(version));
+        }
+    }
     use std::path::PathBuf;
     use std::process::Command as StdCommand;
 
