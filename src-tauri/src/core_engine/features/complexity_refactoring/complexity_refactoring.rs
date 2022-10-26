@@ -403,9 +403,7 @@ impl ComplexityRefactoring {
                             .await;
                         }
                         Err(err) => {
-                            //
-                            let should_remove_suggestion = match err {
-                                ComplexityRefactoringError::ExecutionCancelled(_) => false,
+                            match err {
                                 ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
                                     warn!(
                                         ?payload,
@@ -414,24 +412,20 @@ impl ComplexityRefactoring {
                                         ?parent_node_kind,
                                         "LSP rejected refactoring"
                                     );
-                                    true
                                 }
                                 _ => {
                                     error!(?err, "Failed to perform refactoring");
-                                    true
                                 }
                             };
 
-                            if should_remove_suggestion {
-                                Self::remove_suggestion_and_publish(
-                                    &window_uid,
-                                    &binded_id,
-                                    &binded_suggestions_arc2,
-                                )
-                                .unwrap_or_else(|e| {
-                                    error!(?e, "Failed to remove suggestion when cleaning up after other error");
-                                });
-                            }
+                            _ = Self::remove_suggestion_and_publish(
+                                &window_uid,
+                                &binded_id,
+                                &binded_suggestions_arc2,
+                            )
+                            .unwrap_or_else(|e| {
+                                error!(?e, "Failed to remove suggestion when cleaning up after other error");
+                            });
                         }
                     }
                 }
@@ -777,8 +771,6 @@ fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
-    #[error("Execution was cancelled: '{}'", 0)]
-    ExecutionCancelled(Option<Uuid>),
     #[error("No suggestions found for window")]
     SuggestionsForWindowNotFound(usize),
     #[error("No suggestion found to apply")]
