@@ -6,7 +6,6 @@ pub use docs_generation::cmd_paste_docs;
 pub use docs_generation::DocsGenerator;
 pub use docs_generation::NodeExplanation;
 pub use feature_base::*;
-pub use formatter::SwiftFormatError;
 pub use formatter::SwiftFormatter;
 
 mod bracket_highlight;
