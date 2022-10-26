@@ -550,8 +550,7 @@ impl ComplexityRefactoring {
             edited_content.replace_range(edit.start_index..edit.end_index, edit.text);
         }
 
-        let formatted_new_content = match format_code(&edited_content.as_string(), &file_path).await
-        {
+        let formatted_new_content = match format_code(&edited_content, &file_path).await {
             Ok(content) => content,
             Err(e) => {
                 error!(?e, "Failed to format during refactoring: new content");
@@ -559,7 +558,7 @@ impl ComplexityRefactoring {
             }
         };
 
-        let formatted_old_content = match format_code(&text_content.as_string(), &file_path).await {
+        let formatted_old_content = match format_code(&text_content, &file_path).await {
             Ok(content) => content,
             Err(e) => {
                 error!(?e, "Failed to format during refactoring: old content");

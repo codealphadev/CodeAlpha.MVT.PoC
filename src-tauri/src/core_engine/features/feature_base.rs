@@ -4,7 +4,7 @@ use crate::{
             DismissSuggestionMessage, NodeAnnotationClickedMessage, PerformSuggestionMessage,
             UpdateSelectedSuggestionMessage,
         },
-        CodeDocument,
+        CodeDocument, SwiftFormatError,
     },
     platform::macos::models::editor::EditorShortcutPressedMessage,
 };
@@ -15,10 +15,9 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 use super::{
-    complexity_refactoring::ComplexityRefactoringError,
-    docs_generation::DocsGenerationError,
-    formatter::{SwiftFormatError, SwiftFormatter},
-    BracketHighlight, BracketHighlightError, ComplexityRefactoring, DocsGenerator,
+    complexity_refactoring::ComplexityRefactoringError, docs_generation::DocsGenerationError,
+    formatter::SwiftFormatter, BracketHighlight, BracketHighlightError, ComplexityRefactoring,
+    DocsGenerator,
 };
 
 #[derive(Debug, Clone, PartialEq)]
