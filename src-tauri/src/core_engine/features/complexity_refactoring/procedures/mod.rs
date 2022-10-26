@@ -1,4 +1,5 @@
 pub use dismiss_suggestion::*;
+pub use perform_suggestion::perform_suggestion;
 pub use select_suggestion::select_suggestion;
 
 mod dismiss_suggestion;
