@@ -1,5 +1,6 @@
-use std::path::PathBuf;
-use tracing::{debug, info};
+use std::path::{Path, PathBuf};
+use tauri::api::process::{Command, CommandEvent};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 use crate::core_engine::features::FeatureKind;

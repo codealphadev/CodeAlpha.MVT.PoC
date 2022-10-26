@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
 
-use colored::Colorize;
 use parking_lot::Mutex;
 use strum::IntoEnumIterator;
 use tauri::Manager;
@@ -21,6 +20,7 @@ use super::{
         SwiftFormatter,
     },
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
+    log_list_of_module_names,
     syntax_tree::SwiftSyntaxTree,
     CodeDocument, EditorWindowProps, TextRange, XcodeText,
 };
@@ -189,8 +189,6 @@ impl CoreEngine {
                     if let Ok(code_doc_update) = finished_recv.await {
                         match code_doc_update {
                             CodeDocUpdate::Finished => {
-                                debug!("Syntax tree parsing task finished.");
-
                                 Self::process_features(
                                     feature_procedures_schedule.clone(),
                                     features,
@@ -200,7 +198,7 @@ impl CoreEngine {
                                 feature_procedures_schedule.lock().clear();
                             }
                             CodeDocUpdate::Aborded => {
-                                debug!("Syntax tree parsing task aborded.");
+                                // Syntax tree parsing task aborded.
                             }
                         }
                     }
@@ -318,8 +316,6 @@ impl CoreEngine {
 
         match trigger {
             CoreEngineTrigger::OnTextContentChange | CoreEngineTrigger::OnTextSelectionChange => {
-                println!("Trigger: {}", format!("{:?}", trigger).on_bright_magenta());
-
                 let cancel_recv = self.reset_cancellation_channel();
 
                 tauri::async_runtime::spawn({
@@ -378,7 +374,6 @@ impl CoreEngine {
                 });
             }
             _ => {
-                println!("Trigger: {}", format!("{:?}", trigger).on_bright_green());
                 return None;
             }
         };
@@ -429,7 +424,7 @@ impl CoreEngine {
                 }
             }
             _ = sender.closed() => {
-                error!("OneShot Channel closed");
+                // OneShot Channel closed
             }
         })
     }
@@ -446,6 +441,12 @@ impl CoreEngine {
             .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
         let file_path = get_textarea_file_path(&GetVia::Hash(window_uid)).ok();
+
+        if let Some(path) = file_path.as_ref() {
+            if code_doc.file_path().to_owned() != Some(path.clone()) {
+                log_list_of_module_names(path.clone());
+            }
+        }
 
         if let Some(syntax_tree) = syntax_tree {
             code_doc.update_code_text(syntax_tree, file_path);

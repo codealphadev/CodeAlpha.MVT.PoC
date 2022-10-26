@@ -14,7 +14,7 @@ use crate::{
                 remove_annotations_for_suggestions, Edit, SuggestionsMap,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            FeatureKind, FeatureKind, UserCommand,
+            FeatureKind, UserCommand,
         },
         format_code, get_index_of_first_difference,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
@@ -128,10 +128,10 @@ impl FeatureBase for ComplexityRefactoring {
 
                 tokio::select! {
                     _ = compute_long_running_recv.recv() => {
-                        debug!("Finished computing complexity refactoring suggestions");
+                        // Finished computing complexity refactoring suggestions
                     }
                     _ = cancel_recv => {
-                        debug!("Cancelled computing complexity refactoring suggestions");
+                        // Cancelled computing complexity refactoring suggestions
                     }
                 }
             }
@@ -638,7 +638,7 @@ impl ComplexityRefactoring {
             }
         }
 
-        Self::remove_suggestion_and_publish(&window_uid, &suggestion_id, &suggestions_arc);
+        Self::remove_suggestion_and_publish(&window_uid, &suggestion_id, &suggestions_arc)?;
 
         match text_range_to_scroll_to_after_performing {
             Ok(range) => {
