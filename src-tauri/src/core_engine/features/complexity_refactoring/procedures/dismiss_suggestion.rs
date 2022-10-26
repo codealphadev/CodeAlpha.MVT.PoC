@@ -8,12 +8,12 @@ use crate::{
     core_engine::{
         features::{
             complexity_refactoring::{
-                remove_annotations_for_suggestions, ComplexityRefactoringError,
-                SerializedNodeSlice, SuggestionHash, SuggestionId, SuggestionsArcMutex,
+                ComplexityRefactoringError, SerializedNodeSlice, SuggestionHash, SuggestionId,
+                SuggestionsArcMutex,
             },
             ComplexityRefactoring,
         },
-        CodeDocument, EditorWindowUid,
+        CodeDocument,
     },
     utils::calculate_hash,
 };
@@ -27,40 +27,31 @@ pub async fn dismiss_suggestion(
     dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
 ) -> Result<(), ComplexityRefactoringError> {
     let window_uid = code_document.editor_window_props().window_uid;
+    {
+        let mut suggestions_per_window = suggestions_arc.lock();
+        let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
+            ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
+        )?;
+        let suggestion_to_dismiss = suggestions.get(&suggestion_id).ok_or(
+            ComplexityRefactoringError::SuggestionNotFound(suggestion_id.to_string()),
+        )?;
 
-    let hash =
-        write_dismissed_suggestion(suggestion_id, window_uid, suggestions_arc.clone()).await?;
-    dismissed_suggestions.lock().push(hash);
+        let hash = write_dismissed_suggestion(&suggestion_to_dismiss.serialized_slice)?;
+        dismissed_suggestions.lock().push(hash);
+    }
 
-    let mut suggestions_per_window = suggestions_arc.lock();
-    let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
-        ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
-    )?;
-    suggestions.remove(&suggestion_id);
-    remove_annotations_for_suggestions(vec![suggestion_id]);
-
-    ComplexityRefactoring::publish_to_frontend(suggestions_per_window.clone());
+    ComplexityRefactoring::remove_suggestion_and_publish(
+        &window_uid,
+        &suggestion_id,
+        &suggestions_arc,
+    );
     Ok(())
 }
 
-async fn write_dismissed_suggestion(
-    suggestion_id: SuggestionId,
-    window_uid: EditorWindowUid,
-    suggestions_arc: SuggestionsArcMutex,
+fn write_dismissed_suggestion(
+    suggestion: &SerializedNodeSlice,
 ) -> Result<SuggestionHash, ComplexityRefactoringError> {
-    let mut suggestions_per_window;
-    {
-        suggestions_per_window = suggestions_arc.lock().clone();
-    }
-
-    let suggestions_for_window_uid = suggestions_per_window.get_mut(&window_uid).ok_or(
-        ComplexityRefactoringError::SuggestionsForWindowNotFound(window_uid),
-    )?;
-    let suggestion_to_dismiss = suggestions_for_window_uid.get(&suggestion_id).ok_or(
-        ComplexityRefactoringError::SuggestionNotFound(suggestion_id.to_string()),
-    )?;
-
-    let hash = calculate_hash::<SerializedNodeSlice>(&suggestion_to_dismiss.serialized_slice);
+    let hash = calculate_hash::<SerializedNodeSlice>(&suggestion);
     let app_dir = app_handle()
         .path_resolver()
         .app_dir()
@@ -68,7 +59,7 @@ async fn write_dismissed_suggestion(
     let path = app_dir.join(DISMISSED_SUGGESTIONS_FILE_NAME);
     let mut suggestions: Vec<SuggestionHash> = vec![];
     if path.exists() {
-        if let Ok(file) = tokio::fs::read_to_string(&path).await {
+        if let Ok(file) = fs::read_to_string(&path) {
             suggestions = serde_json::from_str(&file).unwrap();
         }
     }
@@ -80,11 +71,9 @@ async fn write_dismissed_suggestion(
     suggestions.push(hash);
     let suggestions_string = serde_json::to_string(&suggestions)
         .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
-    tokio::fs::create_dir_all(app_dir)
-        .await
+    fs::create_dir_all(app_dir)
         .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
-    tokio::fs::write(&path, suggestions_string)
-        .await
+    fs::write(&path, suggestions_string)
         .map_err(|_| ComplexityRefactoringError::ReadWriteDismissedSuggestionsFailed)?;
 
     Ok(hash)
