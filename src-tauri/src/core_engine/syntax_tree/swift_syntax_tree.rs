@@ -4,7 +4,10 @@ use tokio::sync::oneshot;
 use tracing::error;
 use tree_sitter::{Node, Parser, Tree};
 
-use crate::core_engine::utils::{TextPosition, TextRange, XcodeText};
+use crate::core_engine::{
+    syntax_tree::detect_input_edits,
+    utils::{TextPosition, TextRange, XcodeText},
+};
 
 use super::{
     calculate_cognitive_complexities, detect_input_edits, Complexities, SwiftCodeBlockError,
@@ -56,7 +59,7 @@ impl SwiftSyntaxTree {
 
     pub async fn from_XcodeText(
         content: XcodeText,
-        previous_tree: Option<Tree>,
+        previous_tree: Option<SwiftSyntaxTree>,
     ) -> Result<Self, SwiftSyntaxTreeError> {
         // We wait for a very short time in order to allow quickly subsequently scheduled calls to cancel this one
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
@@ -77,13 +80,17 @@ impl SwiftSyntaxTree {
 
     pub fn _from_XcodeText_blocking(
         content: XcodeText,
-        previous_tree: Option<Tree>,
+        previous_tree: Option<SwiftSyntaxTree>,
     ) -> Result<Self, SwiftSyntaxTreeError> {
         Self::parse_content(content, previous_tree)
     }
 
     pub fn tree(&self) -> &Tree {
         &self.tree
+    }
+
+    pub fn tree_mut(&mut self) -> &mut Tree {
+        &mut self.tree
     }
 
     pub fn text_content(&self) -> &XcodeText {
@@ -124,13 +131,35 @@ impl SwiftSyntaxTree {
         )))
     }
 
+    fn apply_edits_from_diff_to_tree(
+        previous_tree: &mut SwiftSyntaxTree,
+        new_content: &XcodeText,
+    ) -> Result<(), SwiftSyntaxTreeError> {
+        const DIFF_DEADLINE_MS: u64 = 20;
+        let edits = detect_input_edits(previous_tree.text_content(), new_content, DIFF_DEADLINE_MS);
+
+        for edit in edits {
+            previous_tree.tree_mut().edit(&edit);
+        }
+        return Ok(());
+    }
+
     fn parse_content(
         code_text: XcodeText,
-        previous_tree: Option<Tree>,
+        mut previous_ast: Option<SwiftSyntaxTree>,
     ) -> Result<SwiftSyntaxTree, SwiftSyntaxTreeError> {
         let mut parser = SwiftSyntaxTree::parser();
+
+        let mut previous_TSTree: Option<&Tree> = None;
+        if let Some(previous_ast) = &mut previous_ast {
+            previous_TSTree = match Self::apply_edits_from_diff_to_tree(previous_ast, &code_text) {
+                Ok(_) => Some(previous_ast.tree()),
+                Err(_) => None,
+            };
+        }
+
         let mut node_metadata: TreeMetaData = HashMap::new();
-        match parser.parse_utf16(&code_text, previous_tree.as_ref()) {
+        match parser.parse_utf16(&code_text, previous_TSTree) {
             Some(tree) => {
                 calculate_cognitive_complexities(
                     &tree.root_node(),

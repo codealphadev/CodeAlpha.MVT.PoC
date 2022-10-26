@@ -12,7 +12,7 @@ use std::{
 use tracing::{debug, error, warn};
 
 #[cached(result = true, size = 100)]
-pub async fn get_compiler_args_from_xcodebuild(
+pub fn get_compiler_args_from_xcodebuild(
     source_file_path: String,
     _hash: u64,
 ) -> Result<Vec<String>, XCodebuildError> {

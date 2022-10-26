@@ -58,7 +58,7 @@ impl FeatureBase for ComplexityRefactoring {
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
-}
+        }
 
         if let Some(procedure) = self.determine_short_running_procedure(trigger) {
             tauri::async_runtime::spawn({
@@ -69,7 +69,7 @@ impl FeatureBase for ComplexityRefactoring {
                     match procedure {
                         ComplexityRefactoringShortRunningProcedure::PerformSuggestion(id) => {
                             Self::perform_suggestion(code_document, id, suggestions_arc).await
-}
+                        }
                         ComplexityRefactoringShortRunningProcedure::DismissSuggestion(id) => {
                             procedures::dismiss_suggestion(
                                 code_document,
@@ -78,17 +78,17 @@ impl FeatureBase for ComplexityRefactoring {
                                 dismissed_suggestions,
                             )
                             .await
-}
+                        }
                         ComplexityRefactoringShortRunningProcedure::SelectSuggestion(id) => {
                             procedures::select_suggestion(id).await
-    }
-}
+                        }
+                    }
                 }
             });
         }
 
         Ok(())
-}
+    }
 
     fn compute_long_running(
         &mut self,
@@ -115,7 +115,7 @@ impl FeatureBase for ComplexityRefactoring {
 
                     if compute_long_running_send.is_closed() {
                         return;
-                }
+                    }
 
                     _ = Self::compute_suggestions(
                         suggestions_arc,
@@ -129,11 +129,11 @@ impl FeatureBase for ComplexityRefactoring {
                 tokio::select! {
                     _ = compute_long_running_recv.recv() => {
                         debug!("Finished computing complexity refactoring suggestions");
-            }
+                    }
                     _ = cancel_recv => {
                         debug!("Cancelled computing complexity refactoring suggestions");
-        }
-    }
+                    }
+                }
             }
         });
 
@@ -156,14 +156,10 @@ impl FeatureBase for ComplexityRefactoring {
         Ok(())
     }
 
-    fn requires_ai(&self) -> bool {
-        false
-    }
-
     fn kind(&self) -> FeatureKind {
         FeatureKind::ComplexityRefactoring
-                }
-            }
+    }
+}
 
 impl ComplexityRefactoring {
     pub fn new() -> Self {
@@ -229,7 +225,7 @@ impl ComplexityRefactoring {
                 ))?,
             &text_content,
         )
-                .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
+        .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
 
         let file_path = code_document.file_path().clone();
         let mut s_exps = vec![];
@@ -330,7 +326,7 @@ impl ComplexityRefactoring {
                 Self::compute_complexity_annotations(
                     suggestion,
                     &function,
-                text_content,
+                    text_content,
                     id,
                     window_uid,
                 )?;
@@ -340,7 +336,7 @@ impl ComplexityRefactoring {
                 (
                     suggestion.clone(),
                     suggestion_start_pos,
-                suggestion_range,
+                    suggestion_range,
                     parent_node_kind,
                     node_kinds,
                 ),
@@ -361,19 +357,19 @@ impl ComplexityRefactoring {
                 let node_kinds = node_kinds.clone();
                 let parent_node_kind = parent_node_kind.clone();
 
-            let binded_text_content = text_content.clone();
-            let binded_text_content_2 = text_content.clone();
-            let binded_file_path = file_path.clone();
-            let binded_file_path_2 = file_path.clone();
-            let binded_suggestion = suggestion.clone();
-            let binded_id: Uuid = *id;
-            let binded_suggestions_arc = suggestions_arc.clone();
-            let binded_suggestions_arc2 = suggestions_arc.clone();
+                let binded_text_content = text_content.clone();
+                let binded_text_content_2 = text_content.clone();
+                let binded_file_path = file_path.clone();
+                let binded_file_path_2 = file_path.clone();
+                let binded_suggestion = suggestion.clone();
+                let binded_id: Uuid = *id;
+                let binded_suggestions_arc = suggestions_arc.clone();
+                let binded_suggestions_arc2 = suggestions_arc.clone();
 
                 let sender = sender.clone();
 
-            // For error reporting
-            let serialized_slice = suggestion.serialized_slice.clone();
+                // For error reporting
+                let serialized_slice = suggestion.serialized_slice.clone();
 
                 async move {
                     // SourceKit -> very heavy
@@ -407,24 +403,42 @@ impl ComplexityRefactoring {
                             .await;
                         }
                         Err(err) => match err {
-                        ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
-                            warn!(
-                                ?payload,
-                                ?serialized_slice,
-                                ?node_kinds,
-                                ?parent_node_kind,
-                                "LSP rejected refactoring"
-                            );
+                            ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
+                                warn!(
+                                    ?payload,
+                                    ?serialized_slice,
+                                    ?node_kinds,
+                                    ?parent_node_kind,
+                                    "LSP rejected refactoring"
+                                );
                                 true
-                        }
+                            }
                             _ => error!(?err, "Failed to perform refactoring"),
                         },
-                }
+                    }
                 }
             });
         }
 
         Ok(suggestions)
+    }
+
+    pub fn remove_suggestion_and_publish(
+        window_uid: &EditorWindowUid,
+        suggestion_id: &SuggestionId,
+        suggestions_arc: &Arc<
+            Mutex<HashMap<EditorWindowUid, HashMap<SuggestionId, RefactoringSuggestion>>>,
+        >,
+    ) -> Result<(), ComplexityRefactoringError> {
+        let mut suggestions_per_window = suggestions_arc.lock();
+        let suggestions = suggestions_per_window.get_mut(&window_uid).ok_or(
+            ComplexityRefactoringError::SuggestionsForWindowNotFound(*window_uid),
+        )?;
+
+        remove_annotations_for_suggestions(vec![*suggestion_id]);
+        suggestions.remove(&suggestion_id);
+        Self::publish_to_frontend(suggestions_per_window.clone());
+        Ok(())
     }
 
     fn compute_suggestions_for_function(
@@ -518,13 +532,13 @@ impl ComplexityRefactoring {
         file_path: Option<String>,
         window_uid: EditorWindowUid,
     ) {
-            let (old_content, new_content) =
-                Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
+        let (old_content, new_content) =
+            Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
-            suggestion.old_text_content_string = Some(old_content);
-            suggestion.new_text_content_string = Some(new_content);
-            suggestion.state = SuggestionState::Ready;
-            Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
+        suggestion.old_text_content_string = Some(old_content);
+        suggestion.new_text_content_string = Some(new_content);
+        suggestion.state = SuggestionState::Ready;
+        Self::update_suggestion(id, &suggestion, suggestions_arc, window_uid);
     }
 
     async fn format_and_apply_edits_to_text_content(
@@ -565,10 +579,8 @@ impl ComplexityRefactoring {
         suggestion_id: SuggestionId,
         suggestions_arc: SuggestionsArcMutex,
     ) -> Result<(), ComplexityRefactoringError> {
-        let suggestions = Self::get_suggestions_for_window(
-            suggestions_arc.clone(),
-            code_document.editor_window_props().window_uid,
-        );
+        let window_uid = code_document.editor_window_props().window_uid;
+        let suggestions = Self::get_suggestions_for_window(suggestions_arc.clone(), window_uid);
 
         let suggestion_to_apply = suggestions
             .get(&suggestion_id)
@@ -594,47 +606,34 @@ impl ComplexityRefactoring {
             .text_content()
             .ok_or(ComplexityRefactoringError::InsufficientContext)?;
 
-                match replace_text_content(
-                    &text_content,
-                    &XcodeText::from_str(&new_content),
+        match replace_text_content(
+            &text_content,
+            &XcodeText::from_str(&new_content),
             code_document.selected_text_range(),
-                )
-                .await
-                {
-                    Ok(_) => {}
-                    Err(err) => {
-                        error!(?err, "Error replacing text content");
-                return Err(ComplexityRefactoringError::GenericError(err.into()));
-                    }
-                }
-
-        let mut suggestions_per_window;
+        )
+        .await
         {
-            suggestions_per_window = suggestions_arc.lock().clone();
+            Ok(_) => {}
+            Err(err) => {
+                error!(?err, "Error replacing text content");
+                return Err(ComplexityRefactoringError::GenericError(err.into()));
+            }
         }
 
-        if let Some(suggestions) =
-            suggestions_per_window.get_mut(&code_document.editor_window_props().window_uid)
-        {
-                    suggestions.remove(&suggestion_id);
+        Self::remove_suggestion_and_publish(&window_uid, &suggestion_id, &suggestions_arc);
 
-                    remove_annotations_for_suggestions(vec![suggestion_id]);
-                    Self::publish_to_frontend(suggestions_per_window.clone());
-                }
-                }
-
-                match text_range_to_scroll_to_after_performing {
-                    Ok(range) => {
-                        _ = set_selected_text_range(&range, &GetVia::Current);
-                    }
-                    Err(e) => {
-                        error!(
-                            ?e,
-                            "Error getting final cursor position after performing suggestion"
-                        );
+        match text_range_to_scroll_to_after_performing {
+            Ok(range) => {
+                _ = set_selected_text_range(&range, &GetVia::Current);
+            }
+            Err(e) => {
+                error!(
+                    ?e,
+                    "Error getting final cursor position after performing suggestion"
+                );
                 return Err(e);
-                    }
-                }
+            }
+        }
 
         Ok(())
     }
@@ -737,8 +736,8 @@ impl ComplexityRefactoring {
             parent_node_kind,
             node_kinds,
         ))
+    }
 }
-            }
 
 fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
     suggestion: RefactoringSuggestion,
