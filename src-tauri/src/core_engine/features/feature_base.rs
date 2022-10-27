@@ -51,7 +51,7 @@ pub enum FeatureKind {
     Formatter,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FeatureProcedure {
     LongRunning,
     ShortRunning,

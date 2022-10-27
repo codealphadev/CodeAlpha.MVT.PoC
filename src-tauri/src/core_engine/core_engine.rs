@@ -52,7 +52,7 @@ impl From<XcodeError> for CoreEngineError {
 #[derive(Debug, Clone)]
 enum CodeDocUpdate {
     Finished,
-    Aborded,
+    Restarted,
 }
 
 type FeatureProcedureSchedule = HashMap<
@@ -86,7 +86,7 @@ pub struct CoreEngine {
 
     cancel_code_doc_update_task_send: Option<oneshot::Sender<&'static ()>>,
     finished_code_doc_update_task_recv: Option<Receiver<&'static CodeDocUpdate>>,
-    awaiting_code_doc_update_task: Arc<Mutex<()>>,
+    awaiting_code_doc_update_task: Arc<Mutex<bool>>,
 }
 
 impl CoreEngine {
@@ -141,7 +141,7 @@ impl CoreEngine {
             feature_procedures_schedule: Arc::new(Mutex::new(HashMap::new())),
             cancel_code_doc_update_task_send: Some(send),
             finished_code_doc_update_task_recv: None,
-            awaiting_code_doc_update_task: Arc::new(Mutex::new(())),
+            awaiting_code_doc_update_task: Arc::new(Mutex::new(false)),
             swift_format_on_cmd_s_active,
         }
     }
@@ -213,14 +213,14 @@ impl CoreEngine {
             let feature_procedures_schedule = self.feature_procedures_schedule.clone();
             let features = self.features.clone();
             let code_documents = self.code_documents.clone();
-            let code_doc_finished_recv = self.finished_code_doc_update_task_recv.take();
-            let awaiting_arc = self.awaiting_code_doc_update_task.clone();
+            let finished_code_doc_update_task_recv = self.finished_code_doc_update_task_recv.take();
+            let awaiting_code_doc_update_task = self.awaiting_code_doc_update_task.clone();
 
             async move {
-                if let Some(finished_recv) = code_doc_finished_recv {
+                if let Some(task_finished_recv) = finished_code_doc_update_task_recv {
+                    *awaiting_code_doc_update_task.lock() = true;
                     // Waiting for an ongoing code_doc update to finish before proceeding.
-                    let _ = awaiting_arc.lock();
-                    if let Ok(code_doc_update) = finished_recv.await {
+                    if let Ok(code_doc_update) = task_finished_recv.await {
                         match code_doc_update {
                             CodeDocUpdate::Finished => {
                                 Self::process_features(
@@ -228,14 +228,15 @@ impl CoreEngine {
                                     features,
                                     code_documents,
                                 );
+                                *awaiting_code_doc_update_task.lock() = false;
                             }
-                            CodeDocUpdate::Aborded => {
-                                // Syntax tree parsing task aborded.
+                            CodeDocUpdate::Restarted => {
+                                // Syntax tree parsing task restarted.
                             }
                         }
                     }
                 } else {
-                    if !awaiting_arc.is_locked() {
+                    if *awaiting_code_doc_update_task.lock() == false {
                         Self::process_features(
                             feature_procedures_schedule,
                             features,
@@ -358,7 +359,7 @@ impl CoreEngine {
 
                             }
                             _ = cancel_recv => {
-                                _ = code_doc_update_send.send(&CodeDocUpdate::Aborded);
+                                _ = code_doc_update_send.send(&CodeDocUpdate::Restarted);
                             }
                         }
                     }
@@ -413,9 +414,7 @@ impl CoreEngine {
                     },
                 }
             }
-            _ = sender.closed() => {
-                // OneShot Channel closed
-            }
+            _ = sender.closed() => {}
         })
     }
 
