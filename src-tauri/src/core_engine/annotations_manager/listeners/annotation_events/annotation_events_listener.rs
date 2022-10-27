@@ -34,10 +34,12 @@ pub fn annotation_events_listener(annotations_manager_arc: &Arc<Mutex<Annotation
                     annotations_manager.lock().remove_annotation_job_group(id);
                 }
                 AnnotationManagerEvent::ScrollToAnnotationInGroup((group_id, get_via)) => {
-                    if let Err(e) = annotations_manager
-                        .lock()
-                        .scroll_to_annotation(group_id, get_via)
-                    {
+                    let cancel_recv = annotations_manager.lock().reset_scroll_cancel_channel();
+                    if let Err(e) = annotations_manager.lock().scroll_to_annotation(
+                        group_id,
+                        get_via,
+                        cancel_recv,
+                    ) {
                         error!(?e, "Error scrolling to annotation");
                     }
                 }

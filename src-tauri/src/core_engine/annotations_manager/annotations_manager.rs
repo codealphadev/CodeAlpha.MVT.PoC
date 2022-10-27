@@ -3,15 +3,14 @@ use log::error;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
+use tokio::sync::{mpsc, oneshot};
 use ts_rs::TS;
 
 use crate::{
-    core_engine::{
-        events::AnnotationManagerEvent, features::FeatureKind, EditorWindowUid, TextRange,
-    },
+    core_engine::{features::FeatureKind, EditorWindowUid, TextRange},
     platform::macos::{
-        get_bounds_for_TextRange, get_minimal_viewport_properties, get_number_of_characters,
-        get_visible_text_range, scroll_by_one_page, GetVia, XcodeError,
+        get_bounds_for_TextRange, get_focused_window, get_minimal_viewport_properties,
+        get_number_of_characters, get_visible_text_range, scroll_by_one_page, GetVia, XcodeError,
     },
     utils::geometry::{LogicalFrame, LogicalPosition},
 };
@@ -22,16 +21,18 @@ use super::{
     VisibleTextRangePositioning,
 };
 
-static APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS: u64 = 125;
-
 #[derive(thiserror::Error, Debug)]
 pub enum AnnotationError {
     #[error("Annotation of the given job uid does not exist.")]
     AnnotationNotFound,
+    #[error("AnnotationGroup of the given group uid does not exist.")]
+    AnnotationGroupNotFound,
     #[error("The annotation char index is larger than the number of characters in the textarea.")]
     AnnotationOutOfReach,
     #[error("AnnotationGroup of the given uid does not exist.")]
     AnnotationJobGroupNotFound,
+    #[error("Annotation not related to currently focused editor windw.")]
+    AnnotationOnDifferentEditorWindow,
     #[error("Something went wrong when executing the AnnotationManager.")]
     GenericError(#[source] anyhow::Error),
 }
@@ -80,6 +81,7 @@ pub enum GetAnnotationInGroupVia {
     Id(uuid::Uuid),
     Kind(AnnotationKind),
 }
+#[derive(Clone, Debug, PartialEq)]
 pub enum ViewportPositioning {
     Visible,
     InvisibleAbove,
@@ -116,21 +118,21 @@ pub trait AnnotationsManagerTrait {
         &mut self,
         group_id: uuid::Uuid,
         get_job_via: GetAnnotationInGroupVia,
+        cancel_recv: oneshot::Receiver<&'static ()>,
     ) -> Result<(), AnnotationError>;
 }
 
 pub struct AnnotationsManager {
     groups: HashMap<uuid::Uuid, AnnotationJobGroup>,
 
-    // Because scrolling _takes time_ we want to allow to interrupt the scrolling process if the user wants to scroll to another annotation.
-    scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
+    cancel_scrolling_task_sender: Option<oneshot::Sender<&'static ()>>,
 }
 
 impl AnnotationsManagerTrait for AnnotationsManager {
     fn new() -> Self {
         Self {
             groups: HashMap::new(),
-            scroll_to_annotation_job_id: Arc::new(Mutex::new(None)),
+            cancel_scrolling_task_sender: None,
         }
     }
 
@@ -219,69 +221,73 @@ impl AnnotationsManagerTrait for AnnotationsManager {
         &mut self,
         group_id: uuid::Uuid,
         get_via: GetAnnotationInGroupVia,
+        cancel_recv: oneshot::Receiver<&'static ()>,
     ) -> Result<(), AnnotationError> {
         let annotation = self.get_annotation(group_id, get_via)?;
-        {
-            // If there is a another scroll to annotation job running, we want to interrupt it.
-            let mut scroll_to_annotation_job_id = self.scroll_to_annotation_job_id.lock();
-            if scroll_to_annotation_job_id.is_some()
-                && *scroll_to_annotation_job_id != Some(annotation.id)
-            {
-                return Ok(());
-            } else {
-                *scroll_to_annotation_job_id = Some(annotation.id);
-            }
-        }
+        let annotation_group = self.get_annotation_group(group_id)?;
 
-        // Safety net: check if annotation char_index is even reachable
-        if annotation.char_index as i32
-            >= get_number_of_characters(GetVia::Current)
-                .map_err(|e| AnnotationError::GenericError(e.into()))?
-        {
-            return Err(AnnotationError::AnnotationOutOfReach);
-        }
+        let (perform_scrolling_send, mut perform_scrolling_recv) = mpsc::channel(1);
 
         tauri::async_runtime::spawn({
-            let scroll_to_annotation_job_id = self.scroll_to_annotation_job_id.clone();
             async move {
-                let visible_text_range = if let Ok(range) = get_visible_text_range(GetVia::Current)
-                {
-                    range
-                } else {
-                    return;
-                };
+                tauri::async_runtime::spawn({
+                    async move {
+                        loop {
+                            if Self::scroll_check(&annotation, &annotation_group).is_err() {
+                                break;
+                            }
 
-                let viewport_positioning = Self::get_visibility_relative_to_viewport(
-                    annotation.char_index,
-                    &visible_text_range,
-                );
+                            let viewport_positioning = if let Ok(positioning) =
+                                Self::get_visibility_relative_to_viewport(
+                                    annotation.char_index,
+                                    None,
+                                ) {
+                                positioning
+                            } else {
+                                break;
+                            };
 
-                match viewport_positioning {
-                    VisibleTextRangePositioning::Visible => {
-                        _ = Self::scroll_procedure_if_annotation_within_visible_text_range(
-                            &annotation,
-                            group_id,
-                            scroll_to_annotation_job_id,
-                        )
-                        .await;
+                            let positioning = match viewport_positioning {
+                                VisibleTextRangePositioning::Visible => {
+                                    Self::scroll_procedure_if_annotation_within_visible_text_range(
+                                        &annotation,
+                                        perform_scrolling_send.clone(),
+                                    )
+                                    .await
+                                }
+                                VisibleTextRangePositioning::InvisibleAbove => {
+                                    Self::scroll_procedure_if_annotation_outside_visible_text_range(
+                                        VisibleTextRangePositioning::InvisibleAbove,
+                                        perform_scrolling_send.clone(),
+                                    )
+                                    .await
+                                }
+                                VisibleTextRangePositioning::InvisibleBelow => {
+                                    Self::scroll_procedure_if_annotation_outside_visible_text_range(
+                                        VisibleTextRangePositioning::InvisibleBelow,
+                                        perform_scrolling_send.clone(),
+                                    )
+                                    .await
+                                }
+                            };
+
+                            if let Ok(positioning) = positioning {
+                                if positioning == ViewportPositioning::Visible {
+                                    break;
+                                }
+                            } else {
+                                break;
+                            }
+                        }
                     }
-                    VisibleTextRangePositioning::InvisibleAbove => {
-                        _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
-                            VisibleTextRangePositioning::InvisibleAbove,
-                            &annotation,
-                            group_id,
-                            scroll_to_annotation_job_id,
-                        )
-                        .await;
+                });
+
+                tokio::select! {
+                    _ = perform_scrolling_recv.recv() => {
+                        // Scrolling finished
                     }
-                    VisibleTextRangePositioning::InvisibleBelow => {
-                        _ = Self::scroll_procedure_if_annotation_outside_visible_text_range(
-                            VisibleTextRangePositioning::InvisibleBelow,
-                            &annotation,
-                            group_id,
-                            scroll_to_annotation_job_id,
-                        )
-                        .await;
+                    _ = cancel_recv => {
+                        // Scrolling cancelled
                     }
                 }
             }
@@ -297,17 +303,49 @@ impl AnnotationsManager {
         xcode_listener(annotations_manager);
     }
 
+    pub fn reset_scroll_cancel_channel(&mut self) -> oneshot::Receiver<&'static ()> {
+        if let Some(sender) = self.cancel_scrolling_task_sender.take() {
+            // Cancel previous task if it exists.
+            _ = sender.send(&());
+        }
+
+        let (send, recv) = oneshot::channel();
+        self.cancel_scrolling_task_sender = Some(send);
+        recv
+    }
+
     pub fn get_visibility_relative_to_viewport(
         char_index: usize,
-        visible_text_range: &TextRange,
-    ) -> VisibleTextRangePositioning {
-        if char_index < visible_text_range.index {
-            VisibleTextRangePositioning::InvisibleAbove
-        } else if char_index > visible_text_range.index + visible_text_range.length {
-            VisibleTextRangePositioning::InvisibleBelow
+        visible_text_range: Option<&TextRange>,
+    ) -> Result<VisibleTextRangePositioning, AnnotationError> {
+        let visible_text_range = if let Some(visible_text_range) = visible_text_range {
+            visible_text_range.to_owned()
         } else {
-            VisibleTextRangePositioning::Visible
+            get_visible_text_range(GetVia::Current)
+                .map_err(|e| AnnotationError::GenericError(e.into()))?
+        };
+
+        if char_index < visible_text_range.index {
+            Ok(VisibleTextRangePositioning::InvisibleAbove)
+        } else if char_index > visible_text_range.index + visible_text_range.length {
+            Ok(VisibleTextRangePositioning::InvisibleBelow)
+        } else {
+            Ok(VisibleTextRangePositioning::Visible)
         }
+    }
+
+    fn get_annotation_group(
+        &self,
+        group_id: uuid::Uuid,
+    ) -> Result<AnnotationGroup, AnnotationError> {
+        let job_group = self
+            .groups
+            .get(&group_id)
+            .ok_or(AnnotationError::AnnotationJobGroupNotFound)?;
+
+        job_group
+            .get_annotation_group()
+            .ok_or(AnnotationError::AnnotationGroupNotFound)
     }
 
     fn get_annotation(
@@ -355,37 +393,56 @@ impl AnnotationsManager {
         }
     }
 
-    async fn scroll_procedure_if_annotation_outside_visible_text_range(
-        positioning_relative_viewport: VisibleTextRangePositioning,
+    fn scroll_check(
         annotation: &Annotation,
-        group_id: uuid::Uuid,
-        scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
+        annotation_group: &AnnotationGroup,
     ) -> Result<(), AnnotationError> {
-        match positioning_relative_viewport {
-            VisibleTextRangePositioning::Visible => panic!("Should not happen"),
-            VisibleTextRangePositioning::InvisibleAbove => {
-                _ = scroll_by_one_page(true).await;
-            }
-            VisibleTextRangePositioning::InvisibleBelow => {
-                _ = scroll_by_one_page(false).await;
-            }
+        // Check if annotation group is tied to currently focused editor window
+        if annotation_group.editor_window_uid
+            != get_focused_window().map_err(|e| {
+                AnnotationError::GenericError(anyhow!("Could not get focused window: {}", e))
+            })?
+        {
+            return Err(AnnotationError::AnnotationOnDifferentEditorWindow);
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(
-            APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
-        ))
-        .await;
-
-        Self::reschedule_scroll_event(scroll_to_annotation_job_id, annotation, group_id);
+        // Safety net: check if annotation char_index is even reachable
+        if annotation.char_index as i32
+            >= get_number_of_characters(GetVia::Current)
+                .map_err(|e| AnnotationError::GenericError(e.into()))?
+        {
+            return Err(AnnotationError::AnnotationOutOfReach);
+        }
 
         Ok(())
     }
 
+    async fn scroll_procedure_if_annotation_outside_visible_text_range(
+        positioning_relative_viewport: VisibleTextRangePositioning,
+        sender: mpsc::Sender<()>,
+    ) -> Result<ViewportPositioning, AnnotationError> {
+        let viewport_positioning;
+        match positioning_relative_viewport {
+            VisibleTextRangePositioning::Visible => {
+                panic!("Should not happen");
+            }
+            VisibleTextRangePositioning::InvisibleAbove => {
+                scroll_by_one_page(true, sender).await?;
+                viewport_positioning = ViewportPositioning::InvisibleAbove;
+            }
+            VisibleTextRangePositioning::InvisibleBelow => {
+                scroll_by_one_page(false, sender).await?;
+                viewport_positioning = ViewportPositioning::InvisibleBelow;
+            }
+        }
+
+        Ok(viewport_positioning)
+    }
+
     async fn scroll_procedure_if_annotation_within_visible_text_range(
         annotation: &Annotation,
-        group_id: uuid::Uuid,
-        scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
-    ) -> Result<(), AnnotationError> {
+        sender: mpsc::Sender<()>,
+    ) -> Result<ViewportPositioning, AnnotationError> {
         let annotation_top_left =
             match annotation
                 .shapes
@@ -397,27 +454,21 @@ impl AnnotationsManager {
                 AnnotationShape::Point(position) => *position,
             };
 
-        match Self::annotation_visible_on_viewport(annotation_top_left)? {
+        let viewport_position = Self::annotation_visible_on_viewport(annotation_top_left)?;
+
+        match viewport_position {
             ViewportPositioning::Visible => {
-                *scroll_to_annotation_job_id.lock() = None;
-                return Ok(());
+                // Do nothing
             }
             ViewportPositioning::InvisibleAbove => {
-                _ = scroll_by_one_page(true).await;
+                scroll_by_one_page(true, sender).await?;
             }
             ViewportPositioning::InvisibleBelow => {
-                _ = scroll_by_one_page(false).await;
+                scroll_by_one_page(false, sender).await?;
             }
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(
-            APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
-        ))
-        .await;
-
-        Self::reschedule_scroll_event(scroll_to_annotation_job_id, annotation, group_id);
-
-        Ok(())
+        Ok(viewport_position)
     }
 
     fn annotation_visible_on_viewport(
@@ -435,20 +486,6 @@ impl AnnotationsManager {
             Ok(ViewportPositioning::InvisibleBelow)
         } else {
             Ok(ViewportPositioning::Visible)
-        }
-    }
-
-    fn reschedule_scroll_event(
-        scroll_to_annotation_job_id: Arc<Mutex<Option<uuid::Uuid>>>,
-        annotation: &Annotation,
-        group_id: uuid::Uuid,
-    ) {
-        if *scroll_to_annotation_job_id.lock() == Some(annotation.id) {
-            AnnotationManagerEvent::ScrollToAnnotationInGroup((
-                group_id,
-                GetAnnotationInGroupVia::Id(annotation.id),
-            ))
-            .publish_to_tauri();
         }
     }
 }

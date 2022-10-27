@@ -1,7 +1,9 @@
 use rdev::{simulate, EventType};
+use tokio::sync::mpsc;
 
 use crate::{core_engine::TextRange, utils::geometry::LogicalSize};
 
+use anyhow::anyhow;
 use tracing::error;
 
 use super::{
@@ -75,15 +77,34 @@ pub fn scroll_dist_viewport_to_TextRange_start(
     )))
 }
 
-pub async fn scroll_by_one_page(scroll_up: bool) -> Result<(), XcodeError> {
-    if is_focused_uielement_xcode_editor_textarea()? {
+static APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS: u64 = 125;
+
+pub async fn scroll_by_one_page(
+    scroll_up: bool,
+    sender: mpsc::Sender<()>,
+) -> Result<(), XcodeError> {
+    tokio::select! {
+        res = simulate_page_scroll(scroll_up) => {
+            return res;
+        }
+        _ = sender.closed() => {
+            return Err(XcodeError::GenericError(anyhow!("Scrolling was cancelled")));
+        }
+    }
+}
+
+async fn simulate_page_scroll(scroll_up: bool) -> Result<(), XcodeError> {
+    Ok(if is_focused_uielement_xcode_editor_textarea()? {
         // https://stackoverflow.com/questions/4965730/how-do-i-scroll-to-the-top-of-a-window-using-applescript
         if scroll_up {
             _ = simulate(&EventType::KeyPress(rdev::Key::Unknown(0x74)));
         } else {
             _ = simulate(&EventType::KeyPress(rdev::Key::Unknown(0x79)));
         }
-    }
 
-    Ok(())
+        tokio::time::sleep(std::time::Duration::from_millis(
+            APPROX_SCROLL_DURATION_PAGE_UP_DOWN_MS,
+        ))
+        .await
+    })
 }
