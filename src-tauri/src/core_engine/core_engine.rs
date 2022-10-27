@@ -4,12 +4,14 @@ use parking_lot::Mutex;
 use strum::IntoEnumIterator;
 use tauri::Manager;
 use tokio::sync::oneshot::{self, Receiver};
-use tracing::{debug, error};
+use tracing::error;
 
 use crate::{
     app_handle,
     app_state::CoreEngineStateCache,
-    platform::macos::{get_textarea_content, get_textarea_file_path, GetVia, XcodeError},
+    platform::macos::{
+        get_selected_text_range, get_textarea_content, get_textarea_file_path, GetVia, XcodeError,
+    },
 };
 
 use super::{
@@ -22,7 +24,7 @@ use super::{
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     log_list_of_module_names,
     syntax_tree::SwiftSyntaxTree,
-    CodeDocument, EditorWindowProps, TextRange, XcodeText,
+    CodeDocument, EditorWindowProps, XcodeText,
 };
 
 pub type EditorWindowUid = usize;
@@ -52,7 +54,7 @@ impl From<XcodeError> for CoreEngineError {
 #[derive(Debug, Clone)]
 enum CodeDocUpdate {
     Finished,
-    Restarted,
+    Canceled,
 }
 
 type FeatureProcedureSchedule = HashMap<
@@ -130,8 +132,6 @@ impl CoreEngine {
             ))),
         );
 
-        let (send, _) = oneshot::channel();
-
         Self {
             app_handle: app_handle(),
             code_documents: Arc::new(Mutex::new(HashMap::new())),
@@ -139,7 +139,7 @@ impl CoreEngine {
             features: Arc::new(Mutex::new(features)),
             _annotations_manager: annotations_manager,
             feature_procedures_schedule: Arc::new(Mutex::new(HashMap::new())),
-            cancel_code_doc_update_task_send: Some(send),
+            cancel_code_doc_update_task_send: None,
             finished_code_doc_update_task_recv: None,
             awaiting_code_doc_update_task: Arc::new(Mutex::new(false)),
             swift_format_on_cmd_s_active,
@@ -154,18 +154,18 @@ impl CoreEngine {
         self.swift_format_on_cmd_s_active = active;
     }
 
-    pub fn run_features(
+    pub fn handling_trigger(
         &mut self,
         editor_window_uid: EditorWindowUid,
         trigger: CoreEngineTrigger,
-        text_range: Option<&TextRange>,
     ) -> Result<(), CoreEngineError> {
         self.schedule_feature_procedures(&trigger, editor_window_uid);
 
-        let finished_recv = self.compute_code_doc_updates(text_range, editor_window_uid, &trigger);
-
-        if finished_recv.is_some() {
-            self.finished_code_doc_update_task_recv = finished_recv;
+        if trigger == CoreEngineTrigger::OnTextContentChange
+            || trigger == CoreEngineTrigger::OnTextSelectionChange
+        {
+            self.finished_code_doc_update_task_recv =
+                Some(self.compute_code_doc_updates(editor_window_uid));
         }
 
         self.process_features_schedule();
@@ -181,13 +181,8 @@ impl CoreEngine {
         let mut feature_procedures_schedule = self.feature_procedures_schedule.lock();
 
         for feature_kind in FeatureKind::iter() {
-            match feature_kind {
-                FeatureKind::Formatter => {
-                    if !self.swift_format_on_cmd_s_active {
-                        continue;
-                    }
-                }
-                _ => {}
+            if feature_kind == FeatureKind::Formatter && !self.swift_format_on_cmd_s_active {
+                continue;
             }
 
             if feature_kind.requires_ai() && !self.ai_features_active {
@@ -230,7 +225,7 @@ impl CoreEngine {
                                 );
                                 *awaiting_code_doc_update_task.lock() = false;
                             }
-                            CodeDocUpdate::Restarted => {
+                            CodeDocUpdate::Canceled => {
                                 // Syntax tree parsing task restarted.
                             }
                         }
@@ -294,9 +289,9 @@ impl CoreEngine {
         });
     }
 
-    fn reset_cancellation_channel(&mut self) -> oneshot::Receiver<&'static ()> {
+    fn cancel_code_doc_update(&mut self) -> oneshot::Receiver<&'static ()> {
         if let Some(sender) = self.cancel_code_doc_update_task_send.take() {
-            // Cancel previous task if it exists.
+            // Cancel previous code doc update task if it exists.
             _ = sender.send(&());
         }
 
@@ -307,70 +302,59 @@ impl CoreEngine {
 
     fn compute_code_doc_updates(
         &mut self,
-        text_range: Option<&TextRange>,
         window_uid: EditorWindowUid,
-        trigger: &CoreEngineTrigger,
-    ) -> Option<Receiver<&'static CodeDocUpdate>> {
-        let (ast_compute_send, ast_compute_recv) = oneshot::channel();
+    ) -> Receiver<&'static CodeDocUpdate> {
         let (code_doc_update_send, code_doc_update_recv) = oneshot::channel();
+        let (ast_compute_send, ast_compute_recv) = oneshot::channel();
 
-        match trigger {
-            CoreEngineTrigger::OnTextContentChange | CoreEngineTrigger::OnTextSelectionChange => {
-                let cancel_recv = self.reset_cancellation_channel();
+        let cancel_recv = self.cancel_code_doc_update();
 
+        tauri::async_runtime::spawn({
+            let code_documents_arc = self.code_documents.clone();
+
+            async move {
+                // Spin up task to compute syntax tree
                 tauri::async_runtime::spawn({
-                    let code_documents = self.code_documents.clone();
-                    let text_range = text_range.cloned();
+                    let code_documents_arc = code_documents_arc.clone();
 
                     async move {
-                        // Spin up task to compute syntax tree
-                        tauri::async_runtime::spawn({
-                            let code_documents_arc = code_documents.clone();
-
-                            async move {
-                                if let Err(e) = Self::compute_abstract_syntax_tree(
-                                    code_documents_arc,
-                                    window_uid,
-                                    ast_compute_send,
-                                )
-                                .await
-                                {
-                                    debug!("Error in compute_abstract_syntax_tree: {:?}", e);
-                                }
-                            }
-                        });
-
-                        tokio::select! {
-                            recv_res = ast_compute_recv => {
-                                match recv_res {
-                                    Ok(tree_option) => {
-                                        _ = Self::update_code_document(
-                                            code_documents,
-                                            window_uid,
-                                            tree_option,
-                                            text_range,
-                                        );
-                                        _ = code_doc_update_send.send(&CodeDocUpdate::Finished);
-                                    }
-                                    Err(_) => {
-                                        // Channel closed
-                                    },
-                                }
-
-                            }
-                            _ = cancel_recv => {
-                                _ = code_doc_update_send.send(&CodeDocUpdate::Restarted);
-                            }
+                        if let Err(e) = Self::compute_abstract_syntax_tree(
+                            code_documents_arc,
+                            window_uid,
+                            ast_compute_send,
+                        )
+                        .await
+                        {
+                            error!("Error in compute_abstract_syntax_tree: {:?}", e);
                         }
                     }
                 });
-            }
-            _ => {
-                return None;
-            }
-        };
 
-        Some(code_doc_update_recv)
+                tokio::select! {
+                    recv_res = ast_compute_recv => {
+                        match recv_res {
+                            Ok(tree_option) => {
+                                _ = Self::update_code_document(
+                                    code_documents_arc,
+                                    window_uid,
+                                    tree_option,
+                                );
+                                _ = code_doc_update_send.send(&CodeDocUpdate::Finished);
+                            }
+                            Err(_) => {
+                                // Channel closed
+                            },
+                        }
+
+                    }
+                    _ = cancel_recv => {
+                        _ = code_doc_update_send.send(&CodeDocUpdate::Canceled);
+                    }
+                }
+            }
+        });
+
+        return code_doc_update_recv;
     }
 
     pub async fn compute_abstract_syntax_tree(
@@ -422,7 +406,6 @@ impl CoreEngine {
         code_documents: Arc<Mutex<HashMap<EditorWindowUid, CodeDocument>>>,
         window_uid: EditorWindowUid,
         syntax_tree: Option<SwiftSyntaxTree>,
-        text_range: Option<TextRange>,
     ) -> Result<(), CoreEngineError> {
         let mut code_docs_arc = code_documents.lock();
         let code_doc = code_docs_arc
@@ -441,9 +424,10 @@ impl CoreEngine {
             code_doc.update_code_text(syntax_tree, file_path);
         }
 
-        if let Some(text_range) = text_range {
-            code_doc.update_selected_text_range(text_range);
-        }
+        let text_range = get_selected_text_range(&GetVia::Hash(window_uid))
+            .map_err(|e| CoreEngineError::GenericError(e.into()))?;
+
+        code_doc.update_selected_text_range(text_range);
 
         Ok(())
     }

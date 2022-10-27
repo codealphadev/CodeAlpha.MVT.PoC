@@ -13,9 +13,8 @@ pub fn on_app_activated(
 ) -> Result<(), CoreEngineError> {
     let mut core_engine = core_engine_arc.lock();
 
-    core_engine.run_features(
+    core_engine.handling_trigger(
         activated_msg.window_uid,
         CoreEngineTrigger::OnTextSelectionChange,
-        None,
     )
 }
