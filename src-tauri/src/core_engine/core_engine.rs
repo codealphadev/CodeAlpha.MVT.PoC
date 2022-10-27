@@ -183,6 +183,7 @@ impl CoreEngine {
 
             async move {
                 if let Some(finished_recv) = code_doc_finished_recv {
+                    // Waiting for an ongoing code_doc update to finish before proceeding.
                     let _ = awaiting_arc.lock();
                     if let Ok(code_doc_update) = finished_recv.await {
                         match code_doc_update {
@@ -241,20 +242,19 @@ impl CoreEngine {
         code_doc: CodeDocument,
         feature: &mut Arc<Mutex<Feature>>,
     ) {
-        tauri::async_runtime::spawn({
-            let trigger = trigger.clone();
-            let feature = feature.clone();
-            async move {
-                match procedure {
-                    FeatureProcedure::LongRunning => feature
-                        .lock()
-                        .compute_long_running(code_doc, &trigger, None),
-                    FeatureProcedure::ShortRunning => {
-                        feature.lock().compute_short_running(code_doc, &trigger)
-                    }
-                }
+        let trigger = trigger.clone();
+        let feature = feature.clone();
+
+        if let Err(e) = match procedure {
+            FeatureProcedure::LongRunning => feature
+                .lock()
+                .compute_long_running(code_doc, &trigger, None),
+            FeatureProcedure::ShortRunning => {
+                feature.lock().compute_short_running(code_doc, &trigger)
             }
-        });
+        } {
+            error!("Error while running feature: {}", e);
+        }
     }
 
     fn schedule_feature_procedures(
