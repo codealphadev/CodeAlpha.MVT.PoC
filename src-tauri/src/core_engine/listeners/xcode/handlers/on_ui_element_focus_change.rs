@@ -3,11 +3,7 @@ use std::sync::Arc;
 
 use crate::{
     core_engine::{core_engine::CoreEngineError, features::CoreEngineTrigger, CoreEngine},
-    platform::macos::{
-        get_selected_text_range,
-        models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
-        GetVia,
-    },
+    platform::macos::models::editor::{EditorUIElementFocusedMessage, FocusedUIElement},
 };
 
 pub fn on_editor_focused_uielement_changed(
@@ -34,15 +30,8 @@ pub fn on_editor_focused_uielement_changed(
     let core_engine = &mut core_engine_arc.lock();
     core_engine.add_code_document(pid, window_uid);
 
-    let selected_text_range = get_selected_text_range(&GetVia::Pid(pid))?;
-
-    _ = core_engine.run_features(
-        window_uid,
-        CoreEngineTrigger::OnTextSelectionChange,
-        Some(&selected_text_range),
-    );
-
-    _ = core_engine.run_features(window_uid, CoreEngineTrigger::OnTextContentChange, None);
+    _ = core_engine.handling_trigger(window_uid, CoreEngineTrigger::OnTextSelectionChange);
+    _ = core_engine.handling_trigger(window_uid, CoreEngineTrigger::OnTextContentChange);
 
     Ok(())
 }
