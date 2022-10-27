@@ -325,12 +325,14 @@ impl CoreEngine {
                         tauri::async_runtime::spawn({
                             let code_documents = code_documents.clone();
 
-                            let previous_tree;
-                            {
+                            let previous_tree = {
                                 let mut code_docs = code_documents.lock();
-                                let code_doc = code_docs.get_mut(&window_uid).unwrap();
-                                previous_tree = code_doc.syntax_tree().cloned();
-                            }
+                                let code_doc = code_docs.get_mut(&window_uid);
+                                match code_doc {
+                                    Some(code_doc) => code_doc.syntax_tree().cloned(),
+                                    None => return,
+                                }
+                            };
 
                             async move {
                                 if let Err(e) = Self::compute_abstract_syntax_tree(
