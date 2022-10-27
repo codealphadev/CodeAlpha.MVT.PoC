@@ -60,7 +60,9 @@ impl SwiftSyntaxTree {
         previous_tree: Option<SwiftSyntaxTree>,
     ) -> Result<Self, SwiftSyntaxTreeError> {
         // We wait for a very short time in order to allow quickly subsequently scheduled calls to cancel this one
-        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        // There are occasions where we receive multiple calls to this function in a very short time frame (e.g. on typing always triggers TextContentChange and SelectedTextChange)
+        // It is three because we are three cofounders.
+        tokio::time::sleep(std::time::Duration::from_millis(3)).await;
 
         let (send, recv) = oneshot::channel();
 

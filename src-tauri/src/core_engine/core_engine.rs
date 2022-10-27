@@ -208,12 +208,18 @@ impl CoreEngine {
             let feature_procedures_schedule = self.feature_procedures_schedule.clone();
             let features = self.features.clone();
             let code_documents = self.code_documents.clone();
-            let finished_code_doc_update_task_recv = self.finished_code_doc_update_task_recv.take();
             let awaiting_code_doc_update_task = self.awaiting_code_doc_update_task.clone();
+
+            let finished_code_doc_update_task_recv =
+                if self.finished_code_doc_update_task_recv.is_some() {
+                    *awaiting_code_doc_update_task.lock() = true;
+                    self.finished_code_doc_update_task_recv.take()
+                } else {
+                    None
+                };
 
             async move {
                 if let Some(task_finished_recv) = finished_code_doc_update_task_recv {
-                    *awaiting_code_doc_update_task.lock() = true;
                     // Waiting for an ongoing code_doc update to finish before proceeding.
                     if let Ok(code_doc_update) = task_finished_recv.await {
                         match code_doc_update {
@@ -260,6 +266,12 @@ impl CoreEngine {
                     procedure.to_owned(),
                     code_doc.to_owned(),
                     feature,
+                );
+            } else {
+                error!(
+                    ?feature_kind,
+                    ?window_uid,
+                    "Feature or code document not found.",
                 );
             }
         }
@@ -345,7 +357,6 @@ impl CoreEngine {
                                 // Channel closed
                             },
                         }
-
                     }
                     _ = cancel_recv => {
                         _ = code_doc_update_send.send(&CodeDocUpdate::Canceled);
@@ -371,18 +382,18 @@ impl CoreEngine {
                 .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
             previous_ast = code_doc.syntax_tree().cloned();
+        }
 
-            let code_text = get_textarea_content(&GetVia::Hash(window_uid))
-                .map_err(|e| CoreEngineError::GenericError(e.into()))?;
+        let code_text = get_textarea_content(&GetVia::Hash(window_uid))
+            .map_err(|e| CoreEngineError::GenericError(e.into()))?;
 
-            code_text_u16 = XcodeText::from_str(&code_text);
+        code_text_u16 = XcodeText::from_str(&code_text);
 
-            if let Some(ref previous_ast) = previous_ast {
-                if code_text_u16 == *previous_ast.text_content() {
-                    // No change in text, return previous tree
-                    _ = sender.send(None);
-                    return Ok(());
-                }
+        if let Some(ref previous_ast) = previous_ast {
+            if code_text_u16 == *previous_ast.text_content() {
+                // No change in text
+                _ = sender.send(None);
+                return Ok(());
             }
         }
 
@@ -395,6 +406,7 @@ impl CoreEngine {
                     },
                     Err(e) => {
                         error!("Error while computing AST: {}", e);
+                        _ = sender.send(None);
                     },
                 }
             }

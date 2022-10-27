@@ -28,7 +28,7 @@ pub trait Lsp {
 impl Lsp for SwiftLsp {
     async fn make_lsp_request(payload: String) -> Result<String, SwiftLspError> {
         // We wait for a very short time in order to allow quickly subsequently scheduled calls to cancel this one
-        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(3)).await;
 
         let (send, recv) = oneshot::channel();
 
@@ -77,7 +77,7 @@ impl Lsp for SwiftLsp {
                             CommandEvent::Error(err) => {
                                 error!("Error while running sourcekitten: {}", err);
                             }
-                            _ => todo!(),
+                            _ => {}
                         }
                     }
 

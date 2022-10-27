@@ -1,8 +1,9 @@
 use super::{
+    create_annotation_group_for_extraction_and_context,
     procedures::{self, perform_suggestion},
-    set_annotation_group_for_extraction_and_context, ComplexityRefactoringShortRunningProcedure,
-    FERefactoringSuggestion, NodeSlice, RefactoringSuggestion, SuggestionHash, SuggestionId,
-    SuggestionState, SuggestionsArcMutex, SuggestionsPerWindow,
+    ComplexityRefactoringShortRunningProcedure, FERefactoringSuggestion, NodeSlice,
+    RefactoringSuggestion, SuggestionHash, SuggestionId, SuggestionState, SuggestionsArcMutex,
+    SuggestionsPerWindow,
 };
 use crate::{
     app_handle,
@@ -44,7 +45,7 @@ lazy_static! {
 pub struct ComplexityRefactoring {
     is_activated: bool,
     suggestions_arc: SuggestionsArcMutex,
-    dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
+    dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
 
     cancel_long_running_task_send: Option<oneshot::Sender<&'static ()>>,
 }
@@ -61,7 +62,7 @@ impl FeatureBase for ComplexityRefactoring {
 
         if let Some(procedure) = self.determine_short_running_procedure(trigger) {
             tauri::async_runtime::spawn({
-                let dismissed_suggestions = self.dismissed_suggestions.clone();
+                let dismissed_suggestions_arc = self.dismissed_suggestions_arc.clone();
                 let suggestions_arc = self.suggestions_arc.clone();
 
                 async move {
@@ -74,7 +75,7 @@ impl FeatureBase for ComplexityRefactoring {
                                 code_document,
                                 id,
                                 suggestions_arc,
-                                dismissed_suggestions,
+                                dismissed_suggestions_arc,
                             )
                             .await
                         }
@@ -99,13 +100,14 @@ impl FeatureBase for ComplexityRefactoring {
             return Ok(());
         }
 
-        let cancel_recv = self.reset_cancellation_channel();
+        let cancelation_event_recv = self.cancel_complexity_refactoring_task();
 
+        // See Tokio Select Cancellation pattern -> https://tokio.rs/tokio/tutorial/select, chapter Canceling
         let (compute_long_running_send, mut compute_long_running_recv) =
             tokio::sync::mpsc::channel(1);
 
         tauri::async_runtime::spawn({
-            let dismissed_suggestions = self.dismissed_suggestions.clone();
+            let dismissed_suggestions = self.dismissed_suggestions_arc.clone();
             let suggestions_arc = self.suggestions_arc.clone();
 
             async move {
@@ -129,7 +131,7 @@ impl FeatureBase for ComplexityRefactoring {
                     _ = compute_long_running_recv.recv() => {
                         // Finished computing complexity refactoring suggestions
                     }
-                    _ = cancel_recv => {
+                    _ = cancelation_event_recv => {
                         // Cancelled computing complexity refactoring suggestions
                     }
                 }
@@ -165,12 +167,14 @@ impl ComplexityRefactoring {
         Self {
             suggestions_arc: Arc::new(Mutex::new(HashMap::new())),
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
-            dismissed_suggestions: Arc::new(Mutex::new(procedures::read_dismissed_suggestions())),
+            dismissed_suggestions_arc: Arc::new(Mutex::new(
+                procedures::read_dismissed_suggestions(),
+            )),
             cancel_long_running_task_send: None,
         }
     }
 
-    fn reset_cancellation_channel(&mut self) -> oneshot::Receiver<&'static ()> {
+    fn cancel_complexity_refactoring_task(&mut self) -> oneshot::Receiver<&'static ()> {
         if let Some(sender) = self.cancel_long_running_task_send.take() {
             // Cancel previous task if it exists.
             _ = sender.send(&());
@@ -298,7 +302,7 @@ impl ComplexityRefactoring {
         window_uid: EditorWindowUid,
         sender: tokio::sync::mpsc::Sender<()>,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
-        // This is heavy, should be done in parallel -> rayon, but since it takes TSTree which is not sent this is not trivial.
+        // This is heavy, should be done in parallel -> rayon, but since it takes TSNodes which is not sent this is not trivial.
         let mut suggestions = Self::compute_suggestions_for_function(
             &function,
             suggestions_arc.clone(),
@@ -321,14 +325,20 @@ impl ComplexityRefactoring {
         > = HashMap::new();
 
         for (id, suggestion) in suggestions.iter_mut() {
-            let (suggestion_start_pos, suggestion_range, parent_node_kind, node_kinds) =
-                Self::compute_complexity_annotations(
-                    suggestion,
-                    &function,
-                    text_content,
-                    id,
-                    window_uid,
-                )?;
+            let (
+                suggestion_start_pos,
+                suggestion_range,
+                parent_node_kind,
+                node_kinds,
+                context_range,
+            ) = Self::compute_suggestion_metadata(suggestion, &function, text_content)?;
+
+            create_annotation_group_for_extraction_and_context(
+                *id,
+                context_range,
+                suggestion_range,
+                window_uid,
+            );
 
             suggestions_and_meta_infos.insert(
                 *id,
@@ -629,18 +639,25 @@ impl ComplexityRefactoring {
         }
     }
 
-    fn compute_complexity_annotations<'a>(
+    fn compute_suggestion_metadata<'a>(
         suggestion: &'a mut RefactoringSuggestion,
         function: &'a SwiftFunction,
         text_content: &'a XcodeText,
-        id: &'a Uuid,
-        window_uid: usize,
-    ) -> Result<(TextPosition, TextRange, Option<String>, Vec<String>), ComplexityRefactoringError>
-    {
+    ) -> Result<
+        (
+            TextPosition,
+            TextRange,
+            Option<String>,
+            Vec<String>,
+            TextRange,
+        ),
+        ComplexityRefactoringError,
+    > {
         let slice = NodeSlice::deserialize(&suggestion.serialized_slice, function.props.node)?;
         let suggestion_start_pos = TextPosition::from_TSPoint(&slice.nodes[0].start_position());
         let suggestion_end_pos =
             TextPosition::from_TSPoint(&slice.nodes.last().unwrap().end_position());
+
         let suggestion_range = TextRange::from_StartEndTextPosition(
             text_content,
             &suggestion_start_pos,
@@ -649,6 +666,7 @@ impl ComplexityRefactoring {
         .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
             "Failed to derive suggestion range"
         )))?;
+
         let context_range = TextRange::from_StartEndTextPosition(
             &text_content,
             &function.get_first_char_position(),
@@ -657,13 +675,8 @@ impl ComplexityRefactoring {
         .ok_or(ComplexityRefactoringError::GenericError(anyhow!(
             "Failed to derive context range"
         )))?;
+
         suggestion.start_index = Some(suggestion_range.index);
-        set_annotation_group_for_extraction_and_context(
-            *id,
-            context_range,
-            suggestion_range,
-            window_uid,
-        );
 
         let node_kinds = slice
             .nodes
@@ -682,6 +695,7 @@ impl ComplexityRefactoring {
             suggestion_range,
             parent_node_kind,
             node_kinds,
+            context_range,
         ))
     }
 }
