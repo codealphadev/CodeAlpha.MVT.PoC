@@ -1,6 +1,5 @@
-use std::path::{Path, PathBuf};
-use tauri::api::process::{Command, CommandEvent};
-use tracing::{debug, error, info};
+use std::path::PathBuf;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::core_engine::features::FeatureKind;
@@ -11,7 +10,6 @@ use crate::{
     core_engine::{
         events::EventRuleExecutionState,
         features::{CoreEngineTrigger, FeatureBase, FeatureError},
-        rules::TemporaryFileOnDisk,
         utils::XcodeText,
         CodeDocument,
     },
