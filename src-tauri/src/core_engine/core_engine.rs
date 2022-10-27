@@ -57,15 +57,15 @@ enum CodeDocUpdate {
     Canceled,
 }
 
-type FeatureProcedureSchedule = HashMap<
-    u64,
-    (
-        FeatureKind,
-        CoreEngineTrigger,
-        FeatureProcedure,
-        EditorWindowUid,
-    ),
->;
+#[derive(Debug, Clone)]
+pub struct CoreEngineProcedure {
+    pub feature: FeatureKind,
+    pub procedure: FeatureProcedure,
+    pub trigger: CoreEngineTrigger,
+    pub window_uid: EditorWindowUid,
+}
+
+type CoreEngineProcedureSchedule = HashMap<u64, CoreEngineProcedure>;
 
 pub struct CoreEngine {
     pub app_handle: tauri::AppHandle,
@@ -84,7 +84,7 @@ pub struct CoreEngine {
 
     /// We only allow a the most recent combination of trigger and feature to be scheduled for execution.
     /// Any newly scheduled feature execution replaces the previous one from the hash map.
-    feature_procedures_schedule: Arc<Mutex<FeatureProcedureSchedule>>,
+    feature_procedures_schedule: Arc<Mutex<CoreEngineProcedureSchedule>>,
 
     cancel_code_doc_update_task_send: Option<oneshot::Sender<&'static ()>>,
     finished_code_doc_update_task_recv: Option<Receiver<&'static CodeDocUpdate>>,
@@ -190,15 +190,14 @@ impl CoreEngine {
             }
 
             if let Some(procedure) = feature_kind.should_compute(trigger) {
-                feature_procedures_schedule.insert(
-                    hash_trigger_and_feature(trigger, &feature_kind, &procedure, window_uid),
-                    (
-                        feature_kind.to_owned(),
-                        trigger.to_owned(),
-                        procedure,
-                        window_uid,
-                    ),
-                );
+                let procedure = CoreEngineProcedure {
+                    feature: feature_kind,
+                    procedure: procedure,
+                    trigger: trigger.clone(),
+                    window_uid,
+                };
+
+                feature_procedures_schedule.insert(hash_trigger_and_feature(&procedure), procedure);
             }
         }
     }
@@ -250,33 +249,30 @@ impl CoreEngine {
     }
 
     fn process_features(
-        feature_procedures_schedule: Arc<Mutex<FeatureProcedureSchedule>>,
+        core_engine_procedures_schedule: Arc<Mutex<CoreEngineProcedureSchedule>>,
         features: Arc<Mutex<HashMap<FeatureKind, Arc<Mutex<Feature>>>>>,
         code_documents: Arc<Mutex<HashMap<usize, CodeDocument>>>,
     ) {
-        for (feature_kind, trigger, procedure, window_uid) in
-            feature_procedures_schedule.lock().values()
-        {
+        for core_engine_procedure in core_engine_procedures_schedule.lock().values() {
             if let (Some(feature), Some(code_doc)) = (
-                features.lock().get_mut(feature_kind),
-                code_documents.lock().get(&window_uid),
+                features.lock().get_mut(&core_engine_procedure.feature),
+                code_documents.lock().get(&core_engine_procedure.window_uid),
             ) {
                 Self::process_single_feature(
-                    trigger,
-                    procedure.to_owned(),
+                    &core_engine_procedure.trigger,
+                    core_engine_procedure.procedure.to_owned(),
                     code_doc.to_owned(),
                     feature,
                 );
             } else {
                 error!(
-                    ?feature_kind,
-                    ?window_uid,
+                    ?core_engine_procedure,
                     "Feature or code document not found.",
                 );
             }
         }
 
-        feature_procedures_schedule.lock().clear();
+        core_engine_procedures_schedule.lock().clear();
     }
 
     fn process_single_feature(

@@ -1,5 +1,6 @@
 use crate::{
     core_engine::{
+        core_engine::CoreEngineProcedure,
         events::models::{
             DismissSuggestionMessage, NodeAnnotationClickedMessage, PerformSuggestionMessage,
             UpdateSelectedSuggestionMessage,
@@ -110,17 +111,12 @@ impl FeatureKind {
     }
 }
 
-pub fn hash_trigger_and_feature(
-    trigger: &CoreEngineTrigger,
-    feature: &FeatureKind,
-    procedure: &FeatureProcedure,
-    window_uid: EditorWindowUid,
-) -> u64 {
+pub fn hash_trigger_and_feature(core_engine_procedure: &CoreEngineProcedure) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    trigger.hash(&mut hasher);
-    feature.hash(&mut hasher);
-    procedure.hash(&mut hasher);
-    window_uid.hash(&mut hasher);
+    core_engine_procedure.trigger.hash(&mut hasher);
+    core_engine_procedure.feature.hash(&mut hasher);
+    core_engine_procedure.procedure.hash(&mut hasher);
+    core_engine_procedure.window_uid.hash(&mut hasher);
     hasher.finish()
 }
 
