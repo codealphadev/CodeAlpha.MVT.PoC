@@ -173,6 +173,41 @@ impl CoreEngine {
         Ok(())
     }
 
+    fn schedule_feature_procedures(
+        &mut self,
+        trigger: &CoreEngineTrigger,
+        window_uid: EditorWindowUid,
+    ) {
+        let mut feature_procedures_schedule = self.feature_procedures_schedule.lock();
+
+        for feature_kind in FeatureKind::iter() {
+            match feature_kind {
+                FeatureKind::Formatter => {
+                    if !self.swift_format_on_cmd_s_active {
+                        continue;
+                    }
+                }
+                _ => {}
+            }
+
+            if feature_kind.requires_ai() && !self.ai_features_active {
+                continue;
+            }
+
+            if let Some(procedure) = feature_kind.should_compute(trigger) {
+                feature_procedures_schedule.insert(
+                    hash_trigger_and_feature(trigger, &feature_kind),
+                    (
+                        feature_kind.to_owned(),
+                        trigger.to_owned(),
+                        procedure,
+                        window_uid,
+                    ),
+                );
+            }
+        }
+    }
+
     fn process_features_schedule(&mut self) {
         tauri::async_runtime::spawn({
             let feature_procedures_schedule = self.feature_procedures_schedule.clone();
@@ -242,54 +277,20 @@ impl CoreEngine {
         code_doc: CodeDocument,
         feature: &mut Arc<Mutex<Feature>>,
     ) {
-        let trigger = trigger.clone();
-        let feature = feature.clone();
-
-        if let Err(e) = match procedure {
-            FeatureProcedure::LongRunning => feature
-                .lock()
-                .compute_long_running(code_doc, &trigger, None),
-            FeatureProcedure::ShortRunning => {
-                feature.lock().compute_short_running(code_doc, &trigger)
-            }
-        } {
-            error!("Error while running feature: {}", e);
-        }
-    }
-
-    fn schedule_feature_procedures(
-        &mut self,
-        trigger: &CoreEngineTrigger,
-        window_uid: EditorWindowUid,
-    ) {
-        let mut feature_procedures_schedule = self.feature_procedures_schedule.lock();
-
-        for feature_kind in FeatureKind::iter() {
-            match feature_kind {
-                FeatureKind::Formatter => {
-                    if !self.swift_format_on_cmd_s_active {
-                        continue;
+        tauri::async_runtime::spawn({
+            let trigger = trigger.clone();
+            let feature = feature.clone();
+            async move {
+                match procedure {
+                    FeatureProcedure::LongRunning => feature
+                        .lock()
+                        .compute_long_running(code_doc, &trigger, None),
+                    FeatureProcedure::ShortRunning => {
+                        feature.lock().compute_short_running(code_doc, &trigger)
                     }
                 }
-                _ => {}
             }
-
-            if feature_kind.requires_ai() && !self.ai_features_active {
-                continue;
-            }
-
-            if let Some(procedure) = feature_kind.should_compute(trigger) {
-                feature_procedures_schedule.insert(
-                    hash_trigger_and_feature(trigger, &feature_kind),
-                    (
-                        feature_kind.to_owned(),
-                        trigger.to_owned(),
-                        procedure,
-                        window_uid,
-                    ),
-                );
-            }
-        }
+        });
     }
 
     fn reset_cancellation_channel(&mut self) -> oneshot::Receiver<&'static ()> {
@@ -323,22 +324,12 @@ impl CoreEngine {
                     async move {
                         // Spin up task to compute syntax tree
                         tauri::async_runtime::spawn({
-                            let code_documents = code_documents.clone();
-
-                            let previous_tree = {
-                                let mut code_docs = code_documents.lock();
-                                let code_doc = code_docs.get_mut(&window_uid);
-                                match code_doc {
-                                    Some(code_doc) => code_doc.syntax_tree().cloned(),
-                                    None => return,
-                                }
-                            };
+                            let code_documents_arc = code_documents.clone();
 
                             async move {
                                 if let Err(e) = Self::compute_abstract_syntax_tree(
-                                    code_documents,
+                                    code_documents_arc,
                                     window_uid,
-                                    previous_tree,
                                     ast_compute_send,
                                 )
                                 .await
@@ -384,26 +375,25 @@ impl CoreEngine {
     pub async fn compute_abstract_syntax_tree(
         code_documents: Arc<Mutex<HashMap<EditorWindowUid, CodeDocument>>>,
         window_uid: EditorWindowUid,
-        previous_ast: Option<SwiftSyntaxTree>,
         mut sender: oneshot::Sender<Option<SwiftSyntaxTree>>,
     ) -> Result<(), CoreEngineError> {
         let code_text_u16;
+        let previous_ast;
         {
-            // Check if code doc text has updated
             let docs = code_documents.lock();
             let code_doc = docs
                 .get(&window_uid)
                 .ok_or(CoreEngineError::CodeDocNotFound(window_uid))?;
 
-            let current_ast = code_doc.syntax_tree();
+            previous_ast = code_doc.syntax_tree().cloned();
 
             let code_text = get_textarea_content(&GetVia::Hash(window_uid))
                 .map_err(|e| CoreEngineError::GenericError(e.into()))?;
 
             code_text_u16 = XcodeText::from_str(&code_text);
 
-            if let Some(current_ast) = current_ast {
-                if code_text_u16 == *current_ast.text_content() {
+            if let Some(ref previous_ast) = previous_ast {
+                if code_text_u16 == *previous_ast.text_content() {
                     // No change in text, return previous tree
                     _ = sender.send(None);
                     return Ok(());
