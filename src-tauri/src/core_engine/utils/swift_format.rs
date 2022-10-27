@@ -4,17 +4,16 @@ use tauri::{
     api::process::{Command, CommandEvent},
     regex::Regex,
 };
+use tracing::warn;
 
 use super::XcodeText;
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftFormatError {
-    #[error("Failed to get swift version")]
+    #[error("Failed to get swift version {}", 0)]
     VersionParsingFailed(String),
-    #[error("Wrong argument passed to swiftformat")]
-    StdErr(String),
-    #[error("Formatter failed.")]
-    FormatFailed,
+    #[error("Formatter failed. {}", 0)]
+    FormatFailed(String),
     #[error("Formatter could not run due to missing configuration.")]
     InsufficientContextForFormat,
     #[error("Something went wrong when executing this SwiftFormatter.")]
@@ -56,13 +55,12 @@ pub async fn format_code(
             _ => (),
         }
     }
-
-    if !error_content.is_empty() {
-        return Err(SwiftFormatError::StdErr(error_content.into()));
-    } else if !text_content.is_empty() {
+    if !text_content.is_empty() {
         Ok(text_content)
+    } else if !error_content.is_empty() {
+        return Err(SwiftFormatError::FormatFailed(error_content.into()));
     } else {
-        Err(SwiftFormatError::FormatFailed)
+        Err(SwiftFormatError::FormatFailed("Unknown error".into()))
     }
 }
 
@@ -70,13 +68,18 @@ async fn get_swiftformat_args(file_path: &Option<String>) -> Vec<String> {
     let mut args = vec!["--quiet"];
 
     let swift_version;
-    if let Ok(version) = get_xcode_swift_version().await {
-        swift_version = version.to_owned();
-        args.push("--swiftversion");
-        args.push(swift_version.as_str());
+    match get_xcode_swift_version().await {
+        Ok(version) => {
+            swift_version = version.to_owned();
+            args.push("--swiftversion");
+            args.push(swift_version.as_str());
+        }
+        Err(err) => {
+            warn!(?err, "Failed to parse swift version");
+        }
     }
 
-    if let (Some(file_path), Some(_)) = (file_path, get_swiftformat_config_file(file_path)) {
+    if let (Some(file_path), true) = (file_path, swiftformat_config_file_exists(file_path)) {
         // Use config from .swiftformat file if it exists
         args.push("--stdinpath");
         args.push(&file_path);
@@ -102,7 +105,7 @@ async fn get_swiftformat_args(file_path: &Option<String>) -> Vec<String> {
     args.iter().map(|&s| s.into()).collect()
 }
 
-fn get_swiftformat_config_file(path: &Option<String>) -> Option<PathBuf> {
+fn swiftformat_config_file_exists(path: &Option<String>) -> bool {
     if let Some(starting_directory) = path {
         let mut path: PathBuf = starting_directory.into();
         let file = Path::new(".swiftformat");
@@ -111,16 +114,16 @@ fn get_swiftformat_config_file(path: &Option<String>) -> Option<PathBuf> {
             path.push(file);
 
             if path.is_file() {
-                return Some(path);
+                return true;
             }
 
             if !(path.pop() && path.pop()) {
                 // remove file && remove parent
-                return None;
+                return false;
             }
         }
     }
-    None
+    false
 }
 
 async fn get_xcode_swift_version() -> Result<String, SwiftFormatError> {
