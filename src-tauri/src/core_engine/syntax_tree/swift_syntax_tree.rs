@@ -78,13 +78,6 @@ impl SwiftSyntaxTree {
         }
     }
 
-    pub fn _from_XcodeText_blocking(
-        content: XcodeText,
-        previous_tree: Option<SwiftSyntaxTree>,
-    ) -> Result<Self, SwiftSyntaxTreeError> {
-        Self::parse_content(content, previous_tree)
-    }
-
     pub fn tree(&self) -> &Tree {
         &self.tree
     }
@@ -191,13 +184,14 @@ mod tests_SwiftSyntaxTree {
 
     use super::SwiftSyntaxTree;
     use pretty_assertions::assert_eq;
+    use tauri::async_runtime::block_on;
 
     #[test]
     fn test_start_end_point_end_newline_char() {
         let text = XcodeText::from_str("let x = 1; cansole.lug(x);\n");
         //                |------------------------>| <- end column is zero on row 1
         //                                            <- end byte is one past the last byte (27), as they are also zero-based
-        let swift_syntax_tree = SwiftSyntaxTree::_from_XcodeText_blocking(text, None).unwrap();
+        let swift_syntax_tree = block_on(SwiftSyntaxTree::from_XcodeText(text, None)).unwrap();
         let root_node = swift_syntax_tree.tree().root_node();
 
         assert_eq!(root_node.start_byte(), 0);
@@ -220,7 +214,7 @@ mod tests_SwiftSyntaxTree {
         let text = XcodeText::from_str("let x = 1; cansole.lug(x);");
         //                |------------------------>| <- end column is one past the last char (26)
         //                |------------------------>| <- end byte is one past the last byte (26), as they are also zero-based
-        let swift_syntax_tree = SwiftSyntaxTree::_from_XcodeText_blocking(text, None).unwrap();
+        let swift_syntax_tree = block_on(SwiftSyntaxTree::from_XcodeText(text, None)).unwrap();
 
         let root_node = swift_syntax_tree.tree().root_node();
 
@@ -245,7 +239,7 @@ mod tests_SwiftSyntaxTree {
         let mut utf8_str = XcodeText::from_str("let x = 1; cansole.lug(x);");
         text.append(&mut utf8_str);
 
-        let swift_syntax_tree = SwiftSyntaxTree::_from_XcodeText_blocking(text, None).unwrap();
+        let swift_syntax_tree = block_on(SwiftSyntaxTree::from_XcodeText(text, None)).unwrap();
 
         let root_node = swift_syntax_tree.tree().root_node();
 

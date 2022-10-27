@@ -129,8 +129,10 @@ mod tests {
             "#,
                 );
 
-                let swift_syntax_tree =
-                    SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                let swift_syntax_tree = tauri::async_runtime::block_on(
+                    SwiftSyntaxTree::from_XcodeText(text_content, None),
+                )
+                .unwrap();
                 let tree = swift_syntax_tree.tree();
                 let root_node = tree.root_node();
 
@@ -221,7 +223,8 @@ mod tests {
             );
             // Re-parse tree from scratch
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                tauri::async_runtime::block_on(SwiftSyntaxTree::from_XcodeText(text_content, None))
+                    .unwrap();
             let tree = swift_syntax_tree.tree();
             let root_node = tree.root_node();
 

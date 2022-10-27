@@ -43,7 +43,10 @@ pub async fn scroll_with_constant_speed(
             match simulate(&event_type) {
                 Ok(()) => {}
                 Err(_) => {
-                    error!("We could not send {:?}", event_type);
+                    error!(
+                        "Scrolling Error; We could not send input device event to macOS {:?}",
+                        event_type
+                    );
                 }
             }
 

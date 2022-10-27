@@ -428,6 +428,8 @@ fn get_resulting_complexities(
 mod tests {
     mod method_extraction {
 
+        use tauri::async_runtime::block_on;
+
         use crate::core_engine::{
             features::complexity_refactoring::check_for_method_extraction,
             syntax_tree::{SwiftFunction, SwiftSyntaxTree},
@@ -467,7 +469,8 @@ mod tests {
             );
 
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                tauri::async_runtime::block_on(SwiftSyntaxTree::from_XcodeText(text_content, None))
+                    .unwrap();
 
             let functions = SwiftFunction::get_top_level_functions(
                 &swift_syntax_tree,
@@ -513,7 +516,7 @@ mod tests {
             );
 
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                block_on(SwiftSyntaxTree::from_XcodeText(text_content, None)).unwrap();
 
             let functions = SwiftFunction::get_top_level_functions(
                 &swift_syntax_tree,
