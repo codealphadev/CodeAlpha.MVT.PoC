@@ -9,21 +9,23 @@ pub fn generate_tests(function: SwiftFunction) {
 mod tests {
     #[cfg(test)]
     mod generate_tests {
-        use crate::core_engine::{
-            features::bracket_highlight::utils::only_whitespace_on_line_until_position,
-            utils::XcodeText, TextPosition,
-        };
+        use crate::core_engine::{utils::XcodeText, TextPosition};
 
         #[test]
         fn out_of_range() {
-            test_fn(
-                "self.init(
+            let code = XcodeText::from_str(
+                r#"
+                func fibonacciRecursiveNum1(num1: Int, num2: Int, steps: Int) {
 
-
-                  forKnownProcessID: app.processIdentifier)",
-                11,
-                62,
-                None,
+                    if steps > 0 {
+                        let newNum = num1 + num2
+                        fibonacciRecursiveNum1(num2, num2: newNum, steps: steps-1)
+                    }
+                    else {
+                        print("result = \(num2)")
+                    }
+                }
+            "#,
             );
         }
     }

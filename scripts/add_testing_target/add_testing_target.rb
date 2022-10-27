@@ -1,3 +1,7 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'bundler/setup'
+
 require 'xcodeproj'
 require 'optparse'
 options = {}

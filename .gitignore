@@ -15,3 +15,6 @@ public/build
 *.tfstate.*
 
 actions-runner/*
+scripts/tmp/*
+scripts/a.out
+scripts/output
