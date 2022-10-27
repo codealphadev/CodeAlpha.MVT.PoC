@@ -192,8 +192,6 @@ impl CoreEngine {
                                     features,
                                     code_documents,
                                 );
-
-                                feature_procedures_schedule.lock().clear();
                             }
                             CodeDocUpdate::Aborded => {
                                 // Syntax tree parsing task aborded.
@@ -233,6 +231,8 @@ impl CoreEngine {
                 );
             }
         }
+
+        feature_procedures_schedule.lock().clear();
     }
 
     fn process_single_feature(
