@@ -112,7 +112,7 @@ impl FeatureBase for ComplexityRefactoring {
                 let (feature_signals_send, feature_signals_recv) = tokio::sync::mpsc::channel(1);
 
                 tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
                     if feature_signals_send.is_closed() {
                         return;
@@ -182,6 +182,16 @@ impl ComplexityRefactoring {
         recv
     }
 
+    pub fn verify_task_not_canceled(
+        signals_sender: &mpsc::Sender<FeatureSignals>,
+    ) -> Result<(), ComplexityRefactoringError> {
+        if signals_sender.is_closed() {
+            return Err(ComplexityRefactoringError::ExecutionCancelled);
+        } else {
+            Ok(())
+        }
+    }
+
     fn set_suggestions_to_recalculating(
         suggestions_arc: SuggestionsArcMutex,
         editor_window_uid: EditorWindowUid,
@@ -232,7 +242,7 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
         code_document: CodeDocument,
-        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+        signals_sender: mpsc::Sender<FeatureSignals>,
     ) -> Result<(), FeatureError> {
         let window_uid = code_document.editor_window_props().window_uid;
         Self::set_suggestions_to_recalculating(suggestions_arc.clone(), window_uid);
@@ -260,6 +270,8 @@ impl ComplexityRefactoring {
         let file_path = code_document.file_path().clone();
         let mut s_exps = vec![];
         let mut suggestions: SuggestionsMap = HashMap::new();
+
+        Self::verify_task_not_canceled(&signals_sender)?;
 
         // We should spawn them all at once, and then wait for them to finish
         for function in top_level_functions {
@@ -327,7 +339,7 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
-        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+        signals_sender: mpsc::Sender<FeatureSignals>,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
         // This is heavy, should be done in parallel -> rayon, but since it takes TSNodes which is not sent this is not trivial.
         let mut suggestions = Self::compute_suggestions_for_function(
@@ -409,24 +421,24 @@ impl ComplexityRefactoring {
 
                 async move {
                     // SourceKit -> very heavy
-                    if signals_sender.is_closed() {
+                    if Self::verify_task_not_canceled(&signals_sender).is_err() {
                         return;
-                    }
+                    };
 
                     let edits = get_edits_for_method_extraction(
                         suggestion_start_pos,
                         suggestion_range.length,
                         &binded_text_content_2,
                         binded_file_path_2,
-                        signals_sender.clone(),
+                        &signals_sender,
                     )
                     .await;
 
                     match edits {
                         Ok(edits) => {
-                            if signals_sender.is_closed() {
+                            if Self::verify_task_not_canceled(&signals_sender).is_err() {
                                 return;
-                            }
+                            };
 
                             _ = Self::update_suggestion_with_formatted_text_diff(
                                 binded_id,
@@ -436,6 +448,7 @@ impl ComplexityRefactoring {
                                 binded_suggestions_arc,
                                 binded_file_path,
                                 window_uid,
+                                &signals_sender,
                             )
                             .await;
 
@@ -444,7 +457,8 @@ impl ComplexityRefactoring {
                                 .await;
                         }
                         Err(err) => {
-                            match err {
+                            let should_remove_suggestion = match err {
+                                ComplexityRefactoringError::ExecutionCancelled => false,
                                 ComplexityRefactoringError::LspRejectedRefactoring(payload) => {
                                     warn!(
                                         ?payload,
@@ -453,20 +467,24 @@ impl ComplexityRefactoring {
                                         ?parent_node_kind,
                                         "LSP rejected refactoring"
                                     );
+                                    true
                                 }
                                 _ => {
                                     error!(?err, "Failed to perform refactoring");
+                                    true
                                 }
                             };
 
-                            _ = Self::remove_suggestion_and_publish(
+                            if should_remove_suggestion {
+                                _ = Self::remove_suggestion_and_publish(
                                 &window_uid,
                                 &binded_id,
                                 &binded_suggestions_arc2,
-                            )
-                            .unwrap_or_else(|e| {
-                                error!(?e, "Failed to remove suggestion when cleaning up after other error");
-                            });
+                                )
+                                .unwrap_or_else(|e| {
+                                    error!(?e, "Failed to remove suggestion when cleaning up after other error");
+                                });
+                            }
                         }
                     }
                 }
@@ -584,7 +602,12 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         file_path: Option<String>,
         window_uid: EditorWindowUid,
+        signals_sender: &mpsc::Sender<FeatureSignals>,
     ) {
+        if Self::verify_task_not_canceled(&signals_sender).is_err() {
+            return;
+        };
+
         let (old_content, new_content) =
             Self::format_and_apply_edits_to_text_content(edits, text_content, file_path).await;
 
@@ -752,6 +775,8 @@ fn map_refactoring_suggestion_to_fe_refactoring_suggestion(
 pub enum ComplexityRefactoringError {
     #[error("Insufficient context for complexity refactoring")]
     InsufficientContext,
+    #[error("Execution was cancelled")]
+    ExecutionCancelled,
     #[error("No suggestions found for window")]
     SuggestionsForWindowNotFound(usize),
     #[error("No suggestion found to apply")]

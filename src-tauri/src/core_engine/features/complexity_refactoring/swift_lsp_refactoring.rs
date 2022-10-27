@@ -1,9 +1,10 @@
-use super::Edit;
+use super::{ComplexityRefactoring, Edit};
 use crate::core_engine::{
     features::FeatureSignals, Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText,
 };
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct EditDto {
@@ -68,8 +69,11 @@ pub async fn refactor_function(
     length: usize,
     text_content: &XcodeText,
     tmp_file_path: &String,
-    signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+    signals_sender: &mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, SwiftLspError> {
+    ComplexityRefactoring::verify_task_not_canceled(&signals_sender)
+        .map_err(|err| SwiftLspError::GenericError(anyhow!(err)))?;
+
     let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
