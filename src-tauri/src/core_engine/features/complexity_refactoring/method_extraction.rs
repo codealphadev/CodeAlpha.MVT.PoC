@@ -10,7 +10,10 @@ use super::{
     NodeAddress, NodeSubSlice, SliceInputsAndOutputs,
 };
 use crate::core_engine::{
-    features::complexity_refactoring::{NodeSlice, ParsingMetadata, SerializedNodeSlice},
+    features::{
+        complexity_refactoring::{NodeSlice, ParsingMetadata, SerializedNodeSlice},
+        FeatureSignals,
+    },
     rules::TemporaryFileOnDisk,
     syntax_tree::{
         calculate_cognitive_complexities, is_expression, is_l_expression, Complexities,
@@ -72,6 +75,7 @@ pub async fn get_edits_for_method_extraction(
     range_length: usize,
     text_content: &XcodeText,
     file_path: Option<String>,
+    signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, ComplexityRefactoringError> {
     // Create temporary file
     let tmp_file_key = rand::thread_rng()
@@ -88,6 +92,7 @@ pub async fn get_edits_for_method_extraction(
         range_length,
         &text_content,
         &temp_file.path.to_string_lossy().to_string(),
+        signals_sender,
     )
     .await
     .map_err(|e| {

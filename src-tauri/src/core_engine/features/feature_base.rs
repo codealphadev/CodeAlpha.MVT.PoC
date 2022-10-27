@@ -14,6 +14,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 use strum::{Display, EnumIter};
+use tauri::api::process::CommandChild;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -114,6 +115,11 @@ pub fn hash_trigger_and_feature(trigger: &CoreEngineTrigger, feature: &FeatureKi
     trigger.hash(&mut hasher);
     feature.hash(&mut hasher);
     hasher.finish()
+}
+
+pub enum FeatureSignals {
+    ComputationCompleted,
+    SwiftLspCommandSpawned(CommandChild),
 }
 
 pub enum Feature {

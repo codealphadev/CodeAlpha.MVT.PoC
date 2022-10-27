@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 pub struct SwiftLsp;
 
+use crate::core_engine::features::FeatureSignals;
+
 use super::{
     get_compiler_args_from_xcodebuild, get_hashed_pbxproj_modification_date_with_random_fallback,
     XCodebuildError,
@@ -16,17 +18,24 @@ use super::{
 #[automock]
 #[async_trait]
 pub trait Lsp {
-    async fn make_lsp_request(payload: String) -> Result<String, SwiftLspError>;
+    async fn make_lsp_request(
+        payload: String,
+        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+    ) -> Result<String, SwiftLspError>;
 
     async fn get_compiler_args(
         source_file_path: &Option<String>,
         tmp_file_path: &str,
+        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
     ) -> Result<Vec<String>, SwiftLspError>;
 }
 
 #[async_trait]
 impl Lsp for SwiftLsp {
-    async fn make_lsp_request(payload: String) -> Result<String, SwiftLspError> {
+    async fn make_lsp_request(
+        payload: String,
+        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+    ) -> Result<String, SwiftLspError> {
         // We wait for a very short time in order to allow quickly subsequently scheduled calls to cancel this one
         tokio::time::sleep(std::time::Duration::from_millis(3)).await;
 
@@ -103,6 +112,7 @@ impl Lsp for SwiftLsp {
     async fn get_compiler_args(
         source_file_path: &Option<String>,
         tmp_file_path: &str,
+        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
     ) -> Result<Vec<String>, SwiftLspError> {
         // Fallback in case we cannot use xcodebuild; flawed because we don't know if macOS or iOS SDK needed
         let sdk_path = get_macos_sdk_path()?;
