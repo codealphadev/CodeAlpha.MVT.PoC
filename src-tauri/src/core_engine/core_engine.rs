@@ -191,7 +191,7 @@ impl CoreEngine {
 
             if let Some(procedure) = feature_kind.should_compute(trigger) {
                 feature_procedures_schedule.insert(
-                    hash_trigger_and_feature(trigger, &feature_kind),
+                    hash_trigger_and_feature(trigger, &feature_kind, &procedure, window_uid),
                     (
                         feature_kind.to_owned(),
                         trigger.to_owned(),

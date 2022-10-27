@@ -4,7 +4,7 @@ use crate::{
             DismissSuggestionMessage, NodeAnnotationClickedMessage, PerformSuggestionMessage,
             UpdateSelectedSuggestionMessage,
         },
-        CodeDocument, SwiftFormatError,
+        CodeDocument, EditorWindowUid, SwiftFormatError,
     },
     platform::macos::models::editor::{EditorShortcutPressedMessage, ModifierKey},
 };
@@ -52,7 +52,7 @@ pub enum FeatureKind {
     Formatter,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub enum FeatureProcedure {
     LongRunning,
     ShortRunning,
@@ -110,10 +110,17 @@ impl FeatureKind {
     }
 }
 
-pub fn hash_trigger_and_feature(trigger: &CoreEngineTrigger, feature: &FeatureKind) -> u64 {
+pub fn hash_trigger_and_feature(
+    trigger: &CoreEngineTrigger,
+    feature: &FeatureKind,
+    procedure: &FeatureProcedure,
+    window_uid: EditorWindowUid,
+) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     trigger.hash(&mut hasher);
     feature.hash(&mut hasher);
+    procedure.hash(&mut hasher);
+    window_uid.hash(&mut hasher);
     hasher.finish()
 }
 
