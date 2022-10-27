@@ -17,7 +17,7 @@ pub fn remove_annotations_for_suggestions(suggestion_ids: Vec<uuid::Uuid>) {
     }
 }
 
-pub fn set_annotation_group_for_extraction_and_context(
+pub fn create_annotation_group_for_extraction_and_context(
     suggestion_id: Uuid,
     context_range: TextRange,
     extraction_range: TextRange,
