@@ -70,8 +70,7 @@ pub async fn refactor_function(
     tmp_file_path: &String,
     signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    let compiler_args =
-        SwiftLsp::get_compiler_args(file_path, tmp_file_path, signals_sender.clone()).await?;
+    let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
 key.actionuid: source.refactoring.kind.extract.function
