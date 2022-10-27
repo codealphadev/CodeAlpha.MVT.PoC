@@ -60,8 +60,8 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
     ) -> Result<AnnotationResult, AnnotationError> {
         let viewport_positioning = AnnotationsManager::get_visibility_relative_to_viewport(
             self.char_index,
-            visible_text_range,
-        );
+            Some(visible_text_range),
+        )?;
 
         let mut result = AnnotationResult {
             id: self.id,
@@ -102,8 +102,8 @@ impl AnnotationJobTrait for AnnotationJobSingleChar {
     ) -> Result<AnnotationResult, AnnotationError> {
         let viewport_positioning = AnnotationsManager::get_visibility_relative_to_viewport(
             self.char_index,
-            visible_text_range,
-        );
+            Some(visible_text_range),
+        )?;
 
         if let Some(previous_result) = self.result.as_ref() {
             if let Some(bounds) = previous_result.bounds.as_ref() {
