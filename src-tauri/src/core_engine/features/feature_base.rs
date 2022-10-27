@@ -5,7 +5,7 @@ use crate::{
             DismissSuggestionMessage, NodeAnnotationClickedMessage, PerformSuggestionMessage,
             UpdateSelectedSuggestionMessage,
         },
-        CodeDocument, EditorWindowUid, SwiftFormatError,
+        CodeDocument, SwiftFormatError,
     },
     platform::macos::models::editor::{EditorShortcutPressedMessage, ModifierKey},
 };

@@ -2,12 +2,13 @@ use std::collections::HashMap;
 
 use cached::proc_macro::cached;
 
+use tokio::sync::mpsc;
 use tree_sitter::Node;
 
 use super::{
     get_node_address, get_slice_inputs_and_outputs, get_sub_slice_inputs_and_outputs, is_child_of,
-    refactor_function, update_parsing_metadata_for_node, ComplexityRefactoringError, Edit,
-    NodeAddress, NodeSubSlice, SliceInputsAndOutputs,
+    refactor_function, update_parsing_metadata_for_node, ComplexityRefactoring,
+    ComplexityRefactoringError, Edit, NodeAddress, NodeSubSlice, SliceInputsAndOutputs,
 };
 use crate::core_engine::{
     features::{
@@ -75,7 +76,7 @@ pub async fn get_edits_for_method_extraction(
     range_length: usize,
     text_content: &XcodeText,
     file_path: Option<String>,
-    signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+    signals_sender: &mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, ComplexityRefactoringError> {
     // Create temporary file
     let tmp_file_key = rand::thread_rng()
@@ -85,6 +86,8 @@ pub async fn get_edits_for_method_extraction(
         .collect();
 
     let temp_file = create_temp_file(&text_content, tmp_file_key)?;
+
+    ComplexityRefactoring::verify_task_not_canceled(&signals_sender)?;
 
     let suggestion: Vec<Edit> = refactor_function(
         &file_path,
@@ -101,6 +104,7 @@ pub async fn get_edits_for_method_extraction(
             SwiftLspError::RefactoringNotPossible(payload) => {
                 ComplexityRefactoringError::LspRejectedRefactoring(payload)
             }
+            SwiftLspError::ExecutionCanceled => ComplexityRefactoringError::ExecutionCancelled,
             _ => ComplexityRefactoringError::GenericError(e.into()),
         }
     })?;

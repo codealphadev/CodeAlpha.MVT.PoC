@@ -2,9 +2,8 @@ use async_trait::async_trait;
 use cached::proc_macro::cached;
 use mockall::automock;
 use tauri::api::process::{Command, CommandEvent};
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tracing::error;
-use uuid::Uuid;
 
 pub struct SwiftLsp;
 
@@ -20,7 +19,7 @@ use super::{
 pub trait Lsp {
     async fn make_lsp_request(
         payload: String,
-        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+        signals_sender: &mpsc::Sender<FeatureSignals>,
     ) -> Result<String, SwiftLspError>;
 
     async fn get_compiler_args(
@@ -33,7 +32,7 @@ pub trait Lsp {
 impl Lsp for SwiftLsp {
     async fn make_lsp_request(
         payload: String,
-        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
+        signals_sender: &mpsc::Sender<FeatureSignals>,
     ) -> Result<String, SwiftLspError> {
         // We wait for a very short time in order to allow quickly subsequently scheduled calls to cancel this one
         tokio::time::sleep(std::time::Duration::from_millis(3)).await;
@@ -42,6 +41,7 @@ impl Lsp for SwiftLsp {
 
         rayon::spawn({
             let payload = payload.clone();
+            let signals_sender = signals_sender.to_owned();
 
             move || {
                 tauri::async_runtime::spawn(async move {
@@ -107,7 +107,7 @@ impl Lsp for SwiftLsp {
         if !text_content.is_empty() {
             Ok(text_content)
         } else if termination_signal == Some(9) {
-            Err(SwiftLspError::ExecutionCancelled(None))
+            Err(SwiftLspError::ExecutionCanceled)
         } else {
             Err(SwiftLspError::SourceKittenCommandFailed(payload, stderr))
         }
@@ -204,8 +204,8 @@ fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
-    #[error("Execution was cancelled: '{}'", 0)]
-    ExecutionCancelled(Option<Uuid>),
+    #[error("Execution was cancelled")]
+    ExecutionCanceled,
 
     #[error("Refactoring could not be carried out: '{}'", 0)]
     RefactoringNotPossible(String),
