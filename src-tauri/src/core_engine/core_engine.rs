@@ -360,8 +360,8 @@ impl CoreEngine {
                                         );
                                         _ = code_doc_update_send.send(&CodeDocUpdate::Finished);
                                     }
-                                    Err(e) => {
-                                        error!("OneShot Channel error: {}", e);
+                                    Err(_) => {
+                                        // Channel closed
                                     },
                                 }
 
