@@ -189,6 +189,8 @@ impl SwiftCodeBlockBase<'_> for SwiftFunction<'_> {
 #[cfg(test)]
 mod tests {
     mod get_top_level_functions {
+        use tauri::async_runtime::block_on;
+
         use crate::core_engine::{
             syntax_tree::{SwiftFunction, SwiftSyntaxTree},
             XcodeText,
@@ -212,7 +214,7 @@ mod tests {
             );
 
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                block_on(SwiftSyntaxTree::from_XcodeText(text_content, None)).unwrap();
 
             assert_eq!(
                 SwiftFunction::get_top_level_functions(

@@ -86,8 +86,11 @@ pub struct CoreEngine {
     /// Any newly scheduled feature execution replaces the previous one from the hash map.
     feature_procedures_schedule: Arc<Mutex<CoreEngineProcedureSchedule>>,
 
+    /// A Sender that is used to cancel an ongoing code document update task
     cancel_code_doc_update_task_send: Option<oneshot::Sender<&'static ()>>,
+    /// A receiver that gets notified when a code document update task is finished
     finished_code_doc_update_task_recv: Option<Receiver<&'static CodeDocUpdate>>,
+    /// Is true if there is a procedures processor waiting to run once a code document has finished updating
     awaiting_code_doc_update_task: Arc<Mutex<bool>>,
 }
 

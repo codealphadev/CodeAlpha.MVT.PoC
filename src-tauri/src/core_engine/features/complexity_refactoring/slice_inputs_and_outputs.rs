@@ -366,7 +366,8 @@ mod tests {
             "#,
             );
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                tauri::async_runtime::block_on(SwiftSyntaxTree::from_XcodeText(text_content, None))
+                    .unwrap();
 
             let functions = SwiftFunction::get_top_level_functions(
                 &swift_syntax_tree,
@@ -407,7 +408,8 @@ mod tests {
             "#,
             );
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                tauri::async_runtime::block_on(SwiftSyntaxTree::from_XcodeText(text_content, None))
+                    .unwrap();
 
             let functions = SwiftFunction::get_top_level_functions(
                 &swift_syntax_tree,
@@ -449,7 +451,8 @@ mod tests {
             "#,
             );
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                tauri::async_runtime::block_on(SwiftSyntaxTree::from_XcodeText(text_content, None))
+                    .unwrap();
 
             let functions = SwiftFunction::get_top_level_functions(
                 &swift_syntax_tree,
@@ -487,7 +490,8 @@ mod tests {
             "#,
             );
             let swift_syntax_tree =
-                SwiftSyntaxTree::_from_XcodeText_blocking(text_content, None).unwrap();
+                tauri::async_runtime::block_on(SwiftSyntaxTree::from_XcodeText(text_content, None))
+                    .unwrap();
 
             let functions = SwiftFunction::get_top_level_functions(
                 &swift_syntax_tree,
