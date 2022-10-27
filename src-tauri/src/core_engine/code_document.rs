@@ -1,4 +1,4 @@
-use super::{syntax_tree::SwiftSyntaxTree, utils::XcodeText, TextRange};
+use super::{syntax_tree::SwiftSyntaxTree, TextRange, XcodeText};
 
 #[derive(Clone, Debug)]
 pub struct EditorWindowProps {
@@ -65,4 +65,3 @@ impl CodeDocument {
         self.selected_text_range = Some(selected_text_range);
     }
 }
-            
