@@ -29,8 +29,9 @@ use lazy_static::lazy_static;
 
 use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc};
+use tauri::api::process::CommandChild;
 
-use tokio::sync::oneshot;
+use tokio::sync::mpsc;
 
 use tracing::{error, warn};
 use uuid::Uuid;
@@ -47,7 +48,7 @@ pub struct ComplexityRefactoring {
     suggestions_arc: SuggestionsArcMutex,
     dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
 
-    cancel_long_running_task_send: Option<oneshot::Sender<&'static ()>>,
+    cancel_long_running_task_send: Option<mpsc::Sender<&'static ()>>,
 }
 
 impl FeatureBase for ComplexityRefactoring {
@@ -108,33 +109,29 @@ impl FeatureBase for ComplexityRefactoring {
 
             async move {
                 // See Tokio Select Cancellation pattern -> https://tokio.rs/tokio/tutorial/select, chapter Canceling
-                let (complexity_refactoring_signals_send, mut complexity_refactoring_signals_recv) =
-                    tokio::sync::mpsc::channel(1);
+                let (feature_signals_send, feature_signals_recv) = tokio::sync::mpsc::channel(1);
 
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
-                    if complexity_refactoring_signals_send.is_closed() {
+                    if feature_signals_send.is_closed() {
                         return;
                     }
 
-                    _ = Self::compute_suggestions(
+                    if let Err(e) = Self::compute_suggestions(
                         suggestions_arc,
                         dismissed_suggestions,
                         code_document,
-                        complexity_refactoring_signals_send.clone(),
+                        feature_signals_send.clone(),
                     )
-                    .await;
+                    .await
+                    {
+                        error!("Error while computing suggestions: {:?}", e);
+                    }
                 });
 
-                tokio::select! {
-                    _ = complexity_refactoring_signals_recv.recv() => {
-                        // Finished computing complexity refactoring suggestions
-                    }
-                    _ = cancelation_event_recv => {
-                        // Cancelled computing complexity refactoring suggestions
-                    }
-                }
+                Self::drive_compute_long_running(feature_signals_recv, cancelation_event_recv)
+                    .await;
             }
         });
 
@@ -174,13 +171,13 @@ impl ComplexityRefactoring {
         }
     }
 
-    fn cancel_complexity_refactoring_task(&mut self) -> oneshot::Receiver<&'static ()> {
+    fn cancel_complexity_refactoring_task(&mut self) -> mpsc::Receiver<&'static ()> {
         if let Some(sender) = self.cancel_long_running_task_send.take() {
             // Cancel previous task if it exists.
             _ = sender.send(&());
         }
 
-        let (send, recv) = oneshot::channel();
+        let (send, recv) = mpsc::channel(1);
         self.cancel_long_running_task_send = Some(send);
         recv
     }
@@ -199,6 +196,36 @@ impl ComplexityRefactoring {
         Self::publish_to_frontend(suggestions_arc.lock().clone());
 
         Some(())
+    }
+
+    async fn drive_compute_long_running(
+        mut feature_signals_recv: mpsc::Receiver<FeatureSignals>,
+        mut cancelation_event_recv: mpsc::Receiver<&()>,
+    ) {
+        let mut swift_lsp_commands: Vec<CommandChild> = vec![];
+        loop {
+            tokio::select! {
+                signal = feature_signals_recv.recv() => {
+                    if let Some(signal) = signal {
+                        match signal {
+                            FeatureSignals::ComputationCompleted => {
+                                break;
+                            }
+                            FeatureSignals::SwiftLspCommandSpawned(command) => {
+                                swift_lsp_commands.push(command);
+                            }
+                        }
+                    }
+
+                }
+                _ = cancelation_event_recv.recv() => {
+                    for command in swift_lsp_commands {
+                        _ = command.kill();
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     async fn compute_suggestions(
@@ -411,6 +438,10 @@ impl ComplexityRefactoring {
                                 window_uid,
                             )
                             .await;
+
+                            _ = signals_sender
+                                .send(FeatureSignals::ComputationCompleted)
+                                .await;
                         }
                         Err(err) => {
                             match err {

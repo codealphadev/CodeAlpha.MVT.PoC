@@ -117,6 +117,7 @@ pub fn hash_trigger_and_feature(trigger: &CoreEngineTrigger, feature: &FeatureKi
     hasher.finish()
 }
 
+#[derive(Debug)]
 pub enum FeatureSignals {
     ComputationCompleted,
     SwiftLspCommandSpawned(CommandChild),

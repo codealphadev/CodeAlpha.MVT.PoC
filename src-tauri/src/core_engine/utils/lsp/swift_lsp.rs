@@ -26,7 +26,6 @@ pub trait Lsp {
     async fn get_compiler_args(
         source_file_path: &Option<String>,
         tmp_file_path: &str,
-        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
     ) -> Result<Vec<String>, SwiftLspError>;
 }
 
@@ -56,7 +55,8 @@ impl Lsp for SwiftLsp {
                             }
                         };
 
-                        (rx, _) = match command
+                        let cmd_child;
+                        (rx, cmd_child) = match command
                             .args(["request".to_string(), "--yaml".to_string(), payload.clone()])
                             .spawn()
                         {
@@ -66,6 +66,10 @@ impl Lsp for SwiftLsp {
                                 return;
                             }
                         };
+
+                        _ = signals_sender
+                            .send(FeatureSignals::SwiftLspCommandSpawned(cmd_child))
+                            .await;
                     }
 
                     let mut text_content = "".to_string();
@@ -112,7 +116,6 @@ impl Lsp for SwiftLsp {
     async fn get_compiler_args(
         source_file_path: &Option<String>,
         tmp_file_path: &str,
-        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
     ) -> Result<Vec<String>, SwiftLspError> {
         // Fallback in case we cannot use xcodebuild; flawed because we don't know if macOS or iOS SDK needed
         let sdk_path = get_macos_sdk_path()?;
