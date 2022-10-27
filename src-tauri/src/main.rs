@@ -57,7 +57,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             cmd_resize_window,
             cmd_send_feedback,
-            cmd_paste_docs,
+            cmd_create_tests,
             cmd_rebind_main_widget,
             cmd_get_core_engine_state,
         ])
@@ -158,5 +158,25 @@ fn deadlock_detection() {
                 );
             }
         }
+    });
+}
+
+#[tauri::command]
+pub fn cmd_create_tests() {
+    tauri::async_runtime::spawn(async move {
+        // Paste it at the docs insertion point
+        let insertion_point = NODE_EXPLANATION_CURRENT_INSERTION_POINT.lock().clone();
+        let docstring = NODE_EXPLANATION_CURRENT_DOCSTRING.lock().clone();
+        replace_range_with_clipboard_text(
+            &app_handle(),
+            &GetVia::Current,
+            &TextRange {
+                index: insertion_point,
+                length: 0,
+            },
+            Some(&docstring),
+            true,
+        )
+        .await;
     });
 }
