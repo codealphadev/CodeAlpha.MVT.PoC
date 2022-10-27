@@ -1,10 +1,10 @@
-use std::path::{Path, PathBuf};
-use tauri::api::process::{Command, CommandEvent};
-use tracing::{debug, error};
+use std::path::PathBuf;
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::core_engine::features::FeatureKind;
 use crate::core_engine::{format_code, SwiftFormatError};
+use crate::platform::macos::models::editor::ModifierKey;
 use crate::platform::macos::replace_text_content;
 use crate::{
     app_handle,
