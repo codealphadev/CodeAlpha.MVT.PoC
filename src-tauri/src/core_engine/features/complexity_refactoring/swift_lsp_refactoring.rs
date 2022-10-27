@@ -1,5 +1,7 @@
 use super::Edit;
-use crate::core_engine::{Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText};
+use crate::core_engine::{
+    features::FeatureSignals, Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText,
+};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
@@ -66,8 +68,10 @@ pub async fn refactor_function(
     length: usize,
     text_content: &XcodeText,
     tmp_file_path: &String,
+    signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
+    let compiler_args =
+        SwiftLsp::get_compiler_args(file_path, tmp_file_path, signals_sender.clone()).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
 key.actionuid: source.refactoring.kind.extract.function
@@ -84,7 +88,7 @@ key.compilerargs:{}"#,
     )
     .to_string();
 
-    let result_str = SwiftLsp::make_lsp_request(payload.clone()).await?;
+    let result_str = SwiftLsp::make_lsp_request(payload.clone(), signals_sender).await?;
 
     let result: RefactoringResponse =
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;

@@ -15,7 +15,7 @@ use crate::{
                 remove_annotations_for_suggestions, Edit, SuggestionsMap,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            FeatureKind, UserCommand,
+            FeatureKind, FeatureSignals, UserCommand,
         },
         format_code, get_index_of_first_difference,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
@@ -102,19 +102,19 @@ impl FeatureBase for ComplexityRefactoring {
 
         let cancelation_event_recv = self.cancel_complexity_refactoring_task();
 
-        // See Tokio Select Cancellation pattern -> https://tokio.rs/tokio/tutorial/select, chapter Canceling
-        let (compute_long_running_send, mut compute_long_running_recv) =
-            tokio::sync::mpsc::channel(1);
-
         tauri::async_runtime::spawn({
             let dismissed_suggestions = self.dismissed_suggestions_arc.clone();
             let suggestions_arc = self.suggestions_arc.clone();
 
             async move {
+                // See Tokio Select Cancellation pattern -> https://tokio.rs/tokio/tutorial/select, chapter Canceling
+                let (complexity_refactoring_signals_send, mut complexity_refactoring_signals_recv) =
+                    tokio::sync::mpsc::channel(1);
+
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
-                    if compute_long_running_send.is_closed() {
+                    if complexity_refactoring_signals_send.is_closed() {
                         return;
                     }
 
@@ -122,13 +122,13 @@ impl FeatureBase for ComplexityRefactoring {
                         suggestions_arc,
                         dismissed_suggestions,
                         code_document,
-                        compute_long_running_send.clone(),
+                        complexity_refactoring_signals_send.clone(),
                     )
                     .await;
                 });
 
                 tokio::select! {
-                    _ = compute_long_running_recv.recv() => {
+                    _ = complexity_refactoring_signals_recv.recv() => {
                         // Finished computing complexity refactoring suggestions
                     }
                     _ = cancelation_event_recv => {
@@ -205,7 +205,7 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
         code_document: CodeDocument,
-        sender: tokio::sync::mpsc::Sender<()>,
+        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
     ) -> Result<(), FeatureError> {
         let window_uid = code_document.editor_window_props().window_uid;
         Self::set_suggestions_to_recalculating(suggestions_arc.clone(), window_uid);
@@ -249,7 +249,7 @@ impl ComplexityRefactoring {
                 suggestions_arc.clone(),
                 dismissed_suggestions.clone(),
                 code_document.editor_window_props().window_uid,
-                sender.clone(),
+                signals_sender.clone(),
             )?);
         }
 
@@ -300,7 +300,7 @@ impl ComplexityRefactoring {
         suggestions_arc: SuggestionsArcMutex,
         dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
         window_uid: EditorWindowUid,
-        sender: tokio::sync::mpsc::Sender<()>,
+        signals_sender: tokio::sync::mpsc::Sender<FeatureSignals>,
     ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
         // This is heavy, should be done in parallel -> rayon, but since it takes TSNodes which is not sent this is not trivial.
         let mut suggestions = Self::compute_suggestions_for_function(
@@ -375,14 +375,14 @@ impl ComplexityRefactoring {
                 let binded_suggestions_arc = suggestions_arc.clone();
                 let binded_suggestions_arc2 = suggestions_arc.clone();
 
-                let sender = sender.clone();
+                let signals_sender = signals_sender.clone();
 
                 // For error reporting
                 let serialized_slice = suggestion.serialized_slice.clone();
 
                 async move {
                     // SourceKit -> very heavy
-                    if sender.is_closed() {
+                    if signals_sender.is_closed() {
                         return;
                     }
 
@@ -391,12 +391,13 @@ impl ComplexityRefactoring {
                         suggestion_range.length,
                         &binded_text_content_2,
                         binded_file_path_2,
+                        signals_sender.clone(),
                     )
                     .await;
 
                     match edits {
                         Ok(edits) => {
-                            if sender.is_closed() {
+                            if signals_sender.is_closed() {
                                 return;
                             }
 
