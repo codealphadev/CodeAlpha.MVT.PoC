@@ -1,5 +1,6 @@
 use super::{
     create_annotation_group_for_extraction_and_context,
+    method_extraction::MethodExtractionTask,
     procedures::{self, perform_suggestion},
     FERefactoringSuggestion, NodeSlice, RefactoringSuggestion, SuggestionHash, SuggestionId,
     SuggestionState, SuggestionsArcMutex, SuggestionsPerWindow,
@@ -418,19 +419,22 @@ impl ComplexityRefactoring {
             // Spin up a task for each suggestion to run against SourceKit
             //
             tauri::async_runtime::spawn({
-                let suggestion_start_pos = suggestion_start_pos.clone();
-                let suggestion_range = suggestion_range.clone();
+                let method_extraction_task = MethodExtractionTask {
+                    text_content: text_content.clone(),
+                    start_position: suggestion_start_pos.clone(),
+                    range_length: suggestion_range.length,
+                    file_path: file_path.clone(),
+                };
+
                 let node_kinds = node_kinds.clone();
                 let parent_node_kind = parent_node_kind.clone();
 
-                let binded_text_content = text_content.clone();
-                let binded_text_content_2 = text_content.clone();
-                let binded_file_path = file_path.clone();
-                let binded_file_path_2 = file_path.clone();
-                let binded_suggestion = suggestion.clone();
-                let binded_id: Uuid = *id;
-                let binded_suggestions_arc = suggestions_arc.clone();
-                let binded_suggestions_arc2 = suggestions_arc.clone();
+                let text_content = text_content.clone();
+                let file_path = file_path.clone();
+
+                let suggestion = suggestion.clone();
+                let id: Uuid = *id;
+                let suggestions_arc = suggestions_arc.clone();
 
                 let signals_sender = signals_sender.clone();
 
@@ -443,14 +447,9 @@ impl ComplexityRefactoring {
                         return;
                     };
 
-                    let edits = get_edits_for_method_extraction(
-                        suggestion_start_pos,
-                        suggestion_range.length,
-                        &binded_text_content_2,
-                        binded_file_path_2,
-                        &signals_sender,
-                    )
-                    .await;
+                    let edits =
+                        get_edits_for_method_extraction(method_extraction_task, &signals_sender)
+                            .await;
 
                     match edits {
                         Ok(edits) => {
@@ -459,12 +458,12 @@ impl ComplexityRefactoring {
                             };
 
                             _ = Self::update_suggestion_with_formatted_text_diff(
-                                binded_id,
-                                binded_suggestion,
+                                id,
+                                suggestion,
                                 edits,
-                                binded_text_content,
-                                binded_suggestions_arc,
-                                binded_file_path,
+                                text_content,
+                                suggestions_arc,
+                                file_path,
                                 window_uid,
                                 &signals_sender,
                             )
@@ -496,8 +495,8 @@ impl ComplexityRefactoring {
                             if should_remove_suggestion {
                                 _ = Self::remove_suggestion_and_publish(
                                 &window_uid,
-                                &binded_id,
-                                &binded_suggestions_arc2,
+                                &id,
+                                &suggestions_arc,
                                 )
                                 .unwrap_or_else(|e| {
                                     error!(?e, "Failed to remove suggestion when cleaning up after other error");

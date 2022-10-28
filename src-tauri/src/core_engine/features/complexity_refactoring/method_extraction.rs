@@ -71,11 +71,16 @@ pub fn check_for_method_extraction(
     .map(|(slice, remaining_complexity)| (slice.serialize(node), remaining_complexity)))
 }
 
+#[derive(Debug)]
+pub struct MethodExtractionTask {
+    pub text_content: XcodeText,
+    pub start_position: TextPosition,
+    pub range_length: usize,
+    pub file_path: Option<String>,
+}
+
 pub async fn get_edits_for_method_extraction(
-    start_position: TextPosition,
-    range_length: usize,
-    text_content: &XcodeText,
-    file_path: Option<String>,
+    method_extraction_task: MethodExtractionTask,
     signals_sender: &mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, ComplexityRefactoringError> {
     // Create temporary file
@@ -85,15 +90,12 @@ pub async fn get_edits_for_method_extraction(
         .map(char::from)
         .collect();
 
-    let temp_file = create_temp_file(&text_content, tmp_file_key)?;
+    let temp_file = create_temp_file(&method_extraction_task.text_content, tmp_file_key)?;
 
     ComplexityRefactoring::verify_task_not_canceled(&signals_sender)?;
 
     let suggestion: Vec<Edit> = refactor_function(
-        &file_path,
-        start_position,
-        range_length,
-        &text_content,
+        method_extraction_task,
         &temp_file.path.to_string_lossy().to_string(),
         signals_sender,
     )

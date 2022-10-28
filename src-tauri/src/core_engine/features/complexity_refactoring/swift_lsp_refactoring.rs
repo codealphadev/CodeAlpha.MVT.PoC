@@ -1,4 +1,4 @@
-use super::{ComplexityRefactoring, Edit};
+use super::{method_extraction::MethodExtractionTask, ComplexityRefactoring, Edit};
 use crate::core_engine::{
     features::FeatureSignals, Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText,
 };
@@ -64,17 +64,15 @@ fn format_array_as_yaml(compiler_args: Vec<String>) -> String {
 }
 
 pub async fn refactor_function(
-    file_path: &Option<String>,
-    start_position: TextPosition,
-    length: usize,
-    text_content: &XcodeText,
+    method_extraction_task: MethodExtractionTask,
     tmp_file_path: &String,
     signals_sender: &mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, SwiftLspError> {
     ComplexityRefactoring::verify_task_not_canceled(&signals_sender)
         .map_err(|err| SwiftLspError::GenericError(anyhow!(err)))?;
 
-    let compiler_args = SwiftLsp::get_compiler_args(file_path, tmp_file_path).await?;
+    let compiler_args =
+        SwiftLsp::get_compiler_args(&method_extraction_task.file_path, tmp_file_path).await?;
     let payload = format!(
         r#"key.request: source.request.semantic.refactoring
 key.actionuid: source.refactoring.kind.extract.function
@@ -84,9 +82,9 @@ key.column: {}
 key.length: {}
 key.compilerargs:{}"#,
         tmp_file_path,
-        start_position.row + 1,
-        start_position.column + 1,
-        length,
+        method_extraction_task.start_position.row + 1,
+        method_extraction_task.start_position.column + 1,
+        method_extraction_task.range_length,
         format_array_as_yaml(compiler_args)
     )
     .to_string();
@@ -106,7 +104,7 @@ key.compilerargs:{}"#,
         .map(|categorized_edit| categorized_edit.edits)
         .flatten()
         .map(|edit_dto| -> Result<Edit, SwiftLspError> {
-            map_edit_dto_to_edit(edit_dto, text_content)
+            map_edit_dto_to_edit(edit_dto, &method_extraction_task.text_content)
         })
         .collect::<Result<Vec<Edit>, SwiftLspError>>()?;
 
