@@ -13,7 +13,7 @@ pub fn on_editor_textarea_zoomed(
 ) -> Result<(), CoreEngineError> {
     let core_engine = &mut core_engine_arc.lock();
 
-    core_engine.handling_trigger(
+    core_engine.handle_trigger(
         zoomed_msg.window_uid,
         CoreEngineTrigger::OnViewportDimensionsChange,
     )

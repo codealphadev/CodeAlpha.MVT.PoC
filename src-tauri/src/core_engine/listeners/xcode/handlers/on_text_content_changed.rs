@@ -14,7 +14,7 @@ pub fn on_text_content_changed(
 
     core_engine.add_code_document(content_changed_msg.pid, content_changed_msg.window_uid);
 
-    core_engine.handling_trigger(
+    core_engine.handle_trigger(
         content_changed_msg.window_uid,
         CoreEngineTrigger::OnTextContentChange,
     )

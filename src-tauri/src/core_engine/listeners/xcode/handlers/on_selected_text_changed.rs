@@ -13,5 +13,5 @@ pub fn on_selected_text_changed(
 ) -> Result<(), CoreEngineError> {
     let core_engine = &mut core_engine_arc.lock();
 
-    core_engine.handling_trigger(msg.window_uid, CoreEngineTrigger::OnTextSelectionChange)
+    core_engine.handle_trigger(msg.window_uid, CoreEngineTrigger::OnTextSelectionChange)
 }

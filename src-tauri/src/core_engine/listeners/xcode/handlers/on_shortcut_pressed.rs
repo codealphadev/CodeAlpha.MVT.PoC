@@ -13,7 +13,7 @@ pub fn on_editor_shortcut_pressed(
 ) -> Result<(), CoreEngineError> {
     let mut core_engine = core_engine_arc.lock();
 
-    core_engine.handling_trigger(
+    core_engine.handle_trigger(
         msg.window_uid,
         CoreEngineTrigger::OnShortcutPressed(msg.clone()),
     )

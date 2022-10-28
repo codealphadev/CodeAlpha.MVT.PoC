@@ -37,7 +37,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         "User request: Node annotation clicked"
                     );
 
-                    _ = core_engine.lock().handling_trigger(
+                    _ = core_engine.lock().handle_trigger(
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::NodeAnnotationClicked(msg)),
                     );
@@ -48,7 +48,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         feature = FeatureKind::ComplexityRefactoring.to_string(),
                         "User request: Perform suggestion"
                     );
-                    _ = core_engine.lock().handling_trigger(
+                    _ = core_engine.lock().handle_trigger(
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)),
                     );
@@ -59,7 +59,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         feature = FeatureKind::ComplexityRefactoring.to_string(),
                         "User request: Dismiss suggestion"
                     );
-                    _ = core_engine.lock().handling_trigger(
+                    _ = core_engine.lock().handle_trigger(
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)),
                     );
@@ -70,7 +70,7 @@ pub fn user_interaction_listener(core_engine: &Arc<Mutex<CoreEngine>>) {
                         feature = FeatureKind::ComplexityRefactoring.to_string(),
                         "User request: Update selected suggestion"
                     );
-                    _ = core_engine.lock().handling_trigger(
+                    _ = core_engine.lock().handle_trigger(
                         msg.editor_window_uid,
                         CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)),
                     );

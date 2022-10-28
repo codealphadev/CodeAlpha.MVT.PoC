@@ -19,13 +19,9 @@ pub struct FunctionParameter {
     pub param_type: String,
 }
 
-#[derive(Clone)]
 pub struct SwiftFunction<'a> {
     pub props: SwiftCodeBlockProps<'a>,
 }
-
-unsafe impl<'a> Send for SwiftFunction<'a> {}
-unsafe impl<'a> Sync for SwiftFunction<'a> {}
 
 impl SwiftFunction<'_> {
     pub fn get_complexity(&self) -> isize {
