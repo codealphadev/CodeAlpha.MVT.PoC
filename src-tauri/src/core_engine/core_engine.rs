@@ -454,7 +454,11 @@ impl CoreEngine {
         Ok(())
     }
 
-    pub fn add_code_document(&mut self, editor_pid: i32, editor_window_uid: EditorWindowUid) {
+    pub fn add_code_document_if_not_existing(
+        &mut self,
+        editor_pid: i32,
+        editor_window_uid: EditorWindowUid,
+    ) {
         // check if code document is already contained in list of documents
         if self.code_documents.lock().get(&editor_window_uid).is_none() {
             let new_code_doc = CodeDocument::new(&EditorWindowProps {
