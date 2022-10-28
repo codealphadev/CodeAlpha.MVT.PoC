@@ -181,7 +181,7 @@ impl CoreEngine {
         self.swift_format_on_cmd_s_active = active;
     }
 
-    pub fn handling_trigger(
+    pub fn handle_trigger(
         &mut self,
         editor_window_uid: EditorWindowUid,
         trigger: CoreEngineTrigger,

@@ -71,9 +71,6 @@ pub struct SwiftCodeBlockProps<'a> {
     pub tree: &'a SwiftSyntaxTree,
 }
 
-unsafe impl<'a> Send for SwiftCodeBlockProps<'a> {}
-unsafe impl<'a> Sync for SwiftCodeBlockProps<'a> {}
-
 impl<'a> SwiftCodeBlockBase<'a> for SwiftCodeBlock<'a> {
     fn as_text(&self) -> Result<XcodeText, SwiftCodeBlockError> {
         match self {

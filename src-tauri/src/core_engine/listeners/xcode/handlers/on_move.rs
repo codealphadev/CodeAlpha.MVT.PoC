@@ -13,5 +13,5 @@ pub fn on_editor_window_moved(
 ) -> Result<(), CoreEngineError> {
     let mut core_engine = core_engine_arc.lock();
 
-    core_engine.handling_trigger(moved_msg.window_uid, CoreEngineTrigger::OnViewportMove)
+    core_engine.handle_trigger(moved_msg.window_uid, CoreEngineTrigger::OnViewportMove)
 }

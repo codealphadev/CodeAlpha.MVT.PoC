@@ -30,8 +30,8 @@ pub fn on_editor_focused_uielement_changed(
     let core_engine = &mut core_engine_arc.lock();
     core_engine.add_code_document(pid, window_uid);
 
-    _ = core_engine.handling_trigger(window_uid, CoreEngineTrigger::OnTextSelectionChange);
-    _ = core_engine.handling_trigger(window_uid, CoreEngineTrigger::OnTextContentChange);
+    _ = core_engine.handle_trigger(window_uid, CoreEngineTrigger::OnTextSelectionChange);
+    _ = core_engine.handle_trigger(window_uid, CoreEngineTrigger::OnTextContentChange);
 
     Ok(())
 }
