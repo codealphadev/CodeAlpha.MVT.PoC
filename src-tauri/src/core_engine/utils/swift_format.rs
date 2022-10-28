@@ -98,6 +98,8 @@ fn get_swiftformat_args(file_path: &Option<String>) -> Vec<String> {
           "4",
           "--semicolons",
           "never",
+          "--markcategories",
+          "false",
           "--enable",
           "isEmpty,blankLineAfterImports,blankLinesBetweenImports,organizeDeclarations,preferDouble,sortedSwitchCases,wrapEnumCases,wrapSwitchCases",
       ];
