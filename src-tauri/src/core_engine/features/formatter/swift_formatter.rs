@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::core_engine::features::FeatureKind;
+use crate::core_engine::features::{FeatureKind, FeatureProcedure};
 use crate::core_engine::{format_code, SwiftFormatError};
 use crate::platform::macos::models::editor::ModifierKey;
 use crate::platform::macos::replace_text_content;
@@ -77,6 +77,26 @@ impl FeatureBase for SwiftFormatter {
     fn reset(&mut self) -> Result<(), FeatureError> {
         // Do nothing
         Ok(())
+    }
+
+    fn should_compute(
+        _kind: &FeatureKind,
+        trigger: &CoreEngineTrigger,
+    ) -> Option<FeatureProcedure> {
+        match trigger {
+            CoreEngineTrigger::OnShortcutPressed(msg) => {
+                if msg.modifier == ModifierKey::Cmd && msg.key == "S" {
+                    return Some(FeatureProcedure::ShortRunning);
+                } else {
+                    return None;
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn requires_ai(_kind: &FeatureKind, _trigger: &CoreEngineTrigger) -> bool {
+        false
     }
 }
 

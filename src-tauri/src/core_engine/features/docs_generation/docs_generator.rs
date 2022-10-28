@@ -6,7 +6,10 @@ use crate::{
     core_engine::{
         core_engine::EditorWindowUid,
         events::models::NodeAnnotationClickedMessage,
-        features::{CoreEngineTrigger, FeatureBase, FeatureError, FeatureKind, UserCommand},
+        features::{
+            CoreEngineTrigger, FeatureBase, FeatureError, FeatureKind, FeatureProcedure,
+            UserCommand,
+        },
         syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange, XcodeChar,
@@ -49,10 +52,11 @@ impl FeatureBase for DocsGenerator {
             return Ok(());
         }
 
-        if let Some(procedure) = self.determine_short_running_procedure(
-            &code_document.editor_window_props().window_uid,
-            trigger,
-        ) {
+        let no_annotation_is_running =
+            !self.is_docs_gen_task_running(&code_document.editor_window_props().window_uid);
+
+        if let Some(procedure) = Self::determine_procedure(trigger, Some(no_annotation_is_running))
+        {
             match procedure {
                 DocsGenComputeProcedure::FetchNodeExplanation(msg) => {
                     self.procedure_fetch_node_explanation(&code_document, msg)?;
@@ -107,6 +111,20 @@ impl FeatureBase for DocsGenerator {
     fn kind(&self) -> FeatureKind {
         FeatureKind::DocsGeneration
     }
+
+    fn should_compute(
+        _kind: &FeatureKind,
+        trigger: &CoreEngineTrigger,
+    ) -> Option<FeatureProcedure> {
+        match Self::determine_procedure(trigger, None) {
+            Some(_) => Some(FeatureProcedure::ShortRunning),
+            None => None,
+        }
+    }
+
+    fn requires_ai(_kind: &FeatureKind, _trigger: &CoreEngineTrigger) -> bool {
+        true
+    }
 }
 
 impl DocsGenerator {
@@ -118,19 +136,20 @@ impl DocsGenerator {
         }
     }
 
-    fn determine_short_running_procedure(
-        &self,
-        window_uid: &EditorWindowUid,
+    fn determine_procedure(
         trigger: &CoreEngineTrigger,
+        no_docs_gen_task_running: Option<bool>,
     ) -> Option<DocsGenComputeProcedure> {
-        let no_annotation_is_running = !self.is_docs_gen_task_running(window_uid);
+        let no_docs_gen_task_running =
+            if let Some(no_docs_gen_task_running) = no_docs_gen_task_running {
+                no_docs_gen_task_running
+            } else {
+                true
+            };
 
         match trigger {
-            CoreEngineTrigger::OnTextContentChange => {
-                no_annotation_is_running.then(|| DocsGenComputeProcedure::CreateNewNodeAnnotation)
-            }
-            CoreEngineTrigger::OnTextSelectionChange => {
-                no_annotation_is_running.then(|| DocsGenComputeProcedure::CreateNewNodeAnnotation)
+            CoreEngineTrigger::OnTextContentChange | CoreEngineTrigger::OnTextSelectionChange => {
+                no_docs_gen_task_running.then(|| DocsGenComputeProcedure::CreateNewNodeAnnotation)
             }
             CoreEngineTrigger::OnUserCommand(cmd) => match cmd {
                 UserCommand::NodeAnnotationClicked(msg) => {

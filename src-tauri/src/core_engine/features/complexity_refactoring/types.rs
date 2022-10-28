@@ -19,12 +19,6 @@ pub struct Edit {
     pub end_index: usize,
 }
 
-pub enum ComplexityRefactoringShortRunningProcedure {
-    PerformSuggestion(SuggestionId),
-    DismissSuggestion(SuggestionId),
-    SelectSuggestion(SuggestionId),
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "bindings/features/refactoring/")]
 pub struct FERefactoringSuggestion {

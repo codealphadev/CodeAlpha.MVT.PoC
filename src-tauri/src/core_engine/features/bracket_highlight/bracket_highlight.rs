@@ -7,7 +7,7 @@ use crate::{
         events::AnnotationManagerEvent,
         features::{
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            FeatureKind,
+            FeatureKind, FeatureProcedure,
         },
         rules::get_index_of_next_row,
         syntax_tree::SwiftSyntaxTreeError,
@@ -27,6 +27,32 @@ use super::utils::{
     get_indexes_of_first_and_last_char_in_node, get_text_pos_and_index_of_left_most_char_in_range,
     length_to_code_block_body_start, only_whitespace_on_line_until_position,
 };
+
+#[derive(thiserror::Error, Debug)]
+pub enum BracketHighlightError {
+    #[error("Insufficient context for bracket highlighting")]
+    InsufficientContext,
+    #[error("Unsupported codeblock.")]
+    UnsupportedCodeblock,
+    #[error("Position out of bounds")]
+    PositionOutOfBounds,
+    #[error("Found unterminated code block")]
+    UnterminatedCodeBlock,
+    #[error("Something went wrong when executing this BracketHighlighting feature.")]
+    GenericError(#[source] anyhow::Error),
+}
+
+#[derive(Copy, Clone, Debug)]
+struct PositionAndIndex {
+    position: TextPosition,
+    index: usize,
+}
+
+#[derive(Copy, Clone, Debug)]
+struct StartAndEndTextPositions {
+    start: TextPosition,
+    end: TextPosition,
+}
 
 pub struct BracketHighlight {
     is_activated: bool,
@@ -110,9 +136,36 @@ impl FeatureBase for BracketHighlight {
     fn kind(&self) -> FeatureKind {
         FeatureKind::BracketHighlight
     }
+
+    fn should_compute(
+        _kind: &FeatureKind,
+        trigger: &CoreEngineTrigger,
+    ) -> Option<FeatureProcedure> {
+        Self::determine_procedure(trigger)
+    }
+
+    fn requires_ai(_kind: &FeatureKind, _trigger: &CoreEngineTrigger) -> bool {
+        false
+    }
 }
 
 impl BracketHighlight {
+    pub fn new() -> Self {
+        Self {
+            registered_jobs: vec![],
+            is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
+            group_id: None,
+        }
+    }
+
+    fn determine_procedure(trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
+        match trigger {
+            CoreEngineTrigger::OnTextSelectionChange => Some(FeatureProcedure::ShortRunning),
+            CoreEngineTrigger::OnTextContentChange => None, // The TextSelectionChange is already triggered on text content change
+            _ => None,
+        }
+    }
+
     fn procedure_compute_bracket_highlights(
         &mut self,
         code_document: &CodeDocument,
@@ -190,7 +243,7 @@ impl BracketHighlight {
 
         // To determine the elbow point we are interested of the left-most text position
         // in the codeblock between opening and closing bracket.
-        let mut left_most_char: PositionAndIndex = match get_elbow_text_position(
+        let mut left_most_char: PositionAndIndex = match Self::get_elbow_text_position(
             &text_content,
             &line_opening_character,
             &line_closing_character,
@@ -279,7 +332,7 @@ impl BracketHighlight {
         ),
         FeatureError,
     > {
-        let code_block_node = match get_selected_code_block_node(code_document) {
+        let code_block_node = match Self::get_selected_code_block_node(code_document) {
             Ok(node) => {
                 if let Some(node) = node {
                     node
@@ -300,7 +353,7 @@ impl BracketHighlight {
             }
         };
 
-        let (opening_bracket, closing_bracket) = get_start_end_positions_and_indexes(
+        let (opening_bracket, closing_bracket) = Self::get_start_end_positions_and_indexes(
             &code_block_node,
             text_content,
             selected_text_range,
@@ -314,7 +367,7 @@ impl BracketHighlight {
         })?;
 
         let (line_opening_character, line_closing_character) =
-            get_line_start_end_positions_and_indexes(
+            Self::get_line_start_end_positions_and_indexes(
                 &code_block_node,
                 opening_bracket,
                 closing_bracket,
@@ -336,9 +389,7 @@ impl BracketHighlight {
             line_closing_character,
         ))
     }
-}
 
-impl BracketHighlight {
     fn register_annotation_jobs(
         &mut self,
         line_start_corner: InstructionBoundsPropertyOfInterest,
@@ -440,246 +491,215 @@ impl BracketHighlight {
             self.registered_jobs = jobs;
         }
     }
-}
 
-fn get_elbow_text_position(
-    text_content: &XcodeText,
-    line_opening_char: &PositionAndIndex,
-    line_closing_char: &PositionAndIndex,
-) -> Result<(TextPosition, usize), BracketHighlightError> {
-    if line_opening_char.position.row == line_closing_char.position.row {
-        return Err(BracketHighlightError::GenericError(anyhow!(
-            "No Elbow needed"
-        )));
-    }
-
-    if line_opening_char.position.row > line_closing_char.position.row {
-        return Err(BracketHighlightError::GenericError(anyhow!(
-            "Opening bracket is after closing bracket"
-        )));
-    }
-    // Elbow needed because the open and closing bracket are on different lines
-    let next_row_index = get_index_of_next_row(line_opening_char.index, &text_content).ok_or(
-        BracketHighlightError::GenericError(anyhow!(
-            "Malformed text content; could not find another row"
-        )),
-    )?;
-
-    let left_most_char_index = get_text_pos_and_index_of_left_most_char_in_range(
-        TextRange {
-            index: next_row_index,
-            length: line_closing_char.index - next_row_index + 1,
-        },
-        &text_content,
-    )
-    .ok_or(BracketHighlightError::GenericError(anyhow!(
-        "Malformed text content; could not find another row"
-    )))?;
-
-    Ok(left_most_char_index)
-}
-
-impl BracketHighlight {
-    pub fn new() -> Self {
-        Self {
-            registered_jobs: vec![],
-            is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
-            group_id: None,
+    fn get_elbow_text_position(
+        text_content: &XcodeText,
+        line_opening_char: &PositionAndIndex,
+        line_closing_char: &PositionAndIndex,
+    ) -> Result<(TextPosition, usize), BracketHighlightError> {
+        if line_opening_char.position.row == line_closing_char.position.row {
+            return Err(BracketHighlightError::GenericError(anyhow!(
+                "No Elbow needed"
+            )));
         }
+
+        if line_opening_char.position.row > line_closing_char.position.row {
+            return Err(BracketHighlightError::GenericError(anyhow!(
+                "Opening bracket is after closing bracket"
+            )));
+        }
+        // Elbow needed because the open and closing bracket are on different lines
+        let next_row_index = get_index_of_next_row(line_opening_char.index, &text_content).ok_or(
+            BracketHighlightError::GenericError(anyhow!(
+                "Malformed text content; could not find another row"
+            )),
+        )?;
+
+        let left_most_char_index = get_text_pos_and_index_of_left_most_char_in_range(
+            TextRange {
+                index: next_row_index,
+                length: line_closing_char.index - next_row_index + 1,
+            },
+            &text_content,
+        )
+        .ok_or(BracketHighlightError::GenericError(anyhow!(
+            "Malformed text content; could not find another row"
+        )))?;
+
+        Ok(left_most_char_index)
     }
-}
 
-fn get_selected_code_block_node(
-    code_document: &CodeDocument,
-) -> Result<Option<Node>, BracketHighlightError> {
-    let text_content = code_document
-        .text_content()
-        .ok_or(BracketHighlightError::InsufficientContext)?;
+    fn get_selected_code_block_node(
+        code_document: &CodeDocument,
+    ) -> Result<Option<Node>, BracketHighlightError> {
+        let text_content = code_document
+            .text_content()
+            .ok_or(BracketHighlightError::InsufficientContext)?;
 
-    let selected_text_range = match code_document.selected_text_range() {
-        Some(selected_text_range) => selected_text_range,
-        None => return Ok(None),
-    };
+        let selected_text_range = match code_document.selected_text_range() {
+            Some(selected_text_range) => selected_text_range,
+            None => return Ok(None),
+        };
 
-    let selected_node = match code_document
-        .syntax_tree()
-        .ok_or(BracketHighlightError::InsufficientContext)?
-        .get_code_node_by_text_range(selected_text_range)
-    {
-        Ok(node) => node,
-        Err(SwiftSyntaxTreeError::NoTreesitterNodeFound) => return Ok(None),
-        Err(err) => return Err(BracketHighlightError::GenericError(err.into())),
-    };
+        let selected_node = match code_document
+            .syntax_tree()
+            .ok_or(BracketHighlightError::InsufficientContext)?
+            .get_code_node_by_text_range(selected_text_range)
+        {
+            Ok(node) => node,
+            Err(SwiftSyntaxTreeError::NoTreesitterNodeFound) => return Ok(None),
+            Err(err) => return Err(BracketHighlightError::GenericError(err.into())),
+        };
 
-    let mut code_block_node = match get_code_block_parent(selected_node, false) {
-        None => return Ok(None),
-        Some(node) => node,
-    };
-
-    let length_to_bad_code_block_start =
-        length_to_code_block_body_start(&code_block_node, text_content, selected_text_range.index);
-
-    // If selected block is in bad code block declaration, then get parent
-    if length_to_bad_code_block_start.is_ok() && length_to_bad_code_block_start.unwrap().1 {
-        code_block_node = match get_code_block_parent(code_block_node, true) {
+        let mut code_block_node = match get_code_block_parent(selected_node, false) {
             None => return Ok(None),
             Some(node) => node,
         };
-    }
 
-    if code_block_node.end_position().column == 0 {
-        // This (probably) means that the codeblock is non-terminated, and the end is taken as the end of the document.
-        return Err(BracketHighlightError::UnterminatedCodeBlock);
-    }
-    return Ok(Some(code_block_node));
-}
+        let length_to_bad_code_block_start = length_to_code_block_body_start(
+            &code_block_node,
+            text_content,
+            selected_text_range.index,
+        );
 
-#[derive(thiserror::Error, Debug)]
-pub enum BracketHighlightError {
-    #[error("Insufficient context for bracket highlighting")]
-    InsufficientContext,
-    #[error("Unsupported codeblock.")]
-    UnsupportedCodeblock,
-    #[error("Position out of bounds")]
-    PositionOutOfBounds,
-    #[error("Found unterminated code block")]
-    UnterminatedCodeBlock,
-    #[error("Something went wrong when executing this BracketHighlighting feature.")]
-    GenericError(#[source] anyhow::Error),
-}
-
-#[derive(Copy, Clone, Debug)]
-struct PositionAndIndex {
-    position: TextPosition,
-    index: usize,
-}
-
-#[derive(Copy, Clone, Debug)]
-struct StartAndEndTextPositions {
-    start: TextPosition,
-    end: TextPosition,
-}
-
-fn get_start_end_positions_and_indexes(
-    node: &Node,
-    text_content: &XcodeText,
-    selected_text_range: &TextRange,
-) -> Result<(PositionAndIndex, PositionAndIndex), BracketHighlightError> {
-    let mut match_ranges = get_indexes_of_first_and_last_char_in_node(
-        &node,
-        &text_content,
-        selected_text_range.index,
-    )?;
-
-    let mut box_positions: StartAndEndTextPositions = StartAndEndTextPositions {
-        start: TextPosition::from_TSPoint(&node.start_position()),
-        end: TextPosition::from_TSPoint(&node.end_position()),
-    };
-
-    if node.kind() == "function_declaration" {
-        if let Some(function_declaration_parameters) =
-            special_case_function_declaration(node, text_content, selected_text_range)
-        {
-            match_ranges = (
-                function_declaration_parameters.0.index,
-                function_declaration_parameters.1.index,
-            );
-            box_positions = StartAndEndTextPositions {
-                start: function_declaration_parameters.0.position,
-                end: function_declaration_parameters.1.position,
+        // If selected block is in bad code block declaration, then get parent
+        if length_to_bad_code_block_start.is_ok() && length_to_bad_code_block_start.unwrap().1 {
+            code_block_node = match get_code_block_parent(code_block_node, true) {
+                None => return Ok(None),
+                Some(node) => node,
             };
-        } else {
-            // Skip function declaration node
-            if let Some(parent_node) = node.parent() {
+        }
+
+        if code_block_node.end_position().column == 0 {
+            // This (probably) means that the codeblock is non-terminated, and the end is taken as the end of the document.
+            return Err(BracketHighlightError::UnterminatedCodeBlock);
+        }
+        return Ok(Some(code_block_node));
+    }
+
+    fn get_start_end_positions_and_indexes(
+        node: &Node,
+        text_content: &XcodeText,
+        selected_text_range: &TextRange,
+    ) -> Result<(PositionAndIndex, PositionAndIndex), BracketHighlightError> {
+        let mut match_ranges = get_indexes_of_first_and_last_char_in_node(
+            &node,
+            &text_content,
+            selected_text_range.index,
+        )?;
+
+        let mut box_positions: StartAndEndTextPositions = StartAndEndTextPositions {
+            start: TextPosition::from_TSPoint(&node.start_position()),
+            end: TextPosition::from_TSPoint(&node.end_position()),
+        };
+
+        if node.kind() == "function_declaration" {
+            if let Some(function_declaration_parameters) =
+                Self::special_case_function_declaration(node, text_content, selected_text_range)
+            {
+                match_ranges = (
+                    function_declaration_parameters.0.index,
+                    function_declaration_parameters.1.index,
+                );
+                box_positions = StartAndEndTextPositions {
+                    start: function_declaration_parameters.0.position,
+                    end: function_declaration_parameters.1.position,
+                };
+            } else {
+                // Skip function declaration node
+                if let Some(parent_node) = node.parent() {
+                    if let Some(code_block_parent_node) = get_code_block_parent(parent_node, true) {
+                        return Self::get_start_end_positions_and_indexes(
+                            &code_block_parent_node,
+                            text_content,
+                            selected_text_range,
+                        );
+                    } else {
+                        return Err(BracketHighlightError::UnsupportedCodeblock);
+                    }
+                }
+            }
+        }
+
+        return Ok((
+            PositionAndIndex {
+                position: box_positions.start,
+                index: match_ranges.0,
+            },
+            PositionAndIndex {
+                position: box_positions.end,
+                index: match_ranges.1,
+            },
+        ));
+    }
+
+    fn special_case_function_declaration(
+        node: &Node,
+        text_content: &XcodeText,
+        selected_text_range: &TextRange,
+    ) -> Option<(PositionAndIndex, PositionAndIndex)> {
+        assert!(node.kind() == "function_declaration");
+
+        let mut cursor = node.walk();
+
+        let mut start_position: Option<TextPosition> = None;
+        let mut end_position: Option<TextPosition> = None;
+
+        for child in node.children(&mut cursor) {
+            if child.kind() == "(" {
+                start_position = Some(TextPosition::from_TSPoint(&child.start_position()));
+            }
+
+            if child.kind() == ")" {
+                end_position = Some(TextPosition::from_TSPoint(&child.start_position()));
+            }
+        }
+
+        if let (Some(start_position), Some(end_position)) = (start_position, end_position) {
+            if let (Some(start_index), Some(end_index)) = (
+                start_position.as_TextIndex(&text_content),
+                end_position.as_TextIndex(&text_content),
+            ) {
+                if start_index <= selected_text_range.index
+                    && end_index >= selected_text_range.index
+                {
+                    return Some((
+                        PositionAndIndex {
+                            position: start_position,
+                            index: start_index,
+                        },
+                        PositionAndIndex {
+                            position: end_position,
+                            index: end_index,
+                        },
+                    ));
+                }
+            }
+        }
+
+        None
+    }
+
+    fn get_line_start_end_positions_and_indexes(
+        code_block_node: &Node,
+        opening_bracket: PositionAndIndex,
+        closing_bracket: PositionAndIndex,
+        text_content: &XcodeText,
+        selected_text_range: &TextRange,
+    ) -> Result<(PositionAndIndex, PositionAndIndex), BracketHighlightError> {
+        let is_touching_left_first_char = selected_text_range.index == opening_bracket.index;
+
+        if is_touching_left_first_char {
+            if let Some(parent_node) = code_block_node.parent() {
                 if let Some(code_block_parent_node) = get_code_block_parent(parent_node, true) {
-                    return get_start_end_positions_and_indexes(
+                    return Self::get_start_end_positions_and_indexes(
                         &code_block_parent_node,
                         text_content,
                         selected_text_range,
                     );
-                } else {
-                    return Err(BracketHighlightError::UnsupportedCodeblock);
                 }
             }
         }
+        return Ok((opening_bracket, closing_bracket));
     }
-
-    return Ok((
-        PositionAndIndex {
-            position: box_positions.start,
-            index: match_ranges.0,
-        },
-        PositionAndIndex {
-            position: box_positions.end,
-            index: match_ranges.1,
-        },
-    ));
-}
-
-fn special_case_function_declaration(
-    node: &Node,
-    text_content: &XcodeText,
-    selected_text_range: &TextRange,
-) -> Option<(PositionAndIndex, PositionAndIndex)> {
-    assert!(node.kind() == "function_declaration");
-
-    let mut cursor = node.walk();
-
-    let mut start_position: Option<TextPosition> = None;
-    let mut end_position: Option<TextPosition> = None;
-
-    for child in node.children(&mut cursor) {
-        if child.kind() == "(" {
-            start_position = Some(TextPosition::from_TSPoint(&child.start_position()));
-        }
-
-        if child.kind() == ")" {
-            end_position = Some(TextPosition::from_TSPoint(&child.start_position()));
-        }
-    }
-
-    if let (Some(start_position), Some(end_position)) = (start_position, end_position) {
-        if let (Some(start_index), Some(end_index)) = (
-            start_position.as_TextIndex(&text_content),
-            end_position.as_TextIndex(&text_content),
-        ) {
-            if start_index <= selected_text_range.index && end_index >= selected_text_range.index {
-                return Some((
-                    PositionAndIndex {
-                        position: start_position,
-                        index: start_index,
-                    },
-                    PositionAndIndex {
-                        position: end_position,
-                        index: end_index,
-                    },
-                ));
-            }
-        }
-    }
-
-    None
-}
-
-fn get_line_start_end_positions_and_indexes(
-    code_block_node: &Node,
-    opening_bracket: PositionAndIndex,
-    closing_bracket: PositionAndIndex,
-    text_content: &XcodeText,
-    selected_text_range: &TextRange,
-) -> Result<(PositionAndIndex, PositionAndIndex), BracketHighlightError> {
-    let is_touching_left_first_char = selected_text_range.index == opening_bracket.index;
-
-    if is_touching_left_first_char {
-        if let Some(parent_node) = code_block_node.parent() {
-            if let Some(code_block_parent_node) = get_code_block_parent(parent_node, true) {
-                return get_start_end_positions_and_indexes(
-                    &code_block_parent_node,
-                    text_content,
-                    selected_text_range,
-                );
-            }
-        }
-    }
-    return Ok((opening_bracket, closing_bracket));
 }
