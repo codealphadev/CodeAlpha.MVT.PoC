@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use parking_lot::Mutex;
 use strum::IntoEnumIterator;
@@ -17,9 +21,8 @@ use crate::{
 use super::{
     annotations_manager::{AnnotationsManager, AnnotationsManagerTrait},
     features::{
-        hash_trigger_and_feature, BracketHighlight, ComplexityRefactoring, CoreEngineTrigger,
-        DocsGenerator, Feature, FeatureBase, FeatureError, FeatureKind, FeatureProcedure,
-        SwiftFormatter,
+        BracketHighlight, ComplexityRefactoring, CoreEngineTrigger, DocsGenerator, Feature,
+        FeatureBase, FeatureError, FeatureKind, FeatureProcedure, SwiftFormatter,
     },
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     log_list_of_module_names,
@@ -63,6 +66,31 @@ pub struct CoreEngineProcedure {
     pub procedure: FeatureProcedure,
     pub trigger: CoreEngineTrigger,
     pub window_uid: EditorWindowUid,
+}
+
+impl CoreEngineProcedure {
+    pub fn new(
+        feature: FeatureKind,
+        procedure: FeatureProcedure,
+        trigger: CoreEngineTrigger,
+        window_uid: EditorWindowUid,
+    ) -> Self {
+        Self {
+            feature,
+            procedure,
+            trigger,
+            window_uid,
+        }
+    }
+
+    fn hash(&self) -> u64 {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.trigger.hash(&mut hasher);
+        self.feature.hash(&mut hasher);
+        self.procedure.hash(&mut hasher);
+        self.window_uid.hash(&mut hasher);
+        hasher.finish()
+    }
 }
 
 type CoreEngineProcedureSchedule = HashMap<u64, CoreEngineProcedure>;
@@ -188,19 +216,19 @@ impl CoreEngine {
                 continue;
             }
 
-            if feature_kind.requires_ai() && !self.ai_features_active {
+            if feature_kind.requires_ai(&trigger) && !self.ai_features_active {
                 continue;
             }
 
             if let Some(procedure) = feature_kind.should_compute(trigger) {
-                let procedure = CoreEngineProcedure {
-                    feature: feature_kind,
-                    procedure: procedure,
-                    trigger: trigger.clone(),
+                let procedure = CoreEngineProcedure::new(
+                    feature_kind,
+                    procedure,
+                    trigger.to_owned(),
                     window_uid,
-                };
+                );
 
-                feature_procedures_schedule.insert(hash_trigger_and_feature(&procedure), procedure);
+                feature_procedures_schedule.insert(procedure.hash(), procedure);
             }
         }
     }

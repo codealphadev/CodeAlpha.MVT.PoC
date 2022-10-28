@@ -1,19 +1,15 @@
 use crate::{
     core_engine::{
-        core_engine::CoreEngineProcedure,
         events::models::{
             DismissSuggestionMessage, NodeAnnotationClickedMessage, PerformSuggestionMessage,
             UpdateSelectedSuggestionMessage,
         },
         CodeDocument, SwiftFormatError,
     },
-    platform::macos::models::editor::{EditorShortcutPressedMessage, ModifierKey},
+    platform::macos::models::editor::EditorShortcutPressedMessage,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt,
-    hash::{Hash, Hasher},
-};
+use std::{fmt, hash::Hash};
 use strum::{Display, EnumIter};
 use tauri::api::process::CommandChild;
 use ts_rs::TS;
@@ -60,64 +56,24 @@ pub enum FeatureProcedure {
 }
 
 impl FeatureKind {
-    pub fn requires_ai(&self) -> bool {
+    pub fn requires_ai(&self, trigger: &CoreEngineTrigger) -> bool {
         match self {
-            FeatureKind::BracketHighlight => false,
-            FeatureKind::ComplexityRefactoring => false,
-            FeatureKind::DocsGeneration => true,
-            FeatureKind::Formatter => false,
+            FeatureKind::BracketHighlight => BracketHighlight::requires_ai(self, trigger),
+            FeatureKind::DocsGeneration => DocsGenerator::requires_ai(self, trigger),
+            FeatureKind::Formatter => SwiftFormatter::requires_ai(self, trigger),
+            FeatureKind::ComplexityRefactoring => ComplexityRefactoring::requires_ai(self, trigger),
         }
     }
     pub fn should_compute(&self, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
         match self {
-            FeatureKind::ComplexityRefactoring => match trigger {
-                CoreEngineTrigger::OnTextContentChange => Some(FeatureProcedure::LongRunning),
-                CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(_)) => {
-                    Some(FeatureProcedure::ShortRunning)
-                }
-                CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(_)) => {
-                    Some(FeatureProcedure::ShortRunning)
-                }
-                CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(_)) => {
-                    Some(FeatureProcedure::ShortRunning)
-                }
-                _ => None,
-            },
-            FeatureKind::DocsGeneration => match trigger {
-                CoreEngineTrigger::OnTextContentChange => Some(FeatureProcedure::ShortRunning),
-                CoreEngineTrigger::OnTextSelectionChange => Some(FeatureProcedure::ShortRunning),
-                CoreEngineTrigger::OnUserCommand(cmd) => match cmd {
-                    UserCommand::NodeAnnotationClicked(_) => Some(FeatureProcedure::ShortRunning),
-                    _ => None,
-                },
-                _ => None,
-            },
-            FeatureKind::BracketHighlight => match trigger {
-                CoreEngineTrigger::OnTextSelectionChange => Some(FeatureProcedure::ShortRunning),
-                CoreEngineTrigger::OnTextContentChange => None, // The TextSelectionChange is already triggered on text content change
-                _ => None,
-            },
-            FeatureKind::Formatter => match trigger {
-                CoreEngineTrigger::OnShortcutPressed(msg) => {
-                    if msg.modifier == ModifierKey::Cmd && msg.key == "S" {
-                        return Some(FeatureProcedure::ShortRunning);
-                    } else {
-                        return None;
-                    }
-                }
-                _ => None,
-            },
+            FeatureKind::BracketHighlight => BracketHighlight::should_compute(self, trigger),
+            FeatureKind::DocsGeneration => DocsGenerator::should_compute(self, trigger),
+            FeatureKind::Formatter => SwiftFormatter::should_compute(self, trigger),
+            FeatureKind::ComplexityRefactoring => {
+                ComplexityRefactoring::should_compute(self, trigger)
+            }
         }
     }
-}
-
-pub fn hash_trigger_and_feature(core_engine_procedure: &CoreEngineProcedure) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    core_engine_procedure.trigger.hash(&mut hasher);
-    core_engine_procedure.feature.hash(&mut hasher);
-    core_engine_procedure.procedure.hash(&mut hasher);
-    core_engine_procedure.window_uid.hash(&mut hasher);
-    hasher.finish()
 }
 
 #[derive(Debug)]
@@ -193,6 +149,8 @@ pub trait FeatureBase {
     fn activate(&mut self) -> Result<(), FeatureError>;
     fn deactivate(&mut self) -> Result<(), FeatureError>;
     fn reset(&mut self) -> Result<(), FeatureError>;
+    fn should_compute(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure>;
+    fn requires_ai(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool;
 }
 
 impl FeatureBase for Feature {
@@ -270,6 +228,26 @@ impl FeatureBase for Feature {
             Feature::ComplexityRefactoring(feature) => {
                 feature.compute_short_running(code_document, trigger)
             }
+        }
+    }
+
+    fn should_compute(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
+        match kind {
+            FeatureKind::BracketHighlight => BracketHighlight::should_compute(kind, trigger),
+            FeatureKind::DocsGeneration => DocsGenerator::should_compute(kind, trigger),
+            FeatureKind::Formatter => SwiftFormatter::should_compute(kind, trigger),
+            FeatureKind::ComplexityRefactoring => {
+                ComplexityRefactoring::should_compute(kind, trigger)
+            }
+        }
+    }
+
+    fn requires_ai(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool {
+        match kind {
+            FeatureKind::BracketHighlight => BracketHighlight::requires_ai(kind, trigger),
+            FeatureKind::DocsGeneration => DocsGenerator::requires_ai(kind, trigger),
+            FeatureKind::Formatter => SwiftFormatter::requires_ai(kind, trigger),
+            FeatureKind::ComplexityRefactoring => ComplexityRefactoring::requires_ai(kind, trigger),
         }
     }
 }
