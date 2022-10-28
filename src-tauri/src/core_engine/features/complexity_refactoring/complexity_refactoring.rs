@@ -10,7 +10,7 @@ use crate::{
         features::{
             complexity_refactoring::{remove_annotations_for_suggestions, SuggestionsMap},
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            FeatureKind, FeatureSignals, UserCommand,
+            FeatureKind, FeatureSignal, UserCommand,
         },
         get_index_of_first_difference, CodeDocument, EditorWindowUid, TextRange,
     },
@@ -192,7 +192,7 @@ impl ComplexityRefactoring {
     }
 
     pub fn verify_task_not_cancelled(
-        signals_sender: &mpsc::Sender<FeatureSignals>,
+        signals_sender: &mpsc::Sender<FeatureSignal>,
     ) -> Result<(), ComplexityRefactoringError> {
         if signals_sender.is_closed() {
             return Err(ComplexityRefactoringError::ExecutionCancelled);
@@ -202,7 +202,7 @@ impl ComplexityRefactoring {
     }
 
     async fn handle_signals(
-        mut feature_signals_recv: mpsc::Receiver<FeatureSignals>,
+        mut feature_signals_recv: mpsc::Receiver<FeatureSignal>,
         mut cancelation_event_recv: mpsc::Receiver<&()>,
     ) {
         let mut swift_lsp_commands: Vec<CommandChild> = vec![];
@@ -211,10 +211,10 @@ impl ComplexityRefactoring {
                 signal = feature_signals_recv.recv() => {
                     if let Some(signal) = signal {
                         match signal {
-                            FeatureSignals::ComputationCompleted => {
+                            FeatureSignal::ComputationCompleted => {
                                 break;
                             }
-                            FeatureSignals::SwiftLspCommandSpawned(command) => {
+                            FeatureSignal::SwiftLspCommandSpawned(command) => {
                                 swift_lsp_commands.push(command);
                             }
                         }

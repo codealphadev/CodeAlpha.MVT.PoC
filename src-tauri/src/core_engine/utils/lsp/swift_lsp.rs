@@ -7,7 +7,7 @@ use tracing::error;
 
 pub struct SwiftLsp;
 
-use crate::core_engine::features::FeatureSignals;
+use crate::core_engine::features::FeatureSignal;
 
 use super::{
     get_compiler_args_from_xcodebuild, get_hashed_pbxproj_modification_date_with_random_fallback,
@@ -19,7 +19,7 @@ use super::{
 pub trait Lsp {
     async fn make_lsp_request(
         payload: String,
-        signals_sender: &mpsc::Sender<FeatureSignals>,
+        signals_sender: &mpsc::Sender<FeatureSignal>,
     ) -> Result<String, SwiftLspError>;
 
     async fn get_compiler_args(
@@ -32,7 +32,7 @@ pub trait Lsp {
 impl Lsp for SwiftLsp {
     async fn make_lsp_request(
         payload: String,
-        signals_sender: &mpsc::Sender<FeatureSignals>,
+        signals_sender: &mpsc::Sender<FeatureSignal>,
     ) -> Result<String, SwiftLspError> {
         // We wait for a very short time in order to allow quickly subsequently scheduled calls to cancel this one
         tokio::time::sleep(std::time::Duration::from_millis(3)).await;
@@ -68,7 +68,7 @@ impl Lsp for SwiftLsp {
                         };
 
                         _ = signals_sender
-                            .send(FeatureSignals::SwiftLspCommandSpawned(cmd_child))
+                            .send(FeatureSignal::SwiftLspCommandSpawned(cmd_child))
                             .await;
                     }
 

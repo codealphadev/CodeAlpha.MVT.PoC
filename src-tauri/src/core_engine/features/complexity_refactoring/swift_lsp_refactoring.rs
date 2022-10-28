@@ -1,6 +1,6 @@
 use super::{method_extraction::MethodExtractionTask, ComplexityRefactoring, Edit};
 use crate::core_engine::{
-    features::FeatureSignals, Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText,
+    features::FeatureSignal, Lsp, SwiftLsp, SwiftLspError, TextPosition, XcodeText,
 };
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
@@ -66,7 +66,7 @@ fn format_array_as_yaml(compiler_args: Vec<String>) -> String {
 pub async fn refactor_function(
     method_extraction_task: MethodExtractionTask,
     tmp_file_path: &String,
-    signals_sender: &mpsc::Sender<FeatureSignals>,
+    signals_sender: &mpsc::Sender<FeatureSignal>,
 ) -> Result<Vec<Edit>, SwiftLspError> {
     ComplexityRefactoring::verify_task_not_cancelled(&signals_sender)
         .map_err(|err| SwiftLspError::GenericError(anyhow!(err)))?;

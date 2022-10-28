@@ -8,7 +8,7 @@ use crate::{
                 ComplexityRefactoringError, Edit, NodeSlice, RefactoringSuggestion, SuggestionHash,
                 SuggestionState, SuggestionsArcMutex, SuggestionsMap,
             },
-            FeatureSignals,
+            FeatureSignal,
         },
         format_code,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
@@ -31,7 +31,7 @@ pub async fn compute_suggestions(
     suggestions_arc: SuggestionsArcMutex,
     dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
     code_document: CodeDocument,
-    signals_sender: mpsc::Sender<FeatureSignals>,
+    signals_sender: mpsc::Sender<FeatureSignal>,
 ) -> Result<(), ComplexityRefactoringError> {
     let window_uid = code_document.editor_window_props().window_uid;
     set_suggestions_to_recalculating(suggestions_arc.clone(), window_uid);
@@ -102,7 +102,7 @@ fn generate_suggestions_for_function(
     suggestions_arc: SuggestionsArcMutex,
     dismissed_suggestions_arc: Arc<Mutex<Vec<SuggestionHash>>>,
     window_uid: EditorWindowUid,
-    signals_sender: mpsc::Sender<FeatureSignals>,
+    signals_sender: mpsc::Sender<FeatureSignal>,
 ) -> Result<SuggestionsMap, ComplexityRefactoringError> {
     // This is heavy, should be done in parallel -> rayon, but since it takes TSNodes which is not sent this is not trivial.
     let mut suggestions = compute_suggestions_for_function(
@@ -208,7 +208,7 @@ fn generate_suggestions_for_function(
                         .await;
 
                         _ = signals_sender
-                            .send(FeatureSignals::ComputationCompleted)
+                            .send(FeatureSignal::ComputationCompleted)
                             .await;
                     }
                     Err(err) => {
@@ -257,7 +257,7 @@ async fn update_suggestion_with_formatted_text_diff(
     suggestions_arc: SuggestionsArcMutex,
     file_path: Option<String>,
     window_uid: EditorWindowUid,
-    signals_sender: &mpsc::Sender<FeatureSignals>,
+    signals_sender: &mpsc::Sender<FeatureSignal>,
 ) {
     if ComplexityRefactoring::verify_task_not_cancelled(&signals_sender).is_err() {
         return;
