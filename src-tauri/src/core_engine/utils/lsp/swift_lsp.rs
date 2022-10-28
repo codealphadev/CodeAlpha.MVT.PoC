@@ -100,7 +100,7 @@ impl Lsp for SwiftLsp {
         });
 
         let (text_content, stderr, termination_signal) = match recv.await {
-            Ok(text_content) => text_content,
+            Ok(result) => result,
             Err(e) => Err(SwiftLspError::GenericError(e.into())),
         }?;
 
@@ -132,7 +132,7 @@ impl Lsp for SwiftLsp {
         };
 
         // We wait for a very short time in order to allow quickly subsequently scheduled calls to cancel this one
-        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(3)).await;
 
         let (send, recv) = oneshot::channel();
 

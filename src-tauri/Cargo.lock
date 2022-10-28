@@ -4403,7 +4403,6 @@ dependencies = [
  "pin-project-lite",
  "socket2",
  "tokio-macros",
- "tracing",
  "winapi",
 ]
 

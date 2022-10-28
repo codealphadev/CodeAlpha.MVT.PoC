@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::core_engine::features::FeatureKind;
 use crate::core_engine::{format_code, SwiftFormatError};
@@ -34,17 +34,12 @@ impl FeatureBase for SwiftFormatter {
             return Ok(());
         }
 
-        match trigger {
-            CoreEngineTrigger::OnShortcutPressed(msg) => match msg.modifier {
-                ModifierKey::Cmd => match msg.key.as_str() {
-                    "S" => {
-                        return self.format(&code_document).map_err(|err| err.into());
-                    }
-                    _ => {}
-                },
-                _ => {}
-            },
-            _ => {}
+        if Self::determine_procedure(&trigger) {
+            info!(
+                feature = FeatureKind::Formatter.to_string(),
+                "User request: Format document",
+            );
+            return self.format(&code_document).map_err(|err| err.into());
         }
 
         Ok(())
@@ -84,11 +79,7 @@ impl SwiftFormatter {
     fn determine_procedure(trigger: &CoreEngineTrigger) -> bool {
         match trigger {
             CoreEngineTrigger::OnShortcutPressed(msg) => {
-                if msg.modifier == ModifierKey::Cmd && msg.key == "S" {
-                    return true;
-                } else {
-                    return false;
-                }
+                msg.modifier == ModifierKey::Cmd && msg.key == "S"
             }
             _ => false,
         }
