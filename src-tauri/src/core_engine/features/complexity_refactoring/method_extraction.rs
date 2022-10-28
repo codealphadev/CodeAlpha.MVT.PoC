@@ -94,26 +94,25 @@ pub async fn get_edits_for_method_extraction(
 
     ComplexityRefactoring::verify_task_not_canceled(&signals_sender)?;
 
-    let suggestion: Vec<Edit> = refactor_function(
+    let suggestion = refactor_function(
         method_extraction_task,
         &temp_file.path.to_string_lossy().to_string(),
         signals_sender,
     )
-    .await
-    .map_err(|e| {
-        delete_temp_file(&temp_file);
-        match e {
-            SwiftLspError::RefactoringNotPossible(payload) => {
-                ComplexityRefactoringError::LspRejectedRefactoring(payload)
-            }
-            SwiftLspError::ExecutionCanceled => ComplexityRefactoringError::ExecutionCancelled,
-            _ => ComplexityRefactoringError::GenericError(e.into()),
-        }
-    })?;
+    .await;
 
     delete_temp_file(&temp_file);
 
-    Ok(suggestion)
+    match suggestion {
+        Ok(suggestion) => Ok(suggestion),
+        Err(e) => match e {
+            SwiftLspError::RefactoringNotPossible(payload) => {
+                Err(ComplexityRefactoringError::LspRejectedRefactoring(payload))
+            }
+            SwiftLspError::ExecutionCanceled => Err(ComplexityRefactoringError::ExecutionCancelled),
+            _ => Err(ComplexityRefactoringError::GenericError(e.into())),
+        },
+    }
 }
 
 fn delete_temp_file(temp_file: &TemporaryFileOnDisk) {

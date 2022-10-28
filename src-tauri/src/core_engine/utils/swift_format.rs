@@ -28,7 +28,7 @@ pub async fn format_code(
     let mut command = tauri::api::process::Command::new_sidecar("swiftformat")
         .map_err(|err| SwiftFormatError::GenericError(err.into()))?;
 
-    let args = get_swiftformat_args(file_path).await;
+    let args = get_swiftformat_args(file_path);
 
     command = command.args(args);
 
@@ -55,6 +55,7 @@ pub async fn format_code(
             _ => (),
         }
     }
+
     if !text_content.is_empty() {
         Ok(text_content)
     } else if !error_content.is_empty() {
@@ -64,11 +65,11 @@ pub async fn format_code(
     }
 }
 
-async fn get_swiftformat_args(file_path: &Option<String>) -> Vec<String> {
+fn get_swiftformat_args(file_path: &Option<String>) -> Vec<String> {
     let mut args = vec!["--quiet"];
 
     let swift_version;
-    match get_xcode_swift_version().await {
+    match get_xcode_swift_version() {
         Ok(version) => {
             swift_version = version.to_owned();
             args.push("--swiftversion");
@@ -126,7 +127,7 @@ fn swiftformat_config_file_exists(path: &Option<String>) -> bool {
     false
 }
 
-async fn get_xcode_swift_version() -> Result<String, SwiftFormatError> {
+fn get_xcode_swift_version() -> Result<String, SwiftFormatError> {
     let text_content = Command::new("xcrun")
         .args(["swift", "--version"])
         .output()
@@ -176,13 +177,12 @@ mod tests {
     }
 
     mod get_xcode_swift_version {
-        use tauri::async_runtime::block_on;
 
         use super::super::*;
 
         #[test]
         fn good_version() {
-            let version = block_on(get_xcode_swift_version());
+            let version = get_xcode_swift_version();
             assert!(version.is_ok());
         }
     }
