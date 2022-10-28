@@ -1,6 +1,6 @@
 [package]
 name = "Pretzl"
-version = "0.0.88"
+version = "0.0.89"
 description = "Pretzl"
 authors = [ "Adrian Hupka, Daniel Owens, Adam Nyberg",]
 license = ""
@@ -70,7 +70,7 @@ features = [ "v4", "serde",]
 
 [dependencies.tokio]
 version = "1.17.0"
-features = [ "time"]
+features = [ "time",]
 
 [dependencies.strum]
 version = "0.24.1"
@@ -104,3 +104,4 @@ features = [ "isolation",]
 [patch.crates-io.tao]
 git = "https://github.com/codealphadev/tao"
 branch = "0.12.2"
+
