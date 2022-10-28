@@ -12,7 +12,8 @@ pub fn on_text_content_changed(
 ) -> Result<(), CoreEngineError> {
     let core_engine = &mut core_engine_arc.lock();
 
-    core_engine.add_code_document(content_changed_msg.pid, content_changed_msg.window_uid);
+    core_engine
+        .add_code_document_if_not_existing(content_changed_msg.pid, content_changed_msg.window_uid);
 
     core_engine.handle_trigger(
         content_changed_msg.window_uid,
