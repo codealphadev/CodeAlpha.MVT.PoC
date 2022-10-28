@@ -19,7 +19,6 @@ use crate::{
 use anyhow::anyhow;
 use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc};
-use tracing::debug;
 
 use tokio::sync::mpsc;
 

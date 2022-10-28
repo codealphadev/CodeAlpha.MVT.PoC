@@ -4,9 +4,7 @@ use crate::core_engine::{
     features::{complexity_refactoring::ComplexityRefactoringError, SuggestionId},
 };
 
-pub async fn select_suggestion(
-    suggestion_id: SuggestionId,
-) -> Result<(), ComplexityRefactoringError> {
+pub fn select_suggestion(suggestion_id: SuggestionId) -> Result<(), ComplexityRefactoringError> {
     AnnotationManagerEvent::ScrollToAnnotationInGroup((
         suggestion_id,
         GetAnnotationInGroupVia::Kind(AnnotationKind::ExtractionStartChar),

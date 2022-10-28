@@ -182,6 +182,8 @@ impl Lsp for SwiftLsp {
                 Ok(fallback_args)
             }
         }
+
+        // Err(SwiftLspError::GenericError(anyhow!("")))
     }
 }
 

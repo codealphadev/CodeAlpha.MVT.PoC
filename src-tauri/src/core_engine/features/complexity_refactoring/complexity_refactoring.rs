@@ -76,10 +76,9 @@ impl FeatureBase for ComplexityRefactoring {
                                 suggestions_arc,
                                 dismissed_suggestions_arc,
                             )
-                            .await
                         }
                         ComplexityRefactoringProcedure::SelectSuggestion(id) => {
-                            procedures::select_suggestion(id).await
+                            procedures::select_suggestion(id)
                         }
                         ComplexityRefactoringProcedure::ComputeSuggestions => {
                             // See Tokio Select Cancellation pattern -> https://tokio.rs/tokio/tutorial/select, chapter Canceling

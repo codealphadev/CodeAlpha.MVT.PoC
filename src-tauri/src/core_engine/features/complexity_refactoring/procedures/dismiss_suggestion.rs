@@ -20,7 +20,7 @@ use crate::{
 
 const DISMISSED_SUGGESTIONS_FILE_NAME: &str = "dismissed_suggestions.json";
 
-pub async fn dismiss_suggestion(
+pub fn dismiss_suggestion(
     code_document: CodeDocument,
     suggestion_id: SuggestionId,
     suggestions_arc: SuggestionsArcMutex,
