@@ -8,7 +8,6 @@ use crate::{
                 ComplexityRefactoringError, Edit, NodeSlice, RefactoringSuggestion, SuggestionHash,
                 SuggestionState, SuggestionsArcMutex, SuggestionsMap,
             },
-            feature_base::FeatureError,
             FeatureSignals,
         },
         format_code,
@@ -18,9 +17,9 @@ use crate::{
     utils::calculate_hash,
 };
 use anyhow::anyhow;
-
 use parking_lot::Mutex;
 use std::{collections::HashMap, sync::Arc};
+use tracing::debug;
 
 use tokio::sync::mpsc;
 
@@ -34,7 +33,7 @@ pub async fn compute_suggestions(
     dismissed_suggestions: Arc<Mutex<Vec<SuggestionHash>>>,
     code_document: CodeDocument,
     signals_sender: mpsc::Sender<FeatureSignals>,
-) -> Result<(), FeatureError> {
+) -> Result<(), ComplexityRefactoringError> {
     let window_uid = code_document.editor_window_props().window_uid;
     set_suggestions_to_recalculating(suggestions_arc.clone(), window_uid);
 
@@ -44,17 +43,13 @@ pub async fn compute_suggestions(
     let text_content = code_document
         .text_content()
         .as_ref()
-        .ok_or(FeatureError::GenericError(
-            ComplexityRefactoringError::InsufficientContext.into(),
-        ))?
+        .ok_or(ComplexityRefactoringError::InsufficientContext.into())?
         .clone();
 
     let top_level_functions = SwiftFunction::get_top_level_functions(
         code_document
             .syntax_tree()
-            .ok_or(FeatureError::GenericError(
-                ComplexityRefactoringError::InsufficientContext.into(),
-            ))?,
+            .ok_or(ComplexityRefactoringError::InsufficientContext.into())?,
         &text_content,
     )
     .map_err(|err| ComplexityRefactoringError::GenericError(err.into()))?;
@@ -74,9 +69,7 @@ pub async fn compute_suggestions(
             &file_path,
             code_document
                 .syntax_tree()
-                .ok_or(FeatureError::GenericError(
-                    ComplexityRefactoringError::InsufficientContext.into(),
-                ))?,
+                .ok_or(ComplexityRefactoringError::InsufficientContext.into())?,
             suggestions_arc.clone(),
             dismissed_suggestions.clone(),
             code_document.editor_window_props().window_uid,

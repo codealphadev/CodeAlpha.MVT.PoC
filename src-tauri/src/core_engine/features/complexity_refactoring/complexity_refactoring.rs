@@ -87,13 +87,13 @@ impl FeatureBase for ComplexityRefactoring {
                                 tokio::sync::mpsc::channel(1);
 
                             tauri::async_runtime::spawn(async move {
-                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
                                 if feature_signals_send.is_closed() {
                                     return;
                                 }
 
-                                if let Err(e) = procedures::compute_suggestions(
+                                match procedures::compute_suggestions(
                                     suggestions_arc,
                                     dismissed_suggestions_arc,
                                     code_document,
@@ -101,7 +101,9 @@ impl FeatureBase for ComplexityRefactoring {
                                 )
                                 .await
                                 {
-                                    error!("Error while computing suggestions: {:?}", e);
+                                    Err(ComplexityRefactoringError::ExecutionCancelled) => (),
+                                    Err(e) => error!(?e, "Error while computing suggestions"),
+                                    Ok(_) => (),
                                 }
                             });
 
