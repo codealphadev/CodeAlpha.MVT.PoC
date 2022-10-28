@@ -89,7 +89,13 @@ key.compilerargs:{}"#,
     )
     .to_string();
 
+    ComplexityRefactoring::verify_task_not_cancelled(&signals_sender)
+        .map_err(|err| SwiftLspError::GenericError(anyhow!(err)))?;
+
     let result_str = SwiftLsp::make_lsp_request(payload.clone(), signals_sender).await?;
+
+    ComplexityRefactoring::verify_task_not_cancelled(&signals_sender)
+        .map_err(|err| SwiftLspError::GenericError(anyhow!(err)))?;
 
     let result: RefactoringResponse =
         serde_json::from_str(&result_str).map_err(|e| SwiftLspError::GenericError(e.into()))?;
