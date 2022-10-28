@@ -16,5 +16,4 @@ public/build
 
 actions-runner/*
 scripts/tmp/*
-scripts/a.out
-scripts/output
+
