@@ -57,7 +57,7 @@ impl From<XcodeError> for CoreEngineError {
 #[derive(Debug, Clone)]
 enum CodeDocUpdate {
     Finished,
-    Canceled,
+    Cancelled,
 }
 
 #[derive(Debug, Clone)]
@@ -253,7 +253,7 @@ impl CoreEngine {
                                 );
                                 *awaiting_code_doc_update_task.lock() = false;
                             }
-                            CodeDocUpdate::Canceled => {
+                            CodeDocUpdate::Cancelled => {
                                 // Syntax tree parsing task restarted.
                             }
                         }
@@ -276,7 +276,7 @@ impl CoreEngine {
         features: Arc<Mutex<HashMap<FeatureKind, Arc<Mutex<Feature>>>>>,
         code_documents: Arc<Mutex<HashMap<usize, CodeDocument>>>,
     ) {
-        for core_engine_procedure in core_engine_procedures_schedule.lock().values() {
+        for core_engine_procedure in core_engine_procedures_schedule.lock().drain() {
             if let (Some(feature), Some(code_doc)) = (
                 features.lock().get_mut(&core_engine_procedure.feature),
                 code_documents.lock().get(&core_engine_procedure.window_uid),
@@ -293,8 +293,6 @@ impl CoreEngine {
                 );
             }
         }
-
-        core_engine_procedures_schedule.lock().clear();
     }
 
     fn process_single_feature(
@@ -371,7 +369,7 @@ impl CoreEngine {
                         }
                     }
                     _ = cancel_recv => {
-                        _ = code_doc_update_send.send(&CodeDocUpdate::Canceled);
+                        _ = code_doc_update_send.send(&CodeDocUpdate::Cancelled);
                     }
                 }
             }

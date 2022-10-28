@@ -68,7 +68,7 @@ pub async fn refactor_function(
     tmp_file_path: &String,
     signals_sender: &mpsc::Sender<FeatureSignals>,
 ) -> Result<Vec<Edit>, SwiftLspError> {
-    ComplexityRefactoring::verify_task_not_canceled(&signals_sender)
+    ComplexityRefactoring::verify_task_not_cancelled(&signals_sender)
         .map_err(|err| SwiftLspError::GenericError(anyhow!(err)))?;
 
     let compiler_args =

@@ -107,7 +107,7 @@ impl Lsp for SwiftLsp {
         if !text_content.is_empty() {
             Ok(text_content)
         } else if termination_signal == Some(9) {
-            Err(SwiftLspError::ExecutionCanceled)
+            Err(SwiftLspError::ExecutionCancelled)
         } else {
             Err(SwiftLspError::SourceKittenCommandFailed(payload, stderr))
         }
@@ -207,7 +207,7 @@ fn get_macos_sdk_path() -> Result<String, SwiftLspError> {
 #[derive(thiserror::Error, Debug)]
 pub enum SwiftLspError {
     #[error("Execution was cancelled")]
-    ExecutionCanceled,
+    ExecutionCancelled,
 
     #[error("Refactoring could not be carried out: '{}'", 0)]
     RefactoringNotPossible(String),

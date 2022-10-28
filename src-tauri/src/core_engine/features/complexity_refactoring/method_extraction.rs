@@ -92,7 +92,7 @@ pub async fn get_edits_for_method_extraction(
 
     let temp_file = create_temp_file(&method_extraction_task.text_content, tmp_file_key)?;
 
-    ComplexityRefactoring::verify_task_not_canceled(&signals_sender)?;
+    ComplexityRefactoring::verify_task_not_cancelled(&signals_sender)?;
 
     let suggestion = refactor_function(
         method_extraction_task,
@@ -109,7 +109,9 @@ pub async fn get_edits_for_method_extraction(
             SwiftLspError::RefactoringNotPossible(payload) => {
                 Err(ComplexityRefactoringError::LspRejectedRefactoring(payload))
             }
-            SwiftLspError::ExecutionCanceled => Err(ComplexityRefactoringError::ExecutionCancelled),
+            SwiftLspError::ExecutionCancelled => {
+                Err(ComplexityRefactoringError::ExecutionCancelled)
+            }
             _ => Err(ComplexityRefactoringError::GenericError(e.into())),
         },
     }

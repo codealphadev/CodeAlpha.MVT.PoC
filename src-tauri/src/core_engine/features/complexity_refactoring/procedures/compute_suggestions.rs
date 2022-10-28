@@ -57,7 +57,7 @@ pub async fn compute_suggestions(
     let mut s_exps = vec![];
     let mut suggestions: SuggestionsMap = HashMap::new();
 
-    ComplexityRefactoring::verify_task_not_canceled(&signals_sender)?;
+    ComplexityRefactoring::verify_task_not_cancelled(&signals_sender)?;
 
     // We should spawn them all at once, and then wait for them to finish
     for function in top_level_functions {
@@ -180,7 +180,7 @@ fn generate_suggestions_for_function(
 
             async move {
                 // SourceKit -> very heavy
-                if ComplexityRefactoring::verify_task_not_canceled(&signals_sender).is_err() {
+                if ComplexityRefactoring::verify_task_not_cancelled(&signals_sender).is_err() {
                     return;
                 };
 
@@ -189,7 +189,8 @@ fn generate_suggestions_for_function(
 
                 match edits {
                     Ok(edits) => {
-                        if ComplexityRefactoring::verify_task_not_canceled(&signals_sender).is_err()
+                        if ComplexityRefactoring::verify_task_not_cancelled(&signals_sender)
+                            .is_err()
                         {
                             return;
                         };
@@ -258,7 +259,7 @@ async fn update_suggestion_with_formatted_text_diff(
     window_uid: EditorWindowUid,
     signals_sender: &mpsc::Sender<FeatureSignals>,
 ) {
-    if ComplexityRefactoring::verify_task_not_canceled(&signals_sender).is_err() {
+    if ComplexityRefactoring::verify_task_not_cancelled(&signals_sender).is_err() {
         return;
     };
 
