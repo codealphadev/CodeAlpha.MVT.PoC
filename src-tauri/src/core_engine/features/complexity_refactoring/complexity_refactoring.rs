@@ -191,7 +191,7 @@ impl ComplexityRefactoring {
         recv
     }
 
-    pub fn verify_task_not_canceled(
+    pub fn verify_task_not_cancelled(
         signals_sender: &mpsc::Sender<FeatureSignals>,
     ) -> Result<(), ComplexityRefactoringError> {
         if signals_sender.is_closed() {
