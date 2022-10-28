@@ -13,7 +13,6 @@ use std::{fmt, hash::Hash};
 use strum::{Display, EnumIter};
 use tauri::api::process::CommandChild;
 use ts_rs::TS;
-use uuid::Uuid;
 
 use super::{
     complexity_refactoring::ComplexityRefactoringError, docs_generation::DocsGenerationError,
@@ -49,12 +48,6 @@ pub enum FeatureKind {
     Formatter,
 }
 
-#[derive(Clone, Debug, Hash)]
-pub enum FeatureProcedure {
-    LongRunning,
-    ShortRunning,
-}
-
 impl FeatureKind {
     pub fn requires_ai(&self, trigger: &CoreEngineTrigger) -> bool {
         match self {
@@ -64,7 +57,7 @@ impl FeatureKind {
             FeatureKind::ComplexityRefactoring => ComplexityRefactoring::requires_ai(self, trigger),
         }
     }
-    pub fn should_compute(&self, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
+    pub fn should_compute(&self, trigger: &CoreEngineTrigger) -> bool {
         match self {
             FeatureKind::BracketHighlight => BracketHighlight::should_compute(self, trigger),
             FeatureKind::DocsGeneration => DocsGenerator::should_compute(self, trigger),
@@ -135,44 +128,29 @@ impl From<SwiftFormatError> for FeatureError {
 
 pub trait FeatureBase {
     fn kind(&self) -> FeatureKind;
-    fn compute_short_running(
+    fn compute(
         &mut self,
         code_document: CodeDocument,
-        trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError>;
-    fn compute_long_running(
-        &mut self,
-        code_document: CodeDocument,
-        trigger: &CoreEngineTrigger,
-        execution_id: Option<Uuid>,
+        trigger: CoreEngineTrigger,
     ) -> Result<(), FeatureError>;
     fn activate(&mut self) -> Result<(), FeatureError>;
     fn deactivate(&mut self) -> Result<(), FeatureError>;
     fn reset(&mut self) -> Result<(), FeatureError>;
-    fn should_compute(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure>;
+    fn should_compute(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool;
     fn requires_ai(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool;
 }
 
 impl FeatureBase for Feature {
-    fn compute_long_running(
+    fn compute(
         &mut self,
         code_document: CodeDocument,
-        trigger: &CoreEngineTrigger,
-        execution_id: Option<Uuid>,
+        trigger: CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         match self {
-            Feature::BracketHighlighting(feature) => {
-                feature.compute_long_running(code_document, trigger, execution_id)
-            }
-            Feature::DocsGeneration(feature) => {
-                feature.compute_long_running(code_document, trigger, execution_id)
-            }
-            Feature::Formatter(feature) => {
-                feature.compute_long_running(code_document, trigger, execution_id)
-            }
-            Feature::ComplexityRefactoring(feature) => {
-                feature.compute_long_running(code_document, trigger, execution_id)
-            }
+            Feature::BracketHighlighting(feature) => feature.compute(code_document, trigger),
+            Feature::DocsGeneration(feature) => feature.compute(code_document, trigger),
+            Feature::Formatter(feature) => feature.compute(code_document, trigger),
+            Feature::ComplexityRefactoring(feature) => feature.compute(code_document, trigger),
         }
     }
 
@@ -212,26 +190,7 @@ impl FeatureBase for Feature {
         }
     }
 
-    fn compute_short_running(
-        &mut self,
-        code_document: CodeDocument,
-        trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
-        match self {
-            Feature::BracketHighlighting(feature) => {
-                feature.compute_short_running(code_document, trigger)
-            }
-            Feature::DocsGeneration(feature) => {
-                feature.compute_short_running(code_document, trigger)
-            }
-            Feature::Formatter(feature) => feature.compute_short_running(code_document, trigger),
-            Feature::ComplexityRefactoring(feature) => {
-                feature.compute_short_running(code_document, trigger)
-            }
-        }
-    }
-
-    fn should_compute(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
+    fn should_compute(kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool {
         match kind {
             FeatureKind::BracketHighlight => BracketHighlight::should_compute(kind, trigger),
             FeatureKind::DocsGeneration => DocsGenerator::should_compute(kind, trigger),

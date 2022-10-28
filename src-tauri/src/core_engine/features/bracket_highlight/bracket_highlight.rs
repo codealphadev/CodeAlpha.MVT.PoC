@@ -7,7 +7,7 @@ use crate::{
         events::AnnotationManagerEvent,
         features::{
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            FeatureKind, FeatureProcedure,
+            FeatureKind,
         },
         rules::get_index_of_next_row,
         syntax_tree::SwiftSyntaxTreeError,
@@ -20,7 +20,6 @@ use crate::{
 use anyhow::anyhow;
 use tracing::debug;
 use tree_sitter::Node;
-use uuid::Uuid;
 
 use super::utils::{
     get_char_rectangle_from_text_index, get_code_block_parent,
@@ -62,10 +61,10 @@ pub struct BracketHighlight {
 }
 
 impl FeatureBase for BracketHighlight {
-    fn compute_short_running(
+    fn compute(
         &mut self,
         code_document: CodeDocument,
-        _trigger: &CoreEngineTrigger,
+        _trigger: CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
@@ -88,19 +87,6 @@ impl FeatureBase for BracketHighlight {
                     AnnotationManagerEvent::Remove(group_id).publish_to_tauri();
                 }
             }
-        }
-
-        Ok(())
-    }
-
-    fn compute_long_running(
-        &mut self,
-        _code_document: CodeDocument,
-        _trigger: &CoreEngineTrigger,
-        _execution_id: Option<Uuid>,
-    ) -> Result<(), FeatureError> {
-        if !self.is_activated {
-            return Ok(());
         }
 
         Ok(())
@@ -137,10 +123,7 @@ impl FeatureBase for BracketHighlight {
         FeatureKind::BracketHighlight
     }
 
-    fn should_compute(
-        _kind: &FeatureKind,
-        trigger: &CoreEngineTrigger,
-    ) -> Option<FeatureProcedure> {
+    fn should_compute(_kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool {
         Self::determine_procedure(trigger)
     }
 
@@ -158,11 +141,11 @@ impl BracketHighlight {
         }
     }
 
-    fn determine_procedure(trigger: &CoreEngineTrigger) -> Option<FeatureProcedure> {
+    fn determine_procedure(trigger: &CoreEngineTrigger) -> bool {
         match trigger {
-            CoreEngineTrigger::OnTextSelectionChange => Some(FeatureProcedure::ShortRunning),
-            CoreEngineTrigger::OnTextContentChange => None, // The TextSelectionChange is already triggered on text content change
-            _ => None,
+            CoreEngineTrigger::OnTextSelectionChange => true,
+            CoreEngineTrigger::OnTextContentChange => false, // The TextSelectionChange is already triggered on text content change
+            _ => false,
         }
     }
 

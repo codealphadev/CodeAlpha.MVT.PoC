@@ -14,7 +14,7 @@ use crate::{
                 remove_annotations_for_suggestions, Edit, SuggestionsMap,
             },
             feature_base::{CoreEngineTrigger, FeatureBase, FeatureError},
-            FeatureKind, FeatureProcedure, FeatureSignals, UserCommand,
+            FeatureKind, FeatureSignals, UserCommand,
         },
         format_code, get_index_of_first_difference,
         syntax_tree::{SwiftCodeBlockBase, SwiftFunction, SwiftSyntaxTree},
@@ -42,19 +42,11 @@ lazy_static! {
         Mutex::new(None);
 }
 
-enum ShortRunningProcedure {
+enum ComplexityRefactoringProcedure {
     PerformSuggestion(SuggestionId),
     DismissSuggestion(SuggestionId),
     SelectSuggestion(SuggestionId),
-}
-
-enum LongRunningProcedure {
     GetSuggestions,
-}
-
-enum ComplexityRefactoringProcedure {
-    ShortRunning(ShortRunningProcedure),
-    LongRunning(LongRunningProcedure),
 }
 
 pub struct ComplexityRefactoring {
@@ -66,55 +58,10 @@ pub struct ComplexityRefactoring {
 }
 
 impl FeatureBase for ComplexityRefactoring {
-    fn compute_short_running(
+    fn compute(
         &mut self,
         code_document: CodeDocument,
-        trigger: &CoreEngineTrigger,
-    ) -> Result<(), FeatureError> {
-        if !self.is_activated {
-            return Ok(());
-        }
-
-        if let Some(procedure) = Self::determine_procedure(trigger) {
-            match procedure {
-                ComplexityRefactoringProcedure::ShortRunning(short_running_procedure) => {
-                    tauri::async_runtime::spawn({
-                        let dismissed_suggestions_arc = self.dismissed_suggestions_arc.clone();
-                        let suggestions_arc = self.suggestions_arc.clone();
-
-                        async move {
-                            match short_running_procedure {
-                                ShortRunningProcedure::PerformSuggestion(id) => {
-                                    perform_suggestion(code_document, id, suggestions_arc).await
-                                }
-                                ShortRunningProcedure::DismissSuggestion(id) => {
-                                    procedures::dismiss_suggestion(
-                                        code_document,
-                                        id,
-                                        suggestions_arc,
-                                        dismissed_suggestions_arc,
-                                    )
-                                    .await
-                                }
-                                ShortRunningProcedure::SelectSuggestion(id) => {
-                                    procedures::select_suggestion(id).await
-                                }
-                            }
-                        }
-                    });
-                }
-                _ => {}
-            }
-        }
-
-        Ok(())
-    }
-
-    fn compute_long_running(
-        &mut self,
-        code_document: CodeDocument,
-        _trigger: &CoreEngineTrigger,
-        _execution_id: Option<Uuid>,
+        trigger: CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
@@ -123,33 +70,60 @@ impl FeatureBase for ComplexityRefactoring {
         let cancelation_event_recv = self.cancel_complexity_refactoring_task();
 
         tauri::async_runtime::spawn({
-            let dismissed_suggestions = self.dismissed_suggestions_arc.clone();
+            let dismissed_suggestions_arc = self.dismissed_suggestions_arc.clone();
             let suggestions_arc = self.suggestions_arc.clone();
 
             async move {
-                // See Tokio Select Cancellation pattern -> https://tokio.rs/tokio/tutorial/select, chapter Canceling
-                let (feature_signals_send, feature_signals_recv) = tokio::sync::mpsc::channel(1);
+                if let Some(procedure) = Self::determine_procedure(&trigger) {
+                    if let Err(e) = match procedure {
+                        ComplexityRefactoringProcedure::PerformSuggestion(id) => {
+                            perform_suggestion(code_document, id, suggestions_arc).await
+                        }
+                        ComplexityRefactoringProcedure::DismissSuggestion(id) => {
+                            procedures::dismiss_suggestion(
+                                code_document,
+                                id,
+                                suggestions_arc,
+                                dismissed_suggestions_arc,
+                            )
+                            .await
+                        }
+                        ComplexityRefactoringProcedure::SelectSuggestion(id) => {
+                            procedures::select_suggestion(id).await
+                        }
+                        ComplexityRefactoringProcedure::GetSuggestions => {
+                            // See Tokio Select Cancellation pattern -> https://tokio.rs/tokio/tutorial/select, chapter Canceling
+                            let (feature_signals_send, feature_signals_recv) =
+                                tokio::sync::mpsc::channel(1);
 
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            tauri::async_runtime::spawn(async move {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-                    if feature_signals_send.is_closed() {
-                        return;
+                                if feature_signals_send.is_closed() {
+                                    return;
+                                }
+
+                                if let Err(e) = Self::compute_suggestions(
+                                    suggestions_arc,
+                                    dismissed_suggestions_arc,
+                                    code_document,
+                                    feature_signals_send.clone(),
+                                )
+                                .await
+                                {
+                                    error!("Error while computing suggestions: {:?}", e);
+                                }
+                            });
+
+                            Self::handle_signals(feature_signals_recv, cancelation_event_recv)
+                                .await;
+
+                            Ok(())
+                        }
+                    } {
+                        error!(?e, "Error while performing procedure");
                     }
-
-                    if let Err(e) = Self::compute_suggestions(
-                        suggestions_arc,
-                        dismissed_suggestions,
-                        code_document,
-                        feature_signals_send.clone(),
-                    )
-                    .await
-                    {
-                        error!("Error while computing suggestions: {:?}", e);
-                    }
-                });
-
-                Self::handle_signals(feature_signals_recv, cancelation_event_recv).await;
+                }
             }
         });
 
@@ -176,22 +150,8 @@ impl FeatureBase for ComplexityRefactoring {
         FeatureKind::ComplexityRefactoring
     }
 
-    fn should_compute(
-        _kind: &FeatureKind,
-        trigger: &CoreEngineTrigger,
-    ) -> Option<FeatureProcedure> {
-        if let Some(procedure) = Self::determine_procedure(trigger) {
-            match procedure {
-                ComplexityRefactoringProcedure::ShortRunning(_) => {
-                    Some(FeatureProcedure::ShortRunning)
-                }
-                ComplexityRefactoringProcedure::LongRunning(_) => {
-                    Some(FeatureProcedure::LongRunning)
-                }
-            }
-        } else {
-            None
-        }
+    fn should_compute(_kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool {
+        Self::determine_procedure(trigger).is_some()
     }
 
     fn requires_ai(_kind: &FeatureKind, _trigger: &CoreEngineTrigger) -> bool {
@@ -208,6 +168,24 @@ impl ComplexityRefactoring {
                 procedures::read_dismissed_suggestions(),
             )),
             cancel_long_running_task_send: None,
+        }
+    }
+
+    fn determine_procedure(trigger: &CoreEngineTrigger) -> Option<ComplexityRefactoringProcedure> {
+        match trigger {
+            CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)) => {
+                Some(ComplexityRefactoringProcedure::PerformSuggestion(msg.id))
+            }
+            CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)) => {
+                Some(ComplexityRefactoringProcedure::DismissSuggestion(msg.id))
+            }
+            CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)) => msg
+                .id
+                .map(|id| ComplexityRefactoringProcedure::SelectSuggestion(id)),
+            CoreEngineTrigger::OnTextContentChange => {
+                Some(ComplexityRefactoringProcedure::GetSuggestions)
+            }
+            _ => None,
         }
     }
 
@@ -703,32 +681,6 @@ impl ComplexityRefactoring {
         let index = get_index_of_first_difference(prev_text, new_text)
             .ok_or(ComplexityRefactoringError::CouldNotGetCursorPositionAfterPerforming)?;
         Ok(TextRange { index, length: 0 })
-    }
-
-    fn determine_procedure(trigger: &CoreEngineTrigger) -> Option<ComplexityRefactoringProcedure> {
-        match trigger {
-            CoreEngineTrigger::OnUserCommand(UserCommand::PerformSuggestion(msg)) => {
-                Some(ComplexityRefactoringProcedure::ShortRunning(
-                    ShortRunningProcedure::PerformSuggestion(msg.id),
-                ))
-            }
-            CoreEngineTrigger::OnUserCommand(UserCommand::DismissSuggestion(msg)) => {
-                Some(ComplexityRefactoringProcedure::ShortRunning(
-                    ShortRunningProcedure::DismissSuggestion(msg.id),
-                ))
-            }
-            CoreEngineTrigger::OnUserCommand(UserCommand::SelectSuggestion(msg)) => {
-                msg.id.map(|id| {
-                    ComplexityRefactoringProcedure::ShortRunning(
-                        ShortRunningProcedure::SelectSuggestion(id),
-                    )
-                })
-            }
-            CoreEngineTrigger::OnTextContentChange => Some(
-                ComplexityRefactoringProcedure::LongRunning(LongRunningProcedure::GetSuggestions),
-            ),
-            _ => None,
-        }
     }
 
     pub fn get_suggestions_for_window(

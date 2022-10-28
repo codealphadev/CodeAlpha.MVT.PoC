@@ -1,8 +1,7 @@
 use std::path::PathBuf;
 use tracing::debug;
-use uuid::Uuid;
 
-use crate::core_engine::features::{FeatureKind, FeatureProcedure};
+use crate::core_engine::features::FeatureKind;
 use crate::core_engine::{format_code, SwiftFormatError};
 use crate::platform::macos::models::editor::ModifierKey;
 use crate::platform::macos::replace_text_content;
@@ -26,10 +25,10 @@ impl FeatureBase for SwiftFormatter {
         FeatureKind::Formatter
     }
 
-    fn compute_short_running(
+    fn compute(
         &mut self,
         code_document: CodeDocument,
-        trigger: &CoreEngineTrigger,
+        trigger: CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
@@ -51,19 +50,6 @@ impl FeatureBase for SwiftFormatter {
         Ok(())
     }
 
-    fn compute_long_running(
-        &mut self,
-        _code_document: CodeDocument,
-        _trigger: &CoreEngineTrigger,
-        _execution_id: Option<Uuid>,
-    ) -> Result<(), FeatureError> {
-        if !self.is_activated {
-            return Ok(());
-        }
-
-        Ok(())
-    }
-
     fn activate(&mut self) -> Result<(), FeatureError> {
         self.is_activated = true;
         Ok(())
@@ -79,20 +65,8 @@ impl FeatureBase for SwiftFormatter {
         Ok(())
     }
 
-    fn should_compute(
-        _kind: &FeatureKind,
-        trigger: &CoreEngineTrigger,
-    ) -> Option<FeatureProcedure> {
-        match trigger {
-            CoreEngineTrigger::OnShortcutPressed(msg) => {
-                if msg.modifier == ModifierKey::Cmd && msg.key == "S" {
-                    return Some(FeatureProcedure::ShortRunning);
-                } else {
-                    return None;
-                }
-            }
-            _ => None,
-        }
+    fn should_compute(_kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool {
+        Self::determine_procedure(trigger)
     }
 
     fn requires_ai(_kind: &FeatureKind, _trigger: &CoreEngineTrigger) -> bool {
@@ -104,6 +78,19 @@ impl SwiftFormatter {
     pub fn new() -> Self {
         Self {
             is_activated: CORE_ENGINE_ACTIVE_AT_STARTUP,
+        }
+    }
+
+    fn determine_procedure(trigger: &CoreEngineTrigger) -> bool {
+        match trigger {
+            CoreEngineTrigger::OnShortcutPressed(msg) => {
+                if msg.modifier == ModifierKey::Cmd && msg.key == "S" {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            _ => false,
         }
     }
 
