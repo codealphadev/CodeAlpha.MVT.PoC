@@ -13,7 +13,7 @@ use super::{
 use crate::core_engine::{
     features::{
         complexity_refactoring::{NodeSlice, ParsingMetadata, SerializedNodeSlice},
-        FeatureSignals,
+        FeatureSignal,
     },
     rules::TemporaryFileOnDisk,
     syntax_tree::{
@@ -81,7 +81,7 @@ pub struct MethodExtractionTask {
 
 pub async fn get_edits_for_method_extraction(
     method_extraction_task: MethodExtractionTask,
-    signals_sender: &mpsc::Sender<FeatureSignals>,
+    signals_sender: &mpsc::Sender<FeatureSignal>,
 ) -> Result<Vec<Edit>, ComplexityRefactoringError> {
     // Create temporary file
     let tmp_file_key = rand::thread_rng()

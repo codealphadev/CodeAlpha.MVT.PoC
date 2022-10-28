@@ -50,13 +50,12 @@ impl FeatureBase for DocsGenerator {
         let no_annotation_is_running =
             !self.is_docs_gen_task_running(&code_document.editor_window_props().window_uid);
 
-        if let Some(procedure) = Self::determine_procedure(&trigger, Some(no_annotation_is_running))
         {
-            match procedure {
-                DocsGenComputeProcedure::FetchNodeExplanation(msg) => {
+            match Self::determine_procedure(&trigger, Some(no_annotation_is_running)) {
+                Some(DocsGenComputeProcedure::FetchNodeExplanation(msg)) => {
                     self.procedure_fetch_node_explanation(&code_document, msg)?;
                 }
-                DocsGenComputeProcedure::CreateNewNodeAnnotation => {
+                Some(DocsGenComputeProcedure::CreateNewNodeAnnotation) => {
                     if self
                         .procedure_create_new_annotation(&code_document)
                         .is_err()
@@ -65,6 +64,7 @@ impl FeatureBase for DocsGenerator {
                             .remove(&code_document.editor_window_props().window_uid);
                     }
                 }
+                None => (),
             }
         }
 

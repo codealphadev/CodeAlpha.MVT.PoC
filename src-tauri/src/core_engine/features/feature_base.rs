@@ -70,7 +70,7 @@ impl FeatureKind {
 }
 
 #[derive(Debug)]
-pub enum FeatureSignals {
+pub enum FeatureSignal {
     ComputationCompleted,
     SwiftLspCommandSpawned(CommandChild),
 }
