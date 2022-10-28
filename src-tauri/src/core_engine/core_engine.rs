@@ -22,7 +22,7 @@ use super::{
     annotations_manager::{AnnotationsManager, AnnotationsManagerTrait},
     features::{
         BracketHighlight, ComplexityRefactoring, CoreEngineTrigger, DocsGenerator, Feature,
-        FeatureBase, FeatureError, FeatureKind, FeatureProcedure, SwiftFormatter,
+        FeatureBase, FeatureError, FeatureKind, SwiftFormatter,
     },
     listeners::{user_interaction::user_interaction_listener, xcode::xcode_listener},
     log_list_of_module_names,
@@ -63,7 +63,6 @@ enum CodeDocUpdate {
 #[derive(Debug, Clone)]
 pub struct CoreEngineProcedure {
     pub feature: FeatureKind,
-    pub procedure: FeatureProcedure,
     pub trigger: CoreEngineTrigger,
     pub window_uid: EditorWindowUid,
 }
@@ -71,13 +70,11 @@ pub struct CoreEngineProcedure {
 impl CoreEngineProcedure {
     pub fn new(
         feature: FeatureKind,
-        procedure: FeatureProcedure,
         trigger: CoreEngineTrigger,
         window_uid: EditorWindowUid,
     ) -> Self {
         Self {
             feature,
-            procedure,
             trigger,
             window_uid,
         }
@@ -87,7 +84,6 @@ impl CoreEngineProcedure {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         self.trigger.hash(&mut hasher);
         self.feature.hash(&mut hasher);
-        self.procedure.hash(&mut hasher);
         self.window_uid.hash(&mut hasher);
         hasher.finish()
     }
@@ -220,13 +216,9 @@ impl CoreEngine {
                 continue;
             }
 
-            if let Some(procedure) = feature_kind.should_compute(trigger) {
-                let procedure = CoreEngineProcedure::new(
-                    feature_kind,
-                    procedure,
-                    trigger.to_owned(),
-                    window_uid,
-                );
+            if feature_kind.should_compute(trigger) {
+                let procedure =
+                    CoreEngineProcedure::new(feature_kind, trigger.to_owned(), window_uid);
 
                 feature_procedures_schedule.insert(procedure.hash(), procedure);
             }
@@ -291,7 +283,6 @@ impl CoreEngine {
             ) {
                 Self::process_single_feature(
                     &core_engine_procedure.trigger,
-                    core_engine_procedure.procedure.to_owned(),
                     code_doc.to_owned(),
                     feature,
                 );
@@ -308,7 +299,6 @@ impl CoreEngine {
 
     fn process_single_feature(
         trigger: &CoreEngineTrigger,
-        procedure: FeatureProcedure,
         code_doc: CodeDocument,
         feature: &mut Arc<Mutex<Feature>>,
     ) {
@@ -316,13 +306,8 @@ impl CoreEngine {
             let trigger = trigger.clone();
             let feature = feature.clone();
             async move {
-                match procedure {
-                    FeatureProcedure::LongRunning => feature
-                        .lock()
-                        .compute_long_running(code_doc, &trigger, None),
-                    FeatureProcedure::ShortRunning => {
-                        feature.lock().compute_short_running(code_doc, &trigger)
-                    }
+                if let Err(e) = feature.lock().compute(code_doc, trigger) {
+                    error!(?e, "Error while computing feature.");
                 }
             }
         });

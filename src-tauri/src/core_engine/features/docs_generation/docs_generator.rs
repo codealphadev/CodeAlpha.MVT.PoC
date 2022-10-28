@@ -1,15 +1,10 @@
 use std::collections::HashMap;
 
-use uuid::Uuid;
-
 use crate::{
     core_engine::{
         core_engine::EditorWindowUid,
         events::models::NodeAnnotationClickedMessage,
-        features::{
-            CoreEngineTrigger, FeatureBase, FeatureError, FeatureKind, FeatureProcedure,
-            UserCommand,
-        },
+        features::{CoreEngineTrigger, FeatureBase, FeatureError, FeatureKind, UserCommand},
         syntax_tree::{SwiftCodeBlock, SwiftCodeBlockBase, SwiftSyntaxTree},
         utils::XcodeText,
         CodeDocument, TextPosition, TextRange, XcodeChar,
@@ -43,10 +38,10 @@ pub struct DocsGenerator {
 }
 
 impl FeatureBase for DocsGenerator {
-    fn compute_short_running(
+    fn compute(
         &mut self,
         code_document: CodeDocument,
-        trigger: &CoreEngineTrigger,
+        trigger: CoreEngineTrigger,
     ) -> Result<(), FeatureError> {
         if !self.is_activated {
             return Ok(());
@@ -55,7 +50,7 @@ impl FeatureBase for DocsGenerator {
         let no_annotation_is_running =
             !self.is_docs_gen_task_running(&code_document.editor_window_props().window_uid);
 
-        if let Some(procedure) = Self::determine_procedure(trigger, Some(no_annotation_is_running))
+        if let Some(procedure) = Self::determine_procedure(&trigger, Some(no_annotation_is_running))
         {
             match procedure {
                 DocsGenComputeProcedure::FetchNodeExplanation(msg) => {
@@ -71,19 +66,6 @@ impl FeatureBase for DocsGenerator {
                     }
                 }
             }
-        }
-
-        Ok(())
-    }
-
-    fn compute_long_running(
-        &mut self,
-        _code_document: CodeDocument,
-        _trigger: &CoreEngineTrigger,
-        _execution_id: Option<Uuid>,
-    ) -> Result<(), FeatureError> {
-        if !self.is_activated {
-            return Ok(());
         }
 
         Ok(())
@@ -112,14 +94,8 @@ impl FeatureBase for DocsGenerator {
         FeatureKind::DocsGeneration
     }
 
-    fn should_compute(
-        _kind: &FeatureKind,
-        trigger: &CoreEngineTrigger,
-    ) -> Option<FeatureProcedure> {
-        match Self::determine_procedure(trigger, None) {
-            Some(_) => Some(FeatureProcedure::ShortRunning),
-            None => None,
-        }
+    fn should_compute(_kind: &FeatureKind, trigger: &CoreEngineTrigger) -> bool {
+        Self::determine_procedure(trigger, None).is_some()
     }
 
     fn requires_ai(_kind: &FeatureKind, _trigger: &CoreEngineTrigger) -> bool {
