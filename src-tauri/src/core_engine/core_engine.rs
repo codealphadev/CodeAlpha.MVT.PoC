@@ -276,7 +276,7 @@ impl CoreEngine {
         features: Arc<Mutex<HashMap<FeatureKind, Arc<Mutex<Feature>>>>>,
         code_documents: Arc<Mutex<HashMap<usize, CodeDocument>>>,
     ) {
-        for core_engine_procedure in core_engine_procedures_schedule.lock().drain() {
+        for (_, core_engine_procedure) in core_engine_procedures_schedule.lock().drain() {
             if let (Some(feature), Some(code_doc)) = (
                 features.lock().get_mut(&core_engine_procedure.feature),
                 code_documents.lock().get(&core_engine_procedure.window_uid),
