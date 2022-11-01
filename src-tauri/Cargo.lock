@@ -24,7 +24,7 @@ dependencies = [
  "bincode",
  "cached",
  "chrono",
- "cocoa 0.24.0",
+ "cocoa 0.24.1",
  "colored 2.0.0",
  "convert_case 0.6.0",
  "core-foundation 0.9.3",
@@ -72,7 +72,7 @@ version = "0.1.6"
 source = "git+https://github.com/Hupka/accessibility#a873519d2e77ef1c4c7b382b842b87f4263f6b96"
 dependencies = [
  "accessibility-sys",
- "cocoa 0.24.0",
+ "cocoa 0.24.1",
  "core-foundation 0.9.3",
  "core-graphics-types",
  "objc",
@@ -560,9 +560,9 @@ dependencies = [
 
 [[package]]
 name = "cocoa"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f63902e9223530efb4e26ccd0cf55ec30d592d3b42e21a28defc42a9586e832"
+checksum = "f425db7937052c684daec3bd6375c8abe2d146dca4b8b143d6db777c39138f3a"
 dependencies = [
  "bitflags",
  "block",
@@ -3983,7 +3983,7 @@ dependencies = [
  "bitflags",
  "cairo-rs",
  "cc",
- "cocoa 0.24.0",
+ "cocoa 0.24.1",
  "core-foundation 0.9.3",
  "core-graphics 0.22.3",
  "crossbeam-channel",
@@ -4042,7 +4042,7 @@ dependencies = [
  "anyhow",
  "attohttpc",
  "base64",
- "cocoa 0.24.0",
+ "cocoa 0.24.1",
  "dirs-next",
  "embed_plist",
  "encoding_rs",
@@ -4186,7 +4186,7 @@ version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28dce920995fd49907aa9bea7249ed1771454f11f7611924c920a1f75fb614d4"
 dependencies = [
- "cocoa 0.24.0",
+ "cocoa 0.24.1",
  "gtk",
  "percent-encoding",
  "rand 0.8.5",
@@ -5027,7 +5027,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c69eb48aac2da0199ea148c6f2c2610db8a0572b32a3dc857dec40ca22f1cec"
 dependencies = [
- "cocoa 0.24.0",
+ "cocoa 0.24.1",
  "objc",
  "raw-window-handle",
  "windows-sys 0.36.1",
@@ -5330,7 +5330,7 @@ checksum = "ff5c1352b4266fdf92c63479d2f58ab4cd29dc4e78fbc1b62011ed1227926945"
 dependencies = [
  "base64",
  "block",
- "cocoa 0.24.0",
+ "cocoa 0.24.1",
  "core-graphics 0.22.3",
  "crossbeam-channel",
  "gdk",
