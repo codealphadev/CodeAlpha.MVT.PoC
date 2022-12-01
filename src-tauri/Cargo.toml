@@ -94,7 +94,7 @@ git = "https://github.com/Hupka/accessibility"
 git = "https://github.com/Hupka/accessibility"
 
 [dependencies.ts-rs]
-version = "6.2.0"
+version = "6.2.1"
 features = [ "serde-compat", "format", "uuid-impl",]
 
 [build-dependencies.tauri-build]
