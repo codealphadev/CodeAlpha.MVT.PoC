@@ -7,5 +7,5 @@ pub fn get_cloud_function_url() -> String {
 }
 
 pub fn get_cloud_function_apikey() -> String {
-    "-RWsev7z_qgP!Qinp_8cbmwgP9jg4AQBkfz".to_string()
+    "".to_string()
 }
