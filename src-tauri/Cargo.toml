@@ -98,7 +98,7 @@ version = "6.2.0"
 features = [ "serde-compat", "format", "uuid-impl",]
 
 [build-dependencies.tauri-build]
-version = "1.0.0"
+version = "1.2.1"
 features = [ "isolation",]
 
 [patch.crates-io.tao]
