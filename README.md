@@ -59,7 +59,7 @@ To set up machine to be a runner:
 - Make sure to set the environment variables:
   - `TAURI_PRIVATE_KEY` (get from GCP secret manager)
   - `TAURI_KEY_PASSWORD` (get from GCP secret manager)
-  - `APPLE_ID = 'adam.nyberg@gmail.com'`
+  - `APPLE_ID = `
   - `APPLE_PASSWORD`
   - `APPLE_CERTIFICATE`
   - `APPLE_CERTIFICATE_PASSWORD`
